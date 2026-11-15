@@ -1,0 +1,449 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 425
+local R = require("functions/forge/forge_rules")
+local Store = require("functions/forge/forge_store")
+local Cat = require("functions/forge/forge_catalog")
+
+local H = {}
+ForgeHostRules = H
+
+H.SLOTS = {"enhancement", "seal", "edition"}
+
+local function game() return G and G.GAME end
+
+local function has_rules(c)
+  return type(c) == "table" and type(c.rules) == "table" and #c.rules > 0
+end
+
+local function run_spec(kind, id)
+  local spec = Cat.effect(kind, id)
+  if spec and spec.run then return spec end
+  for _, list in ipairs({Cat.RUN, Cat.EFFECTS.voucher, Cat.EFFECTS.deck}) do
+    for _, e in ipairs(list) do
+      if e.id == id and e.run then return e end
+    end
+  end
+  return nil
+end
+H.run_spec = run_spec
+
+function H.extra_values(kind)
+  local out = {}
+  if R.host_of(kind) == "joker" then return out end
+  local seen = {}
+  for _, e in ipairs(Cat.effects_for(kind) or {}) do
+    if e.run and not seen[e.id] and not R.SCORE_GIVE[e.id] then seen[e.id] = true; out[#out + 1] = e end
+  end
+  for _, list in ipairs({Cat.RUN, Cat.EFFECTS.voucher, Cat.EFFECTS.deck}) do
+    for _, e in ipairs(list) do
+      if e.run and not seen[e.id] and not (e.id == "chips" or e.id == "mult" or e.id == "xmult") then seen[e.id] = true; out[#out + 1] = e end
+    end
+  end
+  return out
+end
+
+R.extra_give_fn = function(kind, g)
+  if g.id == "chips" or g.id == "mult" or g.id == "xmult" then return nil end
+  local spec = run_spec(kind, g.id)
+  if not spec then return nil end
+  local c = {id = g.id}
+  if spec.num then c.n = Cat.clamp(spec.num, g.n) end
+  if spec.v then
+    local ok = false
+    for _, v in ipairs(Cat.values(spec.v, true)) do if v == g.v or tostring(v) == tostring(g.v) then c.v = v; ok = true end end
+    if not ok and Cat.own_ok(spec.v, g.v) then c.v = g.v; ok = true end
+    if not ok then
+      local vals = Cat.values(spec.v, true)
+      c.v = vals[1]
+    end
+  end
+  return c
+end
+
+local T = require("functions/forge/forge_text")
+T.run_line = function(kind, g)
+  local spec = run_spec(kind or "voucher", g.id)
+  if not spec then return tostring(g.id) end
+  local ok, line = pcall(Cat.fill, spec.line, g, spec)
+  return ok and line or mod_loc(spec.label)
+end
+
+R.run_give = function(g)
+  local Run = package.loaded["functions/forge/forge_run"]
+  if Run and Run.apply then Run.apply(g, nil) end
+end
+
+local function notify_removed(list)
+  for _, j in ipairs(G.jokers and G.jokers.cards or {}) do
+    pcall(eval_card, j, {cardarea = G.jokers, remove_playing_cards = true, removed = list})
+  end
+end
+
+R.destroy_playing = function(card)
+  if not card or card.forge_dying or card.destroyed or card.shattered then return end
+  card.forge_dying = true
+  card.destroyed = true
+  G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.2, func = function()
+    if card.removed then return true end
+    card:start_dissolve()
+    notify_removed({card})
+    return true
+  end}))
+end
+
+function H.items_on(card)
+  local out = {}
+  if not (card and card.ability) or card.debuff then return out end
+  local cen = card.config and card.config.center
+  if cen and cen.forge_kind == "enhancement" and not cen.forge_lost then
+    local c = Store.get_item(cen.forge_id)
+    if has_rules(c) and c.kind == "enhancement" and c.enabled ~= false then out[#out + 1] = {c = c, key = "e_" .. c.id} end
+  end
+  local sid = card.seal and R.own_id("seal", card.seal)
+  if sid then
+    local c = Store.get_item(sid)
+    if has_rules(c) and c.kind == "seal" and c.enabled ~= false then out[#out + 1] = {c = c, key = "s_" .. c.id} end
+  end
+  local eid = card.edition and card.edition.forge
+  if eid then
+    local c = Store.get_item(eid)
+    if has_rules(c) and c.kind == "edition" and c.enabled ~= false then out[#out + 1] = {c = c, key = "d_" .. c.id} end
+  end
+  return out
+end
+
+function H.card_state(card, key)
+  local ab = card.ability
+  ab.forge_rs = type(ab.forge_rs) == "table" and ab.forge_rs or {}
+  ab.forge_rs[key] = type(ab.forge_rs[key]) == "table" and ab.forge_rs[key] or {}
+  return ab.forge_rs[key]
+end
+
+function H.game_state(key)
+  local g = game()
+  if not g then return {} end
+  g.forge_rs = type(g.forge_rs) == "table" and g.forge_rs or {}
+  g.forge_rs[key] = type(g.forge_rs[key]) == "table" and g.forge_rs[key] or {}
+  return g.forge_rs[key]
+end
+
+local function run_rules(card, ctx, it, host, state)
+  local rules = R.clean_rules(it.c.rules, it.c.kind)
+  if #rules == 0 then return nil end
+  local r = R.calculate(card, ctx, rules, R.clean_vars(it.c.vars), {state = state, host = host, seed = "forge_" .. it.key, dry = H.previewing and H.previewing() or nil})
+  if it.c.kind == "blind" and H.refresh_blind then H.refresh_blind() end
+  return r
+end
+
+local function card_ctx(card, context, extra)
+  local Run = package.loaded["functions/forge/forge_run"] or {}
+  local ctx = {
+    cardarea = context.cardarea, full_hand = context.full_hand, scoring_hand = context.scoring_hand,
+    scoring_name = context.scoring_name or context.poker_hand or Run.hand_name, poker_hands = context.poker_hands or Run.poker_hands,
+    other_card = card, forge_self = card, individual = true,
+  }
+  for k, v in pairs(extra or {}) do ctx[k] = v end
+  return ctx
+end
+
+local function merge(ret, r, held)
+  if type(r) ~= "table" then return end
+  if r.chips and r.chips > 0 then ret.chips = (ret.chips or 0) + r.chips end
+  if r.mult and r.mult > 0 then ret.mult = (ret.mult or 0) + r.mult end
+  if r.h_mult and r.h_mult > 0 then ret.h_mult = (ret.h_mult or 0) + r.h_mult end
+  if r.x_mult and r.x_mult ~= 1 then
+    local base = ret.x_mult and ret.x_mult > 0 and ret.x_mult or 1
+    ret.x_mult = base * r.x_mult
+  end
+  if r.dollars and r.dollars ~= 0 then
+    ret.p_dollars = (ret.p_dollars or 0) + r.dollars
+    G.GAME.dollar_buffer = (G.GAME.dollar_buffer or 0) + r.dollars
+    G.E_MANAGER:add_event(Event({func = function() G.GAME.dollar_buffer = 0; return true end}))
+  end
+end
+
+function H.run_items()
+  local Run = package.loaded["functions/forge/forge_run"]
+  local out = {}
+  if not (Run and Run.sources) then return out end
+  for _, s in ipairs(Run.sources()) do
+    if has_rules(s.c) then out[#out + 1] = {c = s.c, key = "r_" .. s.key, times = s.times or 1} end
+  end
+  return out
+end
+
+function H.joker_edition(card, context, ret)
+  local list = H.items_on(card)
+  if #list == 0 then return ret end
+  local ctx = card_ctx(card, context, {cardarea = G.play, edition = nil})
+  local acc = {}
+  for _, it in ipairs(list) do
+    if it.c.kind == "edition" then merge(acc, run_rules(card, ctx, it, "card", H.card_state(card, it.key)), false) end
+  end
+  if not (acc.chips or acc.mult or acc.x_mult) then return ret end
+  ret.jokers = ret.jokers or {}
+  local j = ret.jokers
+  if acc.chips then j.chip_mod = (j.chip_mod or 0) + acc.chips end
+  if acc.mult then j.mult_mod = (j.mult_mod or 0) + acc.mult end
+  if acc.x_mult then j.x_mult_mod = (j.x_mult_mod and j.x_mult_mod > 0 and j.x_mult_mod or 1) * acc.x_mult end
+  return ret
+end
+
+function H.eval_card(card, context, ret)
+  if not (card and card.ability and context) or context.repetition_only then return ret end
+  if context.edition and context.cardarea == G.jokers and card.edition and card.edition.forge then return H.joker_edition(card, context, ret) end
+  if card.ability.set ~= "Default" and card.ability.set ~= "Enhanced" then return ret end
+  local area = context.cardarea
+  local held = area == G.hand and not context.end_of_round
+  if not (area == G.play or held) then return ret end
+  local ctx = card_ctx(card, context)
+  for _, it in ipairs(H.items_on(card)) do
+    merge(ret, run_rules(card, ctx, it, "card", H.card_state(card, it.key)), held)
+  end
+  if area == G.play then
+    for _, it in ipairs(H.run_items()) do
+      local rctx = card_ctx(card, context)
+      rctx.forge_self = nil
+      for _ = 1, it.times do merge(ret, run_rules(card, rctx, it, "run", H.game_state(it.key)), false) end
+    end
+  end
+  return ret
+end
+
+function H.repeats(card, context)
+  if not (card and card.ability and context and context.repetition) then return 0 end
+  local area = context.cardarea
+  if not (area == G.play or area == G.hand) then return 0 end
+  local n = 0
+  local ctx = card_ctx(card, context, {repetition = true, individual = false})
+  ctx.individual = nil
+  ctx.end_of_round = nil
+  for _, it in ipairs(H.items_on(card)) do
+    local r = run_rules(card, ctx, it, "card", H.card_state(card, it.key))
+    if r and r.repetitions then n = n + r.repetitions end
+  end
+  return n
+end
+
+function H.discard(card)
+  local ctx = {discard = true, other_card = card, forge_self = card, full_hand = G.hand and G.hand.highlighted}
+  local any = false
+  for _, it in ipairs(H.items_on(card)) do
+    run_rules(card, ctx, it, "card", H.card_state(card, it.key))
+    any = true
+  end
+  return any
+end
+
+function H.round_end(card, r)
+  local ctx = {end_of_round = true, cardarea = G.hand, other_card = card, forge_self = card}
+  for _, it in ipairs(H.items_on(card)) do
+    local before = G.GAME.dollars
+    run_rules(card, ctx, it, "card", H.card_state(card, it.key))
+    if G.GAME.dollars ~= before and type(r) == "table" then r.card = card end
+  end
+  return r
+end
+
+function H.use(c, card)
+  if not has_rules(c) then return end
+  local ctx = {forge_when = "used"}
+  run_rules(card or {ability = {}, config = {center = {}}}, ctx, {c = c, key = "u_" .. c.id}, "use", H.game_state("u_" .. c.id))
+end
+
+local WHEN_CTX = {
+  blind_selected = {setting_blind = true}, discard = {discard = true}, round_end = {end_of_round = true},
+  reroll = {reroll_shop = true}, shop_enter = {forge_when = "shop_enter"}, ante_up = {forge_when = "ante_up"}, now = {forge_when = "now"},
+}
+
+local function host_card(it)
+  local key = it.c.kind == "voucher" and ("v_forge_" .. it.c.id) or nil
+  local center = key and G.P_CENTERS and G.P_CENTERS[key]
+  return {ability = {}, config = {center = center or {}}, juice_up = function() end}
+end
+
+function H.fire(when, base)
+  if when == "hand_played" or when == "card_scored" then return end
+  local proto = WHEN_CTX[when]
+  if not proto then return end
+  for _, it in ipairs(H.run_items()) do
+    local ctx = {}
+    for k, v in pairs(base or {}) do ctx[k] = v end
+    for k, v in pairs(proto) do ctx[k] = v end
+    ctx.other_card = nil
+    for _ = 1, it.times do run_rules(host_card(it), ctx, it, "run", H.game_state(it.key)) end
+  end
+end
+
+function H.now(c, key)
+  if not has_rules(c) then return end
+  run_rules(host_card({c = c}), {forge_when = "now"}, {c = c, key = "r_" .. key}, "run", H.game_state("r_" .. key))
+end
+
+function H.score(chips, mult)
+  local changed = false
+  local Run = package.loaded["functions/forge/forge_run"] or {}
+  for _, it in ipairs(H.run_items()) do
+    local ctx = {joker_main = true, cardarea = G.jokers, full_hand = G.play and G.play.cards, scoring_name = Run.hand_name, poker_hands = Run.poker_hands}
+    for _ = 1, it.times do
+      local r = run_rules(host_card(it), ctx, it, "run", H.game_state(it.key))
+      if type(r) == "table" then
+        if r.chip_mod then chips = chips + r.chip_mod; changed = true end
+        if r.mult_mod then mult = mult + r.mult_mod; changed = true end
+        if r.Xmult_mod then mult = mult * r.Xmult_mod; changed = true end
+      end
+    end
+  end
+  return chips, mult, changed
+end
+
+function H.previewing()
+  local Run = package.loaded["functions/forge/forge_run"]
+  return Run and Run.previewing and Run.previewing() or false
+end
+
+H.STATE_PREFIX = {enhancement = "e_", seal = "s_", edition = "d_"}
+H.RUN_PREFIX = {voucher = "v_forge_", deck = "b_forge_", stake = "stake_forge_", blind = "bl_forge_"}
+H.KEY_KINDS = {
+  {"^m_forge_(%w+)$", {enhancement = true}}, {"^e_forge_(%w+)$", {edition = true}}, {"^c_forge_(%w+)$", {tarot = true, planet = true, spectral = true}},
+  {"^v_forge_(%w+)$", {voucher = true}}, {"^b_forge_(%w+)$", {deck = true}}, {"^tag_forge_(%w+)$", {tag = true}}, {"^bl_forge_(%w+)$", {blind = true}},
+  {"^forge_(%w+)_seal$", {seal = true}},
+}
+
+local function in_run()
+  if not game() then return false end
+  if G.STAGES and G.STAGE ~= G.STAGES.RUN then return false end
+  return true
+end
+
+function H.item_state(c, card)
+  if type(c) ~= "table" then return nil end
+  local host = R.host_of(c.kind)
+  if host == "card" then
+    local rs = card and type(card.ability) == "table" and card.ability.forge_rs
+    local st = type(rs) == "table" and rs[(H.STATE_PREFIX[c.kind] or "") .. tostring(c.id)]
+    return type(st) == "table" and st or nil
+  end
+  if not in_run() then return nil end
+  local rs = G.GAME.forge_rs
+  if type(rs) ~= "table" then return nil end
+  local st
+  if host == "use" then st = rs["u_" .. tostring(c.id)]
+  elseif host == "run" and H.RUN_PREFIX[c.kind] then st = rs["r_" .. H.RUN_PREFIX[c.kind] .. tostring(c.id)] end
+  return type(st) == "table" and st or nil
+end
+
+function H.item_vars(c, card)
+  local T = require("functions/forge/forge_text")
+  return T.vars(nil, R.clean_vars(c and c.vars), H.item_state(c, card))
+end
+
+function H.item_of_key(key)
+  if type(key) ~= "string" or not key:find("forge_", 1, true) then return nil end
+  for _, k in ipairs(H.KEY_KINDS) do
+    local id = key:match(k[1])
+    if id then
+      local c = Store.get_item(id)
+      if not (c and k[2][c.kind]) and k[2].seal then
+        c = nil
+        for _, it in ipairs(Store.live_items and Store.live_items() or {}) do
+          if it.kind == "seal" and tostring(it.id):lower() == id then c = it break end
+        end
+      end
+      if c and k[2][c.kind] and has_rules(c) then return c end
+      return nil
+    end
+  end
+  return nil
+end
+
+local TEXT_TYPES = {descriptions = true, other = true, raw_descriptions = true}
+
+function H.live_args(args)
+  if type(args) ~= "table" or not TEXT_TYPES[args.type] then return args end
+  local c = H.item_of_key(args.key)
+  if not c then return args end
+  local ok, v = pcall(H.item_vars, c, H.describing)
+  if not ok or type(v) ~= "table" then return args end
+  local a = {}
+  for k, x in pairs(args) do a[k] = x end
+  a.vars = v
+  return a
+end
+
+function H.refresh_blind()
+  local b = G and G.GAME and G.GAME.blind
+  local p = b and b.config and b.config.blind
+  if p and p.forge_kind == "blind" and b.set_text then pcall(b.set_text, b) end
+end
+
+function H.install_text()
+  if H.text_hooked then return end
+  H.text_hooked = true
+  if type(localize) == "function" then
+    local orig = localize
+    localize = function(args, ...)
+      if type(args) == "table" and type(args.key) == "string" and args.key:find("forge_", 1, true) then
+        local ok, a = pcall(H.live_args, args)
+        if ok and a then return orig(a, ...) end
+      end
+      return orig(args, ...)
+    end
+  end
+  if Card and type(Card.generate_UIBox_ability_table) == "function" then
+    local orig = Card.generate_UIBox_ability_table
+    Card.generate_UIBox_ability_table = function(self, ...)
+      local prev = H.describing
+      H.describing = self
+      local ok, r = pcall(orig, self, ...)
+      H.describing = prev
+      if ok then return r end
+      error(r, 0)
+    end
+  end
+end
+
+local function wrap(obj, name, make)
+  if obj and type(obj[name]) == "function" then obj[name] = make(obj[name]) end
+end
+
+function H.install()
+  if H.hooked then return end
+  H.hooked = true
+  pcall(H.install_text)
+  if type(eval_card) == "function" then
+    local orig = eval_card
+    eval_card = function(card, context, ...)
+      local ret, post = orig(card, context, ...)
+      if type(ret) == "table" then
+        local ok, err = pcall(H.eval_card, card, context, ret)
+        if not ok then print("[FORGE] card rules failed: " .. tostring(err)) end
+      end
+      return ret, post
+    end
+  end
+  wrap(Card, "calculate_seal", function(orig) return function(self, context, ...)
+    local r, r2 = orig(self, context, ...)
+    if type(context) ~= "table" then return r, r2 end
+r 3 2244 %20%20%20%20 -
+l 16
+      local ok, n = pcall(H.repeats, self, context)
+      if ok and n > 0 then return {message = localize("k_again_ex"), repetitions = ((r and r.repetitions) or 0) + n, card = self}, r2 end
+    elseif context.discard and not self.debuff then
+      pcall(H.discard, self)
+    end
+    return r, r2
+  end end)
+  wrap(Card, "get_end_of_round_effect", function(orig) return function(self, ...)
+    local r = orig(self, ...)
+    local ok, err = pcall(H.round_end, self, r)
+    if not ok then print("[FORGE] round end rules failed: " .. tostring(err)) end
+    return r
+  end end)
+end
+
+return H
+end

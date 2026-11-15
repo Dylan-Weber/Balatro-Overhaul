@@ -1,0 +1,905 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 245
+return function(R)
+  local T = require("functions/forge/forge_text")
+
+  local function set(list)
+    local out = {}
+    for _, v in ipairs(list) do out[v] = true end
+    return out
+  end
+
+  local function add_ids(list, ids)
+    for _, id in ipairs(ids) do
+      if not R.member(list, id) then list[#list + 1] = id end
+      R.V8_IDS[id] = true
+    end
+  end
+
+  local HAND = set({"card_scored", "card_held", "hand_played", "before", "after"})
+  local SCORE = set({"card_scored", "card_held", "hand_played"})
+  local ONE_CARD = set({"card_scored", "card_held"})
+
+  R.FOUR_SUITS = {"Hearts", "Diamonds", "Spades", "Clubs"}
+  R.USE_KINDS = {"Tarot", "Planet", "Spectral"}
+  R.RARITIES = {"Common", "Uncommon", "Rare", "Legendary"}
+  R.MATCH_BASE = {"any", "enhanced", "face", "number", "even", "odd", 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, "Hearts", "Diamonds", "Spades", "Clubs", "red", "black"}
+  R.SIMPLE_ONLY = R.SIMPLE_ONLY or {}
+  R.SIMPLE_GIVE = R.SIMPLE_GIVE or {}
+  R.LABEL_ONLY = R.LABEL_ONLY or {}
+  R.LABEL_GIVE = R.LABEL_GIVE or {}
+  R.FILTER_ONLY = R.FILTER_ONLY or {}
+  R.HOST_GIVE = R.HOST_GIVE or {}
+
+  function R.matches()
+    local out = {}
+    for _, v in ipairs(R.MATCH_BASE) do out[#out + 1] = v end
+    for _, v in ipairs(R.enhancements()) do out[#out + 1] = v end
+    return out
+  end
+
+  local function is_wild(c) return c and c.ability and (c.ability.name == "Wild Card" or (c.config and c.config.center and c.config.center.forge_wild)) and true or false end
+
+  local function enhanced(c)
+    local center = c and c.config and c.config.center
+    return center ~= nil and G.P_CENTERS and center ~= G.P_CENTERS.c_base and center.key ~= "c_base"
+  end
+
+  function R.card_match(c, v)
+    if v == "any" or v == nil then return true end
+    if v == "enhanced" then return enhanced(c) end
+    if type(v) == "number" or v == "face" or v == "number" or v == "even" or v == "odd" then return R.rank_ok(c, v) end
+    if v == "red" or v == "black" or R.member(R.FOUR_SUITS, v) then return R.suit_ok(c, v) end
+    return c.config and c.config.center and c.config.center.key == v or false
+  end
+
+  local function match_ok(v)
+    return R.member(R.MATCH_BASE, v) or R.member(R.ENHANCEMENTS, v) or R.own_id("enhancement", v) ~= nil
+  end
+
+  local function scoring(context)
+    return type(context.scoring_hand) == "table" and context.scoring_hand or type(context.full_hand) == "table" and context.full_hand or {}
+  end
+
+  function R.discard_hand(context)
+    if type(context.full_hand) ~= "table" or #context.full_hand == 0 then return nil end
+    if not context.forge_hand and G.FUNCS and G.FUNCS.get_poker_hand_info then
+      local ok, text, _, ph = pcall(G.FUNCS.get_poker_hand_info, context.full_hand)
+      context.forge_hand = ok and {name = text, hands = ph} or {}
+    end
+    local name = context.forge_hand and context.forge_hand.name
+    if name and G.GAME and G.GAME.hands and G.GAME.hands[name] then return name end
+    return nil
+  end
+
+  local function card_conds(rule, skip)
+    local out = {}
+    for _, o in ipairs(rule and rule.only or {}) do
+      if o ~= skip and o.id ~= "chance" and R.CARD_ONLY[o.id] and o.id ~= "lowest_held" then out[#out + 1] = o end
+    end
+    return out
+  end
+
+  local function card_ok(list, context, card, c, seed)
+    for _, o in ipairs(list) do
+      local ok = R.check(o, context, card, c, seed)
+      if o.neg then ok = not ok end
+      if not ok then return false end
+    end
+    return true
+  end
+
+  local NUM = {
+    discarded = {def = 3, lo = 1, hi = 52, step = 1, big = 10},
+    deck_count = {def = 16, lo = 0, hi = R.MANY, step = 1, big = 10},
+    var_xmult = {def = 0.1, lo = 0.01, hi = R.BIG, step = 0.01, big = 1},
+    var_money = {def = 1, lo = 1, hi = R.BIG, step = 1, big = 5},
+    rand_mult = {def = 23, lo = 1, hi = R.BIG, step = 1, big = 10},
+    rank_mult = {def = 2, lo = 1, hi = 1e6, step = 1, big = 10},
+    create_rarity = {def = 1, lo = 1, hi = 10, step = 1, big = 5},
+  }
+  for k, v in pairs(NUM) do R.NUM[k] = v end
+
+  add_ids(R.ONLY, {"first_scored", "played_rank", "played_suit", "all_suits", "suit_and_other", "held_all", "played_this_round", "most_played", "first_discard", "once_per_discard", "discarded", "used_kind", "enhanced", "deck_count", "no_discard", "lowest_held"})
+  add_ids(R.GIVE, {"reset_gains", "var_xmult", "var_money", "rand_mult", "rank_mult", "lose_discards", "create_rarity", "add_to_hand"})
+  R.VAR_GIVE.var_xmult = true
+  R.VAR_GIVE.var_money = true
+  R.CARD_ONLY.enhanced = true
+  R.CARD_ONLY.lowest_held = true
+
+  R.ONLY_WHEN.first_scored = {card_scored = true}
+  R.ONLY_WHEN.lowest_held = {card_held = true}
+  for _, id in ipairs({"played_rank", "played_suit", "all_suits", "suit_and_other", "held_all", "played_this_round", "most_played"}) do R.ONLY_WHEN[id] = HAND end
+  for _, id in ipairs({"first_discard", "once_per_discard", "discarded"}) do R.ONLY_WHEN[id] = {discard = true} end
+  R.ONLY_WHEN.used_kind = {consumable_used = true}
+  R.ONLY_WHEN.enhanced = {card_scored = true, card_held = true, discard = true}
+
+  R.GIVE_WHEN.var_xmult = SCORE
+  R.GIVE_WHEN.rand_mult = SCORE
+  R.GIVE_WHEN.rank_mult = ONE_CARD
+  R.GIVE_WHEN.lose_discards = R.ROUND_WHEN
+  R.GIVE_WHEN.add_to_hand = R.ROUND_WHEN
+  R.V8_WHEN.disable_boss = {self_sold = true, card_sold = true}
+  R.V8_WHEN.level_up = {discard = true}
+  local ALL3 = {joker = true, card = true, run = true}
+  for _, id in ipairs({"reset_gains", "var_xmult", "rand_mult"}) do R.HOST_GIVE[id] = ALL3 end
+  R.HOST_GIVE.rank_mult = {joker = true, card = true}
+
+  R.DEFAULT_ONLY.played_rank = function() return {id = "played_rank", v = 14} end
+  R.DEFAULT_ONLY.played_suit = function() return {id = "played_suit", v = "Hearts"} end
+  R.DEFAULT_ONLY.suit_and_other = function() return {id = "suit_and_other", v = "Clubs"} end
+  R.DEFAULT_ONLY.held_all = function() return {id = "held_all", v = "black"} end
+  R.DEFAULT_ONLY.used_kind = function() return {id = "used_kind", v = "Planet"} end
+  R.DEFAULT_ONLY.discarded = function() return {id = "discarded", v = "face", op = "at_least", n = NUM.discarded.def} end
+  R.DEFAULT_ONLY.deck_count = function() return {id = "deck_count", v = "enhanced", op = "at_least", n = NUM.deck_count.def} end
+  R.DEFAULT_GIVE.create_rarity = function() return {id = "create_rarity", v = "Common", n = 1} end
+  R.DEFAULT_GIVE.add_to_hand = function() return {id = "add_to_hand", v = "random"} end
+  R.DEFAULT_GIVE.reset_gains = function() return {id = "reset_gains"} end
+  R.DEFAULT_GIVE.lose_discards = function() return {id = "lose_discards"} end
+
+  local function fix(list, def) return function(c) if not R.member(list, c.v) then c.v = def end end end
+  R.CLEAN_ONLY.played_rank = fix(R.RANKS, 14)
+  R.CLEAN_ONLY.played_suit = fix(R.SUITS, "Hearts")
+  R.CLEAN_ONLY.suit_and_other = fix(R.FOUR_SUITS, "Clubs")
+  R.CLEAN_ONLY.held_all = fix(R.SUITS, "black")
+  R.CLEAN_ONLY.used_kind = fix(R.USE_KINDS, "Planet")
+  R.CLEAN_ONLY.discarded = function(c)
+    if not match_ok(c.v) then c.v = "any" end
+    c.op = c.op or "at_least"
+  end
+  R.CLEAN_ONLY.deck_count = R.CLEAN_ONLY.discarded
+  R.CLEAN_GIVE.create_rarity = fix(R.RARITIES, "Common")
+  R.CLEAN_GIVE.add_to_hand = function(e)
+    if e.v ~= "random" and not R.value_ok("seal", e.v) then e.v = "random" end
+  end
+  for _, id in ipairs({"first_scored", "all_suits", "played_this_round", "most_played", "first_discard", "once_per_discard", "enhanced", "no_discard", "lowest_held"}) do
+    R.CLEAN_ONLY[id] = function(c) c.v, c.op, c.n, c.mode = nil, nil, nil, nil end
+  end
+
+  local C = R.CHECKS
+  C.enhanced = function(o, context, card, other) return other ~= nil and enhanced(other) end
+  C.first_scored = function(o, context, card, other, seed, rule)
+    local hand = context.scoring_hand
+    if not other or type(hand) ~= "table" then return false end
+    local conds = card_conds(rule, o)
+    for _, c in ipairs(hand) do
+      if c == other then return true end
+      if card_ok(conds, context, card, c, seed) then return false end
+    end
+    return false
+  end
+  C.lowest_held = function(o, context, card, other)
+    if not other or not G.hand or not G.hand.cards then return false end
+    local low, id = nil, 15
+    for _, c in ipairs(G.hand.cards) do
+      if id >= c.base.id and not (c.ability and c.ability.effect == "Stone Card") then id = c.base.id; low = c end
+    end
+    return low == other
+  end
+  C.played_rank = function(o, context)
+    for _, c in ipairs(scoring(context)) do if R.rank_ok(c, o.v) then return true end end
+    return false
+  end
+  C.played_suit = function(o, context)
+    for _, c in ipairs(scoring(context)) do if R.suit_ok(c, o.v) then return true end end
+    return false
+  end
+  C.all_suits = function(o, context)
+    local got = {}
+    local hand = scoring(context)
+    for _, c in ipairs(hand) do
+      if not is_wild(c) then
+        for _, s in ipairs(R.FOUR_SUITS) do
+          if not got[s] and c:is_suit(s, true) then got[s] = true break end
+        end
+      end
+    end
+    for _, c in ipairs(hand) do
+      if is_wild(c) then
+        for _, s in ipairs(R.FOUR_SUITS) do
+          if not got[s] and c:is_suit(s) then got[s] = true break end
+        end
+      end
+    end
+    return got.Hearts and got.Diamonds and got.Spades and got.Clubs or false
+  end
+  C.suit_and_other = function(o, context)
+    local got = {}
+    local hand = scoring(context)
+    for _, c in ipairs(hand) do
+      if not is_wild(c) then
+        for _, s in ipairs(R.FOUR_SUITS) do if c:is_suit(s) then got[s] = true end end
+      end
+    end
+    local order = {o.v}
+    for _, s in ipairs({"Diamonds", "Spades", "Hearts", "Clubs"}) do if s ~= o.v then order[#order + 1] = s end end
+    for _, c in ipairs(hand) do
+      if is_wild(c) then
+        for _, s in ipairs(order) do
+          if not got[s] and c:is_suit(s) then got[s] = true break end
+        end
+      end
+    end
+    if not got[o.v] then return false end
+    for _, s in ipairs(R.FOUR_SUITS) do if s ~= o.v and got[s] then return true end end
+    return false
+  end
+  C.held_all = function(o, context)
+    local suits = o.v == "black" and {"Spades", "Clubs"} or o.v == "red" and {"Hearts", "Diamonds"} or {o.v}
+    for _, c in ipairs(G.hand and G.hand.cards or {}) do
+      local ok = false
+      for _, s in ipairs(suits) do if c:is_suit(s, nil, true) then ok = true end end
+      if not ok then return false end
+    end
+    return true
+  end
+  local function hand_info(context)
+    local name = context.scoring_name
+    return name and G.GAME and G.GAME.hands and G.GAME.hands[name], name
+  end
+  C.played_this_round = function(o, context)
+    local h = hand_info(context)
+    return h ~= nil and (tonumber(h.played_this_round) or 0) > 1
+  end
+  C.most_played = function(o, context)
+    local h, name = hand_info(context)
+    if not h then return false end
+    local n = tonumber(h.played) or 0
+r 3 313 %20%20%20%20 -
+l 71
+      if k ~= name and v.visible and (tonumber(v.played) or 0) >= n then return false end
+    end
+    return true
+  end
+  C.first_discard = function() return (tonumber(R.round_info().discards_used) or 0) <= 0 end
+  C.once_per_discard = function(o, context, card, other)
+    local fh = context.full_hand
+    return other ~= nil and type(fh) == "table" and fh[#fh] == other
+  end
+  C.discarded = function(o, context)
+    local n = 0
+    for _, c in ipairs(type(context.full_hand) == "table" and context.full_hand or {}) do
+      if R.card_match(c, o.v) then n = n + 1 end
+    end
+    return R.compare(o.op, n, o.n)
+  end
+  C.deck_count = function(o)
+    local n = 0
+    for _, c in ipairs(G.playing_cards or {}) do
+      if R.card_match(c, o.v) then n = n + 1 end
+    end
+    return R.compare(o.op, n, o.n)
+  end
+  C.used_kind = function(o, context)
+    local c = context.consumeable
+    return c ~= nil and c.ability ~= nil and c.ability.set == o.v
+  end
+  C.no_discard = function() return (tonumber(R.round_info().discards_used) or 0) <= 0 end
+
+  R.SCORE_GIVE.var_xmult = "xmult"
+  R.AMOUNT.var_xmult = function(g, card) return 1 + g.n * R.var_val(card, g.var) end
+  R.SCORE_GIVE.rand_mult = "mult"
+  R.AMOUNT.rand_mult = function(g, card)
+    local c = card and card.config and card.config.center
+    return pseudorandom("forge_rand_" .. tostring(c and c.forge_id or "x"), 0, math.floor(tonumber(g.n) or 0))
+  end
+  R.SCORE_GIVE.rank_mult = "mult"
+  R.AMOUNT.rank_mult = function(g, card, context, other)
+    if not other or other.debuff or not other.base then return 0 end
+    return g.n * (tonumber(other.base.nominal) or 0)
+  end
+
+  local RARITY_ROLL = {Common = 0, Uncommon = 0.9, Rare = 1}
+
+  local D = R.DOS
+  D.reset_gains = function(g, card, src, context)
+    if context.blueprint then return end
+    local x = R.state(card)
+    if x.chips == 0 and x.mult == 0 and x.xmult == 1 then return end
+    x.chips, x.mult, x.xmult = 0, 0, 1
+    R.status(src, localize("k_reset"), G.C.RED)
+  end
+  D.var_money = function(g, card, src)
+    local n = g.n * R.var_val(card, g.var)
+    if n <= 0 then return end
+    ease_dollars(n)
+    R.status(src, localize("$") .. T.fmt_n(n), G.C.MONEY)
+  end
+  D.lose_discards = function(g, card, src)
+    local n = tonumber(R.round_info().discards_left) or 0
+    if n <= 0 then return end
+    ease_discard(-n, nil, true)
+  end
+  D.create_rarity = function(g, card, src)
+    local made = 0
+    for _ = 1, math.floor(tonumber(g.n) or 1) do
+      if #G.jokers.cards + (G.GAME.joker_buffer or 0) >= G.jokers.config.card_limit then break end
+      G.GAME.joker_buffer = (G.GAME.joker_buffer or 0) + 1
+      made = made + 1
+      local legendary = g.v == "Legendary"
+      local roll = RARITY_ROLL[g.v] or 0
+r 3 617 %20%20%20%20%20%20 -
+l 4
+        local c = create_card("Joker", G.jokers, legendary or nil, not legendary and roll or nil, nil, nil, nil, "forge_rar")
+        c:add_to_deck()
+        G.jokers:emplace(c)
+        c:start_materialize()
+r 3 2539 %20%20%20%20%20%20%20%20 -
+l 8
+        return true
+      end}))
+    end
+    if made > 0 then R.status(src, localize("k_plus_joker"), G.C.BLUE) end
+  end
+  D.add_to_hand = function(g, card, src)
+    if not G.hand then return end
+    local v = g.v
+r 3 617 %20%20%20%20 -
+l 563
+      local made = create_playing_card({front = pseudorandom_element(G.P_CARDS, pseudoseed("forge_hand_fr")), center = G.P_CENTERS.c_base}, G.hand, nil, nil, {G.C.SECONDARY_SET.Enhanced})
+      local seal = v
+      if seal == "random" or not R.usable("seal", seal) then
+        local roll = pseudorandom(pseudoseed("forge_hand_sl"))
+        seal = roll > 0.75 and "Red" or roll > 0.5 and "Blue" or roll > 0.25 and "Gold" or "Purple"
+      end
+      if made then
+        made:set_seal(seal, true)
+        if G.GAME.blind and G.GAME.blind.debuff_card then G.GAME.blind:debuff_card(made) end
+      end
+      if G.hand.sort then G.hand:sort() end
+      src:juice_up()
+      return true
+    end}))
+    if playing_card_joker_effects then playing_card_joker_effects({true}) end
+  end
+
+  local L = {
+    en = {
+      first_scored = "it is the {C:attention}first{} matching card to score",
+      played_rank = "the hand has a scoring {C:attention}%s{}", played_suit = "the hand has a scoring {C:%s}%s{} card", played_colour = "the hand has a scoring {C:%s}%s{} card", colour = {red = "red", black = "black"},
+      all_suits = "the hand has a {C:diamonds}Diamond{}, {C:clubs}Club{}, {C:hearts}Heart{} and {C:spades}Spade{} card",
+      suit_and_other = "the hand has a scoring {C:%s}%s{} card and a scoring card of another suit",
+      held_all = "all cards held in hand are %s",
+      played_this_round = "this {C:attention}poker hand{} was already played this round",
+      most_played = "it is your {C:attention}most played{} poker hand",
+      first_discard = "it is the {C:attention}first discard{} of the round",
+      once_per_discard = "it is the {C:attention}last{} card of the discard",
+      discarded = "the discard has %s {C:attention}%d{} %s", deck_count = "your full deck has %s {C:attention}%d{} %s",
+      used_kind = "it is a {C:%s}%s{} card", enhanced = "it has an {C:attention}enhancement{}",
+      no_discard = "no {C:red}discards{} were used this round", lowest_held = "it is the {C:attention}lowest{} ranked card held in hand",
+      reset_gains = "this joker's gains are reset", var_xmult = "{X:mult,C:white} X%s {} Mult for each {C:attention}%s{}",
+      var_money = "earn {C:money}$%s{} for each {C:attention}%s{}", rand_mult = "{C:mult}+0{} to {C:mult}+%s{} Mult",
+      rank_mult = "add {C:attention}%s{} times its rank to Mult", lose_discards = "lose all {C:red}discards{}",
+      create_rarity1 = "create a {C:%s}%s{} Joker", create_rarity = "create {C:attention}%s{} {C:%s}%s{} Jokers",
+      add_to_hand_random = "add a random card with a random {C:attention}seal{} to your hand", add_to_hand = "add a random card with a {C:attention}%s{} to your hand",
+      level_up_discard = "level up the discarded {C:attention}poker hand{}",
+      rarity = {Common = "Common", Uncommon = "Uncommon", Rare = "Rare", Legendary = "Legendary"},
+      rarities = {Common = "Common", Uncommon = "Uncommon", Rare = "Rare", Legendary = "Legendary"},
+      kinds = {Tarot = "Tarot", Planet = "Planet", Spectral = "Spectral"},
+      match = {any = "cards", enhanced = "enhanced cards", face = "face cards", number = "number cards", even = "even cards", odd = "odd cards", red = "red cards", black = "black cards"},
+      rank_cards = "%ss", suit_cards = "%s", enh_cards = "%s",
+      red_held = "{C:hearts}Hearts{} or {C:diamonds}Diamonds{}", black_held = "{C:spades}Spades{} or {C:clubs}Clubs{}",
+      face = "face card", number = "number card", even = "even card", odd = "odd card",
+    },
+    fr = {
+      first_scored = "c'est la {C:attention}première{} carte de ce type à marquer",
+      played_rank = "la main contient un {C:attention}%s{} qui marque", played_suit = "la main contient une carte de {C:%s}%s{} qui marque", played_colour = "la main contient une carte {C:%s}%s{} qui marque", colour = {red = "rouge", black = "noire"},
+      all_suits = "la main contient un {C:diamonds}Carreau{}, un {C:clubs}Trèfle{}, un {C:hearts}Cœur{} et un {C:spades}Pique{}",
+      suit_and_other = "la main contient une carte {C:%s}%s{} qui marque et une carte d'une autre couleur qui marque",
+      held_all = "toutes les cartes en main sont des %s",
+      played_this_round = "cette {C:attention}main de poker{} a déjà été jouée cette manche",
+      most_played = "c'est votre main de poker {C:attention}la plus jouée{}",
+      first_discard = "c'est la {C:attention}première défausse{} de la manche",
+      once_per_discard = "c'est la {C:attention}dernière{} carte de la défausse",
+      discarded = "la défausse contient %s {C:attention}%d{} %s", deck_count = "votre jeu complet contient %s {C:attention}%d{} %s",
+      used_kind = "c'est une carte {C:%s}%s{}", enhanced = "elle a une {C:attention}amélioration{}",
+      no_discard = "aucune {C:red}défausse{} n'a été utilisée cette manche", lowest_held = "c'est la carte de {C:attention}plus faible{} valeur en main",
+      reset_gains = "les gains de ce joker sont remis à zéro", var_xmult = "{X:mult,C:white} X%s {} Multi par {C:attention}%s{}",
+      var_money = "gagnez {C:money}%s ${} par {C:attention}%s{}", rand_mult = "{C:mult}+0{} à {C:mult}+%s{} Multi",
+      rank_mult = "ajoute {C:attention}%s{} fois sa valeur au Multi", lose_discards = "perdez toutes vos {C:red}défausses{}",
+      create_rarity1 = "crée un Joker {C:%s}%s{}", create_rarity = "crée {C:attention}%s{} Jokers {C:%s}%s{}",
+      add_to_hand_random = "ajoute à votre main une carte au hasard avec un {C:attention}sceau{} au hasard", add_to_hand = "ajoute à votre main une carte au hasard avec un {C:attention}%s{}",
+      level_up_discard = "améliore la {C:attention}main de poker{} défaussée",
+      rarity = {Common = "Commun", Uncommon = "Peu commun", Rare = "Rare", Legendary = "Légendaire"},
+      rarities = {Common = "Communs", Uncommon = "Peu communs", Rare = "Rares", Legendary = "Légendaires"},
+      kinds = {Tarot = "Tarot", Planet = "Planète", Spectral = "Spectrale"},
+      match = {any = "cartes", enhanced = "cartes améliorées", face = "figures", number = "cartes numérotées", even = "cartes paires", odd = "cartes impaires", red = "cartes rouges", black = "cartes noires"},
+      rank_cards = "cartes de valeur %s", suit_cards = "%s", enh_cards = "%s",
+      red_held = "{C:hearts}Cœurs{} ou des {C:diamonds}Carreaux{}", black_held = "{C:spades}Piques{} ou des {C:clubs}Trèfles{}",
+      face = "figure", number = "carte numérotée", even = "carte paire", odd = "carte impaire",
+    },
+    es = {
+      first_scored = "es la {C:attention}primera{} carta así en anotar",
+      played_rank = "la mano tiene un {C:attention}%s{} que anota", played_suit = "la mano tiene una carta de {C:%s}%s{} que anota", played_colour = "la mano tiene una carta {C:%s}%s{} que anota", colour = {red = "roja", black = "negra"},
+      all_suits = "la mano tiene una carta de {C:diamonds}Diamantes{}, {C:clubs}Tréboles{}, {C:hearts}Corazones{} y {C:spades}Picas{}",
+      suit_and_other = "la mano tiene una carta de {C:%s}%s{} que anota y una carta de otro palo que anota",
+      held_all = "todas las cartas en la mano son %s",
+      played_this_round = "esta {C:attention}mano de póker{} ya se jugó en esta ronda",
+      most_played = "es tu mano de póker {C:attention}más jugada{}",
+      first_discard = "es el {C:attention}primer descarte{} de la ronda",
+      once_per_discard = "es la {C:attention}última{} carta del descarte",
+      discarded = "el descarte tiene %s {C:attention}%d{} %s", deck_count = "tu baraja completa tiene %s {C:attention}%d{} %s",
+      used_kind = "es una carta de {C:%s}%s{}", enhanced = "tiene una {C:attention}mejora{}",
+      no_discard = "no se usó ningún {C:red}descarte{} en esta ronda", lowest_held = "es la carta de {C:attention}menor{} valor en la mano",
+      reset_gains = "las ganancias de este joker se reinician", var_xmult = "{X:mult,C:white} X%s {} multi por cada {C:attention}%s{}",
+      var_money = "gana {C:money}$%s{} por cada {C:attention}%s{}", rand_mult = "de {C:mult}+0{} a {C:mult}+%s{} multi",
+      rank_mult = "suma {C:attention}%s{} veces su valor al multi", lose_discards = "pierdes todos los {C:red}descartes{}",
+      create_rarity1 = "crea un joker {C:%s}%s{}", create_rarity = "crea {C:attention}%s{} jokers {C:%s}%s{}",
+      add_to_hand_random = "añade a tu mano una carta al azar con un {C:attention}sello{} al azar", add_to_hand = "añade a tu mano una carta al azar con un {C:attention}%s{}",
+      level_up_discard = "sube de nivel la {C:attention}mano de póker{} descartada",
+      rarity = {Common = "común", Uncommon = "poco común", Rare = "raro", Legendary = "legendario"},
+      rarities = {Common = "comunes", Uncommon = "poco comunes", Rare = "raros", Legendary = "legendarios"},
+      kinds = {Tarot = "Tarot", Planet = "Planeta", Spectral = "Espectral"},
+      match = {any = "cartas", enhanced = "cartas mejoradas", face = "figuras", number = "cartas numéricas", even = "cartas pares", odd = "cartas impares", red = "cartas rojas", black = "cartas negras"},
+      rank_cards = "cartas de valor %s", suit_cards = "%s", enh_cards = "%s",
+      red_held = "{C:hearts}Corazones{} o {C:diamonds}Diamantes{}", black_held = "{C:spades}Picas{} o {C:clubs}Tréboles{}",
+      face = "figura", number = "carta numérica", even = "carta par", odd = "carta impar",
+    },
+  }
+  R.BLOCK_TEXT = L
+  for lang, t in pairs(L) do
+    if T.S[lang] then T.S[lang].level_up_discard = t.level_up_discard end
+  end
+
+  local SUIT_COL = {Hearts = "hearts", Diamonds = "diamonds", Spades = "spades", Clubs = "clubs", red = "red", black = "spades"}
+  local KIND_COL = {Tarot = "tarot", Planet = "planet", Spectral = "spectral"}
+  local RARITY_COL = {Common = "blue", Uncommon = "green", Rare = "red", Legendary = "legendary"}
+
+  local function lt(lang) return L[lang] or L.en end
+  local function op_word(s, o) return s[o.op or "at_least"] or s.at_least end
+
+  function R.match_label(v, lang, plural)
+    local l = lt(lang)
+    if l.match[v] then return l.match[v] end
+    if tonumber(v) then return string.format(l.rank_cards, T.rank_name(v, lang)) end
+    if R.member(R.FOUR_SUITS, v) then return string.format(l.suit_cards, T.suit_name(v, true)) end
+    return string.format(l.enh_cards, T.enh_name(v))
+  end
+
+  local TO = R.TEXT_ONLY
+  for _, id in ipairs({"first_scored", "all_suits", "played_this_round", "most_played", "first_discard", "once_per_discard", "enhanced", "no_discard", "lowest_held"}) do
+    TO[id] = function(o, s, lang) return lt(lang)[id] end
+  end
+  TO.played_rank = function(o, s, lang)
+    local l = lt(lang)
+    local name = l[o.v] or T.rank_name(o.v, lang)
+    return string.format(l.played_rank, name)
+  end
+  TO.played_suit = function(o, s, lang)
+    local l = lt(lang)
+    if o.v == "red" or o.v == "black" then return string.format(l.played_colour, SUIT_COL[o.v], l.colour[o.v]) end
+    return string.format(l.played_suit, SUIT_COL[o.v] or "attention", T.suit_name(o.v))
+  end
+  TO.suit_and_other = function(o, s, lang) return string.format(lt(lang).suit_and_other, SUIT_COL[o.v] or "attention", T.suit_name(o.v)) end
+  TO.held_all = function(o, s, lang)
+    local l = lt(lang)
+    local what = o.v == "red" and l.red_held or o.v == "black" and l.black_held or string.format("{C:%s}%s{}", SUIT_COL[o.v] or "attention", T.suit_name(o.v, true))
+    return string.format(l.held_all, what)
+  end
+  TO.discarded = function(o, s, lang) return string.format(lt(lang).discarded, op_word(s, o), tonumber(o.n) or 0, R.match_label(o.v, lang)) end
+  TO.deck_count = function(o, s, lang) return string.format(lt(lang).deck_count, op_word(s, o), tonumber(o.n) or 0, R.match_label(o.v, lang)) end
+  TO.used_kind = function(o, s, lang) return string.format(lt(lang).used_kind, KIND_COL[o.v] or "tarot", lt(lang).kinds[o.v] or o.v) end
+
+  local TG = R.TEXT_GIVE
+  TG.reset_gains = function(g, s, lang) return lt(lang).reset_gains end
+  TG.lose_discards = function(g, s, lang) return lt(lang).lose_discards end
+  TG.var_xmult = function(g, s, lang, vars) return string.format(lt(lang).var_xmult, T.fmt_n(g.n), T.var_name(vars, g.var)) end
+  TG.var_money = function(g, s, lang, vars) return string.format(lt(lang).var_money, T.fmt_n(g.n), T.var_name(vars, g.var)) end
+  TG.rand_mult = function(g, s, lang) return string.format(lt(lang).rand_mult, T.fmt_n(g.n)) end
+  TG.rank_mult = function(g, s, lang) return string.format(lt(lang).rank_mult, T.fmt_n(g.n)) end
+  TG.create_rarity = function(g, s, lang)
+    local l = lt(lang)
+    local n = math.floor(tonumber(g.n) or 1)
+    if n <= 1 then return string.format(l.create_rarity1, RARITY_COL[g.v] or "blue", l.rarity[g.v] or g.v) end
+    return string.format(l.create_rarity, n, RARITY_COL[g.v] or "blue", l.rarities[g.v] or g.v)
+  end
+  TG.add_to_hand = function(g, s, lang)
+    local l = lt(lang)
+    if g.v == "random" then return l.add_to_hand_random end
+    return string.format(l.add_to_hand, T.seal_name(g.v))
+  end
+
+  local LO, LG = R.LABEL_ONLY, R.LABEL_GIVE
+  LO.first_scored, LO.played_rank, LO.played_suit, LO.all_suits = "First to score", "Hand has a rank", "Hand has a suit", "Hand has every suit"
+  LO.suit_and_other, LO.held_all, LO.played_this_round, LO.most_played = "A suit and another suit", "All held cards are", "Hand already played", "Most played hand"
+  LO.first_discard, LO.once_per_discard, LO.discarded, LO.used_kind = "First discard", "Once per discard", "Cards discarded", "Consumable type"
+  LO.enhanced, LO.deck_count, LO.no_discard, LO.lowest_held = "Has an enhancement", "Cards in full deck", "No discard used", "Lowest held card"
+  LG.reset_gains, LG.var_xmult, LG.var_money, LG.rand_mult = "Reset its gains", "XMult for each point", "Money for each point", "Random Mult"
+  LG.rank_mult, LG.lose_discards, LG.create_rarity, LG.add_to_hand = "Mult from its rank", "Lose all discards", "Create a Joker by rarity", "Add a card to hand"
+  R.FILTER_ONLY.discarded = true
+  R.FILTER_ONLY.deck_count = true
+  R.SIMPLE_ONLY.played_suit = true
+  R.SIMPLE_ONLY.played_rank = true
+  R.SIMPLE_GIVE.rand_mult = true
+  R.SIMPLE_GIVE.create_rarity = true
+
+  if mod_loc_register then
+    mod_loc_register{
+      fr = {
+        ["First to score"] = "Première à marquer", ["Hand has a rank"] = "La main a une valeur", ["Hand has a suit"] = "La main a une couleur", ["Hand has every suit"] = "La main a toutes les couleurs",
+        ["A suit and another suit"] = "Une couleur et une autre", ["All held cards are"] = "Toutes les cartes en main", ["Hand already played"] = "Main déjà jouée", ["Most played hand"] = "Main la plus jouée",
+        ["First discard"] = "Première défausse", ["Once per discard"] = "Une fois par défausse", ["Cards discarded"] = "Cartes défaussées", ["Consumable type"] = "Type de consommable",
+        ["Has an enhancement"] = "A une amélioration", ["Cards in full deck"] = "Cartes du jeu complet", ["No discard used"] = "Aucune défausse utilisée", ["Lowest held card"] = "Plus faible carte en main",
+        ["Reset its gains"] = "Remet ses gains à zéro", ["XMult for each point"] = "XMulti par point", ["Money for each point"] = "Argent par point", ["Random Mult"] = "Multi au hasard",
+        ["Mult from its rank"] = "Multi selon sa valeur", ["Lose all discards"] = "Perd toutes les défausses", ["Create a Joker by rarity"] = "Crée un Joker d'une rareté", ["Add a card to hand"] = "Ajoute une carte en main",
+        ["XMult for each %s"] = "XMulti par %s", ["Money for each %s"] = "Argent par %s", ["WHICH CARDS?"] = "QUELLES CARTES ?", ["Random seal"] = "Sceau au hasard",
+        ["Any card"] = "N'importe quelle carte", ["Enhanced card"] = "Carte améliorée", ["Common"] = "Commun", ["Uncommon"] = "Peu commun", ["Rare"] = "Rare", ["Legendary"] = "Légendaire",
+      },
+      es = {
+        ["First to score"] = "Primera en anotar", ["Hand has a rank"] = "La mano tiene un valor", ["Hand has a suit"] = "La mano tiene un palo", ["Hand has every suit"] = "La mano tiene todos los palos",
+        ["A suit and another suit"] = "Un palo y otro palo", ["All held cards are"] = "Todas las cartas en mano", ["Hand already played"] = "Mano ya jugada", ["Most played hand"] = "Mano más jugada",
+        ["First discard"] = "Primer descarte", ["Once per discard"] = "Una vez por descarte", ["Cards discarded"] = "Cartas descartadas", ["Consumable type"] = "Tipo de consumible",
+        ["Has an enhancement"] = "Tiene una mejora", ["Cards in full deck"] = "Cartas de la baraja completa", ["No discard used"] = "Ningún descarte usado", ["Lowest held card"] = "Carta más baja en mano",
+        ["Reset its gains"] = "Reinicia sus ganancias", ["XMult for each point"] = "XMulti por punto", ["Money for each point"] = "Dinero por punto", ["Random Mult"] = "Multi al azar",
+        ["Mult from its rank"] = "Multi según su valor", ["Lose all discards"] = "Pierde todos los descartes", ["Create a Joker by rarity"] = "Crea un joker por rareza", ["Add a card to hand"] = "Añade una carta a la mano",
+        ["XMult for each %s"] = "XMulti por cada %s", ["Money for each %s"] = "Dinero por cada %s", ["WHICH CARDS?"] = "¿QUÉ CARTAS?", ["Random seal"] = "Sello al azar",
+        ["Any card"] = "Cualquier carta", ["Enhanced card"] = "Carta mejorada", ["Common"] = "Común", ["Uncommon"] = "Poco común", ["Rare"] = "Raro", ["Legendary"] = "Legendario",
+      },
+    }
+  end
+  R.COUNTS = {"jokers", "empty_slots", "consumables", "deck_left", "deck_match", "held_match", "scoring_match", "destroyed_match", "discards_left", "hands_left", "money", "money_5", "sell_others", "times_played", "planets_used", "hands_run", "discards_unused", "below_deck"}
+  R.COUNT_MATCH = {deck_match = true, held_match = true, scoring_match = true, destroyed_match = true}
+  R.COUNT_WHEN = {scoring_match = HAND, times_played = HAND, destroyed_match = {cards_destroyed = true}}
+  R.PER_GIVE = {chips_per = "chips", mult_per = "mult", xmult_per = "xmult", money_per = "money", gain_mult_per = "gain_mult", gain_xmult_per = "gain_xmult"}
+
+  function R.count_ok(when, per)
+    if not R.member(R.COUNTS, per) then return false end
+    return not R.COUNT_WHEN[per] or R.COUNT_WHEN[per][when] or false
+  end
+
+  local function each(list, v, skip_debuff)
+    local n = 0
+    for _, c in ipairs(list or {}) do
+      if not (skip_debuff and c.debuff) and R.card_match(c, v) then n = n + 1 end
+    end
+    return n
+  end
+
+  local function dollars() return math.max(0, (G.GAME and G.GAME.dollars or 0) + (G.GAME and G.GAME.dollar_buffer or 0)) end
+
+  local COUNT = {
+    jokers = function() return R.count_area(G.jokers) end,
+    empty_slots = function() return math.max(0, (G.jokers and G.jokers.config and G.jokers.config.card_limit or 0) - R.count_area(G.jokers)) end,
+    consumables = function() return R.count_area(G.consumeables) end,
+    deck_left = function() return R.count_area(G.deck) end,
+    deck_match = function(g) return each(G.playing_cards, g.m) end,
+    held_match = function(g) return each(G.hand and G.hand.cards, g.m) end,
+    scoring_match = function(g, card, context) return each(context.scoring_hand, g.m, true) end,
+    destroyed_match = function(g, card, context) return each(type(context.removed) == "table" and context.removed, g.m) end,
+    discards_left = function() return tonumber(R.round_info().discards_left) or 0 end,
+    hands_left = function() return tonumber(R.round_info().hands_left) or 0 end,
+    money = function() return dollars() end,
+    money_5 = function() return math.floor(dollars() / 5) end,
+    sell_others = function(g, card)
+      local n = 0
+      for _, j in ipairs(G.jokers and G.jokers.cards or {}) do
+        if j ~= card then n = n + (tonumber(j.sell_cost) or 0) end
+      end
+      return n
+    end,
+    times_played = function(g, card, context)
+      local h = context.scoring_name and G.GAME.hands and G.GAME.hands[context.scoring_name]
+      return h and tonumber(h.played) or 0
+    end,
+    planets_used = function()
+      local n = 0
+      for _, v in pairs(G.GAME and G.GAME.consumeable_usage or {}) do
+        if type(v) == "table" and v.set == "Planet" then n = n + 1 end
+      end
+      return n
+    end,
+    hands_run = function() return tonumber(G.GAME and G.GAME.hands_played) or 0 end,
+    discards_unused = function() return tonumber(G.GAME and G.GAME.unused_discards) or 0 end,
+    below_deck = function() return math.max(0, (tonumber(G.GAME and G.GAME.starting_deck_size) or 52) - #(G.playing_cards or {})) end,
+  }
+  R.COUNT = COUNT
+
+  function R.count_of(g, card, context)
+    local f = COUNT[g.per]
+    if not f then return 0 end
+    local ok, n = pcall(f, g, card, context or {})
+    return ok and tonumber(n) or 0
+  end
+
+  local NUM2 = {
+    chips_per = {def = 2, lo = 1, hi = R.BIG, step = 1, big = 10},
+    mult_per = {def = 1, lo = 1, hi = R.BIG, step = 1, big = 5},
+    xmult_per = {def = 0.2, lo = 0.01, hi = R.BIG, step = 0.01, big = 1},
+    money_per = {def = 1, lo = 1, hi = R.BIG, step = 1, big = 5},
+    gain_mult_per = {def = 1, lo = 1, hi = R.BIG, step = 1, big = 5},
+    gain_xmult_per = {def = 0.1, lo = 0.01, hi = R.BIG, step = 0.01, big = 1},
+  }
+  for k, v in pairs(NUM2) do R.NUM[k] = v end
+  add_ids(R.GIVE, {"chips_per", "mult_per", "xmult_per", "money_per", "gain_mult_per", "gain_xmult_per", "strip_enh"})
+  R.GIVE_WHEN.chips_per = {card_scored = true, hand_played = true}
+  R.GIVE_WHEN.mult_per = SCORE
+  R.GIVE_WHEN.xmult_per = SCORE
+  R.GIVE_WHEN.strip_enh = {before = true}
+  for _, id in ipairs({"chips_per", "mult_per", "xmult_per", "gain_mult_per", "gain_xmult_per"}) do R.HOST_GIVE[id] = ALL3 end
+  R.HOST_GIVE.strip_enh = {joker = true, run = true}
+
+  local DEF_PER = {chips_per = "discards_left", mult_per = "jokers", xmult_per = "deck_match", money_per = "discards_left", gain_mult_per = "jokers", gain_xmult_per = "destroyed_match"}
+  for id, per in pairs(DEF_PER) do
+    R.DEFAULT_GIVE[id] = function()
+      local g = {id = id, n = NUM2[id].def, per = per}
+      if R.COUNT_MATCH[per] then g.m = id == "gain_xmult_per" and "m_glass" or "m_steel" end
+      return g
+    end
+    R.CLEAN_GIVE[id] = function(e, when)
+      e.per = R.member(R.COUNTS, e.per) and e.per or "jokers"
+      if when and not R.count_ok(when, e.per) then e.per = "jokers" end
+      if R.COUNT_MATCH[e.per] then
+        if not match_ok(e.m) then e.m = "any" end
+      else
+        e.m = nil
+      end
+    end
+  end
+  R.DEFAULT_GIVE.strip_enh = function() return {id = "strip_enh"} end
+
+  for id, kind in pairs({chips_per = "chips", mult_per = "mult"}) do
+    R.SCORE_GIVE[id] = kind
+    R.AMOUNT[id] = function(g, card, context) return g.n * R.count_of(g, card, context) end
+  end
+  R.SCORE_GIVE.xmult_per = "xmult"
+  R.AMOUNT.xmult_per = function(g, card, context) return 1 + g.n * R.count_of(g, card, context) end
+
+  D.money_per = function(g, card, src, context, other, out)
+    local n = g.n * R.count_of(g, card, context)
+    if n <= 0 then return end
+    if out.card_ctx and out.when == "card_scored" then
+      out.ret.dollars = (out.ret.dollars or 0) + n
+    else
+      ease_dollars(n)
+      R.status(src, localize("$") .. T.fmt_n(n), G.C.MONEY)
+    end
+  end
+  local function gain_per(field)
+    return function(g, card, src, context)
+      if context.blueprint then return end
+      local n = g.n * R.count_of(g, card, context)
+      if n <= 0 then return end
+      local x = R.state(card)
+      if field == "xmult" then x.xmult = math.floor((x.xmult + n) * 100 + 0.5) / 100 else x.mult = x.mult + n end
+      R.status(src, localize("k_upgrade_ex"), G.C.MULT)
+    end
+  end
+  D.gain_mult_per = gain_per("mult")
+  D.gain_xmult_per = gain_per("xmult")
+  D.strip_enh = function(g, card, src, context)
+    if context.blueprint then return end
+    local any = false
+    for _, c in ipairs(context.scoring_hand or {}) do
+      if not c.debuff and enhanced(c) and not c.forge_stripped then
+        c.forge_stripped = true
+        any = true
+        c:set_ability(G.P_CENTERS.c_base, nil, true)
+        G.E_MANAGER:add_event(Event({func = function() c:juice_up(); c.forge_stripped = nil; return true end}))
+      end
+    end
+    if any then R.status(src, localize("k_upgrade_ex"), G.C.MULT) end
+  end
+
+  local P = {
+    en = {
+      chips_per = "{C:chips}+%s{} Chips for each %s", mult_per = "{C:mult}+%s{} Mult for each %s", xmult_per = "{X:mult,C:white} X%s {} Mult for each %s",
+      money_per = "earn {C:money}$%s{} for each %s", gain_mult_per = "this joker gains {C:mult}+%s{} Mult for each %s", gain_xmult_per = "this joker gains {X:mult,C:white} X%s {} Mult for each %s",
+      strip_enh = "scoring cards lose their {C:attention}enhancement{}",
+      counts = {jokers = "{C:attention}Joker{} you have", empty_slots = "empty {C:attention}Joker{} slot", consumables = "{C:attention}consumable{} you have", deck_left = "card left in your {C:attention}deck{}",
+        deck_match = "%s in your {C:attention}full deck{}", held_match = "%s held in hand", scoring_match = "scoring %s", destroyed_match = "destroyed %s",
+        discards_left = "{C:red}discard{} left", hands_left = "{C:blue}hand{} left", money = "{C:money}$1{} you have", money_5 = "{C:money}$5{} you have",
+        sell_others = "{C:money}$1{} of sell value of your other {C:attention}Jokers{}", times_played = "time this {C:attention}poker hand{} was played",
+        planets_used = "different {C:planet}Planet{} card used this run", hands_run = "hand played this run", discards_unused = "{C:red}discard{} left unused this run",
+        below_deck = "card below your starting deck size"},
+      one = {any = "card", enhanced = "{C:attention}enhanced{} card", face = "{C:attention}face{} card", number = "{C:attention}number{} card", even = "{C:attention}even{} card", odd = "{C:attention}odd{} card", red = "{C:red}red{} card", black = "{C:spades}black{} card"},
+      one_rank = "{C:attention}%s{}", one_suit = "{C:%s}%s{} card", one_enh = "{C:attention}%s{}",
+    },
+    fr = {
+      chips_per = "{C:chips}+%s{} jetons par %s", mult_per = "{C:mult}+%s{} Multi par %s", xmult_per = "{X:mult,C:white} X%s {} Multi par %s",
+      money_per = "gagnez {C:money}%s ${} par %s", gain_mult_per = "ce joker gagne {C:mult}+%s{} Multi par %s", gain_xmult_per = "ce joker gagne {X:mult,C:white} X%s {} Multi par %s",
+      strip_enh = "les cartes qui marquent perdent leur {C:attention}amélioration{}",
+      counts = {jokers = "{C:attention}Joker{} possédé", empty_slots = "emplacement de {C:attention}Joker{} vide", consumables = "{C:attention}consommable{} possédé", deck_left = "carte restante dans votre {C:attention}jeu{}",
+        deck_match = "%s de votre {C:attention}jeu complet{}", held_match = "%s en main", scoring_match = "%s qui marque", destroyed_match = "%s détruite",
+        discards_left = "{C:red}défausse{} restante", hands_left = "{C:blue}main{} restante", money = "{C:money}1 ${} possédé", money_5 = "tranche de {C:money}5 ${} possédée",
+        sell_others = "{C:money}1 ${} de valeur de vente de vos autres {C:attention}Jokers{}", times_played = "fois où cette {C:attention}main de poker{} a été jouée",
+        planets_used = "carte {C:planet}Planète{} différente utilisée dans la partie", hands_run = "main jouée dans la partie", discards_unused = "{C:red}défausse{} non utilisée dans la partie",
+        below_deck = "carte en dessous de la taille de départ du jeu"},
+      one = {any = "carte", enhanced = "carte {C:attention}améliorée{}", face = "{C:attention}figure{}", number = "carte {C:attention}numérotée{}", even = "carte {C:attention}paire{}", odd = "carte {C:attention}impaire{}", red = "carte {C:red}rouge{}", black = "carte {C:spades}noire{}"},
+      one_rank = "carte de valeur {C:attention}%s{}", one_suit = "carte de {C:%s}%s{}", one_enh = "{C:attention}%s{}",
+    },
+    es = {
+      chips_per = "{C:chips}+%s{} fichas por cada %s", mult_per = "{C:mult}+%s{} multi por cada %s", xmult_per = "{X:mult,C:white} X%s {} multi por cada %s",
+      money_per = "gana {C:money}$%s{} por cada %s", gain_mult_per = "este joker gana {C:mult}+%s{} multi por cada %s", gain_xmult_per = "este joker gana {X:mult,C:white} X%s {} multi por cada %s",
+      strip_enh = "las cartas que anotan pierden su {C:attention}mejora{}",
+      counts = {jokers = "{C:attention}joker{} que tienes", empty_slots = "espacio de {C:attention}joker{} vacío", consumables = "{C:attention}consumible{} que tienes", deck_left = "carta que queda en tu {C:attention}baraja{}",
+        deck_match = "%s de tu {C:attention}baraja completa{}", held_match = "%s en la mano", scoring_match = "%s que anota", destroyed_match = "%s destruida",
+        discards_left = "{C:red}descarte{} restante", hands_left = "{C:blue}mano{} restante", money = "{C:money}$1{} que tienes", money_5 = "{C:money}$5{} que tienes",
+        sell_others = "{C:money}$1{} de valor de venta de tus otros {C:attention}jokers{}", times_played = "vez que se jugó esta {C:attention}mano de póker{}",
+        planets_used = "carta de {C:planet}Planeta{} distinta usada en la partida", hands_run = "mano jugada en la partida", discards_unused = "{C:red}descarte{} sin usar en la partida",
+        below_deck = "carta por debajo del tamaño inicial de la baraja"},
+      one = {any = "carta", enhanced = "carta {C:attention}mejorada{}", face = "{C:attention}figura{}", number = "carta {C:attention}numérica{}", even = "carta {C:attention}par{}", odd = "carta {C:attention}impar{}", red = "carta {C:red}roja{}", black = "carta {C:spades}negra{}"},
+      one_rank = "carta de valor {C:attention}%s{}", one_suit = "carta de {C:%s}%s{}", one_enh = "{C:attention}%s{}",
+    },
+  }
+  R.PER_TEXT = P
+  local function pt(lang) return P[lang] or P.en end
+
+  function R.one_label(v, lang)
+    local p = pt(lang)
+    if p.one[v] then return p.one[v] end
+    if tonumber(v) then return string.format(p.one_rank, T.rank_name(v, lang)) end
+    if R.member(R.FOUR_SUITS, v) then return string.format(p.one_suit, SUIT_COL[v], T.suit_name(v)) end
+    return string.format(p.one_enh, T.enh_name(v))
+  end
+
+  function R.count_label(g, lang)
+    local p = pt(lang)
+    local base = p.counts[g.per] or p.counts.jokers
+    if R.COUNT_MATCH[g.per] then return string.format(base, R.one_label(g.m or "any", lang)) end
+    return base
+  end
+
+  for id in pairs(R.PER_GIVE) do
+    TG[id] = function(g, s, lang) return string.format(pt(lang)[id], T.fmt_n(g.n), R.count_label(g, lang)) end
+  end
+  TG.strip_enh = function(g, s, lang) return pt(lang).strip_enh end
+
+  LG.chips_per, LG.mult_per, LG.xmult_per, LG.money_per = "+Chips for each", "+Mult for each", "XMult for each", "Money for each"
+  LG.gain_mult_per, LG.gain_xmult_per, LG.strip_enh = "Gains Mult for each", "Gains XMult for each", "Remove enhancements"
+  R.LABEL_COUNT = {jokers = "Joker you have", empty_slots = "Empty Joker slot", consumables = "Consumable you have", deck_left = "Card left in deck",
+    deck_match = "Card in full deck", held_match = "Card held in hand", scoring_match = "Scoring card", destroyed_match = "Destroyed card",
+    discards_left = "Discard left", hands_left = "Hand left", money = "$1 you have", money_5 = "$5 you have", sell_others = "$1 of other Jokers' sell value",
+    times_played = "Time this hand was played", planets_used = "Planet used this run", hands_run = "Hand played this run", discards_unused = "Discard unused this run", below_deck = "Card below starting deck size"}
+  R.SIMPLE_GIVE.mult_per = true
+  R.SIMPLE_GIVE.chips_per = true
+
+  if mod_loc_register then
+    mod_loc_register{
+      fr = {
+        ["+Chips for each"] = "+Jetons par", ["+Mult for each"] = "+Multi par", ["XMult for each"] = "XMulti par", ["Money for each"] = "Argent par",
+        ["Gains Mult for each"] = "Gagne du Multi par", ["Gains XMult for each"] = "Gagne du XMulti par", ["Remove enhancements"] = "Retire les améliorations", ["FOR EACH WHAT?"] = "PAR QUOI ?",
+        ["Joker you have"] = "Joker possédé", ["Empty Joker slot"] = "Emplacement de Joker vide", ["Consumable you have"] = "Consommable possédé", ["Card left in deck"] = "Carte restante du jeu",
+        ["Card in full deck"] = "Carte du jeu complet", ["Card held in hand"] = "Carte en main", ["Scoring card"] = "Carte qui marque", ["Destroyed card"] = "Carte détruite",
+        ["Discard left"] = "Défausse restante", ["Hand left"] = "Main restante", ["$1 you have"] = "1 $ possédé", ["$5 you have"] = "5 $ possédés", ["$1 of other Jokers' sell value"] = "1 $ de vente des autres Jokers",
+        ["Time this hand was played"] = "Fois où la main a été jouée", ["Planet used this run"] = "Planète utilisée dans la partie", ["Hand played this run"] = "Main jouée dans la partie", ["Discard unused this run"] = "Défausse non utilisée dans la partie", ["Card below starting deck size"] = "Carte sous la taille de départ",
+      },
+      es = {
+        ["+Chips for each"] = "+Fichas por cada", ["+Mult for each"] = "+Multi por cada", ["XMult for each"] = "XMulti por cada", ["Money for each"] = "Dinero por cada",
+        ["Gains Mult for each"] = "Gana multi por cada", ["Gains XMult for each"] = "Gana XMulti por cada", ["Remove enhancements"] = "Quita las mejoras", ["FOR EACH WHAT?"] = "¿POR CADA QUÉ?",
+        ["Joker you have"] = "Joker que tienes", ["Empty Joker slot"] = "Espacio de joker vacío", ["Consumable you have"] = "Consumible que tienes", ["Card left in deck"] = "Carta que queda en la baraja",
+        ["Card in full deck"] = "Carta de la baraja completa", ["Card held in hand"] = "Carta en la mano", ["Scoring card"] = "Carta que anota", ["Destroyed card"] = "Carta destruida",
+        ["Discard left"] = "Descarte restante", ["Hand left"] = "Mano restante", ["$1 you have"] = "$1 que tienes", ["$5 you have"] = "$5 que tienes", ["$1 of other Jokers' sell value"] = "$1 de venta de otros jokers",
+        ["Time this hand was played"] = "Vez que se jugó la mano", ["Planet used this run"] = "Planeta usado en la partida", ["Hand played this run"] = "Mano jugada en la partida", ["Discard unused this run"] = "Descarte sin usar en la partida", ["Card below starting deck size"] = "Carta bajo el tamaño inicial",
+      },
+    }
+  end
+  local RANK_KEY = {[14] = "Ace", [13] = "King", [12] = "Queen", [11] = "Jack"}
+
+  function R.round_target()
+    local g = G and G.GAME
+    if not g then return {suit = "Spades", rank = 14, hand = "High Card", card = {suit = "Spades", rank = 14}} end
+    local cur = g.forge_target
+    local round = tonumber(g.round) or 0
+    if type(cur) == "table" and cur.round == round then return cur end
+    local prev = type(cur) == "table" and cur or {}
+    local seed = "forge_target" .. round
+    local suits = {}
+    for _, s in ipairs(R.FOUR_SUITS) do if s ~= prev.suit then suits[#suits + 1] = s end end
+    local cards = {}
+    for _, c in ipairs(G.playing_cards or {}) do
+      if c.base and c.base.id and not (c.ability and c.ability.effect == "Stone Card") then cards[#cards + 1] = c end
+    end
+    local hands = {}
+    for _, h in ipairs(R.HANDS) do
+      local info = g.hands and g.hands[h]
+      if info and info.visible and h ~= prev.hand then hands[#hands + 1] = h end
+    end
+    local fallback = false
+    local pick = function(list, s)
+      if #list == 0 then return nil end
+      local ok, v = pcall(function() return pseudorandom_element(list, pseudoseed(s)) end)
+      if not ok then fallback = true return nil end
+      return v
+    end
+    local a, b = pick(cards, seed .. "r"), pick(cards, seed .. "c")
+    local out = {round = round}
+    out.suit = pick(suits, seed .. "s") or "Spades"
+    out.rank = a and a.base.id or 14
+    out.hand = pick(hands, seed .. "h") or "High Card"
+    out.card = b and {suit = b.base.suit, rank = b.base.id} or {suit = "Spades", rank = 14}
+    if fallback or not G.STAGE or not G.STAGES or G.STAGE ~= G.STAGES.RUN then return out end
+    g.forge_target = out
+    return out
+  end
+
+  local OF = {en = "%s of %s", fr = "%s de %s", es = "%s de %s"}
+  local function cur_lang()
+    local l = G and G.SETTINGS and G.SETTINGS.language or "en"
+    if l:sub(1, 2) == "fr" then return "fr" end
+    if l:sub(1, 2) == "es" then return "es" end
+    return "en"
+  end
+  local function rank_text(n)
+    local key = RANK_KEY[n] or tostring(n)
+    local ok, r = pcall(localize, key, "ranks")
+    if ok and type(r) == "string" and r ~= "" and r ~= "ERROR" then return r end
+    return T.rank_name(n, cur_lang())
+  end
+
+  function R.target_vars()
+    local t = R.round_target()
+    local lang = cur_lang()
+    return {T.suit_name(t.suit), rank_text(t.rank), T.hand_name(t.hand), string.format(OF[lang], rank_text(t.card.rank), T.suit_name(t.card.suit, true))}
+  end
+
+  add_ids(R.ONLY, {"round_suit", "round_rank", "round_card", "round_hand"})
+  R.CARD_ONLY.round_suit = true
+  R.CARD_ONLY.round_rank = true
+  R.CARD_ONLY.round_card = true
+  R.ONLY_WHEN.round_hand = HAND
+  for _, id in ipairs({"round_suit", "round_rank", "round_card", "round_hand"}) do
+    R.CLEAN_ONLY[id] = function(c) c.v, c.op, c.n, c.mode = nil, nil, nil, nil end
+  end
+  C.round_suit = function(o, context, card, other) return other ~= nil and other:is_suit(R.round_target().suit) end
+  C.round_rank = function(o, context, card, other) return other ~= nil and other:get_id() == R.round_target().rank end
+  C.round_card = function(o, context, card, other)
+    local t = R.round_target().card
+    return other ~= nil and other:get_id() == t.rank and other:is_suit(t.suit)
+  end
+  C.round_hand = function(o, context) return context.scoring_name ~= nil and context.scoring_name == R.round_target().hand end
+
+  local RT = {
+    en = {round_suit = "it is of {C:attention}this round's suit{} ({C:attention}#9#{})", round_rank = "its rank is {C:attention}this round's rank{} ({C:attention}#10#{})",
+      round_card = "it is {C:attention}this round's card{} ({C:attention}#12#{})", round_hand = "the hand is {C:attention}this round's poker hand{} ({C:attention}#11#{})",
+      changes = "{C:inactive}(Changes every round){}"},
+    fr = {round_suit = "elle est de {C:attention}la couleur de la manche{} ({C:attention}#9#{})", round_rank = "sa valeur est {C:attention}la valeur de la manche{} ({C:attention}#10#{})",
+      round_card = "c'est {C:attention}la carte de la manche{} ({C:attention}#12#{})", round_hand = "la main est {C:attention}la main de poker de la manche{} ({C:attention}#11#{})",
+      changes = "{C:inactive}(Change à chaque manche){}"},
+    es = {round_suit = "es del {C:attention}palo de la ronda{} ({C:attention}#9#{})", round_rank = "su valor es {C:attention}el valor de la ronda{} ({C:attention}#10#{})",
+      round_card = "es {C:attention}la carta de la ronda{} ({C:attention}#12#{})", round_hand = "la mano es {C:attention}la mano de póker de la ronda{} ({C:attention}#11#{})",
+      changes = "{C:inactive}(Cambia cada ronda){}"},
+  }
+  R.TARGET_TEXT = RT
+  for _, id in ipairs({"round_suit", "round_rank", "round_card", "round_hand"}) do
+    TO[id] = function(o, s, lang) return (RT[lang] or RT.en)[id] end
+  end
+  LO.round_suit, LO.round_rank, LO.round_card, LO.round_hand = "This round's suit", "This round's rank", "This round's card", "This round's poker hand"
+
+  if mod_loc_register then
+    mod_loc_register{
+      fr = {["This round's suit"] = "Couleur de la manche", ["This round's rank"] = "Valeur de la manche", ["This round's card"] = "Carte de la manche", ["This round's poker hand"] = "Main de poker de la manche"},
+      es = {["This round's suit"] = "Palo de la ronda", ["This round's rank"] = "Valor de la ronda", ["This round's card"] = "Carta de la ronda", ["This round's poker hand"] = "Mano de póker de la ronda"},
+    }
+  end
+  add_ids(R.ONLY, {"lucky_hit", "boss_triggered"})
+  R.CARD_ONLY.lucky_hit = true
+  R.ONLY_WHEN.lucky_hit = {card_scored = true}
+  R.ONLY_WHEN.boss_triggered = HAND
+  for _, id in ipairs({"lucky_hit", "boss_triggered"}) do
+    R.CLEAN_ONLY[id] = function(c) c.v, c.op, c.n, c.mode = nil, nil, nil, nil end
+  end
+  C.lucky_hit = function(o, context, card, other) return other ~= nil and other.lucky_trigger and true or false end
+  C.boss_triggered = function()
+    local b = G.GAME and G.GAME.blind
+    return b ~= nil and b.boss and b.triggered and true or false
+  end
+  local LT = {
+    en = {lucky_hit = "its {C:attention}Lucky{} effect triggered", boss_triggered = "the {C:attention}Boss Blind{} ability was triggered"},
+    fr = {lucky_hit = "son effet {C:attention}Chance{} s'est déclenché", boss_triggered = "l'effet de la {C:attention}Blinde de boss{} s'est déclenché"},
+    es = {lucky_hit = "su efecto de {C:attention}Suerte{} se activó", boss_triggered = "la habilidad de la {C:attention}ciega jefe{} se activó"},
+  }
+  for _, id in ipairs({"lucky_hit", "boss_triggered"}) do
+    TO[id] = function(o, s, lang) return (LT[lang] or LT.en)[id] end
+  end
+  LO.lucky_hit, LO.boss_triggered = "Lucky effect triggered", "Boss ability triggered"
+  if mod_loc_register then
+    mod_loc_register{
+      fr = {["Lucky effect triggered"] = "Effet Chance déclenché", ["Boss ability triggered"] = "Effet du boss déclenché"},
+      es = {["Lucky effect triggered"] = "Efecto de Suerte activado", ["Boss ability triggered"] = "Habilidad del jefe activada"},
+    }
+  end
+end
+end

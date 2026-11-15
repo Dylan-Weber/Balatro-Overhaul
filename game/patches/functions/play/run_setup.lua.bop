@@ -1,0 +1,750 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 569
+RunSetup = RunSetup or {}
+local RS = RunSetup
+
+RS.page = RS.page or {}
+RS.view = RS.view or {}
+
+local function L(s) return mod_loc and mod_loc(s) or s end
+local function PM() return rawget(_G, 'PlayMenu') end
+local function lib() local P = PM() return P and P.lib end
+local function sel() return PM().sel end
+
+local function T(text, scale, colour, shadow)
+  return {n = G.UIT.T, config = {text = tostring(text or ''), scale = scale, colour = colour or G.C.UI.TEXT_LIGHT, shadow = shadow ~= false}}
+end
+
+local function C(cfg, nodes)
+  cfg.align = cfg.align or 'cm'
+  return {n = G.UIT.C, config = cfg, nodes = nodes or {}}
+end
+
+local function R(cfg, nodes)
+  cfg.align = cfg.align or 'cm'
+  return {n = G.UIT.R, config = cfg, nodes = nodes or {}}
+end
+
+local function O(object) return {n = G.UIT.O, config = {object = object}} end
+local function hgap(w) return C({minw = w, minh = 0.05}) end
+local function vgap(h) return R({minh = h, minw = 0.05}) end
+
+local function pack(...)
+  local out = {}
+  for i = 1, select('#', ...) do
+    local v = select(i, ...)
+    if v then out[#out + 1] = v end
+  end
+  return out
+end
+
+local function mods()
+  local M = rawget(_G, 'RunMods')
+  if type(M) == 'table' and type(M.page) == 'function' then return M end
+end
+
+local function call(fn, ...)
+  local M = rawget(_G, 'RunMods')
+  if type(M) ~= 'table' or type(M[fn]) ~= 'function' then return nil end
+  local ok, r = pcall(M[fn], ...)
+  if ok then return r end
+  print("[RunSetup] RunMods." .. fn .. ": " .. tostring(r))
+end
+
+local NAMES = {deck = "Deck", mods = "Modifiers", stake = "Stake"}
+
+function RS.steps()
+  local out = {'deck'}
+  if mods() then out[#out + 1] = 'mods' end
+  out[#out + 1] = 'stake'
+  return out
+end
+
+local function deck_open(c) return c and c.unlocked and true or false end
+
+function RS.all_decks()
+  local out = {}
+  for _, v in ipairs((G.P_CENTER_POOLS and G.P_CENTER_POOLS.Back) or {}) do
+    if not v.omit and v.key and G.P_CENTERS[v.key] then out[#out + 1] = v end
+  end
+  local PR = rawget(_G, 'PlayRandom')
+  if PR and PR.filter_decks and PR.deck_key_shown then out = PR.filter_decks(out, function(v) return PR.deck_key_shown(v.key) end) end
+  if #out == 0 and G.P_CENTERS.b_red then out[1] = G.P_CENTERS.b_red end
+  return out
+end
+
+local function deck_art(c, w, open)
+  if open then return lib().coated(lib().deck_sprite(c, w)) end
+  local s = Sprite(0, 0, w, w * G.CARD_H / G.CARD_W, G.ASSET_ATLAS.centers, {x = 4, y = 0})
+  s.states.drag.can = false
+  return s
+end
+
+local function dim(s)
+  if not s then return s end
+  s.draw_steps = nil
+  local base = s.draw
+  s.draw = function(self) return base(self, {0.36, 0.38, 0.42, 1}) end
+  return s
+end
+
+local function measure(build)
+  local ok, w, h = pcall(function()
+    local b = UIBox{definition = {n = G.UIT.ROOT, config = {colour = G.C.CLEAR, padding = 0}, nodes = {build()}}, config = {offset = {x = 0, y = 0}}}
+    local w_, h_ = b.T.w, b.T.h
+    b:remove()
+    return w_, h_
+  end)
+  if ok then return w or 0, h or 0 end
+  return 0, 0
+end
+
+RS.WIDE_K = 1.25
+
+function RS.wide()
+  return UIK.thumb() and not UIK.portrait()
+end
+
+function RS.land_size(extra)
+  if not RS.wide() then return nil end
+  extra = tonumber(extra) or 0
+  local b = G.TILESIZE * G.TILESCALE / (G.MENU_ZOOM or 1)
+  local w, h = love.graphics.getDimensions()
+  return math.max(UIK.LAND_W, math.min(23, w / b - 1.6)), math.max(UIK.LAND_H, math.min(8.6 - extra, h / b - 2.6 - extra))
+end
+
+function RS.sizes()
+  local t, port = UIK.thumb(), UIK.portrait()
+  local wide = t and not port
+  local k = wide and RS.WIDE_K or 1
+  local function v(a, b) return t and a * k or b end
+  local bh = v(0.9, 0.78)
+  local z = {t = t, port = port, wide = wide, k = k, v = v, bh = bh, s = v(0.42, 0.38), small = v(0.36, 0.32), big = v(0.52, 0.48)}
+  z.foot = port and (2 * bh + 0.5) or (bh + 0.3)
+  z.pager = v(0.82, 0.66) + 0.24
+  z.iw = UIK.W - 0.3
+  z.ih = UIK.H - UIK.TOP - z.foot - 0.15
+  z.pw = v(4.8, 4.6)
+  z.ph = v(3.0, 2.8)
+  z.bw = port and (z.iw - 0.4) / 3 or v(2.9, 2.7)
+  z.bscale = port and v(0.44, 0.4) or v(0.48, 0.45)
+  return z
+end
+
+local function lines(text, scale, colour, w, max)
+  local out = {}
+  for _, l in ipairs(UIK.wrap(text, scale, w, max)) do out[#out + 1] = R({}, {C({maxw = w}, {T(l, scale, colour)})}) end
+  return out
+end
+
+local function pager(what, page, pages, w)
+  return UIK.pager{prev = 'bo_rs_page', next = 'bo_rs_page', prev_ref = {what = what, d = -1, n = pages}, next_ref = {what = what, d = 1, n = pages},
+    prev_id = 'bo_rs_pg_prev', next_id = 'bo_rs_pg_next', prev_disabled = pages <= 1, next_disabled = pages <= 1,
+    text = string.format(L("Page %d of %d"), page, pages), text_w = 2.7, arrow_w = 1.0, w = w}
+end
+
+local function grid(o)
+  local cols, rows = o.cols, o.rows
+  local per = cols * rows
+  local pages = math.max(1, math.ceil(#o.items / per))
+  local page = RS.page[o.what] or math.ceil(math.max(1, o.cur) / per)
+  page = math.max(1, math.min(page, pages))
+  RS.page[o.what] = page
+  local cw = (o.w - 0.2 - (cols - 1) * 0.1) / cols
+  local ch = (o.h - 0.2 - (rows - 1) * 0.1) / rows
+  local body = {}
+  for r = 1, rows do
+    local cells = {}
+    for c = 1, cols do
+      local k = (page - 1) * per + (r - 1) * cols + c
+      if c > 1 then cells[#cells + 1] = hgap(0.1) end
+      cells[#cells + 1] = o.items[k] and o.cell(k, o.items[k], cw, ch) or C({minw = cw, minh = ch})
+    end
+    if r > 1 then body[#body + 1] = vgap(0.1) end
+    body[#body + 1] = R({padding = 0}, cells)
+  end
+  return C({minw = o.w, minh = o.h, r = 0.1, colour = G.C.BLACK, emboss = 0.05, padding = 0.1}, {C({padding = 0}, body)}), page, pages, cw, ch
+end
+
+local function cell_cfg(what, k, cw, ch, chosen, viewed)
+  return {id = 'bo_rs_' .. what .. '_' .. k, minw = cw, minh = ch, r = 0.1, padding = 0,
+    colour = chosen and G.C.L_BLACK or (viewed and G.C.UI.TRANSPARENT_LIGHT) or G.C.CLEAR,
+    outline = (chosen or viewed) and 1.2 or nil, outline_colour = chosen and G.C.GOLD or G.C.UI.TEXT_INACTIVE,
+    hover = true, button = 'bo_rs_pick', ref_table = {what = what, k = k}, focus_args = {snap_to = chosen}}
+end
+
+local function panel_box(w, h, nodes)
+  return C({minw = w, minh = h, r = 0.1, colour = G.C.BLACK, emboss = 0.05, padding = 0.1, id = 'bo_rs_panel'}, nodes)
+end
+
+local function desc_box(w, nodes)
+  return R({}, {C({minw = w, r = 0.1, colour = G.C.WHITE, padding = 0.06}, nodes)})
+end
+
+local function state_line(z, open, chosen)
+  local text = not open and L("LOCKED") or (chosen and L("SELECTED") or " ")
+  local col = not open and G.C.RED or G.C.GREEN
+  return R({minh = z.s + 0.12}, {T(text, z.s + 0.04, col)})
+end
+
+local function grow_text(node, k, d)
+  if type(node) ~= 'table' or (d or 0) > 30 then return end
+  local c = node.config
+  if node.n == G.UIT.T and type(c) == 'table' and type(c.scale) == 'number' then c.scale = c.scale * k end
+  for _, ch in ipairs(type(node.nodes) == 'table' and node.nodes or {}) do grow_text(ch, k, (d or 0) + 1) end
+end
+
+local function deck_desc(c, w)
+  local best
+  local grows = UIK.thumb() and {1.45, 1.3, 1.15, 1} or {1}
+  for _, k in ipairs(grows) do
+    for _, s in ipairs({0.7, 0.6, 0.5}) do
+      local ok, d = pcall(function() return Back(c):generate_UI(nil, s, 0.5) end)
+      if ok and d and k ~= 1 then grow_text(d, k) end
+      local node = ok and d and lib().embed(d, true) or nil
+      local o = node and node.config.object
+      if o and o.T then
+        if best and best.config.object then best.config.object:remove() end
+        best = node
+        if o.T.w <= w then
+          return best, o.T.h
+        end
+      end
+    end
+  end
+  local o = best and best.config.object
+  return best, o and o.T.h or 0
+end
+
+local function unlock_tip(c)
+  local node = deck_desc(c, 6)
+  return R({padding = 0.05}, {node})
+end
+
+local function side_panel(z, w, h, o)
+  local port = z.port
+  local aw = o.art_w or 1.6
+  local tw = w - 0.3
+  local rw = port and (w - 0.2 - aw - 0.3) or (w - 0.2 - aw - 0.25)
+  local function head() return C({padding = 0}, lines(o.name, z.big, o.open and G.C.UI.TEXT_LIGHT or G.C.UI.TEXT_INACTIVE, port and rw or tw, 2)) end
+  local function right()
+    local n = {}
+    if port then n[#n + 1] = R({}, {head()}) end
+    n[#n + 1] = state_line(z, o.open, o.chosen)
+    local d = o.desc(rw)
+    if d then n[#n + 1] = d end
+    if port and o.tail then
+      for _, t in ipairs(o.tail(rw)) do n[#n + 1] = t end
+    end
+    return C({padding = 0}, n)
+  end
+  local function tail()
+    local n = {}
+    for _, t in ipairs(o.tail and o.tail(tw) or {}) do n[#n + 1] = t end
+    return C({padding = 0}, n)
+  end
+  local _, rh = measure(right)
+  local hh, th = 0, 0
+  if not port then
+    hh = select(2, measure(head))
+    th = select(2, measure(tail))
+  end
+  local room = h - 0.2 - hh - th - (port and 0 or 0.2) - 0.1
+  local art_h = math.max(0.5, math.min(o.art_max, room))
+  local art = o.art(art_h)
+  local row = R({padding = 0}, {C({minw = aw}, {art and O(lib().still(art)) or nil}), hgap(port and 0.3 or 0.25), C({minw = rw}, {right()})})
+  if port then return panel_box(w, h, {row}) end
+  return panel_box(w, h, {C({padding = 0}, pack(R({}, {head()}), vgap(0.1), row, th > 0 and vgap(0.1), th > 0 and R({}, {tail()})))})
+end
+
+local function deck_panel(z, c, w, h, chosen)
+  local open = deck_open(c)
+  local art_max = z.port and math.min(h - 0.3, 2.5) or 2.3
+  return side_panel(z, w, h, {name = lib().name_of('Back', c.key, c.name), open = open, chosen = chosen,
+    art_w = art_max * G.CARD_W / G.CARD_H + 0.05, art_max = art_max,
+    art = function(ah) return deck_art(c, ah * G.CARD_W / G.CARD_H, open) end,
+    desc = function(rw)
+      local d = deck_desc(c, rw - 0.12)
+      return d and desc_box(rw, {d}) or nil
+    end})
+end
+
+function RS.deck_step(z)
+  local P = PM()
+  local items = RS.all_decks()
+  local cur_key = lib().new_run_deck().key
+  local view_key = RS.view.deck or cur_key
+  local cur, view = 1, nil
+  for i, d in ipairs(items) do
+    if d.key == cur_key then cur = i end
+    if d.key == view_key then view = d end
+  end
+  view = view or items[cur]
+  local gw = z.port and z.iw or (z.iw - z.pw - 0.2)
+  local gh = z.ih - z.pager - 0.1 - (z.port and (z.ph + 0.15) or 0)
+  local cols, rows = z.port and 4 or 6, z.port and 3 or 2
+  local box, page, pages = grid{what = 'deck', items = items, cur = cur, cols = cols, rows = rows, w = gw, h = gh, cell = function(k, c, cw, ch)
+    local open = deck_open(c)
+    local chosen = c.key == cur_key
+    local cfg = cell_cfg('deck', k, cw, ch, chosen, c.key == view_key and not chosen)
+    if not open then cfg.on_demand_tooltip = {text = {lib().name_of('Back', c.key, c.name)}, filler = {func = unlock_tip, args = c}} end
+    local ah = math.min(ch - 0.14, (cw - 0.14) * G.CARD_H / G.CARD_W)
+    return C(cfg, {O(lib().still(deck_art(c, ah * G.CARD_W / G.CARD_H, open)))})
+  end}
+  local random = UIK.button{label = L("Random deck"), button = 'bo_rs_random', ref_table = {what = 'deck'}, colour = UIK.C.purple, id = 'bo_rs_random_deck', col = true,
+    w = z.port and z.bw or z.pw, h = z.v(0.82, 0.66), scale = z.bscale}
+  P.sel.deck = cur_key
+  if z.port then
+    return {
+      R({}, {box}),
+      R({minh = z.pager}, {C({minw = gw - z.bw - 0.2}, {pager('deck', page, pages, gw - z.bw - 0.2)}), hgap(0.2), C({minw = z.bw}, {random})}),
+      vgap(0.05),
+      R({}, {deck_panel(z, view, z.iw, z.ph, view.key == cur_key)}),
+    }
+  end
+  return {
+    R({padding = 0}, {C({}, {box}), hgap(0.2), C({}, {deck_panel(z, view, z.pw, gh, view.key == cur_key)})}),
+    R({minh = z.pager, padding = 0}, {C({minw = gw}, {pager('deck', page, pages, gw)}), hgap(0.2), C({minw = z.pw}, {random})}),
+  }
+end
+
+local function stake_index_map()
+  local idx = {}
+  for j, c in ipairs((G.P_CENTER_POOLS and G.P_CENTER_POOLS.Stake) or {}) do idx[c.key] = j end
+  return idx
+end
+
+function RS.included(i)
+  local pool = (G.P_CENTER_POOLS and G.P_CENTER_POOLS.Stake) or {}
+  local own = lib().own_stake(i)
+  local idx = stake_index_map()
+  local seen, out = {}, {}
+  local function add(j)
+    if not j or seen[j] or not pool[j] then return end
+    seen[j] = true
+    local ap = pool[j].applied_stakes
+    if type(ap) == 'table' then
+      for _, a in ipairs(ap) do add(idx[a] or idx['stake_' .. tostring(a)]) end
+    else
+      for m = j - 1, 1, -1 do add(m) end
+    end
+    out[#out + 1] = j
+  end
+  add(own and own.stake or i)
+  if not own then
+    for n = #out, 1, -1 do if out[n] == i then table.remove(out, n) end end
+  end
+  table.sort(out)
+  return out
+end
+
+local function base_stake_key(i)
+  local own = lib().own_stake(i)
+  local c = G.P_CENTER_POOLS.Stake[own and own.stake or i]
+  return c and c.key or nil
+end
+
+local function stake_unlock(i)
+  local own = lib().own_stake(i)
+  local base = own and own.stake or i
+  if base <= 1 then return nil end
+  return string.format(L("Win with this deck on %s to unlock"), lib().stake_label(base - 1))
+end
+
+local function stake_bar(z, i, w, h)
+  local inc = RS.included(i)
+  local cs = math.max(0.4, math.min(w - 0.25, (h - 0.4) / (#inc + 1) - 0.06))
+  local fit = math.max(1, math.floor((h - 0.4 - cs) / (cs + 0.06)))
+  local nodes = {}
+  local more = 0
+  if #inc > fit then
+    more = #inc - fit + 1
+    local keep = {}
+    for n = more + 1, #inc do keep[#keep + 1] = inc[n] end
+    inc = keep
+  end
+  if more > 0 then nodes[#nodes + 1] = R({minh = cs * 0.6}, {T("+" .. more, z.small, UIK.C.muted)}) end
+  for _, j in ipairs(inc) do
+    local s = lib().stake_chip(j, cs)
+    nodes[#nodes + 1] = R({minh = cs + 0.06}, {s and O(lib().still(s)) or nil})
+  end
+  nodes[#nodes + 1] = vgap(0.15)
+  local s = lib().stake_chip(i, cs)
+  nodes[#nodes + 1] = R({minh = cs + 0.06}, {s and O(lib().still(s)) or nil})
+  return C({minw = w, minh = h, r = 0.1, colour = G.C.BLACK, emboss = 0.05, padding = 0.08, align = 'bm', id = 'bo_rs_stake_bar'}, {C({align = 'bm', padding = 0}, nodes)})
+end
+
+local function stake_ref(i)
+  local own = lib().own_stake(i)
+  if own then return 'forge:' .. tostring(own.id) end
+  return i
+end
+
+local function stake_ctx(z, i, w, h)
+  local own = lib().own_stake(i)
+  return {deck = lib().new_run_deck().key, stake = stake_ref(i), stake_key = base_stake_key(i), forge_stake = own and own.id or nil,
+    w = w, h = h, port = z.port, phone = z.t,
+    refresh = function() RS.show() end,
+    back = function() RS.show('stake') end,
+    reopen = function() RS.show('mods') end}
+end
+
+local function summary_text(i)
+  local s = call('stake_summary', stake_ref(i))
+  if type(s) == 'table' then s = table.concat(s, ' ') end
+  if type(s) == 'string' and s ~= '' then return s end
+end
+
+local function stake_panel(z, i, w, h, chosen, top)
+  local open = lib().stake_open(i, top)
+  local summary = summary_text(i)
+  local unlock = not open and stake_unlock(i) or nil
+  local art_max = z.port and math.min(h - 0.3, 1.5) or 1.3
+  return side_panel(z, w, h, {name = lib().stake_label(i), open = open, chosen = chosen, art_w = art_max + 0.05, art_max = art_max,
+    art = function(cs)
+      local chip = lib().stake_chip(i, cs)
+      if chip and not open then dim(chip) end
+      return chip
+    end,
+    desc = function(rw)
+      local rows = lib().stake_desc(i, rw)
+      if UIK.thumb() then for _, r in ipairs(rows) do grow_text(r, z.port and 1.3 or 1.45) end end
+      return desc_box(rw, rows)
+    end,
+    tail = function(tw)
+      local n = {}
+      if unlock then for _, l in ipairs(lines(unlock, z.small, G.C.ORANGE, tw, 2)) do n[#n + 1] = l end end
+      if summary and z.port then for _, l in ipairs(lines(summary, z.small, UIK.C.muted, tw, 2)) do n[#n + 1] = l end end
+      if mods() and z.port then
+        n[#n + 1] = vgap(0.08)
+        n[#n + 1] = R({}, {UIK.button{label = L("Stake effects"), button = 'bo_rs_stake_effects', colour = UIK.C.button, id = 'bo_rs_stake_effects',
+          w = math.min(tw, 3.4), h = z.v(0.72, 0.6), scale = z.bscale}})
+      end
+      return n
+    end})
+end
+
+function RS.stake_step(z)
+  local P = PM()
+  local deck = lib().new_run_deck()
+  local top = lib().max_stake(deck.key)
+  local n = lib().stake_count()
+  local items = {}
+  for i = 1, n do items[i] = i end
+  local cur = lib().fix_stake(P.sel.stake, top)
+  P.sel.stake = cur
+  local view = RS.view.stake or cur
+  if not items[view] then view = cur end
+  local barw = z.v(0.95, 0.85)
+  local gw = z.port and (z.iw - barw - 0.15) or (z.iw - z.pw - barw - 0.4)
+  local cols, rows = z.port and 5 or (z.wide and 6 or 8), z.port and 4 or (z.wide and 2 or 3)
+  local gh = z.ih - z.pager - 0.1 - (z.port and (z.ph + 0.15) or 0)
+  if z.port then gh = math.min(gh, rows * ((gw - 0.2 - (cols - 1) * 0.1) / cols) + 0.2 + (rows - 1) * 0.1) end
+  local box, page, pages = grid{what = 'stake', items = items, cur = cur, cols = cols, rows = rows, w = gw, h = gh, cell = function(k, _, cw, ch)
+    local open = lib().stake_open(k, top)
+    local chosen = k == cur
+    local cfg = cell_cfg('stake', k, cw, ch, chosen, k == view and not chosen)
+    if not open then cfg.on_demand_tooltip = {text = pack(lib().stake_label(k), stake_unlock(k))} end
+    local cs = math.min(cw, ch, z.wide and 1.9 or 1.25) - 0.22
+    local s = lib().stake_chip(k, cs)
+    if not open then dim(s) end
+    return C(cfg, {s and O(lib().still(s)) or nil})
+  end}
+  local edit = mods() and not z.port and UIK.button{label = L("Stake effects"), button = 'bo_rs_stake_effects', colour = UIK.C.button, id = 'bo_rs_stake_effects', col = true,
+    w = (z.pw - 0.15) / 2, h = z.v(0.82, 0.66), scale = z.v(0.4, 0.36)} or nil
+  local random = UIK.button{label = L("Random stake"), button = 'bo_rs_random', ref_table = {what = 'stake'}, colour = UIK.C.purple, id = 'bo_rs_random_stake', col = true,
+    w = z.port and z.bw or (edit and (z.pw - 0.15) / 2 or z.pw), h = z.v(0.82, 0.66), scale = edit and (z.v(0.4, 0.36)) or z.bscale}
+  local bar = stake_bar(z, view, barw, gh)
+  local summary = not z.port and summary_text(view) or nil
+  local function sum_lines() return R({minh = 0.1, padding = 0}, {C({padding = 0}, lines(summary, z.small, UIK.C.muted, z.pw - 0.1, 2))}) end
+  local sh = summary and (select(2, measure(sum_lines)) + 0.08) or 0
+  local sum_node = summary and R({minh = sh, align = 'bm'}, {sum_lines()}) or nil
+  if z.port then
+    return {
+      R({padding = 0}, {C({}, {box}), hgap(0.15), C({}, {bar})}),
+      R({minh = z.pager}, {C({minw = z.iw - z.bw - 0.2}, {pager('stake', page, pages, z.iw - z.bw - 0.2)}), hgap(0.2), C({minw = z.bw}, {random})}),
+      vgap(0.05),
+      R({}, {stake_panel(z, view, z.iw, math.max(z.ph, z.ih - gh - z.pager - 0.25), view == cur, top)}),
+    }
+  end
+  return {
+    R({padding = 0}, {C({}, {box}), hgap(0.2), C({}, {bar}), hgap(0.2), C({padding = 0}, pack(R({}, {stake_panel(z, view, z.pw, gh - sh, view == cur, top)}), sum_node))}),
+    R({minh = z.pager, padding = 0}, {C({minw = gw + barw + 0.2}, {pager('stake', page, pages, gw + barw + 0.2)}), hgap(0.2), C({minw = z.pw}, {R({padding = 0}, pack(random, edit and hgap(0.15), edit))})}),
+  }
+end
+
+function RS.mods_step(z)
+  local P = PM()
+  local ctx = stake_ctx(z, lib().fix_stake(P.sel.stake, lib().max_stake(lib().new_run_deck().key)), z.iw, z.ih)
+  ctx.deck = lib().new_run_deck().key
+  local node = call('page', ctx)
+  if type(node) ~= 'table' then node = UIK.note({L("Modifiers could not be shown.")}, {w = z.iw}) end
+  return {R({minw = z.iw, minh = z.ih}, {node})}
+end
+
+function RS.last()
+  local r = lib().profile().bo_last_run
+  if type(r) == 'table' and r.deck and deck_open(G.P_CENTERS[r.deck]) then return r end
+end
+
+local function footer(z, step)
+  local P = PM()
+  local steps = RS.steps()
+  local at = 1
+  for i, s in ipairs(steps) do if s == step then at = i end end
+  local prev, nxt = steps[at - 1], steps[at + 1]
+  local bw = z.bw
+  local function btn(o)
+    o.w, o.h, o.scale, o.col = bw, z.bh, z.bscale, true
+    return UIK.button(o)
+  end
+  local prev_b = prev and btn{label = "< " .. L(NAMES[prev]), button = 'bo_rs_go', ref_table = {d = -1}, colour = UIK.C.button, id = 'bo_rs_prev'} or C({minw = bw, minh = z.bh})
+  local next_b = nxt and btn{label = L(NAMES[nxt]) .. " >", button = 'bo_rs_go', ref_table = {d = 1}, colour = UIK.C.button, id = 'bo_rs_next'}
+    or btn{label = localize('b_play_cap') ~= 'ERROR' and localize('b_play_cap') or L("Play"), button = 'bo_rs_play', colour = UIK.C.ok, id = 'bo_rs_play'}
+  local last_b = btn{label = L("Last Run"), button = 'bo_rs_last', colour = G.C.ORANGE, id = 'bo_rs_last', disabled = RS.last() == nil}
+  local tl = L("Seeded run")
+  local tgw = UIK.text_w(tl, z.v(0.44, 0.4)) + (z.v(1.15, 1)) * 0.5 + 0.06 + 0.35
+  local toggle = UIK.toggle{label = tl, ref_table = P.sel, ref_value = 'seeded', w = tgw, id = 'bo_rs_seeded', callback = function() RS.refresh('bo_rs_seeded') end}
+  local seed = P.sel.seeded and UIK.input{prompt = localize('k_enter_seed'), ref_table = P.sel, ref_value = 'seed', w = 2.9, iw = 2.7, max_length = 8, all_caps = true, id = 'bo_rs_seed'} or nil
+  local mid = {C({}, {toggle}), seed and hgap(0.2) or nil, seed and C({}, {seed}) or nil}
+  if z.port then
+    return {
+      R({padding = 0}, {prev_b, hgap(0.2), last_b, hgap(0.2), next_b}),
+      R({minh = z.bh + 0.2, padding = 0}, mid),
+    }
+  end
+  if z.wide then
+    local back_b = btn{label = localize('b_back'), button = 'bo_rs_back', colour = G.C.ORANGE, id = 'overlay_menu_back_button', focus_args = {button = 'b'}}
+    last_b = btn{label = L("Last Run"), button = 'bo_rs_last', colour = UIK.C.purple, id = 'bo_rs_last', disabled = RS.last() == nil}
+    local mw = z.iw - 4 * bw - 0.8
+    return {R({padding = 0}, {back_b, hgap(0.2), prev_b, hgap(0.2), C({minw = mw, minh = z.bh}, {R({padding = 0}, mid)}), hgap(0.2), next_b, hgap(0.2), last_b})}
+  end
+  local mw = z.iw - 3 * bw - 0.6
+  return {R({padding = 0}, {prev_b, hgap(0.2), C({minw = mw, minh = z.bh}, {R({padding = 0}, mid)}), hgap(0.2), next_b, hgap(0.2), last_b})}
+end
+
+function RS.build(step)
+  local z = RS.sizes()
+  if step ~= RS._built and step == 'mods' then
+    local M = mods()
+    if M and type(M.ui) == 'table' then M.ui.view = nil end
+  end
+  RS._built = step
+  local body
+  local ok, res = xpcall(function()
+    if step == 'mods' and mods() then return RS.mods_step(z) end
+    if step == 'stake' then return RS.stake_step(z) end
+    return RS.deck_step(z)
+  end, debug.traceback)
+  if ok then body = res else
+    print("[RunSetup] " .. tostring(res))
+    body = {UIK.note({L("Not available")}, {w = z.iw})}
+  end
+  local nodes = {R({minw = z.iw, minh = z.ih, align = 'tm', padding = 0}, {C({align = 'tm', padding = 0}, body)})}
+  nodes[#nodes + 1] = vgap(0.1)
+  for _, r in ipairs(footer(z, step)) do
+    if #nodes > 2 then nodes[#nodes + 1] = vgap(0.1) end
+    nodes[#nodes + 1] = r
+  end
+  return R({minw = UIK.W, padding = 0}, {C({align = 'tm', padding = 0}, nodes)})
+end
+
+function RS.def(step)
+  local tabs = {}
+  for _, s in ipairs(RS.steps()) do
+    tabs[#tabs + 1] = {key = s, label = L(NAMES[s]), build = function() return RS.build(s) end}
+  end
+  local wide = RS.wide()
+  return UIK.window{id = 'bo_run_setup', title = not wide and localize('b_new_run') or nil, tabs = tabs, tab = step, back_func = 'bo_rs_back', no_back = wide, land_size = RS.land_size}
+end
+
+function RS.current()
+  local w = UIK._win
+  if w and w.id == 'bo_run_setup' then return w._cur end
+end
+
+function RS.is_open()
+  return RS.current() ~= nil and G.OVERLAY_MENU ~= nil and G.OVERLAY_MENU:get_UIE_by_ID('uik_body') ~= nil
+end
+
+function RS.show(step)
+  if RS.is_open() and (not step or step == RS.current()) then return RS.refresh() end
+r 13 1381 %20%20 -
+l 173
+  G.FUNCS.overlay_menu{definition = RS.def(step or RS.last_step or 'deck')}
+end
+
+function RS.open(step)
+  RS.page, RS.view, RS._built = {}, {}, nil
+  RS.last_step = step
+  RS.show(step)
+  RS.focus(step == 'stake' and ('bo_rs_stake_' .. lib().fix_stake(sel().stake, lib().max_stake(lib().new_run_deck().key))) or nil)
+end
+
+local function find(id)
+  if not G.OVERLAY_MENU then return nil end
+  local e = G.OVERLAY_MENU:get_UIE_by_ID(id)
+  if e then return e end
+  local b = G.OVERLAY_MENU:get_UIE_by_ID('uik_body')
+  local o = b and b.config.object
+  return o and o.get_UIE_by_ID and o:get_UIE_by_ID(id) or nil
+end
+
+function RS.focus(id)
+  local c = G.CONTROLLER
+  if not (id and c and c.HID and c.HID.controller) then return end
+  local e = find(id)
+  if e then c:snap_to{node = e} end
+end
+
+function RS.refresh(focus)
+  RS.last_step = RS.current() or RS.last_step
+  UIK.refresh()
+  RS.focus(focus)
+end
+
+function RS.remember()
+  local P = PM()
+  local deck = lib().new_run_deck()
+  local st = lib().fix_stake(P.sel.stake, lib().max_stake(deck.key))
+  local own = lib().own_stake(st)
+  local p = lib().profile()
+  p.bo_last_run = {deck = deck.key, stake = own and own.stake or st, forge_stake = own and own.id or nil,
+    seed = (P.sel.seeded and type(P.sel.seed) == 'string' and P.sel.seed ~= '' and P.sel.seed) or nil,
+    mods = RS.arming and call('snapshot') or nil}
+end
+
+G.FUNCS.bo_rs_pick = function(e)
+  local r = e and e.config and e.config.ref_table
+  if not r then return end
+  local P = PM()
+  if r.what == 'deck' then
+    local c = RS.all_decks()[r.k]
+    if not c then return end
+    if deck_open(c) then
+      P.sel.deck = c.key
+      P.sel.stake = lib().fix_stake(P.sel.stake, lib().max_stake(c.key))
+      RS.view.deck = nil
+    else
+      RS.view.deck = c.key
+    end
+  elseif r.what == 'stake' then
+    if lib().stake_open(r.k, lib().max_stake(lib().new_run_deck().key)) then
+      P.sel.stake = r.k
+      RS.view.stake = nil
+    else
+      RS.view.stake = r.k
+    end
+  end
+  RS.refresh('bo_rs_' .. r.what .. '_' .. r.k)
+end
+
+G.FUNCS.bo_rs_page = function(e)
+  local r = e and e.config and e.config.ref_table
+  if not r then return end
+  RS.page[r.what] = ((RS.page[r.what] or 1) - 1 + r.d) % math.max(r.n or 1, 1) + 1
+  RS.refresh(r.d < 0 and 'bo_rs_pg_prev' or 'bo_rs_pg_next')
+end
+
+G.FUNCS.bo_rs_random = function(e)
+  local r = e and e.config and e.config.ref_table
+  if not r then return end
+  local P = PM()
+  if r.what == 'deck' then
+    local list = {}
+    for _, c in ipairs(RS.all_decks()) do if deck_open(c) and c.key ~= P.sel.deck then list[#list + 1] = c end end
+    if #list == 0 then return end
+    local c = list[math.random(#list)]
+    P.sel.deck = c.key
+    P.sel.stake = lib().fix_stake(P.sel.stake, lib().max_stake(c.key))
+    RS.view.deck, RS.page.deck = nil, nil
+    RS.refresh('bo_rs_random_deck')
+  else
+    local list = {}
+    for _, k in ipairs(lib().open_stakes(lib().max_stake(lib().new_run_deck().key))) do if k ~= P.sel.stake then list[#list + 1] = k end end
+    if #list == 0 then return end
+    P.sel.stake = list[math.random(#list)]
+    RS.view.stake, RS.page.stake = nil, nil
+    RS.refresh('bo_rs_random_stake')
+  end
+end
+
+G.FUNCS.bo_rs_go = function(e)
+  local d = e and e.config and e.config.ref_table and e.config.ref_table.d or 1
+  local steps = RS.steps()
+  local at = 1
+  for i, s in ipairs(steps) do if s == RS.current() then at = i end end
+  local to = steps[math.max(1, math.min(#steps, at + d))]
+  if not to then return end
+  RS.last_step = to
+  UIK.open_tab(to)
+  RS.focus(d < 0 and (steps[at - 2] and 'bo_rs_prev' or 'bo_rs_next') or (steps[at + 2] and 'bo_rs_next' or 'bo_rs_play'))
+end
+
+G.FUNCS.bo_rs_stake_effects = function()
+  local P = PM()
+  local z = RS.sizes()
+  call('stake_editor', stake_ctx(z, lib().fix_stake(P.sel.stake, lib().max_stake(lib().new_run_deck().key)), z.iw, z.ih))
+end
+
+G.FUNCS.bo_rs_last = function()
+  local r = RS.last()
+  if not r then return end
+  local P = PM()
+  P.sel.deck = r.deck
+  local idx = r.forge_stake and lib().own_stake_index(r.forge_stake) or r.stake
+  P.sel.stake = lib().fix_stake(idx, lib().max_stake(r.deck))
+  P.sel.seeded = r.seed ~= nil
+  P.sel.seed = r.seed or ''
+  if r.mods ~= nil then call('restore', r.mods) end
+  RS.page, RS.view = {}, {}
+  RS.refresh('bo_rs_last')
+end
+
+G.FUNCS.bo_rs_play = function()
+  if not G.FUNCS.bo_play_new_run then return end
+  RS.arming = true
+  call('arm', true)
+  local ok, err = pcall(G.FUNCS.bo_play_new_run)
+  RS.arming = nil
+  if not ok then error(err) end
+end
+
+G.FUNCS.bo_rs_back = function()
+  local P = PM()
+  RS.page, RS.view = {}, {}
+  G.FUNCS.overlay_menu{definition = P.def(P.from_game_over)}
+  local id = 'bo_play_' .. (RS.last_step == 'stake' and 'stake' or 'deck') .. '_grid'
+  G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.15, blockable = false, blocking = false, no_delete = true, pause_force = true, timer = 'REAL', func = function() RS.focus(id) return true end}))
+end
+
+if G.FUNCS.bo_play_new_run and not RS._wrapped then
+  RS._wrapped = true
+  local base = G.FUNCS.bo_play_new_run
+  G.FUNCS.bo_play_new_run = function(...)
+    local ok, err = pcall(RS.remember)
+    if not ok then print("[RunSetup] remember: " .. tostring(err)) end
+    return base(...)
+  end
+end
+
+mod_loc_register{
+  fr = {
+    ["Deck"] = "Jeu", ["Modifiers"] = "Modificateurs", ["Stake"] = "Mise", ["SELECTED"] = "VOTRE CHOIX", ["LOCKED"] = "À DÉBLOQUER",
+    ["Last Run"] = "Dernière partie", ["Play"] = "Jouer", ["Stake effects"] = "Effets de la mise",
+    ["Win with this deck on %s to unlock"] = "Gagnez avec ce jeu en %s pour la débloquer",
+    ["Modifiers could not be shown."] = "Les modificateurs n'ont pas pu s'afficher.",
+  },
+  es = {
+    ["Deck"] = "Baraja", ["Modifiers"] = "Modificadores", ["Stake"] = "Apuesta", ["SELECTED"] = "TU ELECCIÓN", ["LOCKED"] = "POR DESBLOQUEAR",
+    ["Last Run"] = "Última partida", ["Play"] = "Jugar", ["Stake effects"] = "Efectos de la apuesta",
+    ["Win with this deck on %s to unlock"] = "Gana con esta baraja en %s para desbloquearla",
+    ["Modifiers could not be shown."] = "No se pudieron mostrar los modificadores.",
+  },
+}
+
+return RS
+end

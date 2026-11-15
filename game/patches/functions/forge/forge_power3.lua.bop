@@ -1,0 +1,1279 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 324
+local P = {}
+
+local function set(list)
+  local out = {}
+  for _, v in ipairs(list) do out[v] = true end
+  return out
+end
+
+P.PASSIVE = {"p_hand_size", "p_hand_size_var", "p_hands", "p_discards", "p_joker_slots", "p_consumable_slots", "p_interest", "p_free_rerolls", "p_chances", "p_debt", "p_rule", "copy_ability"}
+P.KEY = {p_hand_size = "hand_size", p_hand_size_var = "hand_size", p_hands = "hands", p_discards = "discards", p_joker_slots = "joker_slots", p_consumable_slots = "consumable_slots", p_interest = "interest", p_free_rerolls = "free_rerolls", p_chances = "chances", p_debt = "debt"}
+P.RULES = {"four_fingers", "shortcut", "pareidolia", "smeared", "splash", "showman", "free_planets"}
+P.FLAG_NAME = {four_fingers = "Four Fingers", shortcut = "Shortcut", pareidolia = "Pareidolia", smeared = "Smeared Joker", splash = "Splash", showman = "Showman", free_planets = "Astronomer"}
+P.NAME_FLAG = {["Chaos the Clown"] = "chaos"}
+for k, v in pairs(P.FLAG_NAME) do P.NAME_FLAG[v] = k end
+P.COPY = {"right", "left", "leftmost", "rightmost"}
+P.SIDES = {"right", "left"}
+P.COPY_KINDS = {"negative", "normal"}
+P.COPY_TO = {"deck", "hand"}
+P.RARITY_N = {Common = 1, Uncommon = 2, Rare = 3, Legendary = 4}
+P.WHEN = {"passive", "other_joker", "would_lose", "hand_debuffed"}
+P.GIVES = {"save_run", "dagger", "sell_all", "dup_joker", "copy_consumable"}
+P.ONLY = {"other_rarity", "blind_percent"}
+P.BOSS = {"discard_held", "most_played_zero", "face_down_chance", "face_down_faces", "face_down_after", "level_down", "no_repeat", "one_type", "draw_three", "debuff_played_ante", "shuffle_jokers", "debuff_until_sell", "disable_joker", "force_select"}
+P.TAG = {"next_edition", "boss_money", "shop_voucher", "reroll_boss", "double_money", "free_shop_reroll"}
+P.VOUCHER = {"omen", "telescope", "observatory", "illusion", "boss_reroll", "boss_reroll_any"}
+P.TAG_CTX = {{"next_edition", "store_joker_modify"}, {"boss_money", "eval"}, {"shop_voucher", "voucher_add"}, {"reroll_boss", "new_blind_choice"}, {"free_shop_reroll", "shop_start"}}
+
+local function rules_mod() return package.loaded["functions/forge/forge_rules"] end
+local function store() return package.loaded["functions/forge/forge_store"] end
+local function run_mod() return package.loaded["functions/forge/forge_run"] end
+
+function P.prob()
+  local p = G and G.GAME and G.GAME.probabilities and G.GAME.probabilities.normal or 1
+  local T = package.loaded["functions/forge/forge_text"]
+  return T and T.fmt_n and T.fmt_n(p) or tostring(p)
+end
+
+local TEXT = {
+  en = {
+    passive = "While you have this Joker", other_joker = "For each other Joker", would_lose = "When you would lose the run", hand_debuffed = "When the Boss Blind blocks a played hand",
+    p_hand_size = "{C:attention}%s{} hand size", p_hand_size_var = "{C:attention}%s{} hand size for each {C:attention}%s{}",
+    p_hands = "{C:blue}%s{} hand each round", p_discards = "{C:red}%s{} discard each round", p_joker_slots = "{C:dark_edition}%s{} Joker slot", p_consumable_slots = "{C:attention}%s{} consumable slot",
+    p_interest = "earn an extra {C:money}$%s{} of {C:attention}interest{} for every {C:money}$5{} you have at end of round",
+    p_free_rerolls = "{C:attention}%s{} free {C:green}Reroll{} per shop", p_chances = "all listed {C:green}probabilities{} are {C:attention}X%s{}", p_chances2 = "doubles all listed {C:green}probabilities{}",
+    p_debt = "go up to {C:red}-$%s{} in debt",
+    rules = {
+      four_fingers = "all {C:attention}Flushes{} and {C:attention}Straights{} can be made with {C:attention}4{} cards",
+      shortcut = "allows {C:attention}Straights{} to be made with gaps of {C:attention}1 rank{}",
+      pareidolia = "all cards are considered {C:attention}face{} cards",
+      smeared = "{C:hearts}Hearts{} and {C:diamonds}Diamonds{} count as the same suit, {C:spades}Spades{} and {C:clubs}Clubs{} count as the same suit",
+      splash = "every {C:attention}played card{} counts in scoring",
+      showman = "{C:attention}Joker{}, {C:tarot}Tarot{}, {C:planet}Planet{} and {C:spectral}Spectral{} cards may appear multiple times",
+      free_planets = "all {C:planet}Planet{} cards and {C:planet}Celestial Packs{} in the shop are {C:attention}free{}",
+    },
+    copy = {right = "copies the ability of the {C:attention}Joker{} to the right", left = "copies the ability of the {C:attention}Joker{} to the left", leftmost = "copies the ability of the leftmost {C:attention}Joker{}", rightmost = "copies the ability of the rightmost {C:attention}Joker{}"},
+    save_run = "prevent {C:attention}Death{}",
+    dagger = {right = "destroy the {C:attention}Joker{} to the right and add {C:attention}%s{} times its sell value to this {C:mult}Mult{}", left = "destroy the {C:attention}Joker{} to the left and add {C:attention}%s{} times its sell value to this {C:mult}Mult{}"},
+    sell_all = "add {C:money}$%s{} of {C:attention}sell value{} to every {C:attention}Joker{} and {C:attention}consumable{} card",
+    dup_joker = "duplicate a random {C:attention}Joker{}",
+    copy_consumable = {negative = "create a {C:dark_edition}Negative{} copy of a random {C:attention}consumable{} card you have", normal = "create a copy of a random {C:attention}consumable{} card you have"},
+    other_rarity = "it is {C:%s}%s{}", blind_percent = "your score is %s {C:attention}%s{} percent of the required chips",
+    rarity = {Common = "Common", Uncommon = "Uncommon", Rare = "Rare", Legendary = "Legendary"},
+  },
+  fr = {
+    passive = "Tant que vous avez ce Joker", other_joker = "Pour chaque autre Joker", would_lose = "Quand vous devriez perdre la partie", hand_debuffed = "Quand la Blinde de boss bloque une main jouée",
+    p_hand_size = "{C:attention}%s{} carte en main", p_hand_size_var = "{C:attention}%s{} carte en main par {C:attention}%s{}",
+    p_hands = "{C:blue}%s{} main par manche", p_discards = "{C:red}%s{} défausse par manche", p_joker_slots = "{C:dark_edition}%s{} emplacement de Joker", p_consumable_slots = "{C:attention}%s{} emplacement de consommable",
+    p_interest = "gagnez {C:money}%s ${} d'{C:attention}intérêts{} en plus pour chaque tranche de {C:money}5 ${} en fin de manche",
+    p_free_rerolls = "{C:attention}%s{} {C:green}relance{} gratuite par boutique", p_chances = "toutes les {C:green}probabilités{} indiquées sont {C:attention}X%s{}", p_chances2 = "double toutes les {C:green}probabilités{} indiquées",
+    p_debt = "vous pouvez descendre jusqu'à {C:red}-%s ${} de dette",
+    rules = {
+      four_fingers = "toutes les {C:attention}Couleurs{} et {C:attention}Quintes{} peuvent se faire avec {C:attention}4{} cartes",
+      shortcut = "les {C:attention}Quintes{} peuvent avoir des écarts d'{C:attention}1 valeur{}",
+      pareidolia = "toutes les cartes sont considérées comme des {C:attention}figures{}",
+      smeared = "les {C:hearts}Cœurs{} et les {C:diamonds}Carreaux{} comptent comme la même couleur, les {C:spades}Piques{} et les {C:clubs}Trèfles{} aussi",
+      splash = "chaque {C:attention}carte jouée{} compte pour le score",
+      showman = "les cartes {C:attention}Joker{}, {C:tarot}Tarot{}, {C:planet}Planète{} et {C:spectral}Spectrale{} peuvent apparaître plusieurs fois",
+      free_planets = "toutes les cartes {C:planet}Planète{} et les {C:planet}paquets Célestes{} du boutique sont {C:attention}gratuits{}",
+    },
+    copy = {right = "copie la capacité du {C:attention}Joker{} à droite", left = "copie la capacité du {C:attention}Joker{} à gauche", leftmost = "copie la capacité du {C:attention}Joker{} le plus à gauche", rightmost = "copie la capacité du {C:attention}Joker{} le plus à droite"},
+    save_run = "empêche la {C:attention}Mort{}",
+    dagger = {right = "détruit le {C:attention}Joker{} à droite et ajoute {C:attention}%s{} fois sa valeur de revente à ce {C:mult}Multi{}", left = "détruit le {C:attention}Joker{} à gauche et ajoute {C:attention}%s{} fois sa valeur de revente à ce {C:mult}Multi{}"},
+    sell_all = "ajoute {C:money}%s ${} de {C:attention}valeur de revente{} à chaque {C:attention}Joker{} et {C:attention}consommable{}",
+    dup_joker = "duplique un {C:attention}Joker{} au hasard",
+    copy_consumable = {negative = "crée une copie {C:dark_edition}Négative{} d'un {C:attention}consommable{} au hasard que vous avez", normal = "crée une copie d'un {C:attention}consommable{} au hasard que vous avez"},
+    other_rarity = "il est {C:%s}%s{}", blind_percent = "votre score atteint %s {C:attention}%s{} pour cent des jetons requis",
+    rarity = {Common = "Commun", Uncommon = "Peu commun", Rare = "Rare", Legendary = "Légendaire"},
+  },
+  es = {
+    passive = "Mientras tengas este joker", other_joker = "Por cada otro joker", would_lose = "Cuando fueras a perder la partida", hand_debuffed = "Cuando la ciega jefe bloquea una mano jugada",
+    p_hand_size = "{C:attention}%s{} carta en la mano", p_hand_size_var = "{C:attention}%s{} carta en la mano por cada {C:attention}%s{}",
+    p_hands = "{C:blue}%s{} mano por ronda", p_discards = "{C:red}%s{} descarte por ronda", p_joker_slots = "{C:dark_edition}%s{} espacio de joker", p_consumable_slots = "{C:attention}%s{} espacio de consumible",
+    p_interest = "gana {C:money}$%s{} más de {C:attention}interés{} por cada {C:money}$5{} que tengas al final de la ronda",
+    p_free_rerolls = "{C:attention}%s{} {C:green}renovación{} gratis por tienda", p_chances = "todas las {C:green}probabilidades{} indicadas son {C:attention}X%s{}", p_chances2 = "duplica todas las {C:green}probabilidades{} indicadas",
+    p_debt = "puedes endeudarte hasta {C:red}-$%s{}",
+    rules = {
+      four_fingers = "todos los {C:attention}colores{} y {C:attention}escaleras{} se pueden hacer con {C:attention}4{} cartas",
+      shortcut = "las {C:attention}escaleras{} pueden tener huecos de {C:attention}1 valor{}",
+      pareidolia = "todas las cartas cuentan como {C:attention}figuras{}",
+      smeared = "{C:hearts}Corazones{} y {C:diamonds}Diamantes{} cuentan como el mismo palo, {C:spades}Picas{} y {C:clubs}Tréboles{} también",
+      splash = "cada {C:attention}carta jugada{} cuenta para la puntuación",
+      showman = "las cartas de {C:attention}joker{}, {C:tarot}tarot{}, {C:planet}planeta{} y {C:spectral}espectrales{} pueden aparecer varias veces",
+      free_planets = "todas las cartas de {C:planet}planeta{} y los {C:planet}sobres celestiales{} de la tienda son {C:attention}gratis{}",
+    },
+    copy = {right = "copia la habilidad del {C:attention}joker{} de la derecha", left = "copia la habilidad del {C:attention}joker{} de la izquierda", leftmost = "copia la habilidad del {C:attention}joker{} más a la izquierda", rightmost = "copia la habilidad del {C:attention}joker{} más a la derecha"},
+    save_run = "evita la {C:attention}muerte{}",
+    dagger = {right = "destruye el {C:attention}joker{} de la derecha y suma {C:attention}%s{} veces su valor de venta a este {C:mult}multi{}", left = "destruye el {C:attention}joker{} de la izquierda y suma {C:attention}%s{} veces su valor de venta a este {C:mult}multi{}"},
+    sell_all = "añade {C:money}$%s{} de {C:attention}valor de venta{} a cada {C:attention}joker{} y {C:attention}consumible{}",
+    dup_joker = "duplica un {C:attention}joker{} al azar",
+    copy_consumable = {negative = "crea una copia {C:dark_edition}negativa{} de un {C:attention}consumible{} al azar que tengas", normal = "crea una copia de un {C:attention}consumible{} al azar que tengas"},
+    other_rarity = "es {C:%s}%s{}", blind_percent = "tu puntuación llega a %s {C:attention}%s{} por ciento de las fichas requeridas",
+    rarity = {Common = "común", Uncommon = "poco común", Rare = "raro", Legendary = "legendario"},
+  },
+}
+P.TEXT = TEXT
+
+P.LABEL_GIVE = {p_hand_size = "Hand size", p_hand_size_var = "Hand size for each point", p_hands = "Hands each round", p_discards = "Discards each round", p_joker_slots = "Joker slots",
+  p_consumable_slots = "Consumable slots", p_interest = "Extra interest", p_free_rerolls = "Free rerolls", p_chances = "Multiply chances", p_debt = "Allow debt", p_rule = "Change a game rule",
+  copy_ability = "Copy another Joker", save_run = "Prevent losing the run", dagger = "Destroy a neighbour Joker", sell_all = "Sell value to every card", dup_joker = "Duplicate a random Joker", copy_consumable = "Copy a consumable"}
+P.LABEL_ONLY = {other_rarity = "Other Joker rarity", blind_percent = "Score reached (% of blind)"}
+P.LABEL_VALUE = {four_fingers = "Flushes and Straights with 4 cards", shortcut = "Straights with gaps", pareidolia = "Every card is a face card", smeared = "Suits merge by colour", splash = "Every played card scores",
+  showman = "Same card can show up again", free_planets = "Planets and Celestial packs free", right = "Joker to the right", left = "Joker to the left", leftmost = "Leftmost Joker", rightmost = "Rightmost Joker",
+  negative = "Negative copy", normal = "Normal copy", deck = "Into the deck", hand = "Into your hand"}
+
+local LOC = {
+  fr = {
+    ["Hand size"] = "Cartes en main", ["Hand size for each point"] = "Cartes en main par point", ["Hands each round"] = "Mains par manche", ["Discards each round"] = "Défausses par manche", ["Joker slots"] = "Emplacements de Joker",
+    ["Consumable slots"] = "Emplacements de consommable", ["Extra interest"] = "Intérêts en plus", ["Free rerolls"] = "Relances gratuites", ["Multiply chances"] = "Multiplier les chances", ["Allow debt"] = "Autoriser la dette", ["Change a game rule"] = "Changer une règle du jeu",
+    ["Copy another Joker"] = "Copier un autre Joker", ["Prevent losing the run"] = "Empêcher la défaite", ["Destroy a neighbour Joker"] = "Détruire un Joker voisin", ["Sell value to every card"] = "Valeur de revente à tout", ["Duplicate a random Joker"] = "Dupliquer un Joker au hasard", ["Copy a consumable"] = "Copier un consommable",
+    ["Other Joker rarity"] = "Rareté de l'autre Joker", ["Score reached (% of blind)"] = "Score atteint (% de la blinde)",
+    ["Flushes and Straights with 4 cards"] = "Couleurs et Quintes à 4 cartes", ["Straights with gaps"] = "Quintes avec écarts", ["Every card is a face card"] = "Toutes les cartes sont des figures", ["Suits merge by colour"] = "Couleurs fusionnées", ["Every played card scores"] = "Toute carte jouée compte",
+    ["Same card can show up again"] = "Une carte peut réapparaître", ["Planets and Celestial packs free"] = "Planètes et paquets Célestes gratuits", ["Joker to the right"] = "Joker à droite", ["Joker to the left"] = "Joker à gauche", ["Leftmost Joker"] = "Joker le plus à gauche", ["Rightmost Joker"] = "Joker le plus à droite",
+    ["Negative copy"] = "Copie Négative", ["Normal copy"] = "Copie normale", ["Into the deck"] = "Dans le jeu", ["Into your hand"] = "Dans votre main",
+    ["Discard random held cards"] = "Défausser des cartes en main", ["Discards {C:attention}%d{} random cards held in hand after every played hand"] = "Défausse {C:attention}%d{} cartes au hasard de la main après chaque main jouée",
+    ["Most played hand costs all money"] = "Main la plus jouée : argent à 0", ["Playing your most played {C:attention}poker hand{} sets money to {C:money}$0{}"] = "Jouer votre {C:attention}main de poker{} la plus jouée met votre argent à {C:money}0 ${}",
+    ["Cards drawn face down by chance"] = "Cartes face cachée au hasard", ["{C:green}#P# in %d{} cards get drawn face down"] = "{C:green}#P# carte sur %d{} est piochée face cachée",
+    ["Face cards drawn face down"] = "Figures face cachée", ["All face cards are drawn face down"] = "Toutes les figures sont piochées face cachée",
+    ["Face down after each hand"] = "Face cachée après chaque main", ["Cards are drawn face down after each hand played"] = "Les cartes sont piochées face cachée après chaque main jouée",
+    ["Level down the played hand"] = "Baisse le niveau de la main jouée", ["Decrease level of played {C:attention}poker hand{}"] = "Baisse le niveau de la {C:attention}main de poker{} jouée",
+    ["No repeated hand types"] = "Pas de type de main répété", ["No repeat hand types this round"] = "Aucun type de main répété cette manche",
+    ["Only one hand type"] = "Un seul type de main", ["Play only {C:attention}1{} hand type this round"] = "Ne jouez qu'{C:attention}1{} type de main cette manche",
+    ["Always draw 3"] = "Toujours piocher 3", ["Always draw {C:attention}3{} cards after playing or discarding"] = "Piochez toujours {C:attention}3{} cartes après avoir joué ou défaussé",
+    ["Debuff cards played this ante"] = "Affaiblir les cartes jouées cette mise", ["Cards played previously this Ante are debuffed"] = "Les cartes déjà jouées pendant cette mise sont affaiblies",
+    ["Flip and shuffle Jokers"] = "Retourner et mélanger les Jokers", ["Flips and shuffles all {C:attention}Joker{} cards"] = "Retourne et mélange tous les {C:attention}Jokers{}",
+    ["Debuff until a Joker is sold"] = "Affaiblir jusqu'à une vente de Joker", ["All cards debuffed until {C:attention}1{} Joker sold"] = "Toutes les cartes sont affaiblies jusqu'à la vente d'{C:attention}1{} Joker",
+    ["Disable a random Joker"] = "Désactiver un Joker au hasard", ["One random {C:attention}Joker{} disabled every hand"] = "Un {C:attention}Joker{} au hasard est désactivé à chaque main",
+    ["Force a selected card"] = "Forcer une carte sélectionnée", ["Forces {C:attention}1{} card to always be selected"] = "Force {C:attention}1{} carte à toujours être sélectionnée",
+    ["Edition on the next shop Joker"] = "Édition sur le prochain Joker du boutique", ["Next base edition shop {C:attention}Joker{} is free and becomes {C:dark_edition}%s{}"] = "Le prochain {C:attention}Joker{} de base du boutique est gratuit et devient {C:dark_edition}%s{}",
+    ["Money after the Boss Blind"] = "Argent après la Blinde de boss", ["After defeating the {C:attention}Boss Blind{}, gain {C:money}$%d{}"] = "Après avoir vaincu la {C:attention}Blinde de boss{}, gagnez {C:money}%d ${}",
+    ["Voucher in the next shop"] = "Bon dans le prochain boutique", ["Adds one {C:attention}Voucher{} to the next shop"] = "Ajoute un {C:attention}Bon{} au prochain boutique",
+    ["Reroll the Boss Blind"] = "Relancer la Blinde de boss", ["Rerolls the {C:attention}Boss Blind{}"] = "Relance la {C:attention}Blinde de boss{}",
+    ["Double your money"] = "Doubler votre argent", ["Doubles your money (max {C:money}$%d{})"] = "Double votre argent (max {C:money}%d ${})",
+    ["Free rerolls start at $0"] = "Relances à 0 $", ["Rerolls in the next shop start at {C:money}$0{}"] = "Les relances du prochain boutique commencent à {C:money}0 ${}",
+    ["Spectrals in Arcana packs"] = "Spectrales dans les paquets Arcanes", ["{C:spectral}Spectral{} cards may appear in any of the {C:attention}Arcana Packs{}"] = "Des cartes {C:spectral}Spectrales{} peuvent apparaître dans les {C:attention}paquets Arcanes{}",
+    ["Most played Planet in Celestial packs"] = "Planète la plus jouée dans les paquets Célestes", ["{C:attention}Celestial Packs{} always contain the {C:planet}Planet{} card for your most played {C:attention}poker hand{}"] = "Les {C:attention}paquets Célestes{} contiennent toujours la {C:planet}Planète{} de votre {C:attention}main de poker{} la plus jouée",
+    ["Held Planets give XMult"] = "Planètes en main : XMulti", ["{C:planet}Planet{} cards in your {C:attention}consumable{} area give {X:red,C:white}X%s{} Mult for their {C:attention}poker hand{}"] = "Les {C:planet}Planètes{} de vos {C:attention}consommables{} donnent {X:red,C:white}X%s{} Multi pour leur {C:attention}main de poker{}",
+    ["Shop cards get enhancements"] = "Cartes du boutique améliorées", ["{C:attention}Playing cards{} in the shop may have an {C:enhanced}Enhancement{} or an {C:dark_edition}Edition{}"] = "Les {C:attention}cartes à jouer{} du boutique peuvent avoir une {C:enhanced}Amélioration{} ou une {C:dark_edition}Édition{}",
+    ["Reroll the Boss once per ante"] = "Relancer le boss une fois par mise", ["Reroll the {C:attention}Boss Blind{} {C:attention}1{} time per Ante, {C:money}$10{} per roll"] = "Relancez la {C:attention}Blinde de boss{} {C:attention}1{} fois par mise, {C:money}10 ${} la relance",
+    ["Reroll the Boss any time"] = "Relancer le boss sans limite", ["Reroll the {C:attention}Boss Blind{} {C:attention}unlimited{} times, {C:money}$10{} per roll"] = "Relancez la {C:attention}Blinde de boss{} {C:attention}sans limite{}, {C:money}10 ${} la relance",
+    ["Counts as every suit"] = "Compte comme toutes les couleurs", ["Tarot used this run"] = "Tarot utilisé dans la partie", ["Can be used as any suit"] = "Peut être utilisée comme n'importe quelle couleur",
+  },
+  es = {
+    ["Hand size"] = "Cartas en mano", ["Hand size for each point"] = "Cartas en mano por punto", ["Hands each round"] = "Manos por ronda", ["Discards each round"] = "Descartes por ronda", ["Joker slots"] = "Espacios de joker",
+    ["Consumable slots"] = "Espacios de consumible", ["Extra interest"] = "Interés extra", ["Free rerolls"] = "Renovaciones gratis", ["Multiply chances"] = "Multiplicar probabilidades", ["Allow debt"] = "Permitir deuda", ["Change a game rule"] = "Cambiar una regla del juego",
+    ["Copy another Joker"] = "Copiar otro joker", ["Prevent losing the run"] = "Evitar perder la partida", ["Destroy a neighbour Joker"] = "Destruir un joker vecino", ["Sell value to every card"] = "Valor de venta a todo", ["Duplicate a random Joker"] = "Duplicar un joker al azar", ["Copy a consumable"] = "Copiar un consumible",
+    ["Other Joker rarity"] = "Rareza del otro joker", ["Score reached (% of blind)"] = "Puntuación alcanzada (% de la ciega)",
+    ["Flushes and Straights with 4 cards"] = "Colores y escaleras con 4 cartas", ["Straights with gaps"] = "Escaleras con huecos", ["Every card is a face card"] = "Todas son figuras", ["Suits merge by colour"] = "Palos unidos por color", ["Every played card scores"] = "Toda carta jugada cuenta",
+    ["Same card can show up again"] = "Una carta puede repetirse", ["Planets and Celestial packs free"] = "Planetas y sobres celestiales gratis", ["Joker to the right"] = "Joker de la derecha", ["Joker to the left"] = "Joker de la izquierda", ["Leftmost Joker"] = "Joker más a la izquierda", ["Rightmost Joker"] = "Joker más a la derecha",
+    ["Negative copy"] = "Copia negativa", ["Normal copy"] = "Copia normal", ["Into the deck"] = "En la baraja", ["Into your hand"] = "En tu mano",
+    ["Discard random held cards"] = "Descartar cartas de la mano", ["Discards {C:attention}%d{} random cards held in hand after every played hand"] = "Descarta {C:attention}%d{} cartas al azar de la mano tras cada mano jugada",
+    ["Most played hand costs all money"] = "Mano más jugada: dinero a 0", ["Playing your most played {C:attention}poker hand{} sets money to {C:money}$0{}"] = "Jugar tu {C:attention}mano de póker{} más jugada deja tu dinero en {C:money}$0{}",
+    ["Cards drawn face down by chance"] = "Cartas boca abajo al azar", ["{C:green}#P# in %d{} cards get drawn face down"] = "{C:green}#P# de cada %d{} cartas se roban boca abajo",
+    ["Face cards drawn face down"] = "Figuras boca abajo", ["All face cards are drawn face down"] = "Todas las figuras se roban boca abajo",
+    ["Face down after each hand"] = "Boca abajo tras cada mano", ["Cards are drawn face down after each hand played"] = "Las cartas se roban boca abajo tras cada mano jugada",
+    ["Level down the played hand"] = "Baja el nivel de la mano jugada", ["Decrease level of played {C:attention}poker hand{}"] = "Baja el nivel de la {C:attention}mano de póker{} jugada",
+    ["No repeated hand types"] = "Sin tipos de mano repetidos", ["No repeat hand types this round"] = "No se repiten tipos de mano en esta ronda",
+    ["Only one hand type"] = "Un solo tipo de mano", ["Play only {C:attention}1{} hand type this round"] = "Juega solo {C:attention}1{} tipo de mano en esta ronda",
+    ["Always draw 3"] = "Robar siempre 3", ["Always draw {C:attention}3{} cards after playing or discarding"] = "Roba siempre {C:attention}3{} cartas tras jugar o descartar",
+    ["Debuff cards played this ante"] = "Debilitar cartas jugadas en la apuesta", ["Cards played previously this Ante are debuffed"] = "Las cartas ya jugadas en esta apuesta quedan debilitadas",
+    ["Flip and shuffle Jokers"] = "Voltear y barajar jokers", ["Flips and shuffles all {C:attention}Joker{} cards"] = "Voltea y baraja todos los {C:attention}jokers{}",
+    ["Debuff until a Joker is sold"] = "Debilitar hasta vender un joker", ["All cards debuffed until {C:attention}1{} Joker sold"] = "Todas las cartas quedan debilitadas hasta vender {C:attention}1{} joker",
+    ["Disable a random Joker"] = "Desactivar un joker al azar", ["One random {C:attention}Joker{} disabled every hand"] = "Un {C:attention}joker{} al azar queda desactivado en cada mano",
+    ["Force a selected card"] = "Forzar una carta seleccionada", ["Forces {C:attention}1{} card to always be selected"] = "Obliga a tener siempre {C:attention}1{} carta seleccionada",
+    ["Edition on the next shop Joker"] = "Edición en el próximo joker de la tienda", ["Next base edition shop {C:attention}Joker{} is free and becomes {C:dark_edition}%s{}"] = "El próximo {C:attention}joker{} base de la tienda es gratis y se vuelve {C:dark_edition}%s{}",
+    ["Money after the Boss Blind"] = "Dinero tras la ciega jefe", ["After defeating the {C:attention}Boss Blind{}, gain {C:money}$%d{}"] = "Tras vencer a la {C:attention}ciega jefe{}, gana {C:money}$%d{}",
+    ["Voucher in the next shop"] = "Vale en la próxima tienda", ["Adds one {C:attention}Voucher{} to the next shop"] = "Añade un {C:attention}vale{} a la próxima tienda",
+    ["Reroll the Boss Blind"] = "Cambiar la ciega jefe", ["Rerolls the {C:attention}Boss Blind{}"] = "Cambia la {C:attention}ciega jefe{}",
+    ["Double your money"] = "Duplicar tu dinero", ["Doubles your money (max {C:money}$%d{})"] = "Duplica tu dinero (máx. {C:money}$%d{})",
+    ["Free rerolls start at $0"] = "Renovaciones desde $0", ["Rerolls in the next shop start at {C:money}$0{}"] = "Las renovaciones de la próxima tienda empiezan en {C:money}$0{}",
+    ["Spectrals in Arcana packs"] = "Espectrales en sobres arcanos", ["{C:spectral}Spectral{} cards may appear in any of the {C:attention}Arcana Packs{}"] = "Pueden aparecer cartas {C:spectral}espectrales{} en los {C:attention}sobres arcanos{}",
+    ["Most played Planet in Celestial packs"] = "Planeta más jugado en sobres celestiales", ["{C:attention}Celestial Packs{} always contain the {C:planet}Planet{} card for your most played {C:attention}poker hand{}"] = "Los {C:attention}sobres celestiales{} siempre traen el {C:planet}planeta{} de tu {C:attention}mano de póker{} más jugada",
+    ["Held Planets give XMult"] = "Planetas guardados dan XMulti", ["{C:planet}Planet{} cards in your {C:attention}consumable{} area give {X:red,C:white}X%s{} Mult for their {C:attention}poker hand{}"] = "Las cartas de {C:planet}planeta{} en tus {C:attention}consumibles{} dan {X:red,C:white}X%s{} multi para su {C:attention}mano de póker{}",
+    ["Shop cards get enhancements"] = "Cartas de la tienda mejoradas", ["{C:attention}Playing cards{} in the shop may have an {C:enhanced}Enhancement{} or an {C:dark_edition}Edition{}"] = "Las {C:attention}cartas de juego{} de la tienda pueden tener una {C:enhanced}mejora{} o una {C:dark_edition}edición{}",
+    ["Reroll the Boss once per ante"] = "Cambiar el jefe una vez por apuesta", ["Reroll the {C:attention}Boss Blind{} {C:attention}1{} time per Ante, {C:money}$10{} per roll"] = "Cambia la {C:attention}ciega jefe{} {C:attention}1{} vez por apuesta, {C:money}$10{} cada vez",
+    ["Reroll the Boss any time"] = "Cambiar el jefe sin límite", ["Reroll the {C:attention}Boss Blind{} {C:attention}unlimited{} times, {C:money}$10{} per roll"] = "Cambia la {C:attention}ciega jefe{} {C:attention}sin límite{}, {C:money}$10{} cada vez",
+    ["Counts as every suit"] = "Cuenta como todos los palos", ["Tarot used this run"] = "Tarot usado en la partida", ["Can be used as any suit"] = "Puede usarse como cualquier palo",
+  },
+}
+P.LOC = LOC
+
+local function lt(lang) return TEXT[lang] or TEXT.en end
+
+local function signed(n)
+  n = tonumber(n) or 0
+  local T = package.loaded["functions/forge/forge_text"]
+  local s = T and T.fmt_n and T.fmt_n(math.abs(n)) or tostring(math.abs(n))
+  return (n < 0 and "-" or "+") .. s
+end
+
+function P.rules(R)
+  local T = require("functions/forge/forge_text")
+  local function add_ids(list, ids)
+    for _, id in ipairs(ids) do
+      if not R.member(list, id) then list[#list + 1] = id end
+      R.V8_IDS[id] = true
+    end
+  end
+  for _, w in ipairs(P.WHEN) do
+    if not R.member(R.WHEN, w) then R.WHEN[#R.WHEN + 1] = w end
+    if not R.member(R.JOKER_WHEN, w) then R.JOKER_WHEN[#R.JOKER_WHEN + 1] = w end
+    R.V8_IDS[w] = true
+  end
+  add_ids(R.GIVE, P.PASSIVE)
+  add_ids(R.GIVE, P.GIVES)
+  add_ids(R.ONLY, P.ONLY)
+  local NUM = {
+    p_hand_size = {def = 1, lo = -10, hi = 100, step = 1, big = 5}, p_hand_size_var = {def = 1, lo = -10, hi = 100, step = 1, big = 5},
+    p_hands = {def = 1, lo = -10, hi = 100, step = 1, big = 5}, p_discards = {def = 1, lo = -10, hi = 100, step = 1, big = 5},
+    p_joker_slots = {def = 1, lo = -10, hi = 100, step = 1, big = 5}, p_consumable_slots = {def = 1, lo = -10, hi = 100, step = 1, big = 5},
+    p_interest = {def = 1, lo = 1, hi = 1e6, step = 1, big = 5}, p_free_rerolls = {def = 1, lo = 1, hi = 100, step = 1, big = 5},
+    p_chances = {def = 2, lo = 1, hi = 1000, step = 1, big = 5}, p_debt = {def = 20, lo = 1, hi = 1e6, step = 5, big = 50},
+    dagger = {def = 2, lo = 1, hi = 1e6, step = 1, big = 5}, sell_all = {def = 1, lo = 1, hi = 1e6, step = 1, big = 5},
+    blind_percent = {def = 25, lo = 1, hi = 1000, step = 5, big = 25},
+  }
+  for k, v in pairs(NUM) do R.NUM[k] = v end
+  R.VAR_GIVE.p_hand_size_var = true
+  local JOKER = {joker = true}
+  for _, id in ipairs(P.PASSIVE) do R.HOST_GIVE[id] = JOKER end
+  for _, id in ipairs(P.GIVES) do R.HOST_GIVE[id] = JOKER end
+  for _, id in ipairs(P.ONLY) do R.HOST_ONLY[id] = JOKER end
+  R.ONLY_WHEN.other_rarity = {other_joker = true}
+  R.ONLY_WHEN.blind_percent = {would_lose = true, round_end = true, hand_played = true, after = true}
+  if R.ONLY_WHEN.boss_triggered then
+    local t = {}
+    for k, v in pairs(R.ONLY_WHEN.boss_triggered) do t[k] = v end
+    t.hand_debuffed = true
+    R.ONLY_WHEN.boss_triggered = t
+  end
+  local OUTSIDE = {blind_selected = true, first_hand = true, round_end = true, shop_end = true, blind_skipped = true, after = true, reroll = true}
+  R.GIVE_WHEN.save_run = {would_lose = true}
+  R.GIVE_WHEN.dagger = OUTSIDE
+  R.GIVE_WHEN.sell_all = OUTSIDE
+  R.GIVE_WHEN.dup_joker = {self_sold = true, blind_selected = true, round_end = true, shop_end = true, blind_skipped = true}
+  R.GIVE_WHEN.copy_consumable = {shop_end = true, blind_selected = true, round_end = true, blind_skipped = true, reroll = true}
+
+  local PASS = set(P.PASSIVE)
+  P.PASS = PASS
+  local OTHER_OK = set({"chips", "mult", "xmult", "money", "var_add", "var_set", "var_chips", "var_mult", "gain_chips", "gain_mult", "gain_xmult"})
+  local LOSE_OK = set({"save_run", "destroy_self", "money", "var_add", "var_set", "create", "tag", "reset_gains", "create_rarity", "make_card"})
+  local DEBUFF_OK = set({"money", "var_add", "var_set", "gain_chips", "gain_mult", "gain_xmult", "create", "tag", "make_card", "reset_gains"})
+  local base_give, base_only = R.allowed_give, R.allowed_only
+  function R.allowed_give(when, give, host)
+    host = host or "joker"
+    if PASS[give] then return host == "joker" and when == "passive" end
+    if when == "passive" then return false end
+    if when == "would_lose" then return host == "joker" and LOSE_OK[give] or false end
+    if when == "other_joker" then return host == "joker" and OTHER_OK[give] or false end
+    if when == "hand_debuffed" then return host == "joker" and DEBUFF_OK[give] or false end
+    return base_give(when, give, host)
+  end
+  function R.allowed_only(when, only, host)
+    if when == "passive" then return false end
+    if (when == "other_joker" or when == "would_lose" or when == "hand_debuffed") and (host or "joker") ~= "joker" then return false end
+    return base_only(when, only, host)
+  end
+
+  local function fix(list, def) return function(c) if not R.member(list, c.v) then c.v = def end end end
+  R.DEFAULT_GIVE.p_rule = function() return {id = "p_rule", v = "four_fingers"} end
+  R.DEFAULT_GIVE.copy_ability = function() return {id = "copy_ability", v = "right"} end
+  R.DEFAULT_GIVE.dagger = function() return {id = "dagger", v = "right", n = 2} end
+  R.DEFAULT_GIVE.copy_consumable = function() return {id = "copy_consumable", v = "negative"} end
+  R.DEFAULT_GIVE.save_run = function() return {id = "save_run"} end
+  R.DEFAULT_GIVE.dup_joker = function() return {id = "dup_joker"} end
+  R.DEFAULT_ONLY.other_rarity = function() return {id = "other_rarity", v = "Uncommon"} end
+  R.DEFAULT_ONLY.blind_percent = function() return {id = "blind_percent", op = "at_least", n = 25} end
+  R.CLEAN_GIVE.p_rule = function(e) fix(P.RULES, "four_fingers")(e); e.n = nil end
+  R.CLEAN_GIVE.copy_ability = function(e) fix(P.COPY, "right")(e); e.n = nil end
+  R.CLEAN_GIVE.dagger = fix(P.SIDES, "right")
+  R.CLEAN_GIVE.copy_consumable = function(e) fix(P.COPY_KINDS, "negative")(e); e.n = nil end
+  R.CLEAN_GIVE.save_run = function(e) e.v, e.n = nil, nil end
+  R.CLEAN_GIVE.dup_joker = function(e) e.v, e.n = nil, nil end
+  R.CLEAN_GIVE.copy_card = function(e) if e.v ~= "hand" then e.v = nil end e.n = nil end
+  for id in pairs(P.KEY) do
+    if not R.CLEAN_GIVE[id] then R.CLEAN_GIVE[id] = function(e) e.v = nil end end
+  end
+  R.CLEAN_ONLY.other_rarity = function(c) fix(R.RARITIES or {"Common", "Uncommon", "Rare", "Legendary"}, "Uncommon")(c); c.op, c.n = nil, nil end
+  R.CLEAN_ONLY.blind_percent = function(c) c.v = nil; c.op = c.op or "at_least" end
+
+  R.CHECKS.other_rarity = function(o, context, card)
+    local j = context.other_joker
+    local c = j and j.config and j.config.center
+    return c ~= nil and j ~= card and c.rarity == P.RARITY_N[o.v]
+  end
+  R.CHECKS.blind_percent = function(o)
+    local b = G.GAME and G.GAME.blind
+    local need = b and tonumber(b.chips) or 0
+    if need <= 0 then return false end
+    return R.compare(o.op, (tonumber(G.GAME.chips) or 0) / need * 100, o.n)
+  end
+
+  local D = R.DOS
+  D.save_run = function(g, card, src, context, other, acc) acc.saved = true end
+  D.dagger = function(g, card, src, context)
+    if context.blueprint then return end
+    local list = G.jokers and G.jokers.cards or {}
+    local at
+    for i, j in ipairs(list) do if j == card then at = i end end
+    if not at then return end
+    local t = list[at + (g.v == "left" and -1 or 1)]
+    if not t or (t.ability and t.ability.eternal) or t.getting_sliced then return end
+    local x = R.state(card)
+    x.mult = x.mult + (tonumber(g.n) or 2) * (tonumber(t.sell_cost) or 0)
+    t.getting_sliced = true
+    G.GAME.joker_buffer = (G.GAME.joker_buffer or 0) - 1
+r 3 617 %20%20%20%20 -
+r 3 2539 %20%20%20%20%20%20 -
+l 40
+      if card.juice_up then card:juice_up(0.8, 0.8) end
+      if t.start_dissolve then t:start_dissolve({HEX and HEX("57ecab") or G.C.RED}, nil, 1.6) end
+      play_sound("slice1", 0.96 + math.random() * 0.08)
+      return true
+    end}))
+    R.status(src, localize{type = "variable", key = "a_mult", vars = {x.mult}}, G.C.RED)
+  end
+  D.sell_all = function(g, card, src)
+    for _, area in ipairs({G.jokers, G.consumeables}) do
+      for _, j in ipairs(area and area.cards or {}) do
+        if j.set_cost then
+          j.ability.extra_value = (j.ability.extra_value or 0) + (tonumber(g.n) or 1)
+          j:set_cost()
+        end
+      end
+    end
+    R.status(src, localize("k_val_up"), G.C.MONEY)
+  end
+  D.dup_joker = function(g, card, src, context, other, acc)
+    if context.blueprint then return end
+    local pool = {}
+    for _, j in ipairs(G.jokers and G.jokers.cards or {}) do if j ~= card then pool[#pool + 1] = j end end
+    if #pool == 0 then R.status(src, localize("k_no_other_jokers"), G.C.FILTER) return end
+    local used = #G.jokers.cards + (G.GAME.joker_buffer or 0) - (acc and acc.when == "self_sold" and 1 or 0)
+    if used >= G.jokers.config.card_limit then R.status(src, localize("k_no_room_ex"), G.C.FILTER) return end
+    local chosen = pseudorandom_element(pool, pseudoseed("forge_invisible"))
+    local c = copy_card(chosen, nil, nil, nil, chosen.edition and chosen.edition.negative)
+    if c.ability and c.ability.invis_rounds then c.ability.invis_rounds = 0 end
+    c:add_to_deck()
+    G.jokers:emplace(c)
+    R.status(src, localize("k_duplicated_ex"), G.C.FILTER)
+  end
+  D.copy_consumable = function(g, card, src)
+    local area = G.consumeables
+    if not (area and area.cards and area.cards[1]) then return end
+    local neg = g.v ~= "normal"
+    if not neg then
+      if #area.cards + (G.GAME.consumeable_buffer or 0) >= area.config.card_limit then return end
+      G.GAME.consumeable_buffer = (G.GAME.consumeable_buffer or 0) + 1
+    end
+r 3 617 %20%20%20%20 -
+l 167
+      local pick = pseudorandom_element(area.cards, pseudoseed("forge_perkeo"))
+      if pick then
+        local c = copy_card(pick, nil)
+        if neg then c:set_edition({negative = true}, true) end
+        c:add_to_deck()
+        area:emplace(c)
+      end
+      if not neg then G.GAME.consumeable_buffer = 0 end
+      return true
+    end}))
+    R.status(src, localize("k_duplicated_ex"), G.C.FILTER)
+  end
+
+  local TG, TO = R.TEXT_GIVE, R.TEXT_ONLY
+  for id in pairs(P.KEY) do
+    TG[id] = function(g, s, lang, vars)
+      local l = lt(lang)
+      if id == "p_chances" and tonumber(g.n) == 2 then return l.p_chances2 end
+      if id == "p_chances" then return string.format(l.p_chances, T.fmt_n(tonumber(g.n) or 2)) end
+      if id == "p_interest" or id == "p_debt" then return string.format(l[id], T.fmt_n(tonumber(g.n) or 1)) end
+      if id == "p_free_rerolls" then return string.format(l[id], T.fmt_n(tonumber(g.n) or 1)) end
+      if id == "p_hand_size_var" then return string.format(l[id], signed(g.n), T.var_name(vars, g.var)) end
+      return string.format(l[id], signed(g.n))
+    end
+  end
+  TG.p_rule = function(g, s, lang) return lt(lang).rules[g.v] or lt(lang).rules.four_fingers end
+  TG.copy_ability = function(g, s, lang) return lt(lang).copy[g.v] or lt(lang).copy.right end
+  TG.save_run = function(g, s, lang) return lt(lang).save_run end
+  TG.dagger = function(g, s, lang) return string.format(lt(lang).dagger[g.v] or lt(lang).dagger.right, T.fmt_n(tonumber(g.n) or 2)) end
+  TG.sell_all = function(g, s, lang) return string.format(lt(lang).sell_all, T.fmt_n(tonumber(g.n) or 1)) end
+  TG.dup_joker = function(g, s, lang) return lt(lang).dup_joker end
+  TG.copy_consumable = function(g, s, lang) return lt(lang).copy_consumable[g.v] or lt(lang).copy_consumable.negative end
+  local RCOL = {Common = "blue", Uncommon = "green", Rare = "red", Legendary = "legendary"}
+  TO.other_rarity = function(o, s, lang) return string.format(lt(lang).other_rarity, RCOL[o.v] or "green", lt(lang).rarity[o.v] or o.v) end
+  TO.blind_percent = function(o, s, lang) return string.format(lt(lang).blind_percent, s[o.op or "at_least"] or s.at_least, T.fmt_n(tonumber(o.n) or 25)) end
+
+  for lang, t in pairs(TEXT) do
+    if T.W and T.W[lang] then
+      for _, w in ipairs(P.WHEN) do T.W[lang][w] = t[w] end
+    end
+  end
+  for id, l in pairs(P.LABEL_GIVE) do R.LABEL_GIVE[id] = l end
+  for id, l in pairs(P.LABEL_ONLY) do R.LABEL_ONLY[id] = l end
+  for _, id in ipairs({"p_hand_size", "p_joker_slots", "p_rule", "copy_ability", "p_discards", "p_hands"}) do R.SIMPLE_GIVE[id] = true end
+
+  R.VALUES_GIVE = R.VALUES_GIVE or {}
+  R.VALUES_ONLY = R.VALUES_ONLY or {}
+  local function opts(list)
+    return function()
+      local out = {}
+      for _, v in ipairs(list) do out[#out + 1] = {label = mod_loc and mod_loc(P.LABEL_VALUE[v] or v) or (P.LABEL_VALUE[v] or v), value = v} end
+      return out
+    end
+  end
+  R.VALUES_GIVE.p_rule = opts(P.RULES)
+  R.VALUES_GIVE.copy_ability = opts(P.COPY)
+  R.VALUES_GIVE.dagger = opts(P.SIDES)
+  R.VALUES_GIVE.copy_consumable = opts(P.COPY_KINDS)
+  R.VALUES_GIVE.copy_card = opts(P.COPY_TO)
+  R.VALUES_ONLY.other_rarity = function()
+    local out = {}
+    for _, v in ipairs({"Common", "Uncommon", "Rare", "Legendary"}) do out[#out + 1] = {label = mod_loc and mod_loc(v) or v, value = v} end
+    return out
+  end
+  if R.COUNTS and R.COUNT and R.PER_GIVE and not R.member(R.COUNTS, "tarots_used") then
+    R.COUNTS[#R.COUNTS + 1] = "tarots_used"
+    R.V8_IDS.tarots_used = true
+    R.COUNT.tarots_used = function()
+      local u = G.GAME and G.GAME.consumeable_usage_total
+      return u and tonumber(u.tarot) or 0
+    end
+    if R.LABEL_COUNT then R.LABEL_COUNT.tarots_used = "Tarot used this run" end
+    local SWAP = {
+      en = {"different {C:planet}Planet{} card used this run", "{C:tarot}Tarot{} card used this run"},
+      fr = {"carte {C:planet}Planète{} différente utilisée dans la partie", "carte {C:tarot}Tarot{} utilisée dans la partie"},
+      es = {"carta de {C:planet}Planeta{} distinta usada en la partida", "carta de {C:tarot}Tarot{} usada en la partida"},
+    }
+    for id in pairs(R.PER_GIVE) do
+      local base = R.TEXT_GIVE[id]
+      if base then
+        R.TEXT_GIVE[id] = function(gv, s, lang, ...)
+          if gv.per ~= "tarots_used" then return base(gv, s, lang, ...) end
+          local x = {}
+          for k, v in pairs(gv) do x[k] = v end
+          x.per = "planets_used"
+          local t = base(x, s, lang, ...)
+          local sw = SWAP[lang] or SWAP.en
+          local a, b = t:find(sw[1], 1, true)
+          if a then t = t:sub(1, a - 1) .. sw[2] .. t:sub(b + 1) end
+          return t
+        end
+      end
+    end
+  end
+  if mod_loc_register then mod_loc_register(LOC) end
+end
+
+local function is_forge(card)
+  local c = card and card.config and card.config.center
+  if c and c.forge and c.forge_id and not c.forge_lost then return c end
+  return nil
+end
+P.is_forge = is_forge
+
+function P.item(card)
+  local cen = is_forge(card)
+  local S = store()
+  if not (cen and S and S.get) then return nil end
+  return S.get(cen.forge_id)
+end
+
+P.cache = {}
+function P.passive_of(c)
+  local hit = P.cache[c.id]
+  if hit and hit.rules == c.rules and hit.vars == c.vars then return hit.info end
+  local R = rules_mod()
+  local info = {list = {}, flags = {}, copy = nil, any = false, var = false}
+  for _, r in ipairs(R.clean_rules(c.rules)) do
+    if r.when == "passive" then
+      for _, g in ipairs(r.give) do
+        info.any = true
+        if g.id == "p_rule" then info.flags[g.v] = true
+        elseif g.id == "copy_ability" then info.copy = g.v
+        elseif P.KEY[g.id] then
+          info.list[#info.list + 1] = g
+          if g.var then info.var = true end
+        end
+      end
+    end
+  end
+  P.cache[c.id] = {rules = c.rules, vars = c.vars, info = info}
+  return info
+end
+
+function P.want(card, info)
+  local R = rules_mod()
+  local w = {}
+  for _, g in ipairs(info.list) do
+    local k = P.KEY[g.id]
+    local n = tonumber(g.n) or 0
+    if g.var then n = n * (tonumber(R.var_val(card, g.var)) or 0) end
+    if k == "chances" then w[k] = (w[k] or 1) * math.max(1, n)
+    else w[k] = (w[k] or 0) + math.floor(n) end
+  end
+  for k, v in pairs(w) do if v == 0 or (k == "chances" and v == 1) then w[k] = nil end end
+  return w
+end
+
+local function apply(k, d)
+  if d == 0 then return end
+  local g = G.GAME
+  if k == "hand_size" then if G.hand then G.hand:change_size(d) end
+  elseif k == "hands" then g.round_resets.hands = g.round_resets.hands + d
+  elseif k == "discards" then
+    g.round_resets.discards = g.round_resets.discards + d
+    ease_discard(d)
+  elseif k == "joker_slots" then G.jokers.config.card_limit = G.jokers.config.card_limit + d
+  elseif k == "consumable_slots" then if G.consumeables then G.consumeables.config.card_limit = G.consumeables.config.card_limit + d end
+  elseif k == "interest" then g.interest_amount = (g.interest_amount or 1) + d
+  elseif k == "free_rerolls" then
+    g.current_round.free_rerolls = (g.current_round.free_rerolls or 0) + d
+    if calculate_reroll_cost then calculate_reroll_cost(true) end
+  elseif k == "debt" then g.bankrupt_at = (g.bankrupt_at or 0) - d
+  end
+end
+
+local function refresh_costs()
+r 3 617 %20%20 -
+l 67
+    for _, v in pairs(G.I and G.I.CARD or {}) do if v.set_cost then v:set_cost() end end
+    return true
+  end}))
+end
+
+function P.sync(card, off)
+  local c = P.item(card)
+  if not c then return end
+  local info = P.passive_of(c)
+  local have = type(card.ability.forge_passive) == "table" and card.ability.forge_passive or {}
+  if not info.any and not next(have) then return end
+  local want = {}
+  if not off then
+    if info.var then rules_mod().vars_state(card, rules_mod().clean_vars(c.vars)) end
+    want = P.want(card, info)
+  end
+  local keys = {}
+  for k in pairs(have) do keys[k] = true end
+  for k in pairs(want) do keys[k] = true end
+  for k in pairs(keys) do
+    if k == "chances" then
+      local a, b = tonumber(have[k]) or 1, tonumber(want[k]) or 1
+      if a ~= b then
+        for key, v in pairs(G.GAME.probabilities) do G.GAME.probabilities[key] = v / a * b end
+      end
+    else
+      apply(k, (tonumber(want[k]) or 0) - (tonumber(have[k]) or 0))
+    end
+  end
+  card.ability.forge_passive = next(want) and want or nil
+  if info.flags.free_planets and (off or not card.forge_planets) then refresh_costs() end
+  card.forge_planets = not off and info.flags.free_planets or nil
+end
+
+function P.target(card, v)
+  local list = G.jokers and G.jokers.cards or {}
+  local at
+  for i, j in ipairs(list) do if j == card then at = i break end end
+  if not at then return nil end
+  local t
+  if v == "right" then t = list[at + 1]
+  elseif v == "left" then t = list[at - 1]
+  elseif v == "leftmost" then t = list[1]
+  else t = list[#list] end
+  if t == card then return nil end
+  return t
+end
+
+local SUM = {"chip_mod", "mult_mod", "chips", "mult", "h_mult", "dollars", "p_dollars", "repetitions", "h_chips"}
+local PROD = {"Xmult_mod", "x_mult", "xmult"}
+function P.merge(a, b)
+  if not a then return b end
+  if not b then return a end
+  for _, k in ipairs(SUM) do
+    if a[k] or b[k] then a[k] = (a[k] or 0) + (b[k] or 0) end
+  end
+  for _, k in ipairs(PROD) do
+    if a[k] or b[k] then a[k] = (a[k] or 1) * (b[k] or 1) end
+  end
+  if b.saved then a.saved = true end
+  a.message = a.message or b.message
+  return a
+end
+
+function P.copy(card, context, info)
+  local t = P.target(card, info.copy)
+  if not t then return nil end
+r 3 2310 %20%20 -
+l 107
+  context.blueprint_card = context.blueprint_card or card
+  if context.blueprint > #G.jokers.cards + 1 then return nil end
+  local r = t:calculate_joker(context)
+  context.blueprint = nil
+  local eff = context.blueprint_card or card
+  context.blueprint_card = nil
+  if r then
+    r.card = eff
+    r.colour = G.C.BLUE
+    return r
+  end
+  return nil
+end
+
+local function wrap(obj, name, make)
+  if obj and type(obj[name]) == "function" then obj[name] = make(obj[name]) end
+end
+P.wrap = wrap
+
+local function log(key, err)
+  P.logged = P.logged or {}
+  if P.logged[key] then return end
+  P.logged[key] = true
+  print("[FORGE] " .. key .. " failed: " .. tostring(err))
+end
+
+function P.install_jokers()
+  wrap(Card, "add_to_deck", function(orig) return function(self, from_debuff, ...)
+    local was = self.added_to_deck
+    local r = orig(self, from_debuff, ...)
+    if not was and self.added_to_deck and is_forge(self) then
+      self.ability.forge_passive = nil
+      local ok, err = pcall(P.sync, self)
+      if not ok then log("passive add", err) end
+    end
+    return r
+  end end)
+  wrap(Card, "remove_from_deck", function(orig) return function(self, from_debuff, ...)
+    if self.added_to_deck and is_forge(self) then
+      local ok, err = pcall(P.sync, self, true)
+      if not ok then log("passive remove", err) end
+    end
+    return orig(self, from_debuff, ...)
+  end end)
+  wrap(Card, "calculate_joker", function(orig) return function(self, context)
+    local r, r2 = orig(self, context)
+    if type(context) ~= "table" then return r, r2 end
+    if self.ability and self.ability.set == "Planet" and context.joker_main and not self.debuff and not r then
+      local x = P.observatory()
+      local h = self.ability.consumeable and self.ability.consumeable.hand_type
+      if x and h and h == context.scoring_name then
+        return {message = localize{type = "variable", key = "a_xmult", vars = {x}}, Xmult_mod = x}
+      end
+      return r, r2
+    end
+    if not is_forge(self) or self.debuff then return r, r2 end
+    local c = P.item(self)
+    if not c then return r, r2 end
+    local info = P.passive_of(c)
+    if info.var and self.added_to_deck then
+      local ok, err = pcall(P.sync, self)
+      if not ok then log("passive var", err) end
+    end
+    if info.copy then
+      local ok, cr = pcall(P.copy, self, context, info)
+      if not ok then
+        context.blueprint, context.blueprint_card = nil, nil
+        log("copy ability", cr)
+      elseif cr then r = P.merge(r, cr) end
+    end
+    if r and context.other_joker and context.other_joker ~= self and context.other_joker.juice_up then
+      local other = context.other_joker
+      G.E_MANAGER:add_event(Event({func = function() other:juice_up(0.5, 0.5) return true end}))
+    end
+    return r, r2
+  end end)
+  if type(find_joker) == "function" then
+    local orig = find_joker
+    find_joker = function(name, non_debuff)
+      local out = orig(name, non_debuff)
+      local flag = P.NAME_FLAG[name]
+      if flag and G.jokers and G.jokers.cards then
+        local ok, err = pcall(function()
+          for _, j in ipairs(G.jokers.cards) do
+            if (non_debuff or not j.debuff) and is_forge(j) then
+              if flag == "chaos" then
+                local fp = j.ability.forge_passive
+                for _ = 1, math.floor(tonumber(type(fp) == "table" and fp.free_rerolls) or 0) do out[#out + 1] = j end
+              else
+                local c = P.item(j)
+                if c and P.passive_of(c).flags[flag] then out[#out + 1] = j end
+              end
+            end
+          end
+        end)
+        if not ok then log("find_joker", err) end
+      end
+      return out
+    end
+  end
+  wrap(Card, "is_suit", function(orig) return function(self, suit, bypass_debuff, flush_calc)
+    local cen = self.config and self.config.center
+    if cen and cen.forge_wild then
+      if flush_calc then
+        if self.ability.effect == "Stone Card" then return false end
+        if not self.debuff then return true end
+      else
+r 3 502 %20%20%20%20%20%20%20%20 -
+l 42
+        if self.ability.effect == "Stone Card" then return false end
+        return true
+      end
+    end
+    return orig(self, suit, bypass_debuff, flush_calc)
+  end end)
+end
+
+local function blind_item(b)
+  local p = b and b.config and b.config.blind
+  local S = store()
+  if not (p and p.forge_kind == "blind" and S and S.get_item) then return nil end
+  return S.get_item(p.forge_id)
+end
+
+function P.boss_flags(b)
+  local c = blind_item(b)
+  if not c then return nil end
+  local f = {}
+  for _, e in ipairs(c.effects or {}) do
+    for _, id in ipairs(P.BOSS) do if e.id == id then f[id] = tonumber(e.n) or true end end
+  end
+  return next(f) and f or nil
+end
+
+local function flip_back()
+  for _, c in ipairs(G.hand and G.hand.cards or {}) do if c.facing == "back" then c:flip() end end
+  for _, v in pairs(G.playing_cards or {}) do v.ability.wheel_flipped = nil end
+end
+
+function P.install_blinds()
+  wrap(Blind, "set_blind", function(orig) return function(self, blind, reset, silent)
+    local r = orig(self, blind, reset, silent)
+    local f = not reset and not self.disabled and P.boss_flags(self)
+    if f then
+      if f.no_repeat then
+        self.hands = {}
+        for _, h in ipairs({"Flush Five", "Flush House", "Five of a Kind", "Straight Flush", "Four of a Kind", "Full House", "Flush", "Straight", "Three of a Kind", "Two Pair", "Pair", "High Card"}) do self.hands[h] = false end
+      end
+      if f.one_type then self.only_hand = false end
+      if f.face_down_after then self.prepped = nil end
+      if f.shuffle_jokers and G.jokers and #G.jokers.cards > 0 then
+r 2 191 %20%20%20%20%20%20%20%20 -
+l 1
+        for _, v in ipairs(G.jokers.cards) do v:flip() end
+r 2 195 %20%20%20%20%20%20%20%20 -
+l 19
+          G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.2, func = function()
+            for _, p in ipairs({0.85, 1.15, 1}) do
+              G.E_MANAGER:add_event(Event({func = function() G.jokers:shuffle("aajk"); play_sound("cardSlide1", p) return true end}))
+              delay(0.15)
+            end
+            return true
+          end}))
+        end
+      end
+    end
+    return r
+  end end)
+  wrap(Blind, "press_play", function(orig) return function(self, ...)
+    local r = orig(self, ...)
+    if self.disabled then return r end
+    local f = P.boss_flags(self)
+    if not f then return r end
+    if f.discard_held then
+      local n = math.max(1, math.floor(tonumber(f.discard_held) or 2))
+r 3 617 %20%20%20%20%20%20 -
+l 15
+        local any = nil
+        local pool = {}
+        for _, v in ipairs(G.hand.cards) do pool[#pool + 1] = v end
+        for i = 1, n do
+          if G.hand.cards[i] and #pool > 0 then
+            local pick, at = pseudorandom_element(pool, pseudoseed("hook"))
+            G.hand:add_to_highlighted(pick, true)
+            table.remove(pool, at)
+            any = true
+            play_sound("card1", 1)
+          end
+        end
+        if any then G.FUNCS.discard_cards_from_highlighted(nil, true) end
+        return true
+      end}))
+r 2 484 %20%20%20%20%20%20 -
+l 4
+      delay(0.7)
+      r = true
+    end
+    if f.disable_joker and G.jokers.cards[1] then
+r 2 484 %20%20%20%20%20%20 -
+l 13
+      self.prepped = true
+    end
+    if f.face_down_after then self.prepped = true end
+    return r
+  end end)
+  wrap(Blind, "debuff_hand", function(orig) return function(self, cards, hand, handname, check)
+    local r = orig(self, cards, hand, handname, check)
+    if r or self.disabled then return r end
+    local f = P.boss_flags(self)
+    if not f then return r end
+    if f.no_repeat then
+      self.hands = self.hands or {}
+      if self.hands[handname] then self.triggered = true return true end
+r 2 540 %20%20%20%20%20%20 -
+l 3
+    end
+    if f.one_type then
+      if self.only_hand and self.only_hand ~= handname then self.triggered = true return true end
+r 2 547 %20%20%20%20%20%20 -
+l 2
+    end
+    if f.level_down and G.GAME.hands[handname] and G.GAME.hands[handname].level > 1 then
+r 2 484 %20%20%20%20%20%20 -
+l 6
+      if not check then
+        level_up_hand(self.children and self.children.animatedSprite, handname, nil, -1)
+        self:wiggle()
+      end
+    end
+    if f.most_played_zero and handname == G.GAME.current_round.most_played_poker_hand then
+r 2 484 %20%20%20%20%20%20 -
+l 1
+      if not check then
+r 2 565 %20%20%20%20%20%20%20%20 -
+l 15
+        self:wiggle()
+      end
+    end
+    return r
+  end end)
+  wrap(Blind, "drawn_to_hand", function(orig) return function(self, ...)
+    local was = self.prepped
+    local r = orig(self, ...)
+    if self.disabled then return r end
+    local f = P.boss_flags(self)
+    if not f then return r end
+    if f.force_select and G.hand.cards[1] then
+      local any = false
+      for _, v in ipairs(G.hand.cards) do if v.ability.forced_selection then any = true end end
+      if not any then
+r 2 582 %20%20%20%20%20%20%20%20 -
+l 37
+        local pick = pseudorandom_element(G.hand.cards, pseudoseed("cerulean_bell"))
+        pick.ability.forced_selection = true
+        G.hand:add_to_highlighted(pick)
+      end
+    end
+    if f.disable_joker and was and G.jokers.cards[1] then
+      local pool = {}
+      for _, j in ipairs(G.jokers.cards) do
+        if not j.debuff or #G.jokers.cards < 2 then pool[#pool + 1] = j end
+        j.ability.forge_crimson = nil
+        j:set_debuff(false)
+      end
+      local pick = pseudorandom_element(pool, pseudoseed("crimson_heart"))
+      if pick then
+        pick.ability.forge_crimson = true
+        pick:set_debuff(true)
+        pick:juice_up()
+        self:wiggle()
+      end
+    end
+    return r
+  end end)
+  wrap(Blind, "stay_flipped", function(orig) return function(self, area, card)
+    local r = orig(self, area, card)
+    if r or self.disabled or area ~= G.hand then return r end
+    local f = P.boss_flags(self)
+    if not f then return r end
+    if f.face_down_chance and pseudorandom(pseudoseed("wheel")) < G.GAME.probabilities.normal / math.max(1, tonumber(f.face_down_chance) or 7) then return true end
+    if f.face_down_faces and card:is_face(true) then return true end
+    if f.face_down_after and self.prepped then return true end
+    return r
+  end end)
+  wrap(Blind, "debuff_card", function(orig) return function(self, card, from_blind)
+    local r = orig(self, card, from_blind)
+    if not card then return r end
+    local cen = card.config and card.config.center
+    if self.boss and card.area ~= G.jokers and cen and cen.forge_wild then
+r 2 651 %20%20%20%20%20%20 -
+l 190
+      return r
+    end
+    if self.disabled then return r end
+    local f = P.boss_flags(self)
+    if not f then return r end
+    if card.area == G.jokers then
+      if f.disable_joker and card.ability.forge_crimson then card:set_debuff(true) end
+      return r
+    end
+    if cen and cen.key == "m_wild" and self.boss then return r end
+    if f.debuff_played_ante and card.ability.played_this_ante then card:set_debuff(true) end
+    if f.debuff_until_sell then card:set_debuff(true) end
+    return r
+  end end)
+  wrap(Blind, "disable", function(orig) return function(self, ...)
+    local f = P.boss_flags(self)
+    if f then
+      for _, j in ipairs(G.jokers and G.jokers.cards or {}) do j.ability.forge_crimson = nil end
+      if f.force_select then for _, v in ipairs(G.playing_cards or {}) do v.ability.forced_selection = nil end end
+    end
+    local r = orig(self, ...)
+    if f and (f.face_down_chance or f.face_down_faces or f.face_down_after) then flip_back() end
+    return r
+  end end)
+  wrap(Blind, "defeat", function(orig) return function(self, ...)
+    local f = P.boss_flags(self)
+    if f then
+      for _, j in ipairs(G.jokers and G.jokers.cards or {}) do
+        if j.ability.forge_crimson then j.ability.forge_crimson = nil; j:set_debuff(false) end
+      end
+      if f.force_select then for _, v in ipairs(G.playing_cards or {}) do v.ability.forced_selection = nil end end
+    end
+    return orig(self, ...)
+  end end)
+  wrap(Card, "sell_card", function(orig) return function(self, ...)
+    local r = orig(self, ...)
+    local b = G.GAME and G.GAME.blind
+    if self.ability and self.ability.set == "Joker" and b and not b.disabled then
+      local f = P.boss_flags(b)
+      if f and f.debuff_until_sell then b:disable() end
+    end
+    return r
+  end end)
+  if G and G.FUNCS then
+    wrap(G.FUNCS, "draw_from_deck_to_hand", function(orig) return function(...)
+      local b = G.GAME and G.GAME.blind
+      local f = b and not b.disabled and P.boss_flags(b)
+      if not (f and f.draw_three) then return orig(...) end
+      local name = b.name
+      b.name = "The Serpent"
+      local ok, r = pcall(orig, ...)
+      b.name = name
+      if not ok then error(r) end
+      return r
+    end end)
+  end
+end
+
+function P.run_flag(id)
+  local Run = run_mod()
+  if not (Run and Run.sources) then return nil end
+  local hit
+  for _, s in ipairs(Run.sources()) do
+    if not s.blind then
+      for _, e in ipairs(s.c.effects or {}) do
+        if e.id == id then hit = e end
+      end
+    end
+  end
+  return hit
+end
+
+function P.observatory()
+  if G.GAME.used_vouchers and G.GAME.used_vouchers.v_observatory then return nil end
+  local e = P.run_flag("observatory")
+  return e and (tonumber(e.n) or 1.5) or nil
+end
+
+local function boss_reroll_grant()
+  local uv = G.GAME and G.GAME.used_vouchers
+  if not uv or uv.v_retcon then return nil end
+  if P.run_flag("boss_reroll_any") then return "v_retcon" end
+  if not uv.v_directors_cut and P.run_flag("boss_reroll") then return "v_directors_cut" end
+  return nil
+end
+
+local function with_grant(fn, ...)
+  local key = boss_reroll_grant()
+  if not key then return fn(...) end
+  G.GAME.used_vouchers[key] = true
+  local ok, r = pcall(fn, ...)
+  G.GAME.used_vouchers[key] = nil
+  if not ok then error(r) end
+  return r
+end
+
+function P.install_shop()
+  if type(create_card) == "function" then
+    local orig = create_card
+    create_card = function(_type, area, legendary, _rarity, skip_materialize, soulable, forced_key, key_append, ...)
+      if G.pack_cards and area == G.pack_cards and not forced_key and G.GAME and G.GAME.used_vouchers then
+        local ok, nt, nk, nka = pcall(function()
+          if _type == "Tarot" and key_append == "ar1" and not G.GAME.used_vouchers.v_omen_globe and P.run_flag("omen") and pseudorandom("omen_globe") > 0.8 then
+            return "Spectral", nil, "ar2"
+          end
+          if _type == "Planet" and key_append == "pl1" and not G.GAME.used_vouchers.v_telescope and #G.pack_cards.cards == 0 and P.run_flag("telescope") then
+            local hand, tally = nil, 0
+            for _, v in ipairs(G.handlist or {}) do
+              if G.GAME.hands[v].visible and G.GAME.hands[v].played > tally then hand = v; tally = G.GAME.hands[v].played end
+            end
+            if hand then
+              for _, v in pairs(G.P_CENTER_POOLS.Planet) do
+                if v.config and v.config.hand_type == hand then return nil, v.key, nil end
+              end
+            end
+          end
+          return nil
+        end)
+        if ok and nt then _type, key_append = nt, nka end
+        if ok and nk then forced_key = nk end
+      end
+      return orig(_type, area, legendary, _rarity, skip_materialize, soulable, forced_key, key_append, ...)
+    end
+  end
+  if type(create_card_for_shop) == "function" then
+    local orig = create_card_for_shop
+    create_card_for_shop = function(area, ...)
+      local card = orig(area, ...)
+      pcall(function()
+        if not (card and card.ability and (card.ability.set == "Default" or card.ability.set == "Enhanced")) then return end
+        if G.GAME.used_vouchers.v_illusion or not P.run_flag("illusion") then return end
+        if card.ability.set == "Default" and pseudorandom(pseudoseed("illusion")) > 0.6 then
+          local pool = {}
+          for _, v in ipairs(G.P_CENTER_POOLS.Enhanced or {}) do pool[#pool + 1] = v end
+          if #pool > 0 then card:set_ability(pseudorandom_element(pool, pseudoseed("illusion_e")), nil, true) end
+        end
+        if pseudorandom(pseudoseed("illusion")) > 0.8 then
+          local poll = pseudorandom(pseudoseed("illusion"))
+          local ed = poll > 1 - 0.15 and {polychrome = true} or poll > 0.5 and {holo = true} or {foil = true}
+          card:set_edition(ed)
+          card:set_cost()
+        end
+      end)
+      return card
+    end
+  end
+  if G and G.FUNCS then
+    wrap(G.FUNCS, "reroll_boss_button", function(orig) return function(e) return with_grant(orig, e) end end)
+  end
+  if type(create_UIBox_blind_select) == "function" then
+    local orig = create_UIBox_blind_select
+    create_UIBox_blind_select = function(...) return with_grant(orig, ...) end
+  end
+  local M = package.loaded["functions/forge/forge_kinds_more"]
+  if M and M.TAG_CTX then
+    for _, pair in ipairs(P.TAG_CTX) do
+      local have = false
+      for _, x in ipairs(M.TAG_CTX) do if x[1] == pair[1] then have = true end end
+      if not have then M.TAG_CTX[#M.TAG_CTX + 1] = pair end
+    end
+  end
+  if M and M.tag_apply then
+    local base = M.tag_apply
+    M.tag_apply = function(tag, ctx, p)
+      local r, handled = P.tag_apply(tag, ctx, p)
+      if handled then return r end
+      return base(tag, ctx, p)
+    end
+  end
+end
+
+function P.tag_apply(tag, ctx, p)
+  local S = store()
+  local c = S and S.get_item and S.get_item(p.forge_id)
+  if not c then return nil, false end
+  local has = {}
+  for _, e in ipairs(c.effects or {}) do has[e.id] = e end
+  local t = ctx.type
+  if t == "eval" and has.boss_money then
+    if not (G.GAME.last_blind and G.GAME.last_blind.boss) then return nil, true end
+    tag:yep("+", G.C.GOLD, function() return true end)
+    tag.triggered = true
+    return {dollars = math.floor(tonumber(has.boss_money.n) or 25), condition = localize("ph_defeat_the_boss"), pos = tag.pos, tag = tag}, true
+  end
+  if t == "store_joker_modify" and has.next_edition then
+    local card = ctx.card
+    if not card or card.edition or card.temp_edition or card.ability.set ~= "Joker" then return nil, true end
+    local R = rules_mod()
+    local ed = R.edition_arg(has.next_edition.v or "foil") or {foil = true}
+    local lock = tag.ID
+r 4 133 %20%20%20%20 -
+l 4
+    card.temp_edition = true
+    tag:yep("+", G.C.DARK_EDITION, function()
+      card.temp_edition = nil
+      card:set_edition(ed, true)
+r 4 361 %20%20%20%20%20%20 -
+l 1
+      card:set_cost()
+r 4 143 %20%20%20%20%20%20 -
+l 7
+      return true
+    end)
+    tag.triggered = true
+    return true, true
+  end
+  if t == "voucher_add" and has.shop_voucher then
+    tag:yep("+", G.C.SECONDARY_SET.Voucher, function()
+r 4 305 %20%20%20%20%20%20 -
+l 2
+      local key = get_next_voucher_key(true)
+      G.ARGS.voucher_tag[key] = true
+r 4 308 %20%20%20%20%20%20 -
+l 2
+      local card = Card(G.shop_vouchers.T.x + G.shop_vouchers.T.w / 2, G.shop_vouchers.T.y, G.CARD_W, G.CARD_H, G.P_CARDS.empty, G.P_CENTERS[key], {bypass_discovery_center = true, bypass_discovery_ui = true})
+      create_shop_card_ui(card, "Voucher", G.shop_vouchers)
+r 3 1446 %20%20%20%20%20%20 -
+r 9 3131 %20%20%20%20%20%20 -
+r 4 314 %20%20%20%20%20%20 -
+l 7
+      return true
+    end)
+    tag.triggered = true
+    return nil, true
+  end
+  if t == "new_blind_choice" and has.reroll_boss then
+    local lock = tag.ID
+r 4 133 %20%20%20%20 -
+l 1
+    tag:yep("+", G.C.GREEN, function()
+r 4 288 %20%20%20%20%20%20 -
+r 4 289 %20%20%20%20%20%20 -
+r 3 617 %20%20%20%20%20%20 -
+l 10
+        G.E_MANAGER:add_event(Event({func = function() G.CONTROLLER.locks[lock] = nil return true end}))
+        return true
+      end}))
+      return true
+    end)
+    tag.triggered = true
+    return true, true
+  end
+  if t == "shop_start" and has.free_shop_reroll then
+    if G.GAME.shop_d6ed then return nil, true end
+r 4 384 %20%20%20%20 -
+l 1
+    tag:yep("+", G.C.GREEN, function()
+r 4 386 %20%20%20%20%20%20 -
+r 3 603 %20%20%20%20%20%20 -
+l 7
+      return true
+    end)
+    tag.triggered = true
+    return true, true
+  end
+  if t == "immediate" and has.double_money and not next(P.others(c, "double_money")) then
+    local lock = tag.ID
+r 4 133 %20%20%20%20 -
+l 116
+    local max = math.floor(tonumber(has.double_money.n) or 40)
+    tag:yep("+", G.C.MONEY, function() G.CONTROLLER.locks[lock] = nil return true end)
+    G.E_MANAGER:add_event(Event({trigger = "immediate", func = function()
+      ease_dollars(math.min(max, math.max(0, G.GAME.dollars)), true)
+      return true
+    end}))
+    tag.triggered = true
+    return true, true
+  end
+  return nil, false
+end
+
+function P.others(c, skip)
+  local out = {}
+  for _, e in ipairs(c.effects or {}) do if e.id ~= skip then out[#out + 1] = e end end
+  return out
+end
+
+function P.cat(Cat)
+  local function n(lo, hi, def, step, unit) return {lo = lo, hi = hi, def = def, step = step or 1, unit = unit} end
+  local boss = {
+    {id = "discard_held", label = "Discard random held cards", num = n(1, 1000, 2), line = "Discards {C:attention}%d{} random cards held in hand after every played hand", simple = true},
+    {id = "most_played_zero", label = "Most played hand costs all money", line = "Playing your most played {C:attention}poker hand{} sets money to {C:money}$0{}"},
+    {id = "face_down_chance", label = "Cards drawn face down by chance", num = n(2, 1000, 7), line = "{C:green}#P# in %d{} cards get drawn face down"},
+    {id = "face_down_faces", label = "Face cards drawn face down", line = "All face cards are drawn face down", simple = true},
+    {id = "face_down_after", label = "Face down after each hand", line = "Cards are drawn face down after each hand played"},
+    {id = "level_down", label = "Level down the played hand", line = "Decrease level of played {C:attention}poker hand{}", simple = true},
+    {id = "no_repeat", label = "No repeated hand types", line = "No repeat hand types this round"},
+    {id = "one_type", label = "Only one hand type", line = "Play only {C:attention}1{} hand type this round"},
+    {id = "draw_three", label = "Always draw 3", line = "Always draw {C:attention}3{} cards after playing or discarding"},
+    {id = "debuff_played_ante", label = "Debuff cards played this ante", line = "Cards played previously this Ante are debuffed"},
+    {id = "shuffle_jokers", label = "Flip and shuffle Jokers", line = "Flips and shuffles all {C:attention}Joker{} cards"},
+    {id = "debuff_until_sell", label = "Debuff until a Joker is sold", line = "All cards debuffed until {C:attention}1{} Joker sold"},
+    {id = "disable_joker", label = "Disable a random Joker", line = "One random {C:attention}Joker{} disabled every hand"},
+    {id = "force_select", label = "Force a selected card", line = "Forces {C:attention}1{} card to always be selected"},
+  }
+  local tag = {
+    {id = "next_edition", label = "Edition on the next shop Joker", v = "shader", line = "Next base edition shop {C:attention}Joker{} is free and becomes {C:dark_edition}%s{}", simple = true},
+    {id = "boss_money", label = "Money after the Boss Blind", num = n(1, 1e6, 25, 1, "$"), line = "After defeating the {C:attention}Boss Blind{}, gain {C:money}$%d{}"},
+    {id = "shop_voucher", label = "Voucher in the next shop", line = "Adds one {C:attention}Voucher{} to the next shop"},
+    {id = "reroll_boss", label = "Reroll the Boss Blind", line = "Rerolls the {C:attention}Boss Blind{}"},
+    {id = "double_money", label = "Double your money", num = n(1, 1e6, 40, 5, "$"), line = "Doubles your money (max {C:money}$%d{})"},
+    {id = "free_shop_reroll", label = "Free rerolls start at $0", line = "Rerolls in the next shop start at {C:money}$0{}"},
+  }
+  local voucher = {
+    {id = "omen", label = "Spectrals in Arcana packs", line = "{C:spectral}Spectral{} cards may appear in any of the {C:attention}Arcana Packs{}"},
+    {id = "telescope", label = "Most played Planet in Celestial packs", line = "{C:attention}Celestial Packs{} always contain the {C:planet}Planet{} card for your most played {C:attention}poker hand{}"},
+    {id = "observatory", label = "Held Planets give XMult", num = n(1.05, 1e6, 1.5, 0.05, "x"), line = "{C:planet}Planet{} cards in your {C:attention}consumable{} area give {X:red,C:white}X%s{} Mult for their {C:attention}poker hand{}", args = {"n"}},
+    {id = "illusion", label = "Shop cards get enhancements", line = "{C:attention}Playing cards{} in the shop may have an {C:enhanced}Enhancement{} or an {C:dark_edition}Edition{}"},
+    {id = "boss_reroll", label = "Reroll the Boss once per ante", line = "Reroll the {C:attention}Boss Blind{} {C:attention}1{} time per Ante, {C:money}$10{} per roll"},
+    {id = "boss_reroll_any", label = "Reroll the Boss any time", line = "Reroll the {C:attention}Boss Blind{} {C:attention}unlimited{} times, {C:money}$10{} per roll"},
+  }
+  local function add(list, items)
+    if not list then return end
+    for _, e in ipairs(items) do
+      local have = false
+      for _, x in ipairs(list) do if x.id == e.id then have = true end end
+      if not have then
+        e.new, e.need = true, 8
+        list[#list + 1] = e
+      end
+    end
+  end
+  add(Cat.EFFECTS.boss, boss)
+  add(Cat.EFFECTS.tag, tag)
+  add(Cat.EFFECTS.voucher, voucher)
+  local enh = Cat.BY_ID and Cat.BY_ID.enhancement
+  if enh and enh.adv_fields then
+    local have = false
+    for _, f in ipairs(enh.adv_fields) do if f.id == "any_suit" then have = true end end
+    if not have then enh.adv_fields[#enh.adv_fields + 1] = {id = "any_suit", label = "Counts as every suit", type = "toggle", def = false, new = true} end
+  end
+  local base_need = Cat.need_v
+  Cat.need_v = function(c)
+    local need = base_need(c)
+    if type(c) == "table" and c.kind == "enhancement" and type(c.fields) == "table" and c.fields.any_suit then need = math.max(need, 8) end
+    return need
+  end
+  local base_line = Cat.effect_line
+  Cat.effect_line = function(kind_id, e)
+    local s = base_line(kind_id, e)
+    if type(s) == "string" and s:find("#P#", 1, true) then s = s:gsub("#P#", P.prob()) end
+    return s
+  end
+  if mod_loc_register then mod_loc_register(LOC) end
+end
+
+function P.install_text()
+  if type(generate_card_ui) ~= "function" then return end
+  local orig = generate_card_ui
+  generate_card_ui = function(...)
+    pcall(P.check_prob)
+    return orig(...)
+  end
+end
+
+function P.check_prob()
+  local p = G and G.GAME and G.GAME.probabilities and G.GAME.probabilities.normal or 1
+  if P.last_p == p then return end
+  P.last_p = p
+  local K = package.loaded["functions/forge/forge_kinds"]
+  local M = package.loaded["functions/forge/forge_kinds_more"]
+  if K and K.inject_loc then pcall(K.inject_loc) end
+  if M and M.inject_loc then pcall(M.inject_loc) end
+end
+
+function P.install()
+  if P.hooked then return end
+  P.hooked = true
+  for _, f in ipairs({P.install_jokers, P.install_blinds, P.install_shop, P.install_text}) do
+    local ok, err = pcall(f)
+    if not ok then log("install", err) end
+  end
+end
+
+return P
+end

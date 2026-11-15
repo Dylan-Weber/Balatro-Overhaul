@@ -1,0 +1,736 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 643
+local R = RunMods
+local Cat = R.Cat
+
+R.ui = R.ui or {page = 1, ppage = 1, spage = 1}
+
+local function L(s) return mod_loc and mod_loc(s) or s end
+local function fmt(s, ...) local ok, r = pcall(string.format, L(s), ...) return ok and r or s end
+
+local K = {
+    felt = {0.06, 0.33, 0.23, 1},
+    felt_edge = {0.03, 0.2, 0.14, 1},
+    pink = {1, 0.3, 0.64, 1},
+    cyan = {0.3, 0.9, 1, 1},
+    green = {0.4, 1, 0.55, 1},
+    lcd = {0.05, 0.07, 0.09, 1},
+    chip_off = {0.09, 0.17, 0.14, 1},
+    chip_on = {0.62, 0.13, 0.36, 1},
+    edit = {0.13, 0.27, 0.42, 1},
+    dim = {0.3, 0.45, 0.4, 1},
+    row = {0, 0, 0, 0.18},
+    lever_off = {0.12, 0.12, 0.14, 1},
+    knob_off = {0.5, 0.52, 0.56, 1},
+    lever_on = {0.08, 0.36, 0.18, 1},
+    muted = {0.72, 0.8, 0.78, 1},
+    down = {1, 0.45, 0.4, 1},
+}
+R.COLOURS = K
+
+local function T(text, scale, colour)
+    return {n = G.UIT.T, config = {text = tostring(text or ""), scale = scale, colour = colour or G.C.UI.TEXT_LIGHT, shadow = true}}
+end
+
+local function box(align, w, h, nodes, extra)
+    local c = {align = align or 'cm', minw = w, minh = h, padding = 0}
+    for k, v in pairs(extra or {}) do c[k] = v end
+    return {n = G.UIT.C, config = c, nodes = nodes or {}}
+end
+
+local function row(align, w, h, nodes, extra)
+    local c = {align = align or 'cm', minw = w, minh = h, padding = 0}
+    for k, v in pairs(extra or {}) do c[k] = v end
+    return {n = G.UIT.R, config = c, nodes = nodes or {}}
+end
+
+local function fit(text, scale, colour, w)
+    return box('cm', nil, nil, {T(text, scale, colour)}, {maxw = w})
+end
+
+local function phone() return UIK and UIK.thumb and UIK.thumb() or false end
+local function port() return UIK and UIK.portrait and UIK.portrait() or false end
+local function wide_k()
+    local RS = rawget(_G, "RunSetup")
+    return phone() and not port() and RS and RS.WIDE_K or 1
+end
+local function PZ(a, b) if phone() then return a * wide_k() end return b end
+local function land_size(extra)
+    return function()
+        local RS = rawget(_G, "RunSetup")
+        if RS and RS.land_size then return RS.land_size(extra) end
+    end
+end
+
+local function deck_sprite(center, h)
+    local w = h * 71 / 95
+    local atlas = G.ASSET_ATLAS[center.atlas or 'centers'] or G.ASSET_ATLAS['centers']
+    local s = Sprite(0, 0, w, h, atlas, center.pos or {x = 0, y = 0})
+    s.states.drag.can = false
+    return {n = G.UIT.O, config = {object = s}}, w
+end
+
+local function stake_sprite(idx, size)
+    if not (G.P_CENTER_POOLS.Stake and G.P_CENTER_POOLS.Stake[idx]) then return nil end
+    local ok, s = pcall(get_stake_sprite, idx, size)
+    if not ok or not s then return nil end
+    return {n = G.UIT.O, config = {object = s}}
+end
+
+function R.editor(ctx)
+    ctx = ctx or R._ctx or {}
+    if type(ctx.picks) == "table" and ctx.picks ~= ctx._auto then return ctx end
+    ctx.picks, ctx._auto = R.picks, R.picks
+    return ctx
+end
+
+local function commit(ctx)
+    if ctx.commit then pcall(ctx.commit, ctx.picks) end
+end
+
+local function refresh()
+    local ctx = R._ctx
+    if ctx and ctx.refresh then
+        local ok, err = pcall(ctx.refresh)
+        if not ok then print("[RunMods] refresh: " .. tostring(err)) end
+        return
+    end
+    if UIK and UIK.refresh then UIK.refresh() end
+end
+R.refresh = refresh
+
+local function deck_key_of(d)
+    if type(d) == "table" then
+        if d.effect and d.effect.center then return d.effect.center.key end
+        return d.key
+    end
+    if type(d) == "string" then
+        if G.P_CENTERS[d] then return d end
+        for _, c in ipairs(G.P_CENTER_POOLS.Back or {}) do if c.name == d then return c.key end end
+    end
+    return nil
+end
+R.deck_key_of = deck_key_of
+
+local function stake_index(stake)
+    local idx = Cat.stake_index(stake)
+    return idx
+end
+
+function R.mix(deck, p)
+    local base = get_starting_params and get_starting_params() or {hands = 4, discards = 3, hand_size = 8, dollars = 4, joker_slots = 5, consumable_slots = 2}
+    local key = deck_key_of(deck)
+    local center = key and G.P_CENTERS[key]
+    local cfg = center and center.config or {}
+    local before, after = {}, {}
+    for _, s in ipairs(Cat.STATS) do
+        local v = tonumber(base[s.param]) or 0
+        if not cfg.customDeck then v = v + (tonumber(cfg[s.key]) or 0) end
+        before[s.key], after[s.key] = v, v
+    end
+    local extras = {}
+    local on = R.set_of(p and p.decks)
+    for _, k in ipairs(R.deck_keys(p)) do
+        local c = G.P_CENTERS[k]
+        for _, piece in ipairs(c and Cat.deck_pieces(c) or {}) do
+            if on[piece.id] then
+                if piece.stat then
+                    after[piece.stat] = after[piece.stat] + (tonumber(piece.value) or 0)
+                else
+                    extras[#extras + 1] = piece.label
+                end
+            end
+        end
+    end
+    return before, after, extras
+end
+
+local function lever(on, ph, g)
+    g = wide_k() > 1 and math.min(g or 1, 1.3) or 1
+    local tw, th = PZ(1.0, 0.82) * g, PZ(0.5, 0.4) * g
+    local kn = th - 0.12
+    return {n = G.UIT.C, config = {align = on and 'cr' or 'cl', minw = tw, minh = th, r = th / 2 - 0.01, colour = on and K.lever_on or K.lever_off,
+        padding = 0.06, outline = 1, outline_colour = on and K.green or K.dim}, nodes = {
+        {n = G.UIT.C, config = {align = 'cm', minw = kn, minh = kn, r = kn / 2 - 0.01, colour = on and K.green or K.knob_off}, nodes = {}},
+    }}, tw
+end
+
+local function lever_row(o)
+    local ph = phone()
+    local g = o.grow or 1
+    local lv, lw = lever(o.on, ph, g)
+    local h = o.h
+    local label_w = o.w - lw - 0.45
+    local tcol = o.disabled and G.C.UI.TEXT_INACTIVE or G.C.UI.TEXT_LIGHT
+    local tw_ = label_w - (o.icon_w or 0) - 0.1
+    local big = ph and port() and UIK.wrap
+    local ts = big and 0.44 or PZ(0.34, 0.31) * g
+    local lines_ = big and UIK.wrap(o.label, ts, tw_, 2) or {o.label}
+    local inner = {}
+    if o.over then
+        inner[#inner + 1] = row('cl', label_w, nil, {T(o.over, big and 0.32 or PZ(0.27, 0.25) * g, K.muted)})
+        inner[#inner + 1] = row('cl', label_w, 0.04)
+    end
+    for _, l in ipairs(lines_) do inner[#inner + 1] = row('cl', label_w, nil, {T(l, ts, tcol)}) end
+    local lead = {}
+    if o.icon then lead[#lead + 1] = box('cm', o.icon_w, h, {o.icon}) end
+    lead[#lead + 1] = box('cm', lw + 0.1, h, {lv})
+    lead[#lead + 1] = box('cm', 0.1, h)
+    lead[#lead + 1] = {n = G.UIT.C, config = {align = 'cl', minw = label_w - (o.icon_w or 0), maxw = label_w - (o.icon_w or 0), minh = h, padding = 0}, nodes = inner}
+    for _, l in ipairs(lead) do l.config.portrait_keep = true end
+    return {n = G.UIT.C, config = {align = 'cm', minw = o.w, minh = h, r = 0.1, portrait_keep = true, colour = o.on and {0.02, 0.18, 0.1, 0.55} or K.row,
+        button = not o.disabled and o.button or nil, ref_table = o.ref, hover = not o.disabled, shadow = false, padding = 0}, nodes = lead}
+end
+
+local function pager(id, cur, n, w, h, func)
+    local ph = phone()
+    local aw = PZ(1.2, 1.0)
+    local bh = PZ(0.62, 0.5)
+    local function arrow(label, d)
+        return {n = G.UIT.C, config = {align = 'cm', minw = aw, minh = bh, r = 0.1, colour = G.C.RED, button = func, ref_table = {id = id, d = d, n = n}, hover = true, shadow = true}, nodes = {T(label, PZ(0.42, 0.38))}}
+    end
+    return row('cm', w, h, {
+        arrow('<', -1),
+        box('cm', PZ(2.6, 2.3), bh, {T(fmt("Page %d of %d", cur, n), PZ(0.36, 0.32))}),
+        arrow('>', 1),
+    })
+end
+
+local function deck_chip(center, ctx, cw, ch)
+    local ph = phone()
+    local key = center.key
+    local n, total = R.deck_state(ctx.picks, key)
+    local lit = n > 0
+    local ew = PZ(0.66, 0.5)
+    local mw = cw - ew - 0.06
+    local grow = math.min(1.2, ch / (PZ(1.08, 0.92)))
+    local name_h = (PZ(0.44, 0.38)) * grow
+    local sp, sw = deck_sprite(center, (ch - name_h - 0.14) * 0.92)
+    local status = not lit and L("NOT IN") or (n == total and L("ALL IN") or fmt("%d of %d", n, total))
+    local main = {n = G.UIT.C, config = {align = 'cm', minw = mw, minh = ch, r = 0.12, colour = lit and K.chip_on or K.chip_off,
+        outline = lit and 1.6 or 1, outline_colour = lit and K.pink or K.dim,
+        button = not ctx.readonly and 'run_mods_deck' or nil, ref_table = {key = key}, hover = not ctx.readonly, shadow = true, padding = 0}, nodes = {
+        {n = G.UIT.R, config = {align = 'cm', padding = 0}, nodes = {
+            box('cm', mw, name_h, {fit(Cat.name_of(key), (PZ(0.4, 0.34)) * grow, G.C.UI.TEXT_LIGHT, mw - 0.16)}),
+        }},
+        {n = G.UIT.R, config = {align = 'cm', padding = 0}, nodes = {
+            box('cm', sw + 0.12, ch - name_h - 0.06, {sp}),
+            box('cm', math.max(0.6, mw - sw - 0.4), ch - name_h - 0.06, {fit(status, (PZ(0.34, 0.29)) * grow, lit and K.green or K.muted, math.max(0.6, mw - sw - 0.4))}),
+        }},
+    }}
+    local edit = {n = G.UIT.C, config = {align = 'cm', minw = ew, minh = ch, r = 0.12, colour = K.edit, outline = 1, outline_colour = K.cyan,
+        button = 'run_mods_edit', ref_table = {key = key}, hover = true, shadow = true, padding = 0}, nodes = {T('>', PZ(0.5, 0.42))}}
+    return {n = G.UIT.C, config = {align = 'cm', minw = cw, minh = ch, padding = 0}, nodes = {main, box('cm', 0.06, ch), edit}}
+end
+
+local function board_frame(w, h, nodes)
+    return {n = G.UIT.C, config = {id = 'run_mods_board', align = 'tm', minw = w, minh = h, r = 0.2, colour = K.felt, outline = 2, outline_colour = K.pink, padding = 0.2, emboss = 0.06}, nodes = {
+        {n = G.UIT.R, config = {align = 'tm', padding = 0}, nodes = {{n = G.UIT.C, config = {align = 'tm', padding = 0}, nodes = nodes}}},
+    }}
+end
+
+local function grid(cells, cols, cw, ch, gx, gy)
+    local rows = {}
+    for i = 1, #cells, cols do
+        local r = {}
+        for j = i, math.min(#cells, i + cols - 1) do
+            if #r > 0 then r[#r + 1] = box('cm', gx, ch) end
+            r[#r + 1] = cells[j]
+        end
+        if #rows > 0 then rows[#rows + 1] = row('cm', nil, gy) end
+        rows[#rows + 1] = row('cm', nil, ch, r)
+    end
+    return rows
+end
+
+local function deck_board(ctx, w, h, prt)
+    local ph = phone()
+    local iw = w - 0.4
+    local decks = Cat.deck_list()
+    local cols = (prt and ph) and 2 or ((prt or iw < 8.5 or ph) and 3 or 4)
+    local gx, gy = 0.14, 0.14
+    local cw = (iw - (cols - 1) * gx) / cols
+    local ch = PZ(1.08, 0.92)
+    local head_h = PZ(0.92, 0.82)
+    local pg_h = PZ(0.78, 0.66)
+    local avail = h - 0.4 - head_h - pg_h - 0.1
+    local rows = math.max(1, math.min(prt and 6 or 4, math.floor((avail + gy) / (ch + gy))))
+    local per = cols * rows
+    local pages = math.max(1, math.ceil(#decks / per))
+    if pages == 1 then
+        rows = math.max(1, math.ceil(#decks / cols))
+        ch = math.max(ch, math.min(PZ(1.4, 1.25), (avail - (rows - 1) * gy) / rows))
+    elseif phone() then
+        ch = math.max(ch, math.min(ch * 1.3, (avail - (rows - 1) * gy) / rows))
+    end
+    R.ui.page = math.max(1, math.min(pages, R.ui.page or 1))
+    local cells = {}
+    for i = (R.ui.page - 1) * per + 1, math.min(#decks, R.ui.page * per) do
+        cells[#cells + 1] = deck_chip(decks[i], ctx, cw, ch)
+    end
+    local nodes = {
+        row('cm', iw, head_h * 0.55, {T(L("DECK EFFECTS"), PZ(0.46, 0.42), G.C.GOLD)}),
+        row('cm', iw, head_h * 0.45, {fit(ctx.readonly and L("The host picks the effects") or L("Tap a deck to add all its effects, > picks single ones"), PZ(0.3, 0.27), K.muted, iw - 0.2)}),
+    }
+    local body = grid(cells, cols, cw, ch, gx, gy)
+    nodes[#nodes + 1] = row('cm', iw, h - 0.4 - head_h - pg_h, {{n = G.UIT.C, config = {align = 'cm', padding = 0}, nodes = body}})
+    if pages > 1 then nodes[#nodes + 1] = pager('decks', R.ui.page, pages, iw, pg_h, 'run_mods_page')
+    else nodes[#nodes + 1] = row('cm', iw, pg_h) end
+    return board_frame(w, h, nodes)
+end
+
+local function small_button(label, func, ref, w, h, colour, disabled)
+    local ph = phone()
+    return {n = G.UIT.C, config = {align = 'cm', minw = w, minh = h, r = 0.1, colour = disabled and G.C.UI.BACKGROUND_INACTIVE or (colour or G.C.RED),
+        button = not disabled and func or nil, ref_table = ref, hover = not disabled, shadow = true, padding = 0}, nodes = {
+        box('cm', nil, nil, {T(label, PZ(0.36, 0.32), disabled and G.C.UI.TEXT_INACTIVE or G.C.UI.TEXT_LIGHT)}, {maxw = w - 0.15}),
+    }}
+end
+
+local function piece_board(ctx, key, w, h, prt)
+    local ph = phone()
+    local center = G.P_CENTERS[key]
+    if not center then R.ui.view = nil return deck_board(ctx, w, h, prt) end
+    local iw = w - 0.4
+    local n, total, pieces = R.deck_state(ctx.picks, key)
+    local bh = PZ(0.66, 0.54)
+    local head_h = PZ(1.2, 1.0)
+    local bw = PZ(1.9, 1.6)
+    local sp, sw = deck_sprite(center, head_h - 0.2)
+    local name_w = iw - 2 * (bw * (prt and 1 or 1)) - 0.3
+    local left = small_button(L("< Decks"), 'run_mods_decks', {}, bw, bh, K.edit)
+    local right
+    if ctx.readonly then
+        right = box('cm', bw, bh)
+    else
+        right = small_button(n == total and L("All off") or L("All on"), 'run_mods_all', {key = key, on = n ~= total}, bw, bh, n == total and G.C.RED or G.C.GREEN)
+    end
+    local head = row('cm', iw, head_h, {
+        box('cm', bw, head_h, {left}),
+        {n = G.UIT.C, config = {align = 'cm', minw = name_w, maxw = name_w, minh = head_h, padding = 0}, nodes = {
+            box('cm', sw + 0.15, head_h, {sp}),
+            {n = G.UIT.C, config = {align = 'cm', padding = 0}, nodes = {
+                row('cm', nil, nil, {T(Cat.name_of(key), PZ(0.44, 0.4), G.C.GOLD)}),
+                row('cm', nil, nil, {T(fmt("%d of %d effects on", n, total), PZ(0.3, 0.27), n > 0 and K.green or K.muted)}),
+            }},
+        }},
+        box('cm', bw, head_h, {right}),
+    })
+    local cols = (prt or iw < 7.5) and 1 or 2
+    local gx, gy = 0.16, 0.1
+    local rh = (prt and ph) and 1.05 or PZ(0.74, 0.6)
+    local cw = (iw - (cols - 1) * gx) / cols
+    local pg_h = PZ(0.78, 0.66)
+    local avail = h - 0.4 - head_h - pg_h - 0.1
+    local rows = math.max(1, math.floor((avail + gy) / (rh + gy)))
+    local per = rows * cols
+    local pages = math.max(1, math.ceil(#pieces / per))
+    R.ui.ppage = math.max(1, math.min(pages, R.ui.ppage or 1))
+    local on = R.set_of(ctx.picks.decks)
+    local first, last = (R.ui.ppage - 1) * per + 1, math.min(#pieces, R.ui.ppage * per)
+    local grow = 1
+    if pages == 1 then
+        local n_rows = math.max(1, math.ceil((last - first + 1) / cols))
+        local wide = wide_k() > 1
+        local want = math.min(wide and PZ(1.3, 0.85) or PZ(1.0, 0.85), (avail - (n_rows - 1) * gy) / n_rows)
+        if want > rh then grow = math.min(wide and 1.4 or 1.2, want / rh); rh = want end
+    end
+    local cells = {}
+    for i = first, last do
+        local p = pieces[i]
+        cells[#cells + 1] = lever_row({on = on[p.id], label = p.label, w = cw, h = rh, button = 'run_mods_piece', ref = {id = p.id}, disabled = ctx.readonly, grow = grow})
+    end
+    local nodes = {head, row('cm', iw, 0.1)}
+    nodes[#nodes + 1] = row('cm', iw, h - 0.4 - head_h - pg_h - 0.1, {{n = G.UIT.C, config = {align = 'tm', padding = 0}, nodes = grid(cells, cols, cw, rh, gx, gy)}}, {align = 'tm'})
+    if pages > 1 then nodes[#nodes + 1] = pager('pieces', R.ui.ppage, pages, iw, pg_h, 'run_mods_page')
+    else nodes[#nodes + 1] = row('cm', iw, pg_h) end
+    return board_frame(w, h, nodes)
+end
+
+local function readout(ctx, w, h, prt)
+    local ph = phone()
+    local iw = w - 0.3
+    local before, after, extras = R.mix(ctx.deck, ctx.picks)
+    local nodes = {}
+    local sc = PZ(0.33, 0.3)
+    local lh = PZ(0.4, 0.34)
+    nodes[#nodes + 1] = row('cm', iw, PZ(0.56, 0.5), {T(L("THE MIX"), PZ(0.48, 0.44), G.C.GOLD)})
+    local dk = deck_key_of(ctx.deck)
+    nodes[#nodes + 1] = row('cm', iw, lh, {fit(dk and fmt("On top of %s", Cat.name_of(dk)) or L("On top of the lobby deck"), sc * 0.9, K.muted, iw)})
+    local stat_cols = prt and 2 or 1
+    local cw = (iw - (stat_cols - 1) * 0.5) / stat_cols
+    local cells = {}
+    for _, s in ipairs(Cat.STATS) do
+        local a, b = before[s.key], after[s.key]
+        local colour = b > a and K.green or (b < a and K.down or G.C.UI.TEXT_LIGHT)
+        local val = s.money and ("$" .. tostring(b)) or tostring(b)
+        cells[#cells + 1] = {n = G.UIT.C, config = {align = 'cm', minw = cw, minh = lh, padding = 0}, nodes = {
+            box('cl', cw * 0.72, lh, {T(L(s.label), sc, K.muted)}, {maxw = cw * 0.72}),
+            box('cr', cw * 0.28, lh, {T(val, sc * 1.1, colour)}),
+        }}
+    end
+    for _, r in ipairs(grid(cells, stat_cols, cw, lh, 0.5, 0)) do nodes[#nodes + 1] = r end
+    nodes[#nodes + 1] = row('cm', iw, 0.08)
+    local stake_text = R.stake_summary(ctx.stake, ctx.picks)
+    local bh = PZ(0.66, 0.56)
+    local used = (PZ(0.56, 0.5)) + lh + math.ceil(#Cat.STATS / stat_cols) * lh + 0.08 + lh + lh + bh + 0.12
+    local room = math.max(0, math.floor((h - 0.3 - used) / (lh * 0.9)))
+    local head = #extras > 0 and L("Also in the mix") or L("No extra effects")
+    if #extras > 0 and room < 1 then head = head .. " (" .. #extras .. ")" end
+    nodes[#nodes + 1] = row('cm', iw, lh, {T(head, sc * 0.95, #extras > 0 and K.cyan or K.muted)})
+    local shown = 0
+    for i, e in ipairs(extras) do
+        if shown >= room then break end
+        if shown == room - 1 and #extras > room then
+            nodes[#nodes + 1] = row('cm', iw, lh * 0.9, {T(fmt("and %d more", #extras - shown), sc * 0.85, K.muted)})
+            shown = shown + 1
+            break
+        end
+        nodes[#nodes + 1] = row('cm', iw, lh * 0.9, {fit(e, sc * 0.85, G.C.UI.TEXT_LIGHT, iw - 0.1)})
+        shown = shown + 1
+    end
+    local fill = h - 0.3 - used - shown * lh * 0.9 - 0.02
+    if fill > 0 then nodes[#nodes + 1] = row('cm', iw, fill) end
+    nodes[#nodes + 1] = row('cm', iw, lh, {fit(stake_text or L("Every stake effect is on"), sc * 0.9, stake_text and K.pink or K.muted, iw)})
+    local bw = (iw - 0.15) / 2
+    nodes[#nodes + 1] = row('cm', iw, bh + 0.12, {
+        small_button(L("Stake effects"), 'run_mods_stakes', {}, bw, bh, K.edit),
+        box('cm', 0.15, bh),
+        small_button(L("Clear"), 'run_mods_clear', {}, bw, bh, G.C.RED, ctx.readonly or R.empty(ctx.picks)),
+    })
+    return {n = G.UIT.C, config = {id = 'run_mods_readout', align = 'tm', minw = w, minh = h, r = 0.2, colour = K.lcd, outline = 2, outline_colour = K.cyan, padding = 0.15}, nodes = {
+        {n = G.UIT.R, config = {align = 'tm', padding = 0}, nodes = {{n = G.UIT.C, config = {align = 'tm', padding = 0}, nodes = nodes}}},
+    }}
+end
+
+function R.page(ctx)
+    ctx = R.editor(ctx)
+    R._ctx = ctx
+    local w = ctx.w or (UIK and UIK.W) or 15
+    local h = ctx.h or (UIK and UIK.H) or 6.6
+    local prt = ctx.port
+    if prt == nil then prt = port() end
+    local gap = 0.18
+    local board, read
+    if prt then
+        local rh = math.min(h * 0.42, phone() and 4.6 or 4.2)
+        local bh = h - rh - gap
+        board = R.ui.view and piece_board(ctx, R.ui.view, w, bh, true) or deck_board(ctx, w, bh, true)
+        read = readout(ctx, w, rh, true)
+        return {n = G.UIT.R, config = {align = 'cm', minw = w, minh = h, padding = 0}, nodes = {
+            {n = G.UIT.C, config = {align = 'cm', padding = 0}, nodes = {
+                row('cm', w, bh, {board}),
+                row('cm', w, gap),
+                row('cm', w, rh, {read}),
+            }},
+        }}
+    end
+    local rw = math.max(4.2, math.min(5 * wide_k(), w * 0.3))
+    local bw = w - rw - gap
+    board = R.ui.view and piece_board(ctx, R.ui.view, bw, h, false) or deck_board(ctx, bw, h, false)
+    read = readout(ctx, rw, h, false)
+    return {n = G.UIT.R, config = {align = 'cm', minw = w, minh = h, padding = 0}, nodes = {board, box('cm', gap, h), read}}
+end
+
+local function stake_body(sctx)
+    local ph = phone()
+    local prt = port()
+    local w, h = UIK.W, UIK.H
+    if prt then w = w - 0.6 end
+    local ctx = R.editor(sctx)
+    local groups, idx = Cat.stake_groups(sctx.stake)
+    local items = {}
+    for _, g in ipairs(groups) do
+        for _, p in ipairs(g.pieces) do items[#items + 1] = {g = g, p = p} end
+    end
+    local iw = w - 0.4
+    local cols = (prt or (wide_k() > 1 and #items <= 4)) and 1 or 2
+    local gx, gy = 0.2, 0.1
+    local cw = (iw - (cols - 1) * gx) / cols
+    local rh = (prt and ph) and 1.3 or PZ(0.86, 0.7)
+    local head_h = PZ(0.6, 0.5)
+    local pg_h = PZ(0.78, 0.66)
+    local avail = h - 0.4 - head_h - pg_h
+    local rows = math.max(1, math.floor((avail + gy) / (rh + gy)))
+    local per = rows * cols
+    local pages = math.max(1, math.ceil(#items / per))
+    R.ui.spage = math.max(1, math.min(pages, R.ui.spage or 1))
+    local first, last = (R.ui.spage - 1) * per + 1, math.min(#items, R.ui.spage * per)
+    local n_rows = math.max(1, math.ceil((last - first + 1) / cols))
+    local grow = 1
+    if pages == 1 then
+        local wide = wide_k() > 1
+        local want = math.min(wide and PZ(1.5, 0.95) or PZ(1.1, 0.95), (avail - (n_rows - 1) * gy) / n_rows)
+        if want > rh then grow = math.min(wide and 1.5 or 1.25, want / rh); rh = want end
+    end
+    local order_list = {}
+    for r = 1, n_rows do
+        for c = 1, cols do
+            local i = first + (c - 1) * n_rows + (r - 1)
+            if i <= last then order_list[#order_list + 1] = i end
+        end
+    end
+    local cells = {}
+    local isz = (PZ(0.55, 0.48)) * grow
+    for _, i in ipairs(order_list) do
+        local it = items[i]
+        local order
+        for j, c in ipairs(G.P_CENTER_POOLS.Stake or {}) do if c.key == it.g.key then order = j end end
+        local icon = order and stake_sprite(order, isz) or nil
+        cells[#cells + 1] = lever_row({on = not R.stake_off(ctx.picks, it.p.id), over = Cat.stake_name(it.g.stake), label = it.p.label, w = cw, h = rh,
+            button = 'run_mods_stake_piece', ref = {id = it.p.id}, disabled = ctx.readonly, icon = icon, icon_w = icon and (isz + 0.2) or nil, grow = grow})
+    end
+    local nodes = {}
+    local top_c = G.P_CENTER_POOLS.Stake and G.P_CENTER_POOLS.Stake[idx]
+    nodes[#nodes + 1] = row('cm', iw, head_h, {fit(#items > 0 and fmt("%s: turn single effects on or off", Cat.stake_name(top_c)) or L("This stake has no effects to turn off"), PZ(0.34, 0.31), K.muted, iw)})
+    nodes[#nodes + 1] = row('cm', iw, h - 0.4 - head_h - pg_h, {{n = G.UIT.C, config = {align = 'tm', padding = 0}, nodes = grid(cells, cols, cw, rh, gx, gy)}}, {align = 'tm'})
+    if pages > 1 then nodes[#nodes + 1] = pager('stakes', R.ui.spage, pages, iw, pg_h, 'run_mods_page')
+    else nodes[#nodes + 1] = row('cm', iw, pg_h) end
+    return {n = G.UIT.R, config = {align = 'cm', padding = 0}, nodes = {board_frame(w, h, nodes)}}
+end
+
+function R.stake_editor(ctx)
+    ctx = ctx or {}
+    if type(ctx.picks) ~= "table" then ctx.picks = (R._ctx and R._ctx.picks) or R.picks end
+    if ctx.readonly == nil and R._ctx then ctx.readonly = R._ctx.readonly end
+    if ctx.commit == nil and R._ctx then ctx.commit = R._ctx.commit end
+    R._sctx = ctx
+    R.ui.spage = 1
+    local footer = {}
+    if not ctx.readonly and #Cat.stake_pieces(ctx.stake) > 0 then
+        footer[#footer + 1] = UIK.button{label = L("All on"), button = 'run_mods_stake_all', ref_table = {on = true}, colour = G.C.GREEN, col = true}
+        footer[#footer + 1] = UIK.button{label = L("All off"), button = 'run_mods_stake_all', ref_table = {on = false}, colour = G.C.RED, col = true}
+    end
+    G.FUNCS.overlay_menu{definition = UIK.window{
+        id = 'run_mods_stakes',
+        title = L("STAKE EFFECTS"),
+        tabs = {{key = 'stakes', label = L("Stake effects"), build = function() return stake_body(R._sctx) end}},
+        back_func = 'run_mods_stake_back',
+        footer = footer,
+        back_inline = 'land',
+        land_size = land_size(1.0),
+    }}
+end
+
+local function default_deck()
+    local b = G.GAME and G.GAME.viewed_back
+    return b and b.effect and b.effect.center and b.effect.center.key or 'b_red'
+end
+
+local function default_stake()
+    local m = G.PROFILES and G.SETTINGS and G.PROFILES[G.SETTINGS.profile] and G.PROFILES[G.SETTINGS.profile].MEMORY
+    return (m and tonumber(m.stake)) or (G.GAME and G.GAME.stake) or 1
+end
+
+function R.open(ctx)
+    ctx = ctx or {}
+    if ctx.deck == nil and not ctx.lobby then ctx.deck = default_deck() end
+    ctx.stake = ctx.stake or default_stake()
+    R._open_ctx = ctx
+    R.ui.view = nil
+    local function build()
+        local c = R._open_ctx
+        c.w, c.h, c.port, c.phone, c.refresh = UIK.W, UIK.H, UIK.portrait(), UIK.thumb(), UIK.refresh
+        return R.page(c)
+    end
+    G.FUNCS.overlay_menu{definition = UIK.window{
+        id = 'run_mods',
+        title = L("RUN MODIFIERS"),
+        tabs = {{key = 'mix', label = L("Run Modifiers"), build = build}},
+        back_func = ctx.back_func or 'exit_overlay_menu',
+        land_size = land_size(1.8),
+    }}
+end
+
+local function after_change(ctx)
+    commit(ctx)
+    play_sound('generic1', 0.9 + math.random() * 0.1, 0.6)
+    refresh()
+end
+
+
+G.FUNCS.run_mods_deck = function(e)
+    local ctx = R.editor(R._ctx)
+    local key = e and e.config and e.config.ref_table and e.config.ref_table.key
+    if not key or ctx.readonly then return end
+    local on = R.toggle_deck(ctx.picks, key)
+    commit(ctx)
+    play_sound(on and 'chips2' or 'cancel', 1, 0.6)
+    refresh()
+end
+
+G.FUNCS.run_mods_edit = function(e)
+    local key = e and e.config and e.config.ref_table and e.config.ref_table.key
+    if not key then return end
+    R.ui.view, R.ui.ppage = key, 1
+    play_sound('button', 1, 0.6)
+    refresh()
+end
+
+G.FUNCS.run_mods_decks = function()
+    R.ui.view = nil
+    play_sound('button', 1, 0.6)
+    refresh()
+end
+
+G.FUNCS.run_mods_piece = function(e)
+    local ctx = R.editor(R._ctx)
+    local id = e and e.config and e.config.ref_table and e.config.ref_table.id
+    if not id or ctx.readonly then return end
+    R.toggle_piece(ctx.picks, id)
+    after_change(ctx)
+end
+
+G.FUNCS.run_mods_all = function(e)
+    local ctx = R.editor(R._ctx)
+    local r = e and e.config and e.config.ref_table
+    if not (r and r.key) or ctx.readonly then return end
+    R.set_deck(ctx.picks, r.key, r.on)
+    after_change(ctx)
+end
+
+G.FUNCS.run_mods_page = function(e)
+    local r = e and e.config and e.config.ref_table
+    if not r then return end
+    local field = r.id == 'pieces' and 'ppage' or (r.id == 'stakes' and 'spage' or 'page')
+    local n = math.max(1, r.n or 1)
+    R.ui[field] = ((R.ui[field] or 1) - 1 + r.d) % n + 1
+    play_sound('paper1', 1, 0.5)
+    if r.id == 'stakes' then UIK.refresh() else refresh() end
+end
+
+G.FUNCS.run_mods_clear = function()
+    local ctx = R.editor(R._ctx)
+    if ctx.readonly then return end
+    R.clear(ctx.picks)
+    commit(ctx)
+    play_sound('cancel', 1, 0.6)
+    refresh()
+end
+
+G.FUNCS.run_mods_stakes = function()
+    local ctx = R._ctx or {}
+    local reopen = ctx.reopen
+    if not reopen and R._open_ctx and ctx == R._open_ctx then reopen = function() R.open(R._open_ctx) end end
+    R.stake_editor({stake = ctx.stake, picks = ctx.picks, readonly = ctx.readonly, commit = ctx.commit, back = reopen})
+end
+
+G.FUNCS.run_mods_stake_piece = function(e)
+    local ctx = R._sctx
+    local id = e and e.config and e.config.ref_table and e.config.ref_table.id
+    if not (ctx and id) or ctx.readonly then return end
+    local off = R.toggle_stake(ctx.picks, id)
+    commit(ctx)
+    play_sound(off and 'cancel' or 'chips2', 1, 0.6)
+    UIK.refresh()
+end
+
+G.FUNCS.run_mods_stake_all = function(e)
+    local ctx = R._sctx
+    local r = e and e.config and e.config.ref_table
+    if not (ctx and r) or ctx.readonly then return end
+    R.set_stake_all(ctx.picks, ctx.stake, r.on)
+    commit(ctx)
+    play_sound(r.on and 'chips2' or 'cancel', 1, 0.6)
+    UIK.refresh()
+end
+
+G.FUNCS.run_mods_stake_back = function()
+    local ctx = R._sctx
+    R._sctx = nil
+    if ctx and ctx.back then
+        local ok, err = pcall(ctx.back)
+        if ok then return end
+        print("[RunMods] stake back: " .. tostring(err))
+    end
+r 13 1375 %20%20%20%20 -
+l 85
+end
+
+function R.run_info_def()
+    local rm = R.in_run()
+    local ph = phone()
+    local w = port() and 7.6 or 11
+    local nodes = {row('cm', w, 0.6, {T(L("RUN MODIFIERS"), PZ(0.5, 0.45), G.C.GOLD)})}
+    nodes[#nodes + 1] = row('cm', w, 0.4, {fit(rm and rm.src == "mp" and L("Set by the lobby host. Progress is off for this run.") or L("Progress is off for this run."), 0.3, K.muted, w - 0.3)})
+    local lines = {}
+    if rm then
+        local on = R.set_of(rm.decks)
+        for _, k in ipairs(R.deck_keys(rm)) do
+            local c = G.P_CENTERS[k]
+            local parts = {}
+            for _, p in ipairs(c and Cat.deck_pieces(c) or {}) do if on[p.id] then parts[#parts + 1] = p.label end end
+            if #parts > 0 then lines[#lines + 1] = {title = Cat.name_of(k), text = table.concat(parts, ", ")} end
+        end
+        local off = {}
+        for _, p in ipairs(Cat.stake_pieces(rm.stake or G.GAME.stake or 1)) do
+            if R.stake_off(rm, p.id) then off[#off + 1] = p.label end
+        end
+        if #off > 0 then lines[#lines + 1] = {title = L("Stake effects off"), text = table.concat(off, ", "), pink = true} end
+    end
+    if #lines == 0 then lines[1] = {title = L("Nothing picked"), text = ""} end
+    for _, ln in ipairs(lines) do
+        local tw = w - 0.4
+        local wrapped = UIK.wrap and UIK.wrap(ln.text, 0.3, tw, 3) or {ln.text}
+        local inner = {row('cm', tw, 0.38, {T(ln.title, 0.34, ln.pink and K.pink or K.cyan)})}
+        for _, s in ipairs(type(wrapped) == "table" and wrapped or {ln.text}) do inner[#inner + 1] = row('cm', tw, 0.32, {T(s, 0.3)}) end
+        nodes[#nodes + 1] = row('cm', w, nil, {{n = G.UIT.C, config = {align = 'cm', minw = w - 0.2, r = 0.12, colour = K.lcd, outline = 1, outline_colour = ln.pink and K.pink or K.cyan, padding = 0.08}, nodes = inner}}, {padding = 0.05})
+    end
+    return {n = G.UIT.ROOT, config = {align = 'cm', colour = G.C.CLEAR, padding = 0.1}, nodes = {
+        {n = G.UIT.C, config = {align = 'tm', minw = w, r = 0.2, colour = K.felt, outline = 2, outline_colour = K.pink, padding = 0.15}, nodes = {
+            {n = G.UIT.R, config = {align = 'tm', padding = 0}, nodes = {{n = G.UIT.C, config = {align = 'tm', padding = 0}, nodes = nodes}}},
+        }},
+    }}
+end
+
+function R.hook_run_info()
+    local X = rawget(_G, "Extras")
+    if not X or R._info_hooked or type(X.run_info_tabs) ~= "function" then return end
+    R._info_hooked = true
+    local orig = X.run_info_tabs
+    X.run_info_tabs = function(list)
+        orig(list)
+        if R.in_run() then
+            list[#list + 1] = {label = L("Run Modifiers"), tab_definition_function = R.run_info_def}
+        end
+    end
+end
+
+if mod_loc_register then mod_loc_register{
+    fr = {
+        ["RUN MODIFIERS"] = "MODIFICATEURS DE PARTIE", ["DECK EFFECTS"] = "EFFETS DE JEU", ["STAKE EFFECTS"] = "EFFETS DE MISE",
+        ["Tap a deck to add all its effects, > picks single ones"] = "Touchez un jeu pour ajouter tous ses effets, > pour en choisir un par un",
+        ["The host picks the effects"] = "L'hôte choisit les effets",
+        ["ALL IN"] = "TAPIS", ["NOT IN"] = "PAS PRIS", ["%d of %d"] = "%d sur %d",
+        ["< Decks"] = "< Jeux", ["%d of %d effects on"] = "%d effets sur %d actifs",
+        ["THE MIX"] = "LE MÉLANGE", ["On top of %s"] = "Base : %s", ["On top of the lobby deck"] = "Base : le jeu du salon",
+        ["Also in the mix"] = "Aussi dans le mélange", ["No extra effects"] = "Pas d'effet en plus", ["and %d more"] = "et %d de plus",
+        ["Every stake effect is on"] = "Tous les effets de mise sont actifs", ["Stake effects"] = "Effets de mise", ["%s: turn single effects on or off"] = "%s : activez ou coupez chaque effet",
+        ["This stake has no effects to turn off"] = "Cette mise n'a aucun effet à couper",
+        ["All on"] = "Tout activer", ["All off"] = "Tout couper",
+        ["Set by the lobby host. Progress is off for this run."] = "Choisis par l'hôte du salon. Progression désactivée pour cette partie.",
+        ["Progress is off for this run."] = "Progression désactivée pour cette partie.",
+        ["Stake effects off"] = "Effets de mise coupés", ["Nothing picked"] = "Rien de choisi",
+    },
+    es = {
+        ["RUN MODIFIERS"] = "MODIFICADORES DE PARTIDA", ["DECK EFFECTS"] = "EFECTOS DE BARAJA", ["STAKE EFFECTS"] = "EFECTOS DEL POZO",
+        ["Tap a deck to add all its effects, > picks single ones"] = "Toca una baraja para sumar todos sus efectos, > para elegirlos uno a uno",
+        ["The host picks the effects"] = "El anfitrión elige los efectos",
+        ["ALL IN"] = "TODO", ["NOT IN"] = "FUERA", ["%d of %d"] = "%d de %d",
+        ["< Decks"] = "< Barajas", ["%d of %d effects on"] = "%d de %d efectos activos",
+        ["THE MIX"] = "LA MEZCLA", ["On top of %s"] = "Base: %s", ["On top of the lobby deck"] = "Base: la baraja de la sala",
+        ["Also in the mix"] = "También en la mezcla", ["No extra effects"] = "Sin efectos extra", ["and %d more"] = "y %d más",
+        ["Every stake effect is on"] = "Todos los efectos del pozo activos", ["Stake effects"] = "Efectos del pozo", ["%s: turn single effects on or off"] = "%s: activa o apaga cada efecto",
+        ["This stake has no effects to turn off"] = "Este pozo no tiene efectos que apagar",
+        ["All on"] = "Activar todo", ["All off"] = "Apagar todo",
+        ["Set by the lobby host. Progress is off for this run."] = "Elegido por el anfitrión. Progreso desactivado en esta partida.",
+        ["Progress is off for this run."] = "Progreso desactivado en esta partida.",
+        ["Stake effects off"] = "Efectos del pozo apagados", ["Nothing picked"] = "Nada elegido",
+    },
+} end
+
+return R
+end

@@ -1,0 +1,14 @@
+BOP 1
+eol lf
+final 0
+base 41
+c 430
+l 1
+                    "보스의 약화 효과에 {C:attention}면역",
+c 2131
+s 1
+l 2
+                    "Shop items cost {C:money}+$1{}",
+                    "Rerolls go up by {C:money}$2{} each",
+c 1756
+end

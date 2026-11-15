@@ -1,0 +1,401 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 352
+RunMods = RunMods or {}
+local R = RunMods
+local Cat = require("functions/run_mods/catalog")
+R.Cat = Cat
+
+R.MAX_IDS = 200
+R.MAX_LEN = 64
+R.picks = R.picks or {decks = {}, off = {}}
+R.armed = R.armed or false
+
+local function L(s) return mod_loc and mod_loc(s) or s end
+
+local function clean_list(v)
+    local out, seen = {}, {}
+    if type(v) ~= "table" then return out end
+    for _, x in ipairs(v) do
+        if type(x) == "string" and #x > 0 and #x <= R.MAX_LEN and x:find(":", 1, true) and not seen[x] and #out < R.MAX_IDS then
+            seen[x] = true
+            out[#out + 1] = x
+        end
+    end
+    table.sort(out)
+    return out
+end
+
+function R.normalize(p)
+    if type(p) ~= "table" then return {decks = {}, off = {}} end
+    return {decks = clean_list(p.decks), off = clean_list(p.off)}
+end
+
+function R.empty(p)
+    return type(p) ~= "table" or ((type(p.decks) ~= "table" or #p.decks == 0) and (type(p.off) ~= "table" or #p.off == 0))
+end
+
+function R.active()
+    return not R.empty(R.picks)
+end
+
+function R.snapshot()
+    return R.normalize(R.picks)
+end
+
+function R.restore(snap)
+    R.picks = R.normalize(snap)
+    return R.picks
+end
+
+function R.clear(p)
+    p = p or R.picks
+    p.decks, p.off = {}, {}
+    return p
+end
+
+function R.arm(on)
+    R.armed = on and true or false
+end
+
+local function set_of(list)
+    local s = {}
+    for _, x in ipairs(type(list) == "table" and list or {}) do s[x] = true end
+    return s
+end
+R.set_of = set_of
+
+local function put(p, field, id, on)
+    local list = p[field] or {}
+    p[field] = list
+    for i = #list, 1, -1 do
+        if list[i] == id then
+            if on then return end
+            table.remove(list, i)
+        end
+    end
+    if on then list[#list + 1] = id end
+end
+
+function R.deck_state(p, key)
+    local center = G and G.P_CENTERS and G.P_CENTERS[key]
+    local pieces = center and Cat.deck_pieces(center) or {}
+    local on = set_of(p and p.decks)
+    local n = 0
+    for _, x in ipairs(pieces) do if on[x.id] then n = n + 1 end end
+    return n, #pieces, pieces
+end
+
+function R.toggle_deck(p, key)
+    local n, total, pieces = R.deck_state(p, key)
+    local want = n == 0
+    for _, x in ipairs(pieces) do put(p, "decks", x.id, want) end
+    return want, total
+end
+
+function R.set_deck(p, key, on)
+    local _, _, pieces = R.deck_state(p, key)
+    for _, x in ipairs(pieces) do put(p, "decks", x.id, on) end
+end
+
+function R.piece_on(p, id)
+    for _, x in ipairs(p and p.decks or {}) do if x == id then return true end end
+    return false
+end
+
+function R.toggle_piece(p, id)
+    local on = not R.piece_on(p, id)
+    put(p, "decks", id, on)
+    return on
+end
+
+function R.stake_off(p, id)
+    for _, x in ipairs(p and p.off or {}) do if x == id then return true end end
+    return false
+end
+
+function R.toggle_stake(p, id)
+    local off = not R.stake_off(p, id)
+    put(p, "off", id, off)
+    return off
+end
+
+function R.set_stake_all(p, stake, on)
+    for _, x in ipairs(Cat.stake_pieces(stake)) do put(p, "off", x.id, not on) end
+end
+
+function R.deck_keys(p)
+    local keys, seen = {}, {}
+    for _, id in ipairs(p and p.decks or {}) do
+        local k = id:match("^([^:]+):")
+        if k and not seen[k] then seen[k] = true; keys[#keys + 1] = k end
+    end
+    return keys
+end
+
+function R.stake_summary(stake, p)
+    p = p or R.picks
+    local pieces = Cat.stake_pieces(stake)
+    if #pieces == 0 then return nil end
+    local off = 0
+    for _, x in ipairs(pieces) do if R.stake_off(p, x.id) then off = off + 1 end end
+    if off == 0 then return nil end
+    local ok, s = pcall(string.format, L("%d of %d stake effects off"), off, #pieces)
+    return ok and s or nil
+end
+
+local STUB = {key = "b_run_mods", name = "Run Modifier", set = "Back", config = {}, pos = {x = 0, y = 0}}
+R.STUB = STUB
+
+local function merge_cfg(into, cfg)
+    for k, v in pairs(cfg or {}) do
+        if k == "vouchers" or k == "consumables" then
+            into[k] = into[k] or {}
+            for _, x in ipairs(v) do into[k][#into[k] + 1] = x end
+        elseif type(v) == "number" and type(into[k]) == "number" then
+            into[k] = into[k] + v
+        else
+            into[k] = v
+        end
+    end
+end
+
+function R.deck_backs(ids, want_trigger)
+    local on = set_of(ids)
+    local out = {}
+    for _, key in ipairs(R.deck_keys({decks = ids})) do
+        local center = G.P_CENTERS[key]
+        if center then
+            local cfg, name, own, real, trig = {}, STUB.name, false, false, nil
+            for _, p in ipairs(Cat.deck_pieces(center)) do
+                if on[p.id] then
+                    if p.own then own = true end
+                    if p.cfg then merge_cfg(cfg, p.cfg) end
+                    if p.name then name = p.name; real = true end
+                    if p.trigger then trig = p.trigger end
+                end
+            end
+            if own then
+                cfg = {}
+                local known = {}
+                for _, p in ipairs(Cat.deck_pieces(center)) do
+                    if p.cfg then for k in pairs(p.cfg) do known[k] = true end end
+                end
+                for k, v in pairs(center.config or {}) do
+                    if not known[k] then cfg[k] = type(v) == "table" and copy_table and copy_table(v) or v end
+                end
+                for _, p in ipairs(Cat.deck_pieces(center)) do
+                    if on[p.id] and p.cfg then merge_cfg(cfg, p.cfg) end
+                end
+                name, real = center.name or name, true
+            end
+            local back = setmetatable({name = trig and want_trigger and trig or name, run_mod = key,
+                effect = {center = (real or (trig and want_trigger)) and center or STUB, config = cfg, text_UI = ''},
+                pos = center.pos or {x = 0, y = 0}}, Back)
+            if want_trigger then
+                if trig or own then out[#out + 1] = back end
+            else
+                out[#out + 1] = back
+            end
+        end
+    end
+    return out
+end
+
+function R.apply_decks(ids)
+    local g = G.GAME
+    local keep_mp = g.mp_deck
+    for _, back in ipairs(R.deck_backs(ids, false)) do
+        local ok, err = pcall(Back.apply_to_run, back)
+        if not ok then print("[RunMods] deck " .. tostring(back.run_mod) .. ": " .. tostring(err)) end
+    end
+    g.mp_deck = keep_mp
+end
+
+function R.apply_stakes(off_ids, stake, forge_id)
+    local g = G.GAME
+    local off = set_of(off_ids)
+    local groups = Cat.stake_groups(forge_id and {forge = forge_id, stake = stake} or stake)
+    local scaling, dirty = 1, false
+    for _, grp in ipairs(groups) do
+        for _, p in ipairs(grp.pieces) do
+            if off[p.id] then
+                if p.scaling then dirty = true
+                elseif p.undo then
+                    local ok, err = pcall(p.undo, g)
+                    if not ok then print("[RunMods] stake " .. p.id .. ": " .. tostring(err)) end
+                end
+            elseif p.scaling then
+                scaling = math.max(scaling, p.scaling)
+            end
+        end
+    end
+    if dirty then g.modifiers.scaling = scaling > 1 and scaling or nil end
+end
+
+function R.apply_plan(plan, args)
+    local g = G.GAME
+    if not g then return end
+    g.modifiers = g.modifiers or {}
+    R.apply_stakes(plan.off, g.stake or 1, args and args.forge_stake)
+    R.apply_decks(plan.decks)
+end
+
+local function lobby_settings()
+    local bm = rawget(_G, "bom_match")
+    local ok, s = pcall(function() return bm and bm.get_settings and bm.get_settings() end)
+    return ok and type(s) == "table" and s or nil
+end
+
+local function ranked()
+    local Rs = rawget(_G, "bom_rulesets")
+    local ok, kind = pcall(function() return Rs and Rs.lock_kind and Rs.lock_kind() end)
+    return ok and kind == "ranked"
+end
+
+function R.plan_for(args)
+    if type(args) ~= "table" or args.savetext then return nil end
+    local p
+    if args.mp_start then
+        if ranked() then return nil end
+        local s = lobby_settings()
+        p = s and R.normalize(s.run_mods)
+        if p then p.src = "mp" end
+    elseif type(args.run_mods) == "table" then
+        p = R.normalize(args.run_mods)
+        p.src = "solo"
+    elseif R.carry then
+        p = R.normalize(R.carry)
+        p.src = "solo"
+    end
+    if not p or R.empty(p) then return nil end
+    return p
+end
+
+function R.swap_stakes(plan)
+    local off = set_of(plan.off)
+    local swapped = {}
+    for id in pairs(off) do
+        local key = id:match("^(.-):own$")
+        local st = key and G.P_STAKES and G.P_STAKES[key]
+        if st and type(st.modifiers) == "function" then
+            swapped[#swapped + 1] = {st, st.modifiers}
+            st.modifiers = function() end
+        end
+    end
+    return swapped
+end
+
+function R.carry_run()
+    local rm = R.in_run()
+    R.carry = rm and rm.src ~= "mp" and R.normalize(rm) or nil
+    return R.carry ~= nil
+end
+
+local function start_with(orig, self, args, ...)
+    local plan = R.plan_for(args)
+    R.carry = nil
+    if not plan then return orig(self, args, ...) end
+    local swapped = R.swap_stakes(plan)
+    local cur = Back.apply_to_run
+    local pending = true
+    local hook
+    hook = function(back, ...)
+        local r = {cur(back, ...)}
+        if pending and G.GAME and back == G.GAME.selected_back then
+            pending = false
+            if Back.apply_to_run == hook then Back.apply_to_run = cur end
+            local ok, err = pcall(R.apply_plan, plan, args)
+            if not ok then print("[RunMods] apply: " .. tostring(err)) end
+        end
+        return unpack(r)
+    end
+    Back.apply_to_run = hook
+    local res = {pcall(orig, self, args, ...)}
+    if Back.apply_to_run == hook then Back.apply_to_run = cur end
+    for _, s in ipairs(swapped) do s[1].modifiers = s[2] end
+    if not res[1] then error(res[2], 0) end
+    if G.GAME and not pending then
+        G.GAME.run_mods = {decks = plan.decks, off = plan.off, src = plan.src, deck = G.GAME.selected_back_key and G.GAME.selected_back_key.key or nil, stake = G.GAME.stake}
+        local P = rawget(_G, "Progress")
+        if P and P.mark then P.mark("run_mods") end
+    end
+    return unpack(res, 2)
+end
+R._start_with = start_with
+
+function R.in_run()
+    local g = G and G.GAME
+    local rm = g and g.run_mods
+    return type(rm) == "table" and not R.empty(rm) and rm or nil
+end
+
+function R.on_trigger(orig, self, args)
+    local r1, r2 = orig(self, args)
+    local rm = R.in_run()
+    if not (rm and args and G.GAME and self == G.GAME.selected_back) then return r1, r2 end
+    R._tcache = R._tcache or {}
+    if R._tcache.rm ~= rm then R._tcache = {rm = rm, backs = R.deck_backs(rm.decks, true)} end
+    for _, back in ipairs(R._tcache.backs) do
+        if args.context == 'final_scoring_step' and r1 ~= nil then args.chips, args.mult = r1, r2 end
+        local ok, a, b = pcall(Back.trigger_effect, back, args)
+        if ok and a ~= nil and args.context == 'final_scoring_step' then r1, r2 = a, b end
+    end
+    return r1, r2
+end
+
+function R.install()
+    if R._installed or not (Game and Back and G and G.FUNCS) then return end
+    R._installed = true
+    local orig_start = Game.start_run
+    Game.start_run = function(self, args, ...) return start_with(orig_start, self, args, ...) end
+    local orig_trigger = Back.trigger_effect
+    Back.trigger_effect = function(self, args) return R.on_trigger(orig_trigger, self, args) end
+    local orig_funcs = G.FUNCS.start_run
+    if type(orig_funcs) == "function" then
+r 13 2958 %20%20%20%20%20%20%20%20 -
+l 41
+            local restart = e and e.config and e.config.id == 'restart_button'
+            local armed = R.armed
+            R.armed = false
+            if armed and not restart and not (args and (args.savetext or args.mp_start)) and R.active() then
+                args = args or {}
+                args.run_mods = R.snapshot()
+            end
+            return orig_funcs(e, args)
+        end
+    end
+    local orig_menu = Game.main_menu
+    if orig_menu then
+        Game.main_menu = function(...)
+            R.armed = false
+            R.carry = nil
+            return orig_menu(...)
+        end
+    end
+    local orig_setup = G.FUNCS.start_setup_run
+    if type(orig_setup) == "function" then
+        G.FUNCS.start_setup_run = function(e, ...)
+            if e == nil and G.forced_stake ~= nil and G.STAGE == G.STAGES.RUN then R.carry_run() end
+            return orig_setup(e, ...)
+        end
+    end
+    local P = rawget(_G, "Progress")
+    if P and P.LABELS then P.LABELS.run_mods = "Run Modifiers" end
+end
+
+if mod_loc_register then mod_loc_register{
+    fr = {
+        ["%d of %d stake effects off"] = "%d effets de mise sur %d coupés",
+        ["Run Modifiers"] = "Modificateurs de partie",
+    },
+    es = {
+        ["%d of %d stake effects off"] = "%d de %d efectos del pozo apagados",
+        ["Run Modifiers"] = "Modificadores de partida",
+    },
+} end
+
+return R
+end
