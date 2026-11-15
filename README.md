@@ -64,7 +64,7 @@ Get the file for your device from the [latest release](https://github.com/Jupite
 | macOS | `BalatroOverhaulLauncher-2.0-macos.zip` | Balatro on Steam |
 | Linux | `BalatroOverhaulLauncher-2.0-linux-x86_64.tar.gz` | Balatro on Steam |
 | Android | `BalatroOverhaulLauncher-2.0-android.apk` | Balatro from Google Play |
-| iPhone / iPad | None yet: build the IPA yourself ([guide](tools/release/ios/README.md)) | Balatro on Steam, a Mac with Xcode, AltStore or SideStore |
+| iPhone / iPad | No release file yet: the IPA comes from the Build iOS IPA workflow ([guide](tools/release/ios/README.md)) | Balatro on Steam, AltStore or SideStore |
 
 It's simple to use : it finds your Balatro, you press **Install**, then **Play**.
 
@@ -129,9 +129,11 @@ The PC launcher has an **Android** tab that makes the phone app from your Steam 
 </details>
 
 <details>
-<summary><b>iPhone / iPad (sideload, build it yourself)</b></summary>
+<summary><b>iPhone / iPad (sideload)</b></summary>
 
-There's no App Store version and no official IPA. You can build an unsigned IPA on a Mac with Xcode and sideload it with AltStore or SideStore; see [tools/release/ios](tools/release/ios/README.md). Like on Android, the app doesn't include Balatro: on first launch you import your own Steam copy (`Balatro.exe` or `Balatro.love`) from the Files app and it gets patched on the device.
+There's no App Store version. The app is an unsigned IPA that you install with AltStore or SideStore. It's built by the **Build iOS IPA** workflow in this repository's Actions tab, or on your own Mac with Xcode; see [tools/release/ios](tools/release/ios/README.md). Like on Android, the app doesn't include Balatro: on first launch you import your own Steam copy (`Balatro.exe` or `Balatro.love`) from the Files app and it gets patched on the device.
+
+The iPhone and iPad port was made by [JohnG210](https://github.com/JohnG210). Thank you!
 
 </details>
 
