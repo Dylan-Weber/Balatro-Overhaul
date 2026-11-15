@@ -2,15 +2,6 @@ name: Build iOS IPA
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main, ios-actions]
-    paths:
-      - '.github/workflows/ios.yml'
-      - 'tools/release/ios/**'
-      - 'tools/release/android/bootstrap/**'
-      - 'tools/release/android/icon/**'
-      - 'tools/release/patcher/**'
-      - 'game/**'
   pull_request:
     paths:
       - '.github/workflows/ios.yml'
@@ -36,7 +27,7 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
       OVERHAUL_IOS_SOURCE_URL: https://github.com/${{ github.repository }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
       - name: Toolchain
@@ -57,7 +48,7 @@ jobs:
       - name: Package IPA and audit contents
         run: python3 -B tools/release/ios/scripts/make_ipa.py
       - name: Upload IPA, checksums and audit
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: BalatroOverhaul-iOS-${{ github.run_number }}
           path: |
@@ -68,7 +59,7 @@ jobs:
           retention-days: 30
       - name: Upload build log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: iOS-build-log-${{ github.run_number }}
           path: ${{ runner.temp }}/ios-build.log
