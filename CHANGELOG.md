@@ -21,7 +21,7 @@ Changelog for the updates, first being the latest changes.
 - **New rules.** "Every N times" (like Yorick), make a Joker with a chosen edition, draw cards, copy a random Joker, count cards or Jokers with an edition, and booster packs that put one edition on every card.
 - **Card text.** The text editor is now one free text box: type with your real keyboard, Return starts a new line, and you can paint words in any colour.
 - **Try it in a run.** The pause menu has Back to the Forge, which takes you straight back to the builder on the same creation.
-- **Builder.** The settings line up in even columns, every rule can be removed, and the pixel editor has a Replace colour tool (key C) and a Save button.
+- **Builder.** The settings line up in even columns, every rule can be removed, editions can have no shine, and the pixel editor has a Replace colour tool (key C) and a Save button.
 - **Fixes.** Your vouchers on a custom deck work from the start of the run, your vouchers and booster packs work with Cryptid, Tag art shows everywhere, your vouchers sit in pairs in the Collection, and "ERROR in 7" is gone.
 - Creations that use the new features need Overhaul 2.1 or later.
 
@@ -30,13 +30,17 @@ Changelog for the updates, first being the latest changes.
 - **Big numbers.** With Talisman or Amulet, "Score reached", Jimbo's comments and the best hand finder work again.
 - **Custom Run.** "No boss blinds", "Showdown bosses only" and turning off card types in the shop now work with mods.
 - **Mod stakes.** Overhaul's extra stake effects no longer pile onto a mod's own stakes, and wins on them count as Gold Stake wins.
+- **With mods.** Card sleeves and ranked cosmetics show on cards, Forge editions show up in runs, the phone vibrates when a hand levels up, and Forge Tags and Blinds you turned off stay hidden.
+- **Forge rules.** With mods, rules on cards and decks score once per card again (they could apply several times).
 - **Smoother.** Less work every frame with Steamodded.
 
 ### Phones
 - **Texture packs.** Malverk packs can be turned on: tap a pack, then Apply.
 - **Shop.** Tap any card to get the same buttons as on PC, also for cards mods put in another row (#38).
 - **Right click for mods.** A long press works as a right click for mods that use one, like Saturn.
+- **Landscape with mods.** The Blind choice no longer cuts off long boss texts.
 - **Crash fixes.** At start on some Android phones, at the title screen with mods, and when leaving the shop while the screen changed size.
+- **Small fixes.** The "1 in 7" of The Wheel in Run Info has the right size, and the Settings search opens the right page.
 
 ### Multiplayer
 - **Decks to pick from.** Now on the Players tab of the lobby, next to Deck.
@@ -45,6 +49,7 @@ Changelog for the updates, first being the latest changes.
 - **Slowdown.** The game no longer gets slower the longer you play with Jokers.
 - **Score preview.** The hand name stays visible and long scores shrink to fit (#39).
 - **No more flashing.** Windows that refresh no longer jump to the top left first.
+- **Replays.** A crash when a replay recording stopped is fixed.
 
 If you already have the Overhaul, update from the launcher or the Update button on the title screen.
 
