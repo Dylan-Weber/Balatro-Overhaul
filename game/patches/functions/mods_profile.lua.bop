@@ -94,7 +94,7 @@ Game.load_all_files = function(self, retry)
   if not modded() then return load_all_files(self, retry) end
   if not retry then pcall(seed_first_modded_profile) end
 e 7 1212 %20%20 - =2,-2,=1,-1,+%4F%41%44,=13,-2,=1,-1,+%4F%41%44,=14
-l 36
+l 77
   if not G.LOAD_HANDLER.modded then
     G.LOAD_HANDLER.LOCAL_FILES, G.LOAD_HANDLER.FILE_NAMES = file_lists()
     G.LOAD_HANDLER.modded = true
@@ -131,9 +131,8 @@ local function default_name(key)
 end
 
 local load_profile = Game.load_profile
-r 7 845 - -
-l 40
-  if not modded() then return load_profile(self, _profile) end
+function Game:load_profile(_profile, ...)
+  if not modded() then return load_profile(self, _profile, ...) end
   local current = G.SETTINGS.profile
   if not INDEX[current] then
     local saved = G.FILES and G.FILES['settings.jkr']
@@ -147,7 +146,7 @@ l 40
   if type(data) == "table" and next(data) and not data.deleted and (not data.name or data.name == '' or data.name == "P" .. INDEX[_profile]) then
     data.name = default_name(_profile)
   end
-  load_profile(self, _profile)
+  load_profile(self, _profile, ...)
   local name = G.PROFILES[_profile].name
   if _profile == G.SETTINGS.profile and (not name or name == '' or name == "P" .. INDEX[_profile]) then
     G.PROFILES[_profile].name = default_name(_profile)

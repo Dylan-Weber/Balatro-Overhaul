@@ -830,8 +830,8 @@ return {
       kind = "patch",
       patch = "patches/functions/mods_profile.lua.bop",
       path = "functions/mods_profile.lua",
-      sha256 = "a96f81236085626599ae2ed516544e30a6d25337719952b0acdae2f86a1db1d6",
-      size = 8202,
+      sha256 = "73e4b5caa066db8316751f416c457d32743cfb10766d55761bec200a7a78423d",
+      size = 8217,
     },
     {
       kind = "patch",
@@ -2216,8 +2216,8 @@ return {
       file = "files/multiplayer/bom_core.lua",
       kind = "own",
       path = "multiplayer/bom_core.lua",
-      sha256 = "366ea08131c8ff601b44549b2acfe8b1de40582cfbec7e8d7f7d5f9a2f2f665d",
-      size = 24909,
+      sha256 = "3797f006ca65ddb5e9968d30827fd3d8aa20b547968deeb7dc793d7502531600",
+      size = 25460,
     },
     {
       kind = "patch",
@@ -2755,7 +2755,7 @@ return {
       file = "files/overhaul/version.lua",
       kind = "own",
       path = "overhaul/version.lua",
-      sha256 = "18fb514cf62287478bebb5d01e34c1a70cff7b2ab77b90a4d1d65da1a0cbf08f",
+      sha256 = "7bb457fd83dc1b3884bcecf01d9c79a72c7569a952430aa4902455fd4de8c055",
       size = 146,
     },
     {
@@ -6085,7 +6085,7 @@ return {
   game_version = "1.0.1o-FULL",
   name = "Balatro Overhaul",
   overhaul_name = "2.1",
-  overhaul_version = "71",
+  overhaul_version = "72",
   vanilla = {
     {
       lines = "lines/1.txt",

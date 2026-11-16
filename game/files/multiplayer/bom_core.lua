@@ -310,6 +310,15 @@ function bom_core.connect(on_ready, opts)
     AndroidWS.connect(SERVER_URL)
 end
 
+function bom_core.send_hello()
+    local p = G and G.PROFILES and G.SETTINGS and G.PROFILES[G.SETTINGS.profile]
+    local name = p and p.name or nil
+    local R = rawget(_G, "bom_room")
+    local version = R and R.game_version and R.game_version() or nil
+    local mods = bom_core.mods_field and bom_core.mods_field() or nil
+    bom_core.send({type = "client_hello", name = name, pkey = bom_core.player_key(), version = version, mods = mods})
+end
+
 function bom_core.player_key()
     if not (G and G.SETTINGS) then return nil end
     local k = G.SETTINGS.mp_player_key
@@ -564,7 +573,9 @@ function bom_core.update(dt)
         end)
         if not ok_lost then mp_log.error("BOM_CORE", "connection lost handler failed: %s", tostring(err_lost)) end
     end
+    local fresh = connected_now and not was_connected
     was_connected = connected_now
+    if fresh then pcall(bom_core.send_hello) end
     if connected_now and reconnect_callback then
         local cb = reconnect_callback
         reconnect_callback = nil

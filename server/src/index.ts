@@ -65,6 +65,7 @@ interface SocketData {
   rtt?: number | null;
   gameVersion?: string;
   name?: string;
+  shownName?: string;
   nameKey?: string;
   partyCode?: string | null;
   pkey?: string;
@@ -1230,7 +1231,7 @@ const L5_TYPES = ['menu_info', 'name_check'];
 const ALLOWED_TYPES = new Set([
   'create_room', 'join_room', 'find_match', 'cancel_search',
   'room_joined', 'ready_state',
-  'match_settings', 'match_start', 'player_name',
+  'match_settings', 'match_start', 'player_name', 'client_hello',
   'blind_entered', 'blind_finished', 'game_over', 'match_finished',
   'request_state', 'boss_sync', 'rematch_vote',
   'return_to_lobby', 'leave_lobby', 'return_to_menu',
@@ -2133,6 +2134,18 @@ function handlePlayerDeck(ws: BunWS, msg: Record<string, unknown>): void {
   room.decks[pid] = msg.deck as string;
   const opp = getOpponentSocket(room, ws);
   if (opp) sendTo(opp, { type: 'opponent_deck', deck: msg.deck, pid });
+}
+
+function handleClientHello(ws: BunWS, msg: Record<string, unknown>): void {
+  rememberMods(ws, msg);
+  if (typeof msg.name !== 'string') return;
+  const name = cleanName(msg.name);
+  if (!name) return;
+  ws.data.shownName = name;
+  if (ws.data.name) return;
+  const pkey = typeof msg.pkey === 'string' && PKEY_RE.test(msg.pkey) ? msg.pkey : undefined;
+  if (isDefaultName(name) || !nameIsClean(name) || nameHeldElsewhere(nameKey(name), ws, undefined, pkey)) return;
+  claimName(ws, { name, pkey });
 }
 
 function handlePlayerName(ws: BunWS, msg: Record<string, unknown>): void {
@@ -3606,6 +3619,7 @@ const HANDLERS: Record<string, Handler> = {
   match_settings:  handleMatchSettings,
   match_start:     handleMatchStart,
   player_name:     (ws, msg)     => handlePlayerName(ws, msg),
+  client_hello:    (ws, msg)     => handleClientHello(ws, msg),
   ping:            (ws, msg)     => handlePing(ws, msg),
   blind_entered:   handleBlindEntered,
   blind_finished:  (ws, msg)     => handleBlindFinished(ws, msg),
@@ -3725,11 +3739,11 @@ export function setRelease(r: ReleaseService): void { release = r; }
 
 const liveSockets = new Set<BunWS>();
 
-function adminLive(): LiveState {
+export function adminLive(): LiveState {
   const sockets = [...liveSockets].map(ws => {
     const d = ws.data;
     return {
-      name: d.name ?? '', pkey: d.pkey ?? d.socialKey ?? '', version: d.gameVersion ?? '',
+      name: d.name || d.shownName || '', pkey: d.pkey ?? d.socialKey ?? '', version: d.gameVersion ?? '',
       mods: (d.mods ?? []).slice(0, 80).map(m => `${m.name || m.id} ${m.version}`.trim()),
       room: d.roomCode ?? null, party: d.partyCode ?? null, where: d.socialWhere ?? '', queue: d.rankedQueue === true,
       rtt: typeof d.rtt === 'number' ? d.rtt : null, since: d.connectedAt ?? 0,
