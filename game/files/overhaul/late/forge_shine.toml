@@ -1,0 +1,17 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "forge_shine.plain_draw"
+target = "card.lua"
+pattern = '''^(?<indent>[\t ]*)if \(self\.edition and self\.edition\.negative\) or \(self\.ability\.name == 'Antimatter' and \(self\.config\.center\.discovered or self\.bypass_discovery_center\)\) then\n(?<body>[\t ]*self\.children\.center:draw_shader\('negative_shine', nil, self\.ARGS\.send_to_shader\)\n)'''
+position = "at"
+payload = '''
+${indent}if ForgeShine and ForgeShine.owns(self) then
+${indent}    ForgeShine.draw_plain(self)
+${indent}elseif (self.edition and self.edition.negative) or (self.ability.name == 'Antimatter' and (self.config.center.discovered or self.bypass_discovery_center)) then
+${body}'''
+times = 1
+optional = true

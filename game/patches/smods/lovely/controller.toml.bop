@@ -16,7 +16,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 15 405 - -
+r 30 405 - -
 l 12
 '''
 payload = '''
@@ -30,9 +30,9 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 421 - -
-r 15 422 %20%20%20%20%20%20%20%20%20%20 -
-r 15 423 %20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 421 - -
+r 30 422 %20%20%20%20%20%20%20%20%20%20 -
+r 30 423 %20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 13
 '''
 payload = '''
@@ -47,17 +47,17 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 427 - -
-r 15 428 - -
+r 30 427 - -
+r 30 428 - -
 l 2
 button_contents
 }},
-r 15 431 - -
+r 30 431 - -
 l 3
 '''
 payload = '''
 not args.align_left and args.type ~= 'sell' and {n=G.UIT.C, config={align = "cm",minw = 0.2, minh = 0.6}, nodes={}} or nil,
-r 15 428 - -
+r 30 428 - -
 l 11
 button_contents
 }},
@@ -70,8 +70,8 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 437 - -
-r 15 438 %20%20%20%20%20%20%20%20 %20
+r 30 437 - -
+r 30 438 %20%20%20%20%20%20%20%20 %20
 l 5
 '''
 payload = '''

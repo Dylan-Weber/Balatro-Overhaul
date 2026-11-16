@@ -1,0 +1,600 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 241
+TALLY = TALLY or {}
+local T = TALLY
+
+T.REFRESH = 0.5
+T.PER_FRAME = 3
+T.SCALE = 0.34
+T.AGAIN = {j_sock_and_buskin = true, j_mime = true, j_dusk = true}
+T.cards = setmetatable({}, {__mode = 'k'})
+
+mod_loc_register{
+    fr = {
+        ["Tally Joker"] = "Tally Joker",
+        ["A line under each Joker with its numbers"] = "Une ligne sous chaque Joker avec ses valeurs",
+    },
+    es = {
+        ["Tally Joker"] = "Tally Joker",
+        ["A line under each Joker with its numbers"] = "Una línea bajo cada comodín con sus valores",
+    },
+}
+
+local logged = {}
+local function log_once(key, msg)
+    if logged[key] then return end
+    logged[key] = true
+    print("[tally] " .. tostring(msg))
+end
+
+function T.enabled()
+    return G and G.SETTINGS and G.SETTINGS.tally_joker ~= false
+end
+
+local function in_run()
+    return G and G.STAGE == G.STAGES.RUN and G.GAME and G.jokers and G.jokers.cards and true or false
+end
+
+local function same_colour(a, b)
+    if type(a) ~= 'table' or type(b) ~= 'table' then return false end
+    for i = 1, 3 do
+        if math.abs((a[i] or 0) - (b[i] or 0)) > 0.02 then return false end
+    end
+    return true
+end
+
+local function is_inactive(c)
+    return c == nil or same_colour(c, G.C.UI.TEXT_INACTIVE)
+end
+
+local function trim(s)
+    return (tostring(s or ''):gsub('^%s+', ''):gsub('%s+$', ''):gsub('%s%s+', ' '))
+end
+
+local now_cache = {}
+function T.now_word()
+    local lang = G.SETTINGS and G.SETTINGS.language or 'en-us'
+    if now_cache[lang] ~= nil then return now_cache[lang] end
+    local word = false
+    local ok = pcall(function()
+        local d = G.localization.descriptions.Joker.j_ride_the_bus
+        for _, line in ipairs(d.text or {}) do
+            local w = line:match('{C:inactive}%(([^{]+){')
+            if w and trim(w) ~= '' then word = trim(w) break end
+        end
+    end)
+    if not ok then word = false end
+    now_cache[lang] = word
+    return word
+end
+
+local function dyna_text(obj)
+    local s = obj.config and obj.config.string
+    if type(s) == 'table' then s = s[1] end
+    if type(s) == 'table' then s = s.string or (s.ref_table and s.ref_table[s.ref_value]) end
+    if type(s) ~= 'string' and type(s) ~= 'number' then return nil end
+    return tostring(s), obj.colours and obj.colours[1]
+end
+
+local function flatten(nodes, out, bg, depth)
+    if type(nodes) ~= 'table' or depth > 6 then return end
+    for _, n in ipairs(nodes) do
+        if type(n) == 'table' then
+            local c = n.config or {}
+            if n.n == G.UIT.T and (c.text ~= nil or (c.ref_table and c.ref_value)) then
+                local text = c.text
+                if c.ref_table and c.ref_value then text = c.ref_table[c.ref_value] end
+                if c.ref_value == 'blueprint_compat_ui' and (text == nil or trim(text) == '') and c.ref_table.blueprint_compat then
+                    text = localize('k_' .. tostring(c.ref_table.blueprint_compat))
+                end
+                if text ~= nil then out[#out + 1] = {text = tostring(text), colour = c.colour, bg = bg} end
+            elseif n.n == G.UIT.O and type(c.object) == 'table' then
+                local s, col = dyna_text(c.object)
+                if s then out[#out + 1] = {text = s, colour = col, bg = bg} end
+            elseif n.nodes then
+                flatten(n.nodes, out, (n.n == G.UIT.C and c.colour and not same_colour(c.colour, G.C.CLEAR)) and c.colour or bg, depth + 1)
+            elseif n.n == nil then
+                flatten(n, out, bg, depth + 1)
+            end
+        end
+    end
+end
+
+local function split_parens(segs)
+    local out = {}
+    for _, s in ipairs(segs) do
+        local rest = s.text
+        while rest ~= '' do
+            local i = rest:find('[%(%)]')
+            if not i then
+                out[#out + 1] = {text = rest, colour = s.colour, bg = s.bg}
+                break
+            end
+            if i > 1 then out[#out + 1] = {text = rest:sub(1, i - 1), colour = s.colour, bg = s.bg} end
+            out[#out + 1] = {paren = rest:sub(i, i), colour = s.colour}
+            rest = rest:sub(i + 1)
+        end
+    end
+    return out
+end
+
+local function groups_of(segs)
+    local groups, cur, depth = {}, nil, 0
+    for _, s in ipairs(split_parens(segs)) do
+        if s.paren == '(' then
+            depth = depth + 1
+            if depth == 1 then cur = {} end
+        elseif s.paren == ')' then
+            if depth == 1 and cur then groups[#groups + 1] = cur; cur = nil end
+            depth = math.max(0, depth - 1)
+        elseif cur then
+            cur[#cur + 1] = s
+        end
+    end
+    return groups
+end
+
+local function group_text(g)
+    local t = {}
+    for _, s in ipairs(g) do t[#t + 1] = s.text end
+    return trim(table.concat(t))
+end
+
+local function has_value(g)
+    for _, s in ipairs(g) do
+        if s.text:find('%d') and (s.bg or not (is_inactive(s.colour) or same_colour(s.colour, G.C.GREEN))) then return true end
+    end
+    return false
+end
+
+local function has_digit(g)
+    for _, s in ipairs(g) do if s.text:find('%d') then return true end end
+    return false
+end
+
+local function strip_word(g, word)
+    if not word or #g == 0 then return g end
+    local first = g[1]
+    local t = first.text:gsub('^%s+', '')
+    if t:sub(1, #word) ~= word then return nil end
+    local out = {{text = t:sub(#word + 1), colour = first.colour, bg = first.bg}}
+    for i = 2, #g do out[#out + 1] = g[i] end
+    return out
+end
+
+local function pieces_of(g)
+    local out = {}
+    for _, s in ipairs(g) do
+        local t = trim(s.text)
+        if t ~= '' and t ~= ',' then
+            local last = out[#out]
+            if last and not s.bg and not last.bg and same_colour(last.colour, s.colour) then
+                last.text = last.text .. ' ' .. t
+            else
+                out[#out + 1] = {text = t, colour = s.colour, bg = s.bg}
+            end
+        end
+    end
+    return out
+end
+
+local function base_pieces(segs)
+    local out, depth = {}, 0
+    for _, s in ipairs(split_parens(segs)) do
+        if s.paren then
+            depth = math.max(0, depth + (s.paren == '(' and 1 or -1))
+        elseif depth == 0 and s.text:find('%d') and (s.bg or not (is_inactive(s.colour) or same_colour(s.colour, G.C.GREEN))) then
+            local t = trim(s.text)
+            local col = s.bg or s.colour
+            local last = out[#out]
+            if last and same_colour(last.colour, col) then
+                last.text = last.text .. ', ' .. t
+            else
+                out[#out + 1] = {text = t, colour = col}
+            end
+        end
+    end
+    return out
+end
+
+local function tag_pieces(segs)
+    local out, depth = {}, 0
+    for _, s in ipairs(split_parens(segs)) do
+        if s.paren then
+            depth = math.max(0, depth + (s.paren == '(' and 1 or -1))
+        elseif depth == 0 and s.bg and trim(s.text) ~= '' then
+            local t = trim(s.text)
+            local col = s.bg
+            if t == localize('k_compatible') then col = G.C.GREEN
+            elseif t == localize('k_incompatible') then col = G.C.RED end
+            out[#out + 1] = {text = t, colour = col}
+        end
+    end
+    return out
+end
+
+local function chance_pieces(segs)
+    local out, run, depth = {}, nil, 0
+    for _, s in ipairs(split_parens(segs)) do
+        if s.paren then depth = math.max(0, depth + (s.paren == '(' and 1 or -1)) end
+        if not s.paren and depth == 0 and not s.bg and same_colour(s.colour, G.C.GREEN) then
+            run = (run or '') .. s.text
+        else
+            if run and run:find('%d') then out[#out + 1] = {text = trim(run), colour = G.C.GREEN, chance = true} end
+            run = nil
+        end
+    end
+    if run and run:find('%d') then out[#out + 1] = {text = trim(run), colour = G.C.GREEN, chance = true} end
+    return out
+end
+
+local function remove_new(r, n0, m0)
+    local fresh, any = {}, false
+    local nodes, moves = G.I and G.I.NODE, G.I and G.I.MOVEABLE
+    if nodes then for i = n0 + 1, #nodes do fresh[nodes[i]] = true; any = true end end
+    if moves then for i = m0 + 1, #moves do fresh[moves[i]] = true; any = true end end
+    if not any then return end
+    local seen = {}
+    local function walk(t, d)
+        if type(t) ~= 'table' or seen[t] or d > 12 then return end
+        seen[t] = true
+        local c = rawget(t, 'config')
+        local o = type(c) == 'table' and rawget(c, 'object')
+        if o and fresh[o] and o.remove then pcall(o.remove, o); fresh[o] = nil end
+r 13 131 %20%20%20%20%20%20%20%20 -
+l 345
+            if type(v) == 'table' and k ~= 'object' and not (getmetatable(v) and v.is) then walk(v, d + 1) end
+        end
+    end
+    walk(r, 0)
+    for o in pairs(fresh) do
+        if type(o) == 'table' and not o.REMOVED and not o.parent and getmetatable(o) == DynaText and o.remove then pcall(o.remove, o) end
+    end
+end
+
+function T.describe(card)
+    local list, mlist = G.I and G.I.NODE, G.I and G.I.MOVEABLE
+    local n0, m0 = list and #list or 0, mlist and #mlist or 0
+    local ok, r = pcall(card.generate_UIBox_ability_table, card)
+    if ok and type(r) == 'table' then pcall(remove_new, r, n0, m0) end
+    if not ok then
+        log_once('d_' .. tostring(card.config and card.config.center and card.config.center.key), r)
+        return nil
+    end
+    if type(r) ~= 'table' or type(r.main) ~= 'table' then return nil end
+    local segs = {}
+    flatten(r.main, segs, nil, 0)
+    return segs
+end
+
+function T.read(card)
+    local segs = T.describe(card)
+    if not segs then return {now = {}, count = {}, chance = {}, base = {}} end
+    local groups = groups_of(segs)
+    local word = T.now_word()
+    local center = card.config and card.config.center or {}
+    local forge = center.forge or (type(center.key) == 'string' and center.key:sub(1, 8) == 'j_forge_')
+    local now, count = {}, {}
+    for _, g in ipairs(groups) do
+        local rest = word and strip_word(g, word)
+        if rest then
+            for _, p in ipairs(pieces_of(rest)) do now[#now + 1] = p end
+        elseif forge and has_digit(g) then
+            for _, p in ipairs(pieces_of(g)) do count[#count + 1] = p end
+        end
+    end
+    if #now == 0 and #count == 0 then
+        for i = #groups, 1, -1 do
+            if has_value(groups[i]) then
+                now = pieces_of(groups[i])
+                break
+            end
+        end
+    end
+    local base = {}
+    if #now == 0 and #count == 0 then
+        if center.key == 'j_oops' then
+            base[1] = {text = 'X2', colour = G.C.GREEN}
+        elseif T.AGAIN[center.key] then
+            local n = type(card.ability and card.ability.extra) == 'number' and card.ability.extra or 1
+            base[1] = {text = localize('k_again_ex') .. ' x' .. tostring(n), colour = G.C.FILTER}
+        else
+            base = base_pieces(segs)
+            if #base == 0 then base = tag_pieces(segs) end
+        end
+    end
+    return {now = now, count = count, chance = chance_pieces(segs), base = base}
+end
+
+local function num(v)
+    if type(v) == 'number' then return v end
+    local ok, r = pcall(function() return to_number and to_number(v) or tonumber(tostring(v)) end)
+    return ok and type(r) == 'number' and r or nil
+end
+
+local function fmt(v)
+    local ok, s = pcall(number_format, v)
+    if ok and type(s) == 'string' then return s end
+    return tostring(v)
+end
+
+local function differs(a, b)
+    local x, y = num(a), num(b)
+    if x and y then return math.abs(x - y) > 1e-9 * math.max(1, math.abs(x)) end
+    return tostring(a) ~= tostring(b)
+end
+
+local function span(lo, hi, f, none)
+    if hi ~= nil and differs(lo, hi) then
+        if not differs(lo, none) then return f(hi) end
+        if not differs(hi, none) then return f(lo) end
+        return f(lo) .. '/' .. f(hi)
+    end
+    return f(lo)
+end
+
+function T.share_allowed()
+    if not (PREVIEW and PREVIEW.fx_for) then return false end
+    local FL = rawget(_G, 'FairLock')
+    if FL and FL.blocks then
+        local ok, b = pcall(FL.blocks, 'score_preview')
+        if ok and b then return false end
+    end
+    return true
+end
+
+function T.share(card)
+    if not T.share_allowed() then return nil end
+    local ok, lo, hi, all = pcall(PREVIEW.fx_for, card)
+    if not ok then return nil end
+    if not lo and not hi then return all and {} or nil end
+    lo = lo or {}
+    hi = hi or lo
+    local out = {}
+    local function plus(v) return (num(v) or 0) < 0 and fmt(v) or ('+' .. fmt(v)) end
+    local c0, c1 = lo.chips or 0, hi.chips or 0
+    if (num(c0) or 0) ~= 0 or (num(c1) or 0) ~= 0 then out[#out + 1] = {text = span(c0, c1, plus, 0), colour = G.C.CHIPS} end
+    local m0, m1 = lo.mult or 0, hi.mult or 0
+    if (num(m0) or 0) ~= 0 or (num(m1) or 0) ~= 0 then out[#out + 1] = {text = span(m0, m1, plus, 0), colour = G.C.MULT} end
+    local xc0, xc1 = lo.xchips or 1, hi.xchips or 1
+    if (num(xc0) or 1) ~= 1 or (num(xc1) or 1) ~= 1 then
+        out[#out + 1] = {text = span(xc0, xc1, function(v) return 'X' .. fmt(v) end, 1), colour = G.C.WHITE, bg = G.C.CHIPS}
+    end
+    local x0, x1 = lo.xmult or 1, hi.xmult or 1
+    if (num(x0) or 1) ~= 1 or (num(x1) or 1) ~= 1 then
+        out[#out + 1] = {text = span(x0, x1, function(v) return 'X' .. fmt(v) end, 1), colour = G.C.WHITE, bg = G.C.MULT}
+    end
+    local d0, d1 = lo.dollars or 0, hi.dollars or 0
+    if (num(d0) or 0) ~= 0 or (num(d1) or 0) ~= 0 then
+        out[#out + 1] = {text = span(d0, d1, function(v) return ((num(v) or 0) < 0 and '-$' or '$') .. fmt(math.abs(num(v) or 0)) end, 0), colour = G.C.MONEY}
+    end
+    local r = math.max(num(lo.reps) or 0, num(hi.reps) or 0)
+    if r > 0 then out[#out + 1] = {text = localize('k_again_ex') .. ' x' .. fmt(r), colour = G.C.FILTER} end
+    return out
+end
+
+function T.pieces(card)
+    local info = T.cache_info(card)
+    local out = {}
+    local share = T.share(card)
+    if share and #share > 0 then
+        for _, p in ipairs(share) do out[#out + 1] = p end
+    else
+        for _, p in ipairs(#info.now > 0 and info.now or info.base) do
+            out[#out + 1] = share and {text = p.text, colour = G.C.UI.TEXT_INACTIVE, dim = true} or p
+        end
+    end
+    for _, p in ipairs(info.count) do out[#out + 1] = {text = p.text, colour = p.colour, bg = p.bg, second = true} end
+    if #info.chance > 0 then
+        local t = {}
+        for i, p in ipairs(info.chance) do t[i] = p.text end
+        out[#out + 1] = {text = table.concat(t, ', '), colour = G.C.GREEN, chance = true}
+    end
+    return out
+end
+
+function T.cache_info(card)
+    local st = T.cards[card]
+    if st and st.info then return st.info end
+    local info = T.read(card)
+    T.cards[card] = T.cards[card] or {}
+    T.cards[card].info = info
+    return info
+end
+
+local function sig(pieces)
+    local t = {}
+    for i, p in ipairs(pieces) do
+        local c = p.colour or {}
+        local b = p.bg or {}
+        t[i] = p.text .. '|' .. tostring(c[1]) .. tostring(c[2]) .. tostring(c[3]) .. '|' .. tostring(b[1]) .. tostring(b[2])
+    end
+    return table.concat(t, '#')
+end
+
+local function light(c)
+    if is_inactive(c) then return G.C.UI.TEXT_LIGHT end
+    return c
+end
+
+local function text_w(text, s)
+    local f = G.LANG and G.LANG.font
+    if not (f and f.FONT) then return #text * 0.12 * s / 0.3 end
+    return f.FONT:getWidth(text) * (f.squish or 1) * s * (f.FONTSCALE or 1) / G.TILESIZE
+end
+
+local function row_nodes(list, k, s)
+    local nodes, w = {}, 0
+    for i, p in ipairs(list) do
+        if i > 1 then
+            nodes[#nodes + 1] = {n = G.UIT.B, config = {w = 0.14 * k, h = 0.1}}
+            w = w + 0.14 * k
+        end
+        local col = p.dim and p.colour or p.bg or light(p.colour)
+        nodes[#nodes + 1] = {n = G.UIT.C, config = {align = 'cm'}, nodes = {
+            {n = G.UIT.T, config = {text = p.text, colour = col, scale = s}},
+        }}
+        w = w + text_w(p.text, s)
+    end
+    return nodes, w
+end
+
+function T.room(card)
+    local cw = card.T and card.T.w or G.CARD_W
+    local room = cw
+    local list = card.area and card.area.cards or {}
+    for i, c in ipairs(list) do
+        if c == card then
+            for _, o in ipairs({list[i - 1], list[i + 1]}) do
+                if o and o.T then room = math.min(room, math.abs(o.T.x - card.T.x)) end
+            end
+        end
+    end
+    return room * 0.9
+end
+
+function T.definition(card, pieces)
+    local cw = card.T and card.T.w or G.CARD_W
+    local k = cw / G.CARD_W
+    local s = T.SCALE * k
+    local room = T.room(card)
+    local nodes, w = row_nodes(pieces, k, s)
+    local rows
+    if w + 0.1 * k > room then
+        local main, chance = {}, {}
+        for _, p in ipairs(pieces) do
+            if p.chance or p.second then chance[#chance + 1] = p else main[#main + 1] = p end
+        end
+        if #main > 0 and #chance > 0 then
+            rows = {}
+            for _, list in ipairs({main, chance}) do
+                rows[#rows + 1] = {n = G.UIT.R, config = {align = 'cm', maxw = room - 0.1 * k}, nodes = (row_nodes(list, k, s))}
+            end
+        end
+    end
+    if not rows then
+        rows = {{n = G.UIT.R, config = {align = 'cm', maxw = room - 0.1 * k}, nodes = nodes}}
+    end
+    return {n = G.UIT.ROOT, config = {align = 'cm', colour = G.C.CLEAR, padding = 0}, nodes = {
+        {n = G.UIT.C, config = {align = 'cm', colour = {0, 0, 0, 0.62}, r = 0.025 * k, res = 0.15, padding = 0.05 * k}, nodes = rows},
+    }}
+end
+
+function T.drop(card)
+    local st = T.cards[card]
+    if not st then return end
+    if st.box then
+        st.box:remove()
+        st.box = nil
+    end
+    st.sig = nil
+end
+
+function T.show(card, pieces)
+    local st = T.cards[card] or {}
+    T.cards[card] = st
+    if #pieces == 0 then
+        T.drop(card)
+        return
+    end
+    local w = card.T and card.T.w or 0
+    local sg = sig(pieces) .. '@' .. string.format('%.3f %.3f', w, T.room(card))
+    if st.sig == sg and st.box and not st.box.REMOVED then return end
+    T.drop(card)
+    st.sig = sg
+    st.box = UIBox{
+        definition = T.definition(card, pieces),
+        config = {align = 'bm', offset = {x = 0, y = -0.1 * w / G.CARD_W}, major = card, bond = 'Weak', r_bond = 'Weak', can_collide = false},
+    }
+    st.box.attention_text = true
+end
+
+function T.fit_counter(on)
+    local a = G.jokers and G.jokers.children and G.jokers.children.area_uibox
+    local row = a and a.UIRoot and a.UIRoot.children and a.UIRoot.children[2]
+    local b = row and row.children and row.children[1]
+    local txt = row and row.children and row.children[2]
+    if not (b and b.config and txt and txt.T) then return end
+    local want = 0.1
+    local first = on and G.jokers.cards[1]
+    local st = first and T.cards[first]
+    local box = st and st.box
+    if box and box.states.visible and not box.REMOVED then
+        local pad = row.config.padding or 0
+        local bottom = box.T.y + box.T.h
+        want = math.max(0.1, 2 * (bottom + 0.04 + txt.T.h / 2 - row.T.y - pad))
+    end
+    if math.abs((b.config.h or 0) - want) > 0.02 then
+        b.config.h = want
+        a:recalculate()
+    end
+end
+
+local function hidden(card)
+    return card.facing == 'back' or card.sprite_facing == 'back' or not card.states or not card.states.visible
+        or (card.dissolve or 0) > 0 or card.REMOVED or false
+end
+
+local next_i = 1
+function T.update()
+    if not in_run() or not T.enabled() then
+        if T.counter_moved and G.jokers then pcall(T.fit_counter, false); T.counter_moved = nil end
+        for card in pairs(T.cards) do pcall(T.drop, card) end
+        T.cards = setmetatable({}, {__mode = 'k'})
+        return
+    end
+    local now = G.TIMERS and G.TIMERS.REAL or 0
+    local fx_key = tostring(PREVIEW and PREVIEW.fx) .. tostring(PREVIEW and PREVIEW.fx_sel)
+    local dirty = fx_key ~= T.fx_key
+    T.fx_key = fx_key
+    local list = G.jokers.cards
+    local here = {}
+    for _, card in ipairs(list) do here[card] = true end
+    for card in pairs(T.cards) do
+        if not here[card] then pcall(T.drop, card); T.cards[card] = nil end
+    end
+    local budget = T.PER_FRAME
+    local n = #list
+    for step = 1, n do
+        local i = ((next_i + step - 2) % n) + 1
+        local card = list[i]
+        local st = T.cards[card] or {}
+        T.cards[card] = st
+        if st.box then st.box.states.visible = not hidden(card) end
+        if hidden(card) then
+            pcall(T.drop, card)
+        else
+            local stale = not st.info or now >= (st.at or 0)
+            if stale and budget > 0 then
+                budget = budget - 1
+                next_i = i + 1
+                st.info = nil
+                st.at = now + T.REFRESH
+                local ok, err = pcall(function() T.show(card, T.pieces(card)) end)
+                if not ok then log_once('u', err) end
+            elseif dirty and st.info then
+                local ok, err = pcall(function() T.show(card, T.pieces(card)) end)
+                if not ok then log_once('u2', err) end
+            end
+        end
+    end
+    local ok, err = pcall(T.fit_counter, true)
+    if not ok then log_once('counter', err) end
+    T.counter_moved = true
+end
+
+function T.refresh_all()
+    for _, st in pairs(T.cards) do st.at = 0 end
+end
+
+local _game_update = Game.update
+r 7 2449 - -
+l 4
+    _game_update(self, dt)
+    local ok, err = pcall(T.update)
+    if not ok then log_once('update', err) end
+end
+end

@@ -248,7 +248,7 @@ function U.open_settings()
 end
 
 function U.refresh_now()
-r 13 1360 %20%20%20%20 -
+r 32 1360 %20%20%20%20 -
 l 42
     local tab = G.OVERLAY_MENU:get_UIE_by_ID("botlatro_tab")
     local tc = tab and G.OVERLAY_MENU:get_UIE_by_ID("tab_contents")
@@ -292,7 +292,7 @@ end
 G.FUNCS.bot_close_settings = function()
     U.open = false
     BOT.config.save()
-r 13 1375 %20%20%20%20 -
+r 32 1375 %20%20%20%20 -
 l 282
 end
 
@@ -576,7 +576,7 @@ end
 function U.launch_run()
     local v = BOT.config.values or BOT.config.load()
     U.open = false
-r 13 1825 %20%20%20%20 -
+r 32 1825 %20%20%20%20 -
 l 31
     if BOT_BRIDGE then
         BOT_BRIDGE.win_seen = nil
@@ -609,7 +609,7 @@ end
 G.FUNCS.bot_take_over = function()
     if run_is_over() then return U.launch_run() end
     U.open = false
-r 13 1825 %20%20%20%20 -
+r 32 1825 %20%20%20%20 -
 l 69
     U.start_solo()
 end
@@ -680,7 +680,7 @@ function U.update(dt)
     if not U.solo then return end
     if G.STAGE == G.STAGES.RUN and G.STATE ~= G.STATES.MENU then
         U.seen_run = true
-r 23 214 %20%20%20%20%20%20%20%20 -
+r 17 214 %20%20%20%20%20%20%20%20 -
 l 87
             U.hide_panel()
         else

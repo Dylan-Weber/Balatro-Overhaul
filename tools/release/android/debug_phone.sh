@@ -38,9 +38,9 @@ rsync -a \
     --exclude DEV_CHANGELOG.txt --exclude ERROR_LOG.txt --exclude SESSION_LOG.txt \
     --exclude FEATURES.txt --exclude info.txt \
     "$repo/assets/" "$stage/"
-sed -i "s/t.title = 'Balatro'/t.title = 'Balatro Debug'/" "$stage/conf.lua"
-sed -i "s/^\tt.title = 'Balatro Debug'/&\n\tt.identity = '$identity'/" "$stage/conf.lua"
-grep -q "t.identity = '$identity'" "$stage/conf.lua" || { echo "conf.lua layout changed, identity not set"; exit 1; }
+sed -i "s/t.title = 'Balatro'/t.title = 'Balatro Debug'/" "$stage/balatro/conf.lua"
+sed -i "s/^\tt.title = 'Balatro Debug'/&\n\tt.identity = '$identity'/" "$stage/balatro/conf.lua"
+grep -q "t.identity = '$identity'" "$stage/balatro/conf.lua" || { echo "conf.lua layout changed, identity not set"; exit 1; }
 sed -i 's|^mp_config.SERVER_URL *=.*|mp_config.SERVER_URL          = "ws://127.0.0.1:3460/ws"|' "$stage/multiplayer/mp_config.lua"
 cp "$repo/linux/debug_peer.lua" "$stage/debug_peer.lua"
 printf '\nrequire "debug_peer"\n' >> "$stage/main.lua"

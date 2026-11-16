@@ -1,0 +1,1048 @@
+BOP 2
+eol lf
+final 1
+base 0
+l 24
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.001"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*G\.PREV_GARB = G\.PREV_GARB or 0\n)'''
+position = "at"
+payload = '''
+${pre}  if PERF_MON and PERF_MON.enabled then PERF_MON.checkpoint(label, type, reset) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.002"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*progress = progress or 0\n[\t ]*G\.LOADING = G\.LOADING or \{\n[\t ]*font = love\.graphics\.setNewFont\("resources/fonts/m6x11plus\.ttf", 20\),\n[\t ]*love\.graphics\.dis\n[\t ]*\}\n[\t ]*local realw, realh = love\.window\.getMode\(\)\n[\t ]*love\.graphics\.setCanvas\(\)\n[\t ]*love\.graphics\.push\(\)\n[\t ]*love\.graphics\.setShader\(\)\n[\t ]*love\.graphics\.clear\(0,0,0,1\)\n[\t ]*love\.graphics\.setColor\(0\.6, 0\.8, 0\.9,1\)\n[\t ]*if progress > 0 then love\.graphics\.rectangle\('fill', realw/2 - 150, realh/2 - 15, progress\*300, 30, 5\) end\n[\t ]*love\.graphics\.setColor\(1, 1, 1,1\)\n[\t ]*love\.graphics\.setLineWidth\(3\)\n[\t ]*love\.graphics\.rectangle\('line', realw/2 - 150, realh/2 - 15, 300, 30, 5\)\n[\t ]*if G\.F_VERBOSE and not _RELEASE_MODE then love\.graphics\.print\("LOADING: "\.\._next, realw/2 - 150, realh/2 \+40\) end\n[\t ]*love\.graphics\.pop\(\)\n[\t ]*love\.graphics\.present\(\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}  local show_bar = not G.F_HIDE_LOADING_BAR and love.window and love.window.isOpen()
+  if show_bar then
+r 13 106 %20%20%20%20 -
+r 13 107 %20%20%20%20 -
+r 13 108 %20%20%20%20%20%20 -
+l 2
+      love.graphics.dis
+    }
+r 13 111 %20%20%20%20 -
+r 13 112 %20%20%20%20 -
+l 1
+    love.graphics.push()
+r 3 4413 %20%20%20%20 -
+r 13 115 %20%20%20%20 -
+r 13 116 %20%20%20%20 -
+r 13 117 %20%20%20%20 -
+r 13 118 %20%20%20%20 -
+r 22 119 %20%20%20%20 -
+r 13 120 %20%20%20%20 -
+r 13 121 %20%20%20%20 -
+l 1
+    love.graphics.pop()
+r 13 123 %20%20%20%20 -
+l 75
+  end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.003"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*return _t\.key\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}  return _t and _t.key or nil
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.004"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if seed then math\.randomseed\(seed\) end\n[\t ]*local keys = \{\}\n)'''
+position = "at"
+payload = '''
+${pre}  if not _t then return nil, nil end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.005"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*if keys\[1\] and keys\[1\]\.v and type\(keys\[1\]\.v\) == 'table' and keys\[1\]\.v\.sort_id then\n)'''
+position = "at"
+payload = '''
+${pre}  if #keys == 0 then return nil, nil end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.006"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*--The drawhash is a hash table of all drawn nodes and all nodes that may be invisible but still collide with the cursor\n)'''
+position = "at"
+payload = '''
+${pre}local PHONE_GC_CALM = {}
+local phone_gc_live, phone_gc_state = nil, nil
+
+function phone_gc()
+	if not PHONE_GC_CALM.ready and G and G.STATES then
+		PHONE_GC_CALM.ready = true
+		for _, k in ipairs({"SHOP", "BLIND_SELECT", "ROUND_EVAL", "MENU", "GAME_OVER", "SPLASH"}) do
+			if G.STATES[k] then PHONE_GC_CALM[G.STATES[k]] = true end
+		end
+	end
+	local mem = collectgarbage("count")
+	local live = phone_gc_live or mem
+	local soft = live * 1.5 + 16384
+	local budget = 3e-4
+	if mem > soft then budget = mem > soft * 1.5 and 2e-3 or 1e-3 end
+	local state = G and G.STATE
+	if state ~= phone_gc_state then
+		phone_gc_state = state
+		if PHONE_GC_CALM[state] and mem > live * 1.2 then budget = 4e-3 end
+	end
+	local start = love.timer.getTime()
+	local steps = 0
+	while love.timer.getTime() - start < budget and steps < 4000 do
+		steps = steps + 1
+		if collectgarbage("step", 1) then
+			mem = collectgarbage("count")
+			phone_gc_live = mem
+			if mem < live * 1.5 + 16384 then break end
+		end
+	end
+	if collectgarbage("count") > 307200 then
+r 13 660 %09%09 -
+l 2
+		phone_gc_live = collectgarbage("count")
+	end
+r 13 664 %09 -
+l 35
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.007"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if sound_code and G\.SETTINGS\.SOUND\.volume > 0\.001 then\n)'''
+position = "at"
+payload = '''
+${pre}  if type(per) == "table" then per = (rawget(_G, "to_number") or tonumber)(per) end
+  if type(vol) == "table" then vol = (rawget(_G, "to_number") or tonumber)(vol) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.008"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*G\.ARGS\.push\.dt = dt\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if G.JUKEBOX_ACTIVE or G.MG_MUSIC then desired_track = '' end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.009"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*for k, v in pairs\(G\.consumeables\.cards\) do\n[\t ]*if v and type\(v\) == 'table' and v\.ability\.name == name and \(non_debuff or not v\.debuff\) then\n[\t ]*table\.insert\(jokers, v\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if G.consumeables and G.consumeables.cards then
+r 13 911 %20%20%20%20 -
+r 13 907 %20%20%20%20%20%20 -
+r 13 908 %20%20%20%20%20%20%20%20 -
+l 110
+      end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.010"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*local k = 0\.75\n)'''
+position = "at"
+payload = '''
+${pre}  if ante > 1 and ante < 8 and ante ~= math.floor(ante) then
+    local lo = math.floor(ante)
+    local a, b = get_blind_amount(lo), get_blind_amount(lo + 1)
+    return a + (b - a) * (ante - lo)
+  end
+  if (G.GAME.modifiers.scaling or 1) > 3 then
+    local S = rawget(_G, "SMODS")
+    if S and S.get_blind_amount then return S.get_blind_amount(ante) end
+  end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.011"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*--300,  900, 2400,  7000,  18000,  32000,  56000,  90000\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.012"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*--300,  1000, 3000,  8000,  22000,  50000,  90000,  180000\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.013"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.GAME\.round_scores\[score\] and math\.floor\(amt\) > G\.GAME\.round_scores\[score\]\.amt then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if G.GAME.round_scores[score] and math.floor(amt) > (tonumber(G.GAME.round_scores[score].amt) or 0) then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.014"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if score == 'hand' and G\.SETTINGS\.COMP and \(\(not G\.SETTINGS\.COMP\.score\) or \(G\.SETTINGS\.COMP\.score < math\.floor\(amt\)\)\) then \n)'''
+position = "at"
+payload = '''
+${pre}  if not Progress.allowed() then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.015"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.PROFILES\[G\.SETTINGS\.profile\]\.high_scores\[score\] and math\.floor\(amt\) > G\.PROFILES\[G\.SETTINGS\.profile\]\.high_scores\[score\]\.amt then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if G.PROFILES[G.SETTINGS.profile].high_scores[score] and math.floor(amt) > (tonumber(G.PROFILES[G.SETTINGS.profile].high_scores[score].amt) or 0) then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.016"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*function set_joker_usage\(\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if not Progress.allowed() then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.017"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*function get_joker_win_sticker\(_center, index\)\n)'''
+position = "at"
+payload = '''
+${pre}local set_joker_win_raw = set_joker_win
+function set_joker_win(...)
+  if not Progress.allowed() then return end
+  return set_joker_win_raw(...)
+end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.018"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.PROFILES\[G\.SETTINGS\.profile\]\.joker_usage\[_center\.key\] and\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if G.PROFILES[G.SETTINGS.profile].joker_usage and
+e 13 1061 %20%20 - -3,=59
+l 344
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.019"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*for k, v in pairs\(G\.PROFILES\[G\.SETTINGS\.profile\]\.joker_usage\[_center\.key\]\.wins\) do\n)[\t ]*_w = math\.max\(k, _w\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}      if type(k) == 'number' and G.sticker_map[k] then _w = math.max(k, _w) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.020"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*function set_joker_loss\(\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if not Progress.allowed() then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.021"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*function set_deck_usage\(\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if not Progress.allowed() then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.022"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*function set_deck_win\(\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if not Progress.allowed() then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.023"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.PROFILES\[G\.SETTINGS\.profile\]\.all_unlocked then return end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if G.PROFILES[G.SETTINGS.profile].all_unlocked or G.PROFILES[G.SETTINGS.profile].debug_unlocked then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.024"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*for k, v in pairs\(G\.PROFILES\[G\.SETTINGS\.profile\]\.deck_usage\[_center\.key\]\.wins\) do\n)[\t ]*_w = math\.max\(k, _w\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}      if type(k) == 'number' and G.sticker_map[k] then _w = math.max(k, _w) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.025"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*function set_deck_loss\(\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if not Progress.allowed() then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.026"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*function set_profile_progress\(\)\n)'''
+position = "at"
+payload = '''
+${pre}check_profile = function(tab)
+  if not tab then return true, -1 end
+  if tab.deleted then return true, tab.ver or 0 end
+  if tab.progress then return false, tab.ver or 0 end
+  return true, -1
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.027"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*G\.PROGRESS\.deck_stakes\.tally = G\.PROGRESS\.deck_stakes\.tally \+ get_deck_win_stake\(v\.key\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}      G.PROGRESS.deck_stakes.tally = G.PROGRESS.deck_stakes.tally + math.min(get_deck_win_stake(v.key), #G.P_CENTER_POOLS.Stake)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.028"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*G\.PROGRESS\.joker_stickers\.tally = G\.PROGRESS\.joker_stickers\.tally \+ get_joker_win_sticker\(v, true\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}      G.PROGRESS.joker_stickers.tally = G.PROGRESS.joker_stickers.tally + math.min(get_joker_win_sticker(v, true) or 0, #G.P_CENTER_POOLS.Stake)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.029"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*G\.DISCOVER_TALLIES = G\.DISCOVER_TALLIES or \{\n)'''
+position = "at"
+payload = '''
+${pre}  if bom_nemesis and bom_nemesis.ensure_registered then pcall(bom_nemesis.ensure_registered) end
+  if bom_custom_objects and bom_custom_objects.ensure_registered then pcall(bom_custom_objects.ensure_registered) end
+  if bom_traps and bom_traps.initialized and bom_traps.init then pcall(bom_traps.init) end
+  if bom_party_run and bom_party_run.ensure_registered then pcall(bom_party_run.ensure_registered) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.030"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*if v\.unlocked then \n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if v.discovered then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.031"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*for _, v in pairs\(G\.P_BLINDS\) do\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if not v.no_collection and not v.rr_plain then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.032"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*G\.DISCOVER_TALLIES\.blinds\.tally = G\.DISCOVER_TALLIES\.blinds\.tally\+1\n[\t ]*G\.DISCOVER_TALLIES\.total\.tally = G\.DISCOVER_TALLIES\.total\.tally\+1\n[\t ]*end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.033"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.GAME\.seeded or G\.GAME\.challenge then return end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if (G.GAME.seeded and not G.GAME.daily) or G.GAME.challenge then return end
+  if not Progress.allowed() then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.034"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*G\.PROFILES\[G\.SETTINGS\.profile\]\.career_stats\[stat\] = G\.PROFILES\[G\.SETTINGS\.profile\]\.career_stats\[stat\] \+ \(mod or 0\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}  pcall(function()
+    if QuestManager then
+      if stat == "c_hands_played" then
+        QuestManager.process_event("hands_played", nil, mod or 1)
+      elseif stat == "c_cards_discarded" then
+        QuestManager.process_event("cards_discarded", nil, mod or 1)
+      end
+    end
+  end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.035"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*else ret_t\[k\] = v end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}      elseif type(v) ~= 'function' then ret_t[k] = v end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.036"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*G\.action = nil\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}end
+
+function apply_gc_tuning(on)
+  collectgarbage("setpause", on and 150 or 200)
+  collectgarbage("setstepmul", 200)
+end
+
+local deferred_files = {}
+local deferred_files_mt = {
+  __index = function(t, k)
+    local data = deferred_files[k]
+    if data == nil then return nil end
+    deferred_files[k] = nil
+    local v = STR_UNPACK(STR_PACK(data))
+    rawset(t, k, v)
+    return v
+  end,
+  __newindex = function(t, k, v)
+    deferred_files[k] = nil
+    rawset(t, k, v)
+  end,
+}
+
+function defer_file_copy(key, data)
+  if not G.FILES then G.FILES = {} end
+  if getmetatable(G.FILES) ~= deferred_files_mt then setmetatable(G.FILES, deferred_files_mt) end
+  rawset(G.FILES, key, nil)
+  deferred_files[key] = data
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.037"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*love\.filesystem\.remove\(G\.SETTINGS\.profile\.\.'/save\.jkr'\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}  local run_file = G.SETTINGS.profile..'/save.jkr'
+  love.mod_filesystem.remove(run_file)
+  love.mod_filesystem.remove(run_file..'.prev')
+  G.FILES[run_file] = nil
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.038"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*return G\.ARGS\.LOC_COLOURS\[_c\] or _default or G\.C\.UI\.TEXT_DARK\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}  return G.ARGS.LOC_COLOURS[_c] or _default or G.C.BLACK
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.039"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if args and not \(type\(args\) == 'table'\) then\n)'''
+position = "at"
+payload = '''
+${pre}  local function _resolve_var(vars, ref)
+    if type(vars) ~= 'table' then vars = {} end
+    local n = tonumber(ref)
+    if n then return vars[n] or 'ERROR' end
+    local suffix, si = ref:match("^<([^,>]+)>(%d+)$$")
+    if suffix then
+      local v = vars[tonumber(si)]
+      return (not v or tonumber(v) == 1) and '' or suffix
+    end
+    local pl, sg, pi = ref:match("^<([^,>]+),([^>]+)>(%d+)$$")
+    if pl then
+      local v = vars[tonumber(pi)]
+      return (not v or tonumber(v) == 1) and sg or pl
+    end
+    return ''
+  end
+  if args == nil then
+    if not G.LOCALIZE_NIL_LOGGED then
+      G.LOCALIZE_NIL_LOGGED = true
+      print("localize called with nil args\n" .. debug.traceback())
+    end
+    return 'ERROR'
+  end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.040"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*assembled_string = assembled_string\.\.\(type\(subpart\) == 'string' and subpart or args\.vars\[tonumber\(subpart\[1\]\)\] or 'ERROR'\)\n(?<post>[\t ]*end\n[\t ]*final_line = final_line\.\.assembled_string\n)'''
+position = "at"
+payload = '''
+${pre}            assembled_string = assembled_string..(type(subpart) == 'string' and subpart or _resolve_var(args.vars, subpart[1]))
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.041"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*assembled_string = assembled_string\.\.\(type\(subpart\) == 'string' and subpart or args\.vars\[tonumber\(subpart\[1\]\)\] or 'ERROR'\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}          assembled_string = assembled_string..(type(subpart) == 'string' and subpart or _resolve_var(args.vars, subpart[1]))
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.042"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.F_MOBILE_UI then desc_scale = desc_scale\*1\.5 end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if G.F_MOBILE then desc_scale = desc_scale * ((args.type == 'tutorial' and 1.5) or 1.45) end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.043"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*end\n[\t ]*return stake_sprite\n)'''
+position = "at"
+payload = '''
+${pre}  elseif _stake == 9 then
+r 13 1822 %20%20%20%20 -
+r 13 1823 %20%20%20%20%20%20 -
+r 13 1824 %20%20%20%20%20%20 -
+r 13 1825 %20%20%20%20%20%20 -
+l 1
+
+r 13 1827 %20%20%20%20%20%20 -
+l 3
+      Sprite.draw_shader(_sprite, 'foil', nil, _sprite.ARGS.send_to_shader)
+    end
+  elseif _stake == 10 then
+r 13 1822 %20%20%20%20 -
+r 13 1823 %20%20%20%20%20%20 -
+l 1
+      _sprite.ARGS.send_to_shader[1] = math.min(_sprite.VT.r*3, 1) + G.TIMERS.REAL/(14) + (_sprite.juice and _sprite.juice.r*20 or 0) + 1
+r 13 1825 %20%20%20%20%20%20 -
+l 1
+
+r 13 1827 %20%20%20%20%20%20 -
+l 3
+      Sprite.draw_shader(_sprite, 'holo', nil, _sprite.ARGS.send_to_shader)
+    end
+  elseif _stake == 11 then
+r 13 1822 %20%20%20%20 -
+r 13 1823 %20%20%20%20%20%20 -
+l 1
+      _sprite.ARGS.send_to_shader[1] = math.min(_sprite.VT.r*3, 1) + G.TIMERS.REAL/(10) + (_sprite.juice and _sprite.juice.r*20 or 0) + 1
+r 13 1825 %20%20%20%20%20%20 -
+l 1
+
+r 13 1827 %20%20%20%20%20%20 -
+l 4
+      Sprite.draw_shader(_sprite, 'negative', nil, _sprite.ARGS.send_to_shader)
+      Sprite.draw_shader(_sprite, 'negative', nil, _sprite.ARGS.send_to_shader)
+    end
+  elseif _stake == 12 then
+r 13 1822 %20%20%20%20 -
+r 13 1823 %20%20%20%20%20%20 -
+l 1
+      _sprite.ARGS.send_to_shader[1] = math.min(_sprite.VT.r*3, 1) + G.TIMERS.REAL/(8) + (_sprite.juice and _sprite.juice.r*20 or 0) + 1
+r 13 1825 %20%20%20%20%20%20 -
+l 1
+
+r 13 1827 %20%20%20%20%20%20 -
+r 13 1828 %20%20%20%20%20%20 -
+l 67
+      Sprite.draw_shader(_sprite, 'polychrome', nil, _sprite.ARGS.send_to_shader)
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.044"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*G\.C\.GOLD\n[\t ]*\}\n[\t ]*return G\.C\.STAKES\[_stake\]\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    G.C.GOLD,
+    HEX('1a3a6b'),
+    HEX('8b0000'),
+    G.C.BLACK,
+    HEX('e8d5b7'),
+  }
+  return G.C.STAKES[_stake] or G.C.WHITE
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.045"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*--SOUND\n)'''
+position = "at"
+payload = '''
+${pre}DB_PRINT = function(key, val)
+  if not DB_TAB then DB_TAB = {} end
+  DB_TAB[key] = val
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.046"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*function PLAY_SOUND\(args\)\n)'''
+position = "at"
+payload = '''
+${pre}local SOUND_OPEN_FAILED = {}
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.047"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*local s = \{sound = love\.audio\.newSource\("resources/sounds/"\.\.args\.sound_code\.\.'\.ogg', should_stream and "stream" or 'static'\)\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}  local c = SMODS_Sounds and SMODS_Sounds[args.sound_code]
+  local s
+  local function open_source()
+    if c then
+      return love.audio.newSource(love.sound.newDecoder(c.data), c.should_stream and 'stream' or 'static')
+    end
+    return love.audio.newSource("resources/sounds/"..args.sound_code..'.ogg', should_stream and "stream" or 'static')
+  end
+  local now = love.timer.getTime()
+  local source
+  if not (SOUND_OPEN_FAILED[args.sound_code] and SOUND_OPEN_FAILED[args.sound_code] > now) then
+    local ok, res = pcall(open_source)
+    if not ok then
+r 14 96 %20%20%20%20%20%20 -
+l 77
+      ok, res = pcall(open_source)
+    end
+    if ok then
+      source = res
+      SOUND_OPEN_FAILED[args.sound_code] = nil
+    else
+      SOUND_OPEN_FAILED[args.sound_code] = now + 5
+      print('[SOUND] could not open '..tostring(args.sound_code)..': '..tostring(res))
+    end
+  end
+  s = {sound = source}
+  if c then s.per = c.per; s.vol = c.vol end
+  if not s.sound then return s end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.048"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*s\.original_pitch = args\.per or 1\n[\t ]*s\.original_volume = args\.vol or 1\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}  s.original_pitch = ((args.type ~= "sound") and s.per) or args.per or 1
+  s.original_volume = ((args.type ~= "sound") and s.vol) or args.vol or 1
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.049"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*s\.transition_timer = 0\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}  if not s.sound then return s end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.050"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if string\.find\(s\.sound_code,'music'\) then \n)'''
+position = "at"
+payload = '''
+${pre}  if s.sound == nil then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.051"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*if not v\[i\]\.sound:isPlaying\(\) then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if v[i].sound == nil or not v[i].sound:isPlaying() then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.052"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*s\.created_on_state = state\n[\t ]*end\n[\t ]*end\n[\t ]*end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}profile_init_table = function()
+  return {
+      MEMORY = {
+          deck = 'Red Deck',
+          stake = 1,
+      },
+      stake = 1,
+
+      high_scores = {
+r 7 865 %20%20%20%20%20%20%20%20%20%20 -
+r 7 866 %20%20%20%20%20%20%20%20%20%20 -
+r 7 867 %20%20%20%20%20%20%20%20%20%20 -
+r 7 868 %20%20%20%20%20%20%20%20%20%20 -
+r 7 869 %20%20%20%20%20%20%20%20%20%20 -
+r 7 870 %20%20%20%20%20%20%20%20%20%20 -
+r 7 871 %20%20%20%20%20%20%20%20%20%20 -
+r 7 872 %20%20%20%20%20%20%20%20%20%20 -
+r 7 873 %20%20%20%20%20%20%20%20%20%20 -
+l 3
+      },
+
+      career_stats = {
+r 7 877 %20%20%20%20%20%20%20%20%20%20 -
+r 7 878 %20%20%20%20%20%20%20%20%20%20 -
+r 7 879 %20%20%20%20%20%20%20%20%20%20 -
+l 1
+          c_tarots_bought = 0,
+r 7 881 %20%20%20%20%20%20%20%20%20%20 -
+r 7 882 %20%20%20%20%20%20%20%20%20%20 -
+r 7 883 %20%20%20%20%20%20%20%20%20%20 -
+r 7 884 %20%20%20%20%20%20%20%20%20%20 -
+r 7 885 %20%20%20%20%20%20%20%20%20%20 -
+l 2
+          c_shop_rerolls = 0,
+          c_cards_played = 0,
+r 7 888 %20%20%20%20%20%20%20%20%20%20 -
+l 4
+          c_losses = 0,
+          c_wins = 0,
+          c_rounds = 0,
+          c_hands_played = 0,
+r 7 893 %20%20%20%20%20%20%20%20%20%20 -
+l 2
+          c_jokers_sold = 0,
+          c_cards_sold = 0,
+r 7 896 %20%20%20%20%20%20%20%20%20%20 -
+l 5
+      },
+      progress = {
+
+      },
+      joker_usage = {},
+r 7 902 %20%20%20%20%20%20 -
+l 4
+      voucher_usage = {},
+      hand_usage = {},
+      deck_usage = {},
+      deck_stakes = {},
+r 7 907 %20%20%20%20%20%20 -
+r 7 908 %20%20%20%20%20%20 -
+l 84
+          completed = {},
+          unlocked = {}
+      }
+  }
+end
+
+local function drag_zones()
+  local j, c, d, p = G.jokers.T, G.consumeables.T, G.deck.T, G.play.T
+  local function zone(x, y, w, h) return Moveable{T = {x = x, y = y, w = w, h = h}} end
+  return {
+    S_buy = zone(j.x, j.y - 0.1, c.x + c.w - j.x, j.h + 0.6),
+    S_buy_and_use = zone(d.x + 0.2, d.y - 5.1, d.w - 0.1, 4.5),
+    C_sell = zone(j.x, j.y - 0.2, j.w, j.h + 0.6),
+    J_sell = zone(c.x + 0.3, c.y - 0.2, c.w - 0.3, c.h + 0.6),
+    C_use = zone(d.x + 0.2, d.y - 5.1, d.w - 0.1, 4.5),
+    P_select = zone(p.x, p.y - 2, p.w + 2, p.h + 1),
+  }
+end
+
+local function drop_zone(cover, colour, text, card, can, on_release)
+  drag_target({cover = cover, colour = adjust_alpha(colour, 0.9), text = text, card = card, active_check = can, release_func = on_release})
+end
+
+local function priced(key, amount)
+  local lines = copy_table(localize(key))
+  lines[#lines + 1] = '$$'..amount
+  return lines
+end
+
+local function use_dropped(other)
+  G.FUNCS.use_card({config = {ref_table = other}})
+end
+
+local function tutorial_wants(button)
+  if G.OVERLAY_TUTORIAL and G.OVERLAY_TUTORIAL.button_listen == button then G.FUNCS.tut_next() end
+end
+
+create_drag_target_from_card = function(_card)
+  if not _card or G.STAGE ~= G.STAGES.RUN then return end
+  G.DRAG_TARGETS = G.DRAG_TARGETS or drag_zones()
+  local Z, area = G.DRAG_TARGETS, _card.area
+  if not area then return end
+
+  if area == G.shop_jokers or area == G.shop_vouchers or area == G.shop_booster then
+    local key = (area == G.shop_vouchers and 'ml_redeem_target') or (area == G.shop_booster and 'ml_open_target') or 'ml_buy_target'
+    drop_zone(Z.S_buy, G.C.GREEN, priced(key, _card.cost), _card,
+      function(other) return G.FUNCS.card_can_buy(other) end,
+      function(other)
+        if not G.FUNCS.card_can_buy(other) then return end
+        if other.area == G.shop_jokers then
+          tutorial_wants('buy_from_shop')
+          G.FUNCS.buy_from_shop({config = {ref_table = other, id = 'buy'}})
+        elseif other.area == G.shop_vouchers or other.area == G.shop_booster then
+          use_dropped(other)
+        end
+      end)
+    if G.FUNCS.card_can_buy_and_use(_card) then
+      drop_zone(Z.S_buy_and_use, G.C.ORANGE, priced('ml_buy_and_use_target', _card.cost), _card,
+        function(other) return G.FUNCS.card_can_buy_and_use(other) end,
+        function(other)
+          if G.FUNCS.card_can_buy_and_use(other) then
+            G.FUNCS.buy_from_shop({config = {ref_table = other, id = 'buy_and_use'}})
+          end
+        end)
+    end
+  end
+
+  if area == G.pack_cards then
+    if _card.ability.consumeable and _card.ability.set ~= 'Planet' then
+      drop_zone(Z.C_use, G.C.RED, {localize('b_use')}, _card,
+        function(other) return other:can_use_consumeable() end,
+        function(other) if other:can_use_consumeable() then use_dropped(other) end end)
+    else
+      drop_zone(Z.P_select, G.C.GREEN, {localize('b_select')}, _card,
+        function(other) return can_select_pack_card(other) end,
+        function(other) if can_select_pack_card(other) then use_dropped(other) end end)
+    end
+  end
+
+  if area == G.jokers or area == G.consumeables then
+    local price = _card.facing == 'back' and '?' or _card.sell_cost
+    drop_zone(area == G.consumeables and Z.C_sell or Z.J_sell, G.C.GOLD, priced('ml_sell_target', price), _card,
+      function(other) return other:can_sell_card() end,
+      function(other) G.FUNCS.sell_card{config = {ref_table = other}} end)
+r 32 2270 %20%20%20%20 -
+l 90
+      drop_zone(Z.C_use, G.C.RED, {localize('b_use')}, _card,
+        function(other) return other:can_use_consumeable() end,
+        function(other)
+          if not other:can_use_consumeable() then return end
+          use_dropped(other)
+          tutorial_wants('use_card')
+        end)
+    end
+  end
+end
+
+function set_profile_flag(_flag)
+  rawset(G.SETTINGS, _flag, true)
+  for _, profile in pairs(G.PROFILES or {}) do
+    profile.flags = profile.flags or {}
+    profile.flags[_flag] = true
+  end
+end
+
+function get_profile_flag(_flag)
+  if rawget(G.SETTINGS, _flag) then
+    set_profile_flag(_flag)
+    return true
+  end
+  for _, profile in pairs(G.PROFILES or {}) do
+    profile.flags = profile.flags or {}
+    if profile.flags[_flag] then return true end
+  end
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.modded.001"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*-- Function overridden by SMODS in src/overrides\.lua\n[\t ]*function get_joker_win_sticker\(_center, index\)\n)'''
+position = "at"
+payload = '''
+${pre}local set_joker_win_raw = set_joker_win
+function set_joker_win(...)
+  if not Progress.allowed() then return end
+  return set_joker_win_raw(...)
+end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.modded.002"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if not v\.no_collection and not v\.rr_plain then\n[\t ]*if \(not SMODS\.hide_from_collection\(v\)\) then\n)'''
+position = "at"
+payload = '''
+${pre}      if (not SMODS.hide_from_collection(v)) then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.modded.003"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>[\t ]*if not v\.no_collection and not v\.rr_plain then\n)[\t ]*if \(not SMODS\.hide_from_collection\(v\)\) then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.modded.004"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*end\n[\t ]*end\n(?<post>[\t ]*end\n[\t ]*\n[\t ]*for _, v in pairs\(G\.P_TAGS\) do\n)'''
+position = "at"
+payload = '''
+${pre}  end
+    end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.misc_functions.modded.005"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<pre>)[\t ]*assembled_string = assembled_string\.\.\(type\(subpart\) == 'string' and subpart or format_ui_value\(args\.vars\[tonumber\(subpart\[1\]\)\]\) or 'ERROR'\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            assembled_string = assembled_string..(type(subpart) == 'string' and subpart or _resolve_var(args.vars, subpart[1]))
+${post}'''
+optional = true
+end

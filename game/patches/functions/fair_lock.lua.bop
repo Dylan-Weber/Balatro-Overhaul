@@ -260,7 +260,7 @@ function FL.mp_setting_locked(key)
 end
 
 local _fl_game_update = Game.update
-r 9 2449 - -
+r 7 2449 - -
 l 9
     _fl_game_update(self, dt)
     local ok, err = pcall(FL.update)

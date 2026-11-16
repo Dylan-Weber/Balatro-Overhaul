@@ -308,7 +308,7 @@ l 14
 
         if G.GAME.dc_negative_joker_money and G.GAME.dc_negative_joker_money > 0 then
             local neg_count = 0
-r 12 2531 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2531 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 38
                 for _, joker in ipairs(G.jokers.cards) do
                     if joker.edition and joker.edition.negative then
@@ -348,8 +348,8 @@ get_current_pool = function(_type, _rarity, _legendary, _append)
         if G.GAME.dc_allow_legendary and _type == 'Joker' and not _legendary then
             if G.P_JOKER_RARITY_POOLS and G.P_JOKER_RARITY_POOLS[4] then
                 for _, v in ipairs(G.P_JOKER_RARITY_POOLS[4]) do
-r 12 1955 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 12 2031 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 1955 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2031 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 9
                     end
                 end
@@ -360,7 +360,7 @@ l 9
             if G.P_CENTER_POOLS and G.P_CENTER_POOLS.Joker then
                 for _, v in ipairs(G.P_CENTER_POOLS.Joker) do
                     if G.GAME.used_jokers[v.key] and v.unlocked ~= false and not G.GAME.banned_keys[v.key] then
-r 12 2031 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2031 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 11
                     end
                 end
@@ -373,8 +373,8 @@ l 11
                     for _, v in ipairs(G.P_CENTER_POOLS[_type]) do
                         if (G.GAME.dc_allow_black_hole and v.name == 'Black Hole') or
                            (G.GAME.dc_allow_soul and v.name == 'The Soul') then
-r 12 1955 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 12 2031 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 1955 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2031 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 32
                             end
                         end
@@ -408,7 +408,7 @@ end
 
 local original_draw_from_deck_to_hand = G.FUNCS.draw_from_deck_to_hand
 
-r 16 355 - -
+r 15 355 - -
 l 35
     original_draw_from_deck_to_hand(e)
 
@@ -445,7 +445,7 @@ end
 
 local original_discard = G.FUNCS.discard_cards_from_highlighted
 
-r 16 379 - -
+r 15 379 - -
 l 32
     pcall(function()
         if not is_custom_deck() then return end
@@ -479,7 +479,7 @@ end
 local original_skip_blind = G.FUNCS.skip_blind
 
 if original_skip_blind then
-r 13 2740 %20%20%20%20 -
+r 32 2740 %20%20%20%20 -
 l 51
         pcall(function()
             if not is_custom_deck() then return end
@@ -532,7 +532,7 @@ local original_toggle_shop = G.FUNCS.toggle_shop
 if original_toggle_shop then
     local original_cash_out = G.FUNCS.cash_out
     if original_cash_out then
-r 13 2912 %20%20%20%20%20%20%20%20 -
+r 32 2912 %20%20%20%20%20%20%20%20 -
 l 14
             original_cash_out(e)
             if is_custom_deck() and (G.GAME.dc_frugal_dollars or 0) > 0 then
@@ -548,7 +548,7 @@ l 14
         end
     end
 
-r 13 2481 %20%20%20%20 -
+r 32 2481 %20%20%20%20 -
 l 27
         if G.STATE == G.STATES.SHOP then
             pcall(function()
@@ -577,7 +577,7 @@ function DeckCreatorHooks.init()
         end
         if G.FUNCS.setup_run then
             local _orig_setup_run = G.FUNCS.setup_run
-r 13 1570 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1570 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 184
                 pcall(function() DeckCreatorPersistence.refreshDeckList() end)
                 _orig_setup_run(e)

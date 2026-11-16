@@ -851,7 +851,7 @@ local function fx_class()
         if self.mode ~= "pop" then self.start = clock() - (o.offset or 0) end
         self.sprites, self.texts, self.emitters = {}, {}, {}
         self.next_sound = 1
-r 17 21 %20%20%20%20%20%20%20%20 -
+r 22 21 %20%20%20%20%20%20%20%20 -
 l 199
         quiet(self)
     end
@@ -1245,7 +1245,7 @@ function E.open_picker(o)
     o = o or {}
     if not (G and G.FUNCS and UIK and UIK.window) then return end
     E._picker = {after = o.after, pick = o.pick}
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 55
     G.FUNCS.overlay_menu{definition = UIK.window{
         id = "emotes", title = L("EMOTES"), compact = true, w = E.picker_w() + 0.4,

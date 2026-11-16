@@ -41,7 +41,7 @@ match_indent = true
 [[patches]]
 [patches.pattern]
 target = "main.lua"
-pattern = "if (jit.arch == 'arm64' or jit.arch == 'arm') then"
+pattern = "if (love.system.getOS() == 'OS X' ) and (jit.arch == 'arm64' or jit.arch == 'arm') then jit.off() end"
 position = "before"
 payload = """if SMODS and SMODS.preflight_force_quit then if SMODS.preflight_quit_before then SMODS.preflight_quit_before() end return end"""
 match_indent = true

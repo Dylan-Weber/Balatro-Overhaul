@@ -58,7 +58,7 @@ if in_pool_func then
     keep = in_pool_func(v, args)
 end
 if keep then
-r 11 257 %20%20%20%20 -
+r 13 257 %20%20%20%20 -
 l 74
 end"""
 match_indent = true
@@ -134,7 +134,7 @@ pool_opts = pool_opts or {}
 [patches.pattern]
 target = 'functions/common_events.lua'
 pattern = '''
-r 12 1978 - -
+r 31 1978 - -
 l 31
     add = true
 '''
@@ -167,7 +167,7 @@ add = in_pool and (add or pool_opts.override_base_checks)
 [patches.pattern]
 target = 'functions/common_events.lua'
 pattern = '''
-r 12 2047 - -
+r 31 2047 - -
 l 54
 '''
 match_indent = true
@@ -212,7 +212,7 @@ target = "card.lua"
 pattern = '''
 (?<indent>[\t ]*)for k, v in pairs\(G\.P_CENTERS\) do
 [\t ]*if v\.name == self\.ability\.name then
-[\t ]*if not next\(find_joker\(self\.ability\.name, true\)\) then ?
+[\t ]*if not next\(find_joker\(self\.ability\.name, true\)\) then 
 [\t ]*G\.GAME\.used_jokers\[k\] = nil
 [\t ]*end
 [\t ]*end

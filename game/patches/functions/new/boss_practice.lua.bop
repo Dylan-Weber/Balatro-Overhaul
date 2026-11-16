@@ -269,7 +269,7 @@ end
 function BP.open(from)
   if from ~= nil then BP.from = from end
   BP.sel.page_set = nil
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 36
   G.FUNCS.overlay_menu{definition = UIK.window{id = "bo_bp", title = L("BOSS PRACTICE"),
     tabs = {{key = "practice", label = L("Fight"), build = build_tab}, BP.LO and BP.loadout_tab and {key = "loadout", label = L("Loadout"), build = BP.loadout_tab} or nil},
@@ -307,7 +307,7 @@ end
 function BP.result_overlay()
   local P = G.GAME and G.GAME.bo_practice
   if not P then return end
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 53
   local won = P.won == true
   local boss = P.boss
@@ -362,7 +362,7 @@ G.FUNCS.bo_bp_back = function()
   if BP.active() then return BP.result_overlay() end
   local from = BP.from
   if from and G.FUNCS[from] then return G.FUNCS[from]() end
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 11
 end
 G.FUNCS.bo_bp_retry = function()
@@ -375,7 +375,7 @@ G.FUNCS.bo_bp_other = function()
   BP.open()
 end
 G.FUNCS.bo_bp_menu = function()
-r 13 1825 %20%20 -
+r 32 1825 %20%20 -
 l 182
   G.FUNCS.go_to_menu()
 end

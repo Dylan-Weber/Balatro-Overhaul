@@ -54,7 +54,7 @@ end
 
 function M.place_infotip(e)
     if not (e and e.config and e.config.ref_table) then return end
-r 13 2145 %20%20%20%20 -
+r 32 2145 %20%20%20%20 -
 l 11
         definition = {n = G.UIT.ROOT, config = {align = "cm", colour = G.C.CLEAR, padding = 0.02}, nodes = e.config.ref_table},
         config = {offset = {x = -0.03, y = 0}, align = "cl", parent = e}
@@ -67,7 +67,7 @@ l 11
         info:align_to_major()
     end
     if touch() then disable_tip_collision(info) end
-r 13 2150 %20%20%20%20 -
+r 32 2150 %20%20%20%20 -
 l 45
 end
 

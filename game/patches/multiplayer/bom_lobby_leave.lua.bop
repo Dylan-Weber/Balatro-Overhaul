@@ -44,7 +44,7 @@ function M.ask(kind)
     local H = rawget(_G, "Minigames") and Minigames.host
     if H and H.win and H.close then pcall(H.close, "back") end
     M.kind = kind
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 30
     G.FUNCS.overlay_menu{definition = UIK.window{
         id = "bom_leave", compact = true, w = win_w(),
@@ -76,7 +76,7 @@ function M.register()
     G.FUNCS.bom_leave_go = function()
         local k = M.KINDS[M.kind or ""]
         M.kind = nil
-r 13 1825 %20%20%20%20%20%20%20%20 -
+r 32 1825 %20%20%20%20%20%20%20%20 -
 l 6
         if k and G.FUNCS[k.leave] then G.FUNCS[k.leave]() end
     end
@@ -84,7 +84,7 @@ l 6
         local k = M.KINDS[M.kind or ""]
         M.kind = nil
         if k and in_lobby() then return k.back() end
-r 13 1825 %20%20%20%20%20%20%20%20 -
+r 32 1825 %20%20%20%20%20%20%20%20 -
 l 6
     end
 end

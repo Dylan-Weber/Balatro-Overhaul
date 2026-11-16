@@ -77,18 +77,18 @@ end
 function U.refresh_menu()
     if not menu_ready() then return end
     if G.collection_alert then
-r 12 743 %20%20%20%20%20%20%20%20 -
-r 12 744 %20%20%20%20%20%20%20%20 -
+r 31 743 %20%20%20%20%20%20%20%20 -
+r 31 744 %20%20%20%20%20%20%20%20 -
 l 2
     end
     G.MAIN_MENU_UI:remove()
-r 12 754 %20%20%20%20 -
-r 12 755 %20%20%20%20%20%20%20%20 -
+r 31 754 %20%20%20%20 -
+r 31 755 %20%20%20%20%20%20%20%20 -
 l 3
         config = {align = "bmi", offset = {x = 0, y = 10}, major = G.ROOM_ATTACH, bond = 'Weak'}
     }
     G.MAIN_MENU_UI.alignment.offset.y = main_menu_bar_offset()
-r 12 759 %20%20%20%20 -
+r 31 759 %20%20%20%20 -
 l 194
     G.MAIN_MENU_UI:hard_set_VT()
     if not G.OVERLAY_MENU then G.CONTROLLER:snap_to{node = G.MAIN_MENU_UI:get_UIE_by_ID('main_menu_play')} end
@@ -284,7 +284,7 @@ local function leave_prompt()
     local after = U.after_prompt
     U.after_prompt = nil
     if after then return after() end
-r 13 1375 %20%20%20%20 -
+r 32 1375 %20%20%20%20 -
 l 49
 end
 

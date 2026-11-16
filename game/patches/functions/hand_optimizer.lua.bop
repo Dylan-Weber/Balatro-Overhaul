@@ -103,7 +103,7 @@ end
 
 local function num(v)
     if type(v) == "number" then return v end
-    if type(v) == "table" and to_number then
+    if (type(v) == "table" or type(v) == "cdata") and to_number then
         local ok, n = pcall(to_number, v)
         if ok and type(n) == "number" then return n end
     end
@@ -363,7 +363,7 @@ end
 G.FUNCS.ho_select_best = function(e)
     local i = e and e.config and e.config.ref_table and e.config.ref_table.index or 1
     if O.select(i) and G.OVERLAY_MENU and e and e.config and e.config.ref_table and e.config.ref_table.close then
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 382
     end
 end

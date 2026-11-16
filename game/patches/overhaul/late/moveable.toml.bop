@@ -1,0 +1,87 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 37
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.pattern]
+id = "moveable.move_no_frame"
+target = "engine/moveable.lua"
+pattern = "function Moveable:move(dt)"
+position = "after"
+payload = "    if not self.FRAME then return end"
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "moveable.move_major_frame"
+target = "engine/moveable.lua"
+pattern = "if self.role.major.FRAME.MOVE < G.FRAMES.MOVE then self.role.major:move(dt) end"
+position = "at"
+payload = "        if self.role.major.FRAME and self.role.major.FRAME.MOVE < G.FRAMES.MOVE then self.role.major:move(dt) end"
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "moveable.remove_helper"
+target = "engine/moveable.lua"
+pattern = "function Moveable:remove()"
+position = "before"
+payload = '''
+local function overhaul_remove_last_match(t, obj)
+    if not t then return end
+    for i = #t, 1, -1 do
+        if t[i] == obj then
+            table.remove(t, i)
+            return
+        end
+    end
+r 13 131 %20%20%20%20 -
+l 14
+        if v == obj then
+            table.remove(t, k)
+            return
+        end
+    end
+end
+'''
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "moveable.remove_moveables"
+target = "engine/moveable.lua"
+pattern = '''
+r 17 1156 - -
+l 1
+if v == self then
+r 21 506 - -
+l 12
+break;
+end
+end'''
+position = "at"
+payload = "    overhaul_remove_last_match(G.MOVEABLES, self)"
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "moveable.remove_i_moveable"
+target = "engine/moveable.lua"
+pattern = '''
+r 21 510 - -
+l 1
+if v == self then
+r 21 512 - -
+l 6
+break;
+end
+end'''
+position = "at"
+payload = "    overhaul_remove_last_match(G.I.MOVEABLE, self)"
+times = 1
+end

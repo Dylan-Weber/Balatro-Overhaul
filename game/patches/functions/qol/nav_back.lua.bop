@@ -68,7 +68,7 @@ end
 local function names()
     local map, alt = {}, {}
     for k, v in pairs(G.FUNCS) do
-r 21 183 %20%20%20%20%20%20%20%20 -
+r 14 183 %20%20%20%20%20%20%20%20 -
 l 63
             local prev = map[v]
             if not prev or (not M.safe(prev) and M.safe(k)) then map[v] = k end
@@ -133,8 +133,8 @@ function M.reopen()
     local old = G.OVERLAY_MENU
     local layered = G.NO_MOD_CURSOR_STACK
     if not layered then
-r 24 972 %20%20%20%20%20%20%20%20 -
-r 24 973 %20%20%20%20%20%20%20%20 -
+r 29 972 %20%20%20%20%20%20%20%20 -
+r 29 973 %20%20%20%20%20%20%20%20 -
 l 10
     end
     M.reopening = e
@@ -147,8 +147,8 @@ l 10
     if G.OVERLAY_MENU == true then G.OVERLAY_MENU = nil end
     if type(G.OVERLAY_MENU) == "table" and G.OVERLAY_MENU ~= old then return true end
 r 3 349 %20%20%20%20 -
-r 13 1367 %20%20%20%20%20%20%20%20 -
-r 13 1363 %20%20%20%20%20%20%20%20 -
+r 32 1367 %20%20%20%20%20%20%20%20 -
+r 32 1363 %20%20%20%20%20%20%20%20 -
 l 69
         return true
     end

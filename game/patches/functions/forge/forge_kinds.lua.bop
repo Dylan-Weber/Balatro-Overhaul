@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 405
+l 446
 local Store = require("functions/forge/forge_store")
 local Cat = require("functions/forge/forge_catalog")
 local D = require("functions/forge/forge_doc")
@@ -194,6 +194,41 @@ function K.sync_pools()
         end
       end
     end
+  end
+  K.pair_vouchers()
+end
+
+function K.pair_vouchers()
+  local pool = G.P_CENTER_POOLS.Voucher
+  if not pool then return end
+  local mine, rest = {}, {}
+  for _, v in ipairs(pool) do
+    if v.forge_kind == "voucher" then mine[#mine + 1] = v else rest[#rest + 1] = v end
+  end
+  if #mine < 2 then return end
+  table.sort(mine, function(a, b) return (a.order or 0) < (b.order or 0) end)
+  local by_key, child = {}, {}
+  for _, m in ipairs(mine) do by_key[m.key] = m end
+  for _, m in ipairs(mine) do
+    local r = m.requires and m.requires[1]
+    if r and by_key[r] and r ~= m.key and not child[r] then child[r] = m end
+  end
+  local placed, duo, solo = {}, {}, {}
+  for _, m in ipairs(mine) do
+    local r = m.requires and m.requires[1]
+    local head = not (r and by_key[r] and child[r] == m)
+    local c = child[m.key]
+    if head and not placed[m] and c and not placed[c] then
+      duo[#duo + 1] = m
+      duo[#duo + 1] = c
+      placed[m], placed[c] = true, true
+    end
+  end
+  for _, m in ipairs(mine) do if not placed[m] then solo[#solo + 1] = m end end
+  if #rest % 2 == 1 and #solo > 0 then rest[#rest + 1] = table.remove(solo, 1) end
+  for i = #pool, 1, -1 do pool[i] = nil end
+  for _, t in ipairs({rest, duo, solo}) do
+    for _, v in ipairs(t) do pool[#pool + 1] = v end
   end
 end
 
@@ -398,6 +433,12 @@ local function effect(e, c, used, hl)
       local j = pseudorandom_element(pool, pseudoseed("forge_edition_" .. c.id))
       G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.4, func = function() j:set_edition(ed); used:juice_up(0.3, 0.5); return true end}))
     end
+  elseif id == "edition_joker" then
+    local made = R.make_edition_joker(e.v or "foil", n, nil)
+    if made > 0 then G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.4, func = function() play_sound("timpani"); used:juice_up(0.3, 0.5); return true end})) end
+  elseif id == "draw_cards" then
+    G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.3, func = function() used:juice_up(0.3, 0.5); return true end}))
+    R.draw_cards(n, nil)
   elseif id == "rare_joker" then
     if #G.jokers.cards + (G.GAME.joker_buffer or 0) < G.jokers.config.card_limit then
       G.GAME.joker_buffer = (G.GAME.joker_buffer or 0) + 1
@@ -539,33 +580,33 @@ l 4
 end
 
 local function planet_page(page)
-r 15 3558 %20%20 -
+r 30 3558 %20%20 -
 l 1
     for i = #G.your_collection[j].cards, 1, -1 do
-r 13 606 %20%20%20%20%20%20 -
+r 32 606 %20%20%20%20%20%20 -
 l 3
       c:remove()
     end
   end
-r 15 3558 %20%20 -
+r 30 3558 %20%20 -
 l 2
     for i = 1, 6 do
       local center = G.P_CENTER_POOLS.Planet[i + (j - 1) * 6 + 12 * (page - 1)]
-r 13 614 %20%20%20%20%20%20 -
+r 32 614 %20%20%20%20%20%20 -
 l 2
       local card = Card(G.your_collection[j].T.x + G.your_collection[j].T.w / 2, G.your_collection[j].T.y, G.CARD_W, G.CARD_H, nil, center)
       card:start_materialize(nil, i > 1 or j > 1)
-r 15 3562 %20%20%20%20%20%20 -
+r 30 3562 %20%20%20%20%20%20 -
 l 2
     end
   end
-r 15 3566 %20%20 -
+r 30 3566 %20%20 -
 l 4
 end
 
 function K.collection_planets()
   local rows = {}
-r 15 3538 %20%20 -
+r 30 3538 %20%20 -
 l 17
   for j = 1, 2 do
     G.your_collection[j] = CardArea(G.ROOM.T.x + 0.2 * G.ROOM.T.w / 2, G.ROOM.T.h, 6.25 * G.CARD_W, 1 * G.CARD_H, {card_limit = 6, type = "title", highlight_limit = 0, collection = true})
@@ -584,8 +625,8 @@ l 17
 end
 
 G.FUNCS.forge_collection_planet_page = function(args)
-r 13 603 %20%20 -
-l 147
+r 32 603 %20%20 -
+l 76
   planet_page(args.cycle_config.current_option)
 end
 
@@ -651,9 +692,28 @@ function K.install_hooks()
   end
   if Card and Card.apply_to_run then
     local orig = Card.apply_to_run
+    local function keep_card(self, cen)
+      if not (rawget(_G, "SMODS") and G.vouchers and G.vouchers.emplace) then return end
+      local card = self and copy_card(self) or Card(0, 0, G.CARD_W, G.CARD_H, G.P_CARDS.empty, cen)
+      card.VT.x, card.VT.y = G.vouchers.T.x, G.vouchers.T.y
+      G.vouchers:emplace(card)
+    end
     Card.apply_to_run = function(self, center)
       local cen = center or (self and self.config and self.config.center)
       if cen and cen.forge_kind == "voucher" then
+        if K.deck_starting then
+          if G.GAME and G.GAME.used_vouchers then G.GAME.used_vouchers[cen.key] = true end
+r 3 617 %20%20%20%20%20%20%20%20%20%20 -
+l 118
+            if G.GAME and G.GAME.used_vouchers then G.GAME.used_vouchers[cen.key] = true end
+            pcall(keep_card, nil, cen)
+            local ok, err = pcall(K.apply_voucher, cen)
+            if not ok then log_once("voucher", "voucher failed: " .. tostring(err)) end
+            return true
+          end}))
+          return
+        end
+        pcall(keep_card, self, cen)
         local ok, err = pcall(K.apply_voucher, cen)
         if not ok then log_once("voucher", "voucher failed: " .. tostring(err)) end
         return
@@ -661,13 +721,43 @@ function K.install_hooks()
       return orig(self, center)
     end
   end
+  if Card and Card.open and not K.open_hooked then
+    K.open_hooked = true
+    local orig = Card.open
+    local LEND = {"update_pack", "ease_background_colour", "create_UIBox", "particles", "group_key", "draw_hand", "select_card", "select_exclusions"}
+    Card.open = function(self, ...)
+      local cen = self and self.config and self.config.center
+      local S = rawget(_G, "SMODS")
+      if not (cen and cen.forge_kind == "booster" and type(S) == "table" and type(S.Centers) == "table" and not S.Centers[cen.key]) then
+        return orig(self, ...)
+      end
+      local base = G.P_CENTERS[cen.forge_sample or ""] or G.P_CENTERS.p_buffoon_normal_1
+      if not (base and base.update_pack) then return orig(self, ...) end
+      for _, k in ipairs(LEND) do
+        if cen[k] == nil then cen[k] = base[k] end
+      end
+      S.Centers[cen.key] = cen
+      local res = {pcall(orig, self, ...)}
+      S.Centers[cen.key] = nil
+      if not res[1] then error(res[2], 0) end
+      return unpack(res, 2, table.maxn(res))
+    end
+  end
+  do
+    local Ed = require("functions/forge/forge_editions")
+    pcall(Ed.install_draw)
+    pcall(Ed.install_pack)
+  end
   if Back and Back.apply_to_run then
     local orig = Back.apply_to_run
     Back.apply_to_run = function(self, ...)
-      local r = orig(self, ...)
+      K.deck_starting = true
+      local res = {pcall(orig, self, ...)}
+      K.deck_starting = nil
+      if not res[1] then error(res[2], 0) end
       local ok, err = pcall(K.apply_deck, self)
       if not ok then log_once("deck", "deck failed: " .. tostring(err)) end
-      return r
+      return unpack(res, 2, table.maxn(res))
     end
   end
   if type(create_UIBox_your_collection_planets) == "function" then

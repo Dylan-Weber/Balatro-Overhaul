@@ -355,7 +355,7 @@ function R.install()
     Back.trigger_effect = function(self, args) return R.on_trigger(orig_trigger, self, args) end
     local orig_funcs = G.FUNCS.start_run
     if type(orig_funcs) == "function" then
-r 13 2958 %20%20%20%20%20%20%20%20 -
+r 32 2958 %20%20%20%20%20%20%20%20 -
 l 41
             local restart = e and e.config and e.config.id == 'restart_button'
             local armed = R.armed

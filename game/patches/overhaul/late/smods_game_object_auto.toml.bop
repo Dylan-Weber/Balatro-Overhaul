@@ -1,0 +1,388 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 251
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.001"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*if o:check_duplicate_key\(\) then return end\n)'''
+position = "at"
+payload = '''
+${pre}        if o.set == 'Atlas' and o.obj_table[o.key] and o:check_duplicate_key() then return o.obj_table[o.key] end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.002"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>[\t ]*o:inject\(i\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}            if LOADING_SCREEN then LOADING_SCREEN.draw() end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.003"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)[\t ]*if not silent then table\.insert\(orig_o\.dependencies, SMODS\.current_mod\.id\) end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            if not silent and SMODS.current_mod then table.insert(orig_o.dependencies, SMODS.current_mod.id) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.004"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*SMODS\.Atlas = SMODS\.GameObject:extend \{\n)'''
+position = "at"
+payload = '''
+${pre}    local function atlas_rgba8(data)
+        local format = data:getFormat()
+        if format == 'rgba8' or love.graphics.getImageFormats()[format] then return data end
+        local out = love.image.newImageData(data:getWidth(), data:getHeight(), 'rgba8')
+        out:mapPixel(function(x, y) return data:getPixel(x, y) end)
+        data:release()
+        return out
+    end
+
+    local atlas_prefetch = nil
+
+    local function atlas_source(atlas)
+        local file_path = type(atlas.path) == 'table' and
+            ((G.SETTINGS.real_language and atlas.path[G.SETTINGS.real_language]) or atlas.path[G.SETTINGS.language] or atlas.path['default'] or atlas.path['en-us']) or atlas.path
+        if file_path == 'DEFAULT' then return end
+        if atlas.language and G.SETTINGS.language ~= atlas.language and G.SETTINGS.real_language ~= atlas.language then return end
+        local texture_scaling = G.SETTINGS.GRAPHICS.texture_scaling
+        if atlas.force_pixel then
+            texture_scaling = 1
+        end
+        if not atlas.language and (atlas.obj_table[('%s_%s'):format(atlas.key, G.SETTINGS.language)] or atlas.obj_table[('%s_%s'):format(atlas.key, G.SETTINGS.real_language)]) then return end
+        return file_path, texture_scaling, (atlas.path_mod or atlas.mod or SMODS).path
+    end
+
+    local function png_size(file_data)
+        local ok, head = pcall(file_data.getString, file_data)
+        head = ok and head and head:sub(1, 24)
+        if not head or #head < 24 or head:sub(2, 4) ~= 'PNG' then return end
+        local function u32(i)
+            local a, b, c, d = head:byte(i, i + 3)
+            return ((a * 256 + b) * 256 + c) * 256 + d
+        end
+        return u32(17), u32(21)
+    end
+
+    local function atlas_prefetch_start(atlases)
+        if atlas_prefetch then return end
+        local ok_ip, IP = pcall(require, "functions/image_prefetch")
+        local P = ok_ip and IP.new(8)
+        if not P then return end
+        P.too_big = {}
+        atlas_prefetch = P
+        local limit = love.graphics.getSystemLimits().texturesize or math.huge
+        local queued = {}
+        local function queue(path, file_data) queued[#queued + 1] = {path, file_data, file_data:getSize()} end
+        for _, atlas in ipairs(atlases) do
+            local file_path, texture_scaling, root = atlas_source(atlas)
+            if file_path then
+                local full_path = NFS.getNormalizedPath(root .. 'assets/' .. texture_scaling .. 'x/' .. file_path)
+                local file_data = NFS.newFileData(full_path)
+                if file_data then
+                    local w, h = png_size(file_data)
+                    local low_data
+                    if w and (w > limit or h > limit) and texture_scaling == 2 then
+                        local low_path = NFS.getNormalizedPath(root .. 'assets/1x/' .. file_path)
+                        low_data = NFS.newFileData(low_path)
+                        if low_data then
+                            P.too_big[full_path] = true
+                            file_data:release()
+                            queue(low_path, low_data)
+                        end
+                    end
+                    if not low_data then queue(full_path, file_data) end
+                else
+                    local other_path = NFS.getNormalizedPath(root .. 'assets/' .. (3 - texture_scaling) .. 'x/' .. file_path)
+                    local other_data = NFS.newFileData(other_path)
+                    if other_data then queue(other_path, other_data) end
+                end
+                if LOADING_SCREEN then LOADING_SCREEN.draw() end
+            end
+        end
+        table.sort(queued, function(a, b) return a[3] > b[3] end)
+        for _, q in ipairs(queued) do P:queue(q[1], q[2]) end
+        P:close_queue()
+    end
+
+    local function atlas_prefetch_stop()
+        local P = atlas_prefetch
+        if not P then return end
+        atlas_prefetch = nil
+        P:stop()
+    end
+
+    SMODS.atlas_prefetch_stop = atlas_prefetch_stop
+
+    local function atlas_decode(path, file_data)
+        local data = atlas_prefetch and atlas_prefetch:take(path)
+        return data or love.image.newImageData(file_data)
+    end
+
+    local function atlas_fit(data, dpiscale, limit)
+        local w, h = data:getDimensions()
+        if w <= limit and h <= limit then return data, dpiscale end
+        local k = math.max(w, h) / limit
+        local nw, nh = math.max(1, math.floor(w / k)), math.max(1, math.floor(h / k))
+        local out = love.image.newImageData(nw, nh, data:getFormat())
+        out:mapPixel(function(x, y)
+            return data:getPixel(math.min(w - 1, math.floor(x * w / nw)), math.min(h - 1, math.floor(y * h / nh)))
+        end)
+        return out, dpiscale * nw / w
+    end
+
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.005"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)[\t ]*local file_path = type\(self\.path\) == 'table' and\n[\t ]*\(\(G\.SETTINGS\.real_language and self\.path\[G\.SETTINGS\.real_language\]\) or self\.path\[G\.SETTINGS\.language\] or self\.path\['default'\] or self\.path\['en-us'\]\) or self\.path\n[\t ]*if file_path == 'DEFAULT' then return end\n[\t ]*-- language specific sprites override fully defined sprites only if that language is set\n[\t ]*if self\.language and G\.SETTINGS\.language ~= self\.language and G\.SETTINGS\.real_language ~= self\.language then return end\n[\t ]*local texture_scaling = G\.SETTINGS\.GRAPHICS\.texture_scaling\n[\t ]*if self\.force_pixel then\n[\t ]*texture_scaling = 1\n[\t ]*end\n[\t ]*if not self\.language and \(self\.obj_table\[\('%s_%s'\):format\(self\.key, G\.SETTINGS\.language\)\] or self\.obj_table\[\('%s_%s'\):format\(self\.key, G\.SETTINGS\.real_language\)\]\) then return end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            local file_path, texture_scaling = atlas_source(self)
+            if not file_path then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.006"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*local file_data = NFS\.newFileData\(self\.full_path\)\n)'''
+position = "at"
+payload = '''
+${pre}            local limit = love.graphics.getSystemLimits().texturesize or math.huge
+            local dpiscale = texture_scaling
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.007"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)[\t ]*self\.image_data = assert\(love\.image\.newImageData\(file_data\),\n[\t ]*\('Failed to initialize image data for Atlas %s'\):format\(self\.key\)\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                local main_path = self.full_path
+                if not (atlas_prefetch and atlas_prefetch.too_big[main_path]) then
+                    self.image_data = atlas_rgba8(assert(atlas_decode(main_path, file_data),
+                        ('Failed to initialize image data for Atlas %s'):format(self.key)))
+                end
+                local w, h = math.huge, math.huge
+                if self.image_data then w, h = self.image_data:getDimensions() end
+                if (w > limit or h > limit) and texture_scaling == 2 then
+                    local low_path = NFS.getNormalizedPath((self.path_mod or self.mod or SMODS).path ..
+                        'assets/1x/' .. file_path)
+                    local low_data = NFS.newFileData(low_path)
+                    if low_data then
+                        self.full_path = low_path
+                        self.image_data = atlas_rgba8(assert(atlas_decode(low_path, low_data),
+                            ('Failed to initialize image data for Atlas %s'):format(self.key)))
+                        dpiscale = 1
+                    end
+                end
+                if not self.image_data then
+                    self.image_data = atlas_rgba8(assert(love.image.newImageData(file_data),
+                        ('Failed to initialize image data for Atlas %s'):format(self.key)))
+                end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.008"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)[\t ]*local image = love\.graphics\.newImage\(file_data\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                local source_data = atlas_rgba8(assert(atlas_decode(self.full_path, file_data),
+                    ('Failed to initialize image data for Atlas %s'):format(self.key)))
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.009"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)[\t ]*local w, h = image:getWidth\(\), image:getHeight\(\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                local w, h = source_data:getDimensions()
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.010"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)[\t ]*local canvas = love\.graphics\.newCanvas\(nw, nh\)\n[\t ]*image:setFilter\("nearest", "nearest"\)\n[\t ]*love\.graphics\.setCanvas\(canvas\)\n[\t ]*love\.graphics\.setColor\(1,1,1,1\)\n[\t ]*scalingShader:send\("sourceImage", image\)\n[\t ]*scalingShader:send\("dim", \{1/w, 1/h\}\)\n[\t ]*love\.graphics\.setShader\(scalingShader\)\n[\t ]*local bm, abm = love\.graphics\.getBlendMode\(\)\n[\t ]*love\.graphics\.setBlendMode\("replace", "premultiplied"\)\n[\t ]*love\.graphics\.rectangle\("fill", 0, 0, nw, nh\)\n[\t ]*love\.graphics\.setBlendMode\(bm, abm\)\n[\t ]*love\.graphics\.setShader\(\)\n[\t ]*love\.graphics\.setCanvas\(\)\n[\t ]*local imageData2 = canvas:newImageData\(\)\n[\t ]*image:release\(\)\n[\t ]*canvas:release\(\)\n[\t ]*self\.image_data = imageData2\n[\t ]*end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                if math.max(w, h) * math.max(1, newScale) > limit then
+                    self.image_data = source_data
+                    dpiscale = other_scale
+                else
+                    local image = love.graphics.newImage(source_data)
+                    local canvas = love.graphics.newCanvas(nw, nh)
+                    image:setFilter("nearest", "nearest")
+                    love.graphics.setCanvas(canvas)
+                    love.graphics.setColor(1,1,1,1)
+                    scalingShader:send("sourceImage", image)
+                    scalingShader:send("dim", {1/w, 1/h})
+                    love.graphics.setShader(scalingShader)
+                    local bm, abm = love.graphics.getBlendMode()
+                    love.graphics.setBlendMode("replace", "premultiplied")
+                    love.graphics.rectangle("fill", 0, 0, nw, nh)
+                    love.graphics.setBlendMode(bm, abm)
+r 3 4413 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 128
+                    local imageData2 = canvas:newImageData()
+                    image:release()
+                    canvas:release()
+                    self.image_data = imageData2
+                end
+            end
+            self.image_data, dpiscale = atlas_fit(self.image_data, dpiscale, limit)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.011"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)[\t ]*\{ mipmaps = true, dpiscale = texture_scaling \}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                { mipmaps = true, dpiscale = dpiscale })
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.012"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*pre_inject_class = function\(self\)\n[\t ]*G:set_render_settings\(\) -- restore originals first in case a texture pack was disabled\n)'''
+position = "at"
+payload = '''
+${pre}        inject_class = function(self)
+            local list = {}
+            for _, key in ipairs(self.obj_buffer) do
+                local o = self.obj_table[key]
+                if o then list[#list + 1] = o end
+            end
+            pcall(atlas_prefetch_start, list)
+            SMODS.GameObject.inject_class(self)
+            atlas_prefetch_stop()
+        end,
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.013"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*-- until stakes_fixed\n)'''
+position = "at"
+payload = '''
+${pre}            local overhaul_stake_orders = {}
+            for _, stake in ipairs(G.P_CENTER_POOLS[self.set]) do overhaul_stake_orders[stake] = stake.order end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.014"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*table\.sort\(G\.P_CENTER_POOLS\[self\.set\], function\(a, b\) return a\.order < b\.order end\)\n)'''
+position = "at"
+payload = '''
+${pre}            local overhaul_stake_broken = false
+            for _, stake in ipairs(G.P_CENTER_POOLS[self.set]) do
+                for _, key in pairs(stake.applied_stakes or {}) do
+                    local below = G.P_STAKES[key]
+                    if below and below ~= stake and below.order >= stake.order then overhaul_stake_broken = true end
+                end
+            end
+            if overhaul_stake_broken then
+                for stake, order in pairs(overhaul_stake_orders or {}) do stake.order = order end
+            end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.015"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>[\t ]*return \{ ability = copy_table\(self\.config\), fake_card = self\.key \}\n[\t ]*end,\n[\t ]*generate_ui = function\(self, info_queue, card, desc_nodes, specific_vars, full_UI_table\)\n)[\t ]*if not card then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            if not card or (self.set == 'Edition' and not card.edition) then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.016"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)[\t ]*if love\.graphics\.getRendererInfo\(\) ~= "OpenGL ES" and \(self\.mod and not self\.mod\.gles_alerted\) and not love\.graphics\.validateShader\(true, file\) then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            if SMODS.renderer_name() ~= "OpenGL ES" and (self.mod and not self.mod.gles_alerted) and not love.graphics.validateShader(true, file) then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.017"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>[\t ]*\['hovering'\] = 1,\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}                ['filter_type'] = G.SETTINGS.GRAPHICS.filter_type or 1,
+                ['filter_intensity'] = (G.SETTINGS.GRAPHICS.filter_intensity or 50) / 100,
+                ['rainbow_speed'] = (G.SETTINGS.GRAPHICS.rainbow_speed or 50) / 50,
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.018"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)[\t ]*should_apply = function\(self\) return not G\.recording_mode or G\.video_control end,\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        should_apply = function(self) return (not G.recording_mode or G.video_control) and (G.SETTINGS.GRAPHICS.perf_shader_quality or 3) >= 2 end,
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_game_object.019"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>)[\t ]*\}\n[\t ]*\n[\t ]*SMODS\.Keybind \{\n[\t ]*key_pressed = 'm',\n[\t ]*event = 'held',\n[\t ]*held_duration = 1\.1,\n[\t ]*action = function\(self\)\n[\t ]*SMODS\.save_all_config\(\)\n[\t ]*SMODS\.restart_game\(\)\n[\t ]*end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+times = 1
+end

@@ -76,7 +76,7 @@ match_indent = true
 [[patches]]
 [patches.regex]
 target = 'functions/UI_definitions.lua'
-pattern = '''(?<indent>[\t ]*)UIBox_button\(\{button = 'your_collection_blinds', label = \{localize\('b_blinds'\)\}, count = G\.DISCOVER_TALLIES\.blinds, minw = 5, id = 'your_collection_blinds'\}\),'''
+pattern = '''(?<indent>[\t ]*)UIBox_button\(\{button = 'your_collection_blinds', label = \{localize\('b_blinds'\)\}, count = G\.DISCOVER_TALLIES\.blinds, minw = 5, minh = 2.0, id = 'your_collection_blinds', focus_args = \{snap_to = true\}\}\),'''
 position = 'after'
 payload = '''UIBox_button({button = 'your_collection_other_gameobjects', label = {localize('k_other')}, minw = 5, id = 'your_collection_other_gameobjects', focus_args = {snap_to = true}}),'''
 
@@ -252,14 +252,14 @@ payload = 'colour = part.control.V and args.vars.colours[tonumber(part.control.V
 [patches.pattern]
 target = "functions/common_events.lua"
 pattern = '''
-r 12 898 - -
+r 31 898 - -
 l 5
                     trigger = 'before',
                     delay = delay,
 '''
 position = "at"
 payload = '''
-r 12 898 - -
+r 31 898 - -
 l 102
                     trigger = trigger,
                     delay = delay,
@@ -288,10 +288,10 @@ match_indent = true
 [[patches]]
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
-pattern = "{n=G.UIT.T, config={scale = 0.35,text = args.count.tally..' / '..args.count.of, lang = G.LANGUAGES['en-us'], colour = {1,1,1,0.9}}}"
+pattern = "{n=G.UIT.T, config={scale = 0.35,text = args.count.tally..' / '..args.count.of, colour = {1,1,1,0.9}}}"
 position = "at"
 match_indent = true
-payload = "{n=G.UIT.T, config={scale = 0.35,text = args.count.tally..' / '..args.count.of, lang = G.LANGUAGES['en-us'], colour = args.text_colour}}"
+payload = "{n=G.UIT.T, config={scale = 0.35,text = args.count.tally..' / '..args.count.of, colour = args.text_colour}}"
 
 # G.UIDEF.card_h_popup():
 # add a "card_type_text_colour" variable
@@ -363,7 +363,7 @@ match_indent = true
 [patches.pattern]
 target = 'functions/common_events.lua'
 pattern = '''
-r 12 2718 - %20
+r 31 2718 - %20
 l 38
 '''
 position = "at"
@@ -403,7 +403,7 @@ match_indent = false
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
 pattern = '''
-r 15 1045 - -
+r 30 1045 - -
 l 16
 '''
 position = "after"
@@ -421,7 +421,7 @@ match_indent = true
 [patches.pattern]
 target = 'engine/node.lua'
 pattern = '''
-r 17 276 - -
+r 22 276 - -
 l 15
 '''
 position = "after"
@@ -438,7 +438,7 @@ match_indent = true
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
 pattern = '''
-r 15 1051 - -
+r 30 1051 - -
 l 11
 '''
 position = "at"
@@ -451,7 +451,7 @@ match_indent = true
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
 pattern = '''
-r 15 1172 - -
+r 30 1172 - -
 l 14
 '''
 position = "before"
@@ -467,13 +467,13 @@ target = "functions/UI_definitions.lua"
 match_indent = true
 position = "at"
 pattern = '''
-r 15 5701 - -
+r 30 5701 - -
 l 3
 bonus_mods = bonus_mods + 1'''
 payload = '''
 if not v.no_ui then
-r 15 5701 %20%20 -
-r 15 5702 %20%20 -
+r 30 5701 %20%20 -
+r 30 5702 %20%20 -
 l 13
 end
 '''
@@ -488,7 +488,7 @@ pattern = '''
 game_rules[#game_rules+1] = {n=G.UIT.R, config={align = "cl"}, nodes= localize{type = 'text', key = 'ch_c_'..v.id, vars = {v.value}}}'''
 payload = '''
 if not v.no_ui then
-r 15 5733 %20%20 -
+r 30 5733 %20%20 -
 l 30
 end
 '''
@@ -520,7 +520,7 @@ target = "engine/sprite.lua"
 match_indent = true
 position = "at"
 pattern = '''
-r 30 166 - -
+r 26 166 - -
 l 11
 '''
 payload = '''
@@ -533,7 +533,7 @@ target = "engine/sprite.lua"
 match_indent = true
 position = "after"
 pattern = '''
-r 30 59 - -
+r 26 59 - -
 l 12
 '''
 payload = '''
@@ -547,22 +547,22 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 15 1231 - -
-r 15 1232 %20%20%20%20 -
-r 15 1233 %20%20%20%20 -
-r 15 1234 %20%20%20%20%20%20 -
-r 15 1235 %20%20%20%20%20%20%20%20 -
+r 30 1231 - -
+r 30 1232 %20%20%20%20 -
+r 30 1233 %20%20%20%20 -
+r 30 1234 %20%20%20%20%20%20 -
+r 30 1235 %20%20%20%20%20%20%20%20 -
 l 1
       }},
-r 15 1237 %20%20%20%20%20%20 -
-r 15 1238 %20%20%20%20%20%20%20%20 -
-r 15 1239 %20%20%20%20%20%20%20%20 -
-r 15 1240 %20%20%20%20%20%20%20%20 -
+r 30 1237 %20%20%20%20%20%20 -
+r 30 1238 %20%20%20%20%20%20%20%20 -
+r 30 1239 %20%20%20%20%20%20%20%20 -
+r 30 1240 %20%20%20%20%20%20%20%20 -
 l 1
       }},
-r 15 1242 %20%20%20%20%20%20 -
-r 15 1243 %20%20%20%20%20%20%20%20 -
-r 15 1244 %20%20%20%20%20%20%20%20 -
+r 30 1242 %20%20%20%20%20%20 -
+r 30 1243 %20%20%20%20%20%20%20%20 -
+r 30 1244 %20%20%20%20%20%20%20%20 -
 l 154
       }},
     }},
@@ -570,7 +570,7 @@ l 154
 }},
 '''
 payload = '''
-{n=G.UIT.R, config = {align = "cm", r = 0.1, id = 'HUD_blind_badge', func = 'SMODS_HUD_blind_badge'}, nodes = {}},
+{n=G.UIT.R, config = {align = "cm", r = 0.1, id = 'HUD_blind_badge', func = 'HUD_blind_badge'}, nodes = {}},
 '''
 
 # adjust placement of G.HUD

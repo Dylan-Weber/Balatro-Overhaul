@@ -598,8 +598,8 @@ function E.get_blind_amount(s, ante)
     if s.scaling == 2 then amounts = {300, 900, 2600, 8000, 20000, 36000, 60000, 100000}
     elseif s.scaling == 3 then amounts = {300, 1000, 3200, 9000, 25000, 60000, 110000, 200000}
     else amounts = {300, 800, 2000, 5000, 11000, 20000, 35000, 50000} end
-r 11 925 %20%20%20%20 -
-r 11 926 %20%20%20%20 -
+r 13 925 %20%20%20%20 -
+r 13 926 %20%20%20%20 -
 l 588
     local a, b, c, d = amounts[8], 1.6, ante - 8, 1 + 0.2 * (ante - 8)
     local amount = floor(a * (b + (k * c) ^ d) ^ c)
@@ -1189,7 +1189,7 @@ local function discard_cards(s, cards, n, hook)
             s.consumable_buffer = s.consumable_buffer + 1
             add_pending_cons(s, 1)
         end
-r 16 401 %20%20%20%20%20%20%20%20 -
+r 15 401 %20%20%20%20%20%20%20%20 -
 l 1250
         for k = 1, nj do
             local ek = eff_k[k]

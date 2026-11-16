@@ -50,7 +50,7 @@ if total_cashout_rows > 7 then
     local total_hidden = total_cashout_rows - 7
 
 r 1 112 %20%20%20%20 -
-r 12 1025 %20%20%20%20%20%20%20%20 -
+r 31 1025 %20%20%20%20%20%20%20%20 -
 l 17
         func = function()
             local hidden = {n=G.UIT.R, config={align = "cm"}, nodes={

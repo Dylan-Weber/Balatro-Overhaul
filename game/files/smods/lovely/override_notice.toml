@@ -140,7 +140,7 @@ match_indent = true
 [[patches]]
 [patches.pattern]
 target = "functions/UI_definitions.lua"
-pattern = "function create_UIBox_notify_alert(_achievement, _type, _from_left)"
+pattern = "function create_UIBox_notify_alert(_achievement, _type)"
 position = "before"
 payload = "-- Function overridden by SMODS in src/overrides.lua"
 match_indent = true

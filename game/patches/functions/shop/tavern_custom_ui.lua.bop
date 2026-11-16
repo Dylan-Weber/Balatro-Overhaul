@@ -437,7 +437,7 @@ local function cur_tab()
 end
 
 G.FUNCS.tavern_custom = function(e)
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 43
   A.install_hooks()
   V.sel = {}

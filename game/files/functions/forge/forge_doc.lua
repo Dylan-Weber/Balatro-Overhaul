@@ -73,6 +73,12 @@ D.JOKER_TEMPLATES = {
   {key = "j_burglar", rules = {{when = "blind_selected", give = {{id = "hand", n = 3}}}}},
   {key = "j_midas_mask", rules = {{when = "card_scored", only = {{id = "rank", v = "face"}}, give = {{id = "change", what = "enhancement", v = "m_gold"}}}}},
   {key = "j_flash", rules = {{when = "reroll", give = {{id = "gain_mult", n = 2}}}}},
+  {key = "j_ancient", vars = {{name = "Suit", type = "suit", start = "random"}}, rules = {{when = "card_scored", only = {{id = "suit", v = "var:1"}}, give = {{id = "xmult", n = 1.5}}}, {when = "round_end", give = {{id = "var_pick", var = 1, v = "random"}}}}},
+  {key = "j_castle", vars = {{name = "Suit", type = "suit", start = "random"}}, rules = {{when = "discard", only = {{id = "suit", v = "var:1"}}, give = {{id = "gain_chips", n = 3}}}, {when = "round_end", give = {{id = "var_pick", var = 1, v = "random"}}}}},
+  {key = "j_idol", vars = {{name = "Suit", type = "suit", start = "random"}, {name = "Rank", type = "rank", start = "random"}}, rules = {{when = "card_scored", only = {{id = "suit", v = "var:1"}, {id = "rank", v = "var:2"}}, give = {{id = "xmult", n = 2}}}, {when = "round_end", give = {{id = "var_pick", var = 1, v = "random"}, {id = "var_pick", var = 2, v = "random"}}}}},
+  {key = "j_mail", vars = {{name = "Rank", type = "rank", start = "random"}}, rules = {{when = "discard", only = {{id = "rank", v = "var:1"}}, give = {{id = "money", n = 5}}}, {when = "round_end", give = {{id = "var_pick", var = 1, v = "random"}}}}},
+  {key = "j_todo_list", vars = {{name = "Hand", type = "hand", start = "random"}}, rules = {{when = "hand_played", only = {{id = "hand", v = "var:1", mode = "is"}}, give = {{id = "money", n = 4}}}, {when = "round_end", give = {{id = "var_pick", var = 1, v = "random"}}}}},
+  {key = "j_yorick", rules = {{when = "discard", only = {{id = "every", v = "event", n = 23}}, give = {{id = "gain_xmult", n = 1}}}}},
 }
 
 D.GAME_TEMPLATES = {
@@ -124,6 +130,12 @@ D.GAME_TEMPLATES = {
   edition = {
     {key = "foil", fields = {shader = "foil", chips = 50}}, {key = "holo", fields = {shader = "holo", chips = 0, mult = 10}},
     {key = "polychrome", fields = {shader = "polychrome", chips = 0, xmult = 1.5}}, {key = "negative", fields = {shader = "negative", chips = 0, slot = true}},
+    {key = "tshine_scan", fields = {shader = "tshine_scan", chips = 30}}, {key = "tshine_gleam", fields = {shader = "tshine_gleam", chips = 30}},
+    {key = "tshine_sweep", fields = {shader = "tshine_sweep", chips = 30}}, {key = "tshine_gold", fields = {shader = "tshine_gold", chips = 0, mult = 6}},
+    {key = "tshine_glitter", fields = {shader = "tshine_glitter", chips = 0, mult = 8}}, {key = "tshine_void", fields = {shader = "tshine_void", chips = 0, xmult = 1.3}},
+    {key = "tshine_prism", fields = {shader = "tshine_prism", chips = 0, xmult = 1.5}}, {key = "tshine_molten", fields = {shader = "tshine_molten", chips = 0, mult = 8}},
+    {key = "tshine_spotlight", fields = {shader = "tshine_spotlight", chips = 40}}, {key = "tshine_wave", fields = {shader = "tshine_wave", chips = 0, mult = 6}},
+    {key = "tshine_noir", fields = {shader = "tshine_noir", chips = 0, xmult = 1.3}}, {key = "tshine_ghost", fields = {shader = "tshine_ghost", chips = 0, xmult = 1.5}},
   },
   tag = {
     {key = "tag_economy", effects = {{id = "money", n = 20}}}, {key = "tag_double", effects = {{id = "double"}}}, {key = "tag_rare", effects = {{id = "free_joker", v = 3}}},
@@ -203,6 +215,10 @@ function D.from_template(kind, t)
   if kind == "joker" then
     local c = G.P_CENTERS[t.key] or {}
     base.rarity, base.cost, base.rules = c.rarity or 1, c.cost or 4, copy(t.rules)
+    if t.vars then
+      base.vars = copy(t.vars)
+      for _, v in ipairs(base.vars) do v.name = mod_loc(v.name) end
+    end
     return D.new("joker", base)
   end
   local fields = Cat.default_fields(kind)
@@ -267,6 +283,8 @@ local function plain_lines(d, l)
       add(string.format(mod_loc("Choose {C:attention}%d{} of up to {C:attention}%d{} %s cards"), choose or 1, shown or 3, Cat.value_label("plain", f.pack)))
       if d.mode == "advanced" and f.own_only then add(mod_loc("Only {C:attention}your own{} creations")) end
     end
+    local pe = require("functions/forge/forge_editions").pack_edition(d)
+    if pe then add(string.format(mod_loc("Every card is {C:dark_edition}%s{}"), require("functions/forge/forge_rules").ed_name(pe))) end
   elseif d.kind == "collab" then
     add(string.format(mod_loc("Face cards of {C:attention}%s{}"), Cat.value_label("suit", f.suit)))
   elseif d.kind == "blind" then
@@ -404,7 +422,7 @@ local function register()
       ["New"] = "Nouveau", ["Levels up {C:attention}%s{}"] = "Monte {C:attention}%s{} d'un niveau", ["{C:mult}+%s{} Mult and {C:chips}+%s{} Chips per level"] = "{C:mult}+%s{} Multi et {C:chips}+%s{} Jetons par niveau",
       ["{C:chips}+%s{} Chips"] = "{C:chips}+%s{} Jetons", ["{C:mult}+%s{} Mult"] = "{C:mult}+%s{} Multi", ["{X:mult,C:white}X%s{} Mult"] = "{X:mult,C:white}X%s{} Multi",
       ["{X:mult,C:white}X%s{} Mult while this card stays in hand"] = "{X:mult,C:white}X%s{} Multi tant que la carte reste en main", ["{C:green}1 in %d{} chance to break"] = "{C:green}1 chance sur %d{} de se briser",
-      ["{C:dark_edition}+1{} Joker slot"] = "{C:dark_edition}+1{} emplacement de Joker", ["Choose {C:attention}%d{} of up to {C:attention}%d{} %s cards"] = "Choisissez {C:attention}%d{} carte parmi {C:attention}%d{} (%s)", ["Only {C:attention}your own{} creations"] = "Seulement {C:attention}vos{} créations",
+      ["{C:dark_edition}+1{} Joker slot"] = "{C:dark_edition}+1{} emplacement de Joker", ["Choose {C:attention}%d{} of up to {C:attention}%d{} %s cards"] = "Choisissez {C:attention}%d{} carte parmi {C:attention}%d{} (%s)", ["Only {C:attention}your own{} creations"] = "Seulement {C:attention}vos{} créations", ["Every card is {C:dark_edition}%s{}"] = "Chaque carte est {C:dark_edition}%s{}",
       ["Face cards of {C:attention}%s{}"] = "Figures de {C:attention}%s{}", ["Size {C:red}X%s{}, reward {C:money}$%d{}"] = "Taille {C:red}X%s{}, récompense {C:money}%d ${}", ["Pick up to {C:attention}%d{} cards"] = "Choisissez jusqu'à {C:attention}%d{} cartes",
       ["Give every variable a name"] = "Donnez un nom à chaque variable", ["Rule %d uses a variable that is gone"] = "La règle %d utilise une variable supprimée",
       ["Give it a name"] = "Donnez-lui un nom", ["Add a rule"] = "Ajoutez une règle", ["Rule %d does nothing yet: add an effect"] = "La règle %d ne fait rien : ajoutez un effet", ["Add an effect"] = "Ajoutez un effet",
@@ -415,7 +433,7 @@ local function register()
       ["New"] = "Nuevo", ["Levels up {C:attention}%s{}"] = "Sube {C:attention}%s{} un nivel", ["{C:mult}+%s{} Mult and {C:chips}+%s{} Chips per level"] = "{C:mult}+%s{} multi y {C:chips}+%s{} Fichas por nivel",
       ["{C:chips}+%s{} Chips"] = "{C:chips}+%s{} Fichas", ["{C:mult}+%s{} Mult"] = "{C:mult}+%s{} multi", ["{X:mult,C:white}X%s{} Mult"] = "{X:mult,C:white}X%s{} multi",
       ["{X:mult,C:white}X%s{} Mult while this card stays in hand"] = "{X:mult,C:white}X%s{} multi mientras siga en la mano", ["{C:green}1 in %d{} chance to break"] = "{C:green}1 de %d{} probabilidades de romperse",
-      ["{C:dark_edition}+1{} Joker slot"] = "{C:dark_edition}+1{} espacio de comodín", ["Choose {C:attention}%d{} of up to {C:attention}%d{} %s cards"] = "Elige {C:attention}%d{} de hasta {C:attention}%d{} cartas (%s)", ["Only {C:attention}your own{} creations"] = "Solo {C:attention}tus{} creaciones",
+      ["{C:dark_edition}+1{} Joker slot"] = "{C:dark_edition}+1{} espacio de comodín", ["Choose {C:attention}%d{} of up to {C:attention}%d{} %s cards"] = "Elige {C:attention}%d{} de hasta {C:attention}%d{} cartas (%s)", ["Only {C:attention}your own{} creations"] = "Solo {C:attention}tus{} creaciones", ["Every card is {C:dark_edition}%s{}"] = "Cada carta es {C:dark_edition}%s{}",
       ["Face cards of {C:attention}%s{}"] = "Figuras de {C:attention}%s{}", ["Size {C:red}X%s{}, reward {C:money}$%d{}"] = "Tamaño {C:red}X%s{}, premio {C:money}$%d{}", ["Pick up to {C:attention}%d{} cards"] = "Elige hasta {C:attention}%d{} cartas",
       ["Give every variable a name"] = "Ponle un nombre a cada variable", ["Rule %d uses a variable that is gone"] = "La regla %d usa una variable borrada",
       ["Give it a name"] = "Ponle un nombre", ["Add a rule"] = "Añade una regla", ["Rule %d does nothing yet: add an effect"] = "La regla %d aún no hace nada: añade un efecto", ["Add an effect"] = "Añade un efecto",

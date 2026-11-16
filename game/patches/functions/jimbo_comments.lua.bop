@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 429
+l 438
 JIMBO_COMMENTS = JIMBO_COMMENTS or {}
 local JC = JIMBO_COMMENTS
 
@@ -379,6 +379,15 @@ local function fill(text, vars)
     return text
 end
 
+local function plain_num(v)
+    local conv = rawget(_G, "progression_number")
+    if type(v) ~= "number" and type(conv) == "function" then
+        local ok, n = pcall(conv, v)
+        if ok and type(n) == "number" then return n end
+    end
+    return tonumber(v)
+end
+
 local function fmt_num(v)
     local ok, s = pcall(number_format, v)
     if ok and type(s) == "string" then return s end
@@ -432,10 +441,10 @@ local function make_card()
     local s = touch() and 0.55 or 0.48
     local card = Card(0, 0, G.CARD_W * s, G.CARD_H * s, G.P_CARDS.empty, jimbo_center(), {bypass_discovery_center = true})
     card._is_jimbo_visual = true
-r 6 220 %20%20%20%20 -
-r 9 1460 %20%20%20%20 -
-r 6 219 %20%20%20%20 -
-r 15 4154 %20%20%20%20 -
+r 5 220 %20%20%20%20 -
+r 7 1460 %20%20%20%20 -
+r 5 219 %20%20%20%20 -
+r 30 4154 %20%20%20%20 -
 l 508
     card.no_ui = true
     return card
@@ -765,11 +774,11 @@ local function money_band(d)
 end
 
 local function on_hand_done()
-    local score = (tonumber(G.GAME.chips) or 0) - (S.chips_before or 0)
+    local score = (plain_num(G.GAME.chips) or 0) - (S.chips_before or 0)
     S.chips_before = nil
     local name = G.GAME.last_hand_played
     if not name or score <= 0 then return end
-    local target = S.target or tonumber(G.GAME.blind and G.GAME.blind.chips) or 0
+    local target = S.target or plain_num(G.GAME.blind and G.GAME.blind.chips) or 0
     local vars = {score = fmt_num(score), hand = hand_label(name)}
     S.streak[#S.streak + 1] = name
     if #S.streak > 5 then table.remove(S.streak, 1) end
@@ -779,7 +788,7 @@ local function on_hand_done()
     end
     if target > 0 and score >= target * 10 and JC.fire("huge_hand", vars, "hand") then return end
     if target > 0 and score >= target and (S.first_hand_of_blind) and JC.fire("one_shot", vars, "hand") then return end
-    local best = G.GAME.round_scores and G.GAME.round_scores.hand and tonumber(G.GAME.round_scores.hand.amt) or 0
+    local best = G.GAME.round_scores and G.GAME.round_scores.hand and plain_num(G.GAME.round_scores.hand.amt) or 0
     if score >= best and (G.GAME.hands_played or 0) > 4 and JC.fire("best_hand", vars, "hand") then return end
     if #S.streak == 5 then
         local same = true
@@ -787,7 +796,7 @@ local function on_hand_done()
         if same and JC.fire("hand_streak", vars, "hand") then S.streak = {} return end
     end
     local hl = G.GAME.current_round and G.GAME.current_round.hands_left or 0
-    local need = target - (tonumber(G.GAME.chips) or 0)
+    local need = target - (plain_num(G.GAME.chips) or 0)
     if target > 0 and hl >= 1 and need > 0 and score * hl < need * 0.4 then JC.fire("weak_hand", vars, "hand") end
 end
 
@@ -809,7 +818,7 @@ local function poll_run()
     end
 
     if st == G.STATES.HAND_PLAYED and prev ~= st then
-        S.chips_before = tonumber(g.chips) or 0
+        S.chips_before = plain_num(g.chips) or 0
         S.first_hand_of_blind = (g.current_round and (g.current_round.hands_played or 0) <= 1) or false
     elseif prev == G.STATES.HAND_PLAYED and st ~= prev and S.chips_before then
         on_hand_done()
@@ -820,7 +829,7 @@ local function poll_run()
         local id = tostring(key) .. ":" .. tostring(g.round)
         if S.blind_seen ~= id then
             S.blind_seen = id
-            S.target = tonumber(g.blind and g.blind.chips) or 0
+            S.target = plain_num(g.blind and g.blind.chips) or 0
             S.boss = g.blind and g.blind.boss and key or nil
             if in_mp() and pvp_now() then
                 JC.fire("mp_pvp", nil, "blind")
@@ -832,7 +841,7 @@ local function poll_run()
         end
         local cr = g.current_round
         if cr and cr.hands_left == 1 and S.last_hand_blind ~= id then
-            local need = (tonumber(g.blind and g.blind.chips) or 0) - (tonumber(g.chips) or 0)
+            local need = (plain_num(g.blind and g.blind.chips) or 0) - (plain_num(g.chips) or 0)
             if need > 0 then
                 S.last_hand_blind = id
                 JC.fire("last_hand", {left = fmt_num(need)}, "hand")
@@ -842,7 +851,7 @@ local function poll_run()
 
     if st == G.STATES.ROUND_EVAL and prev ~= st then
         local cr = g.current_round
-        local chips, target = tonumber(g.chips) or 0, S.target or 0
+        local chips, target = plain_num(g.chips) or 0, S.target or 0
         if cr and cr.hands_left == 0 then
             JC.fire("clutch_win", nil, "center")
         elseif target > 0 and chips < target * 1.1 then
@@ -854,7 +863,7 @@ local function poll_run()
 
     if st == G.STATES.GAME_OVER and not S.over then
         S.over = true
-        local chips, target = tonumber(g.chips) or 0, S.target or tonumber(g.blind and g.blind.chips) or 0
+        local chips, target = plain_num(g.chips) or 0, S.target or plain_num(g.blind and g.blind.chips) or 0
         if in_mp() then
             JC.fire("mp_lost", nil, "center", true)
         elseif target > 0 and chips >= target * 0.85 then
@@ -945,7 +954,7 @@ local function poll_menu()
     if t < JC._idle_at then return end
     local r = JC.IDLE[rate()]
     JC._idle_at = t + rand(r[1], r[2])
-r 23 214 %20%20%20%20 -
+r 17 214 %20%20%20%20 -
 l 479
         if in_collection() then JC.fire("collection") end
         return

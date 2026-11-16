@@ -436,7 +436,7 @@ function DB.open(from)
   local R = DB.today_rules()
   DB.from = from
   DB.state = {page = 1, day = R.date, sig = DB.sig_of(R)}
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 26
   G.FUNCS.overlay_menu{definition = UIK.window{id = "bo_daily_board", title = L("DAILY BOARD"),
     tabs = {{key = "today", label = L("Today"), build = build_board}, {key = "friends", label = L("Friends"), build = build_friends}},
@@ -464,7 +464,7 @@ function DB.back()
     end}))
     return
   end
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 19
 end
 

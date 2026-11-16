@@ -167,7 +167,7 @@ end
 function R.map_refs(t, fn, depth)
   depth = depth or 0
   if type(t) ~= "table" or depth > 8 then return end
-r 11 131 %20%20 -
+r 13 131 %20%20 -
 l 114
     if type(v) == "table" then
       R.map_refs(v, fn, depth + 1)
@@ -284,7 +284,7 @@ function R.make_card(v, src)
   if not (area and area.config) or #area.cards + (G.GAME[buf] or 0) >= area.config.card_limit then return false end
   G.GAME[buf] = (G.GAME[buf] or 0) + 1
 r 3 617 %20%20 -
-l 271
+l 273
     local c = create_card(set, area, nil, nil, nil, nil, v, "forge_make")
     c:add_to_deck()
     area:emplace(c)
@@ -479,7 +479,9 @@ function R.clean_vars(list)
     if type(v) == "table" and #out < R.MAX_VARS then
       local name = R.clean_name(v.name)
       if name == "" then name = "V" .. (#out + 1) end
-      out[#out + 1] = {name = name, start = R.num("var_start", v.start)}
+      local o = {name = name}
+      if not (R.clean_typed and R.clean_typed(v, o)) then o.start = R.num("var_start", v.start) end
+      out[#out + 1] = o
     end
   end
   return out
@@ -498,7 +500,7 @@ function R.clean_rule(r, kind)
   local out = {when = r.when, only = {}, give = {}}
   for _, o in ipairs(type(r.only) == "table" and r.only or {}) do
     if type(o) == "table" and member(R.ONLY, o.id) and R.allowed_only(r.when, o.id, host) then
-      local c = {id = o.id, v = o.v, mode = o.mode, op = o.op, n = o.n, neg = o.neg == true and o.id ~= "chance" or nil, var = o.id == "var" and var_index(o.var) or nil}
+      local c = {id = o.id, v = o.v, mode = o.mode, op = o.op, n = o.n, neg = o.neg == true and o.id ~= "chance" or nil, var = (o.id == "var" or (o.id == "every" and o.v == "var")) and var_index(o.var) or nil}
       if c.n ~= nil then c.n = R.num(o.id, c.n, true) end
       if c.op and not member(R.OPS, c.op) then c.op = "at_least" end
       if c.id == "blind" and not member(R.BLINDS, c.v) then c.v = "Small" end
@@ -563,7 +565,7 @@ l 4
     return nil
   end
 r 3 2875 %20%20 -
-l 179
+l 191
     if context.cardarea == G.play then return "card_scored" end
     if context.cardarea == G.hand and not context.end_of_round then return "card_held" end
     return nil
@@ -652,8 +654,9 @@ function R.vars_state(card, defs)
   local x = R.state(card)
   x.vars = type(x.vars) == "table" and x.vars or {}
   for i, d in ipairs(type(defs) == "table" and defs or {}) do
-    if tonumber(x.vars[i]) == nil then x.vars[i] = tonumber(d.start) or 0 end
+    if (not d.type or d.type == "number") and tonumber(x.vars[i]) == nil then x.vars[i] = tonumber(d.start) or 0 end
   end
+  if R.typed_state then R.typed_state(x, defs) end
   return x.vars
 end
 
@@ -707,11 +710,17 @@ function R.check(o, context, card, other, seed, rule)
 end
 
 local function all_ok(rule, context, card, other, seed)
+  local every
   for _, o in ipairs(rule.only or {}) do
-    local ok = R.check(o, context, card, other, seed, rule)
-    if o.neg then ok = not ok end
-    if not ok then return false end
+    if o.id == "every" then
+      every = o
+    else
+      local ok = R.check(o, context, card, other, seed, rule)
+      if o.neg then ok = not ok end
+      if not ok then return false end
+    end
   end
+  if every and R.every_hit then return R.every_hit(every, context, card, seed) end
   return true
 end
 
@@ -721,6 +730,7 @@ function R.state(card)
     x.chips = tonumber(x.chips) or 0
     x.mult = tonumber(x.mult) or 0
     x.xmult = tonumber(x.xmult) or 1
+    x.xchips = tonumber(x.xchips) or 1
     return x
   end
   local ab = card.ability
@@ -729,10 +739,14 @@ function R.state(card)
   x.chips = tonumber(x.chips) or 0
   x.mult = tonumber(x.mult) or 0
   x.xmult = tonumber(x.xmult) or 1
+  x.xchips = tonumber(x.xchips) or 1
   return x
 end
 
-local function msg_var(key, n) return localize{type = "variable", key = key, vars = {n}} end
+local function msg_var(key, n)
+  if (key == "a_chips" or key == "a_mult") and tonumber(n) and n < 0 then return localize{type = "variable", key = key .. "_minus", vars = {-n}} end
+  return localize{type = "variable", key = key, vars = {n}}
+end
 
 local function status(card, text, colour)
   if not (card and card.T) then return end
@@ -804,7 +818,7 @@ l 6
     card.states.drag.is = true
     card.children.center.pinch.x = true
     G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.3, blockable = false, func = function()
-r 13 2209 %20%20%20%20%20%20 -
+r 32 2209 %20%20%20%20%20%20 -
 l 57
       card:remove()
       return true
@@ -907,7 +921,7 @@ l 14
     if g.v == R.TAG_RANDOM then key = R.roll_tag() end
     if not key or not G.P_TAGS or not G.P_TAGS[key] or not R.usable("tag", key) then return end
 r 3 617 %20%20%20%20 -
-l 279
+l 295
       add_tag(Tag(key))
       play_sound("generic1", 0.9 + math.random() * 0.1, 0.8)
       play_sound("holo1", 1.2 + math.random() * 0.1, 0.4)
@@ -967,24 +981,26 @@ local function apply_card(rule, i, card, src, context, other, phase, acc)
     if R.SCORE_GIVE[g.id] then
       local kind = R.SCORE_GIVE[g.id]
       n = tonumber(R.AMOUNT[g.id](g, card, context, other)) or 0
-      g = {id = kind, n = n}
+      g = {id = kind, n = n, neg = R.NEG_GIVE and R.NEG_GIVE[g.id]}
     end
     if (g.id == "chips" or g.id == "var_chips") and not held then
-      if n > 0 then acc.ret.chips = (acc.ret.chips or 0) + n end
+      if n > 0 or (g.neg and n < 0) then acc.ret.chips = (acc.ret.chips or 0) + n end
     elseif g.id == "mult" or g.id == "var_mult" then
-      if n > 0 then
+      if n > 0 or (g.neg and n < 0) then
         if held then acc.ret.h_mult = (acc.ret.h_mult or 0) + n else acc.ret.mult = (acc.ret.mult or 0) + n end
       end
     elseif g.id == "xmult" then
       if g.n ~= 1 then acc.ret.x_mult = (acc.ret.x_mult or 1) * g.n end
+    elseif g.id == "xchips" then
+      if g.n ~= 1 and not held then acc.forge_xchips = (acc.forge_xchips or 1) * g.n end
     elseif g.id ~= "retrigger" and g.id ~= "change" and g.id ~= "chips" and g.id ~= "var_chips" then side_effect(g, card, src, context, other, acc) end
   end
 end
 
 local function apply_main(rule, card, src, context, acc)
   for _, g in ipairs(rule.give) do
-    if R.SCORE_GIVE[g.id] then g = {id = R.SCORE_GIVE[g.id], n = tonumber(R.AMOUNT[g.id](g, card, context, nil)) or 0} end
-    if g.id == "chips" and g.n <= 0 or g.id == "mult" and g.n <= 0 or g.id == "xmult" and g.n == 1 then
+    if R.SCORE_GIVE[g.id] then g = {id = R.SCORE_GIVE[g.id], n = tonumber(R.AMOUNT[g.id](g, card, context, nil)) or 0, neg = R.NEG_GIVE and R.NEG_GIVE[g.id]} end
+    if g.id == "chips" and (g.n == 0 or g.n < 0 and not g.neg) or g.id == "mult" and (g.n == 0 or g.n < 0 and not g.neg) or (g.id == "xmult" or g.id == "xchips") and g.n == 1 then
     elseif g.id == "chips" then acc.ret.chip_mod = (acc.ret.chip_mod or 0) + g.n
     elseif g.id == "mult" then acc.ret.mult_mod = (acc.ret.mult_mod or 0) + g.n
     elseif g.id == "var_chips" then
@@ -994,6 +1010,7 @@ local function apply_main(rule, card, src, context, acc)
       local n = g.n * var_val(card, g.var)
       if n > 0 then acc.ret.mult_mod = (acc.ret.mult_mod or 0) + n end
     elseif g.id == "xmult" then acc.ret.Xmult_mod = (acc.ret.Xmult_mod or 1) * g.n
+    elseif g.id == "xchips" then acc.ret.Xchip_mod = (acc.ret.Xchip_mod or 1) * g.n
     else side_effect(g, card, src, context, nil, acc) end
   end
 end
@@ -1055,6 +1072,10 @@ end
 calc = function(card, context, rules, vars)
   local when, phase = R.trigger_of(context)
   if not when then return nil end
+  if R.rule_refs and R.rule_refs(rules) then
+    if type(vars) == "table" and #vars > 0 then R.vars_state(card, vars) end
+    rules = R.resolve_refs(rules, card)
+  end
   if phase == "destroy" then
     if context.blueprint then return nil end
     return destroy_phase(card, context, rules)
@@ -1098,12 +1119,14 @@ calc = function(card, context, rules, vars)
     if x.chips > 0 then acc.ret.chips = (acc.ret.chips or 0) + x.chips end
     if x.mult > 0 then acc.ret.mult = (acc.ret.mult or 0) + x.mult end
     if x.xmult > 1 then acc.ret.x_mult = (acc.ret.x_mult or 1) * x.xmult end
+    if (tonumber(x.xchips) or 1) > 1 then acc.forge_xchips = (acc.forge_xchips or 1) * x.xchips end
   end
   if when == "hand_played" then
     local x = R.state(card)
     if x.chips > 0 then acc.ret.chip_mod = (acc.ret.chip_mod or 0) + x.chips end
     if x.mult > 0 then acc.ret.mult_mod = (acc.ret.mult_mod or 0) + x.mult end
     if x.xmult > 1 then acc.ret.Xmult_mod = (acc.ret.Xmult_mod or 1) * x.xmult end
+    if x.xchips > 1 and R.cur_host ~= "card" then acc.ret.Xchip_mod = (acc.ret.Xchip_mod or 1) * x.xchips end
   end
   if phase == "repeat" then
     if acc.reps and acc.reps > 0 then return {message = localize("k_again_ex"), repetitions = acc.reps, card = src} end
@@ -1111,19 +1134,22 @@ calc = function(card, context, rules, vars)
   end
   local ret = acc.ret
   if when == "card_scored" or when == "card_held" then
+    if acc.forge_xchips and R.xchips_ret then R.xchips_ret(ret, acc.forge_xchips, src) end
     if next(ret) then ret.card = src; return ret end
     return nil
   end
   if when == "hand_played" or when == "other_joker" then
     if type(card_eval_status_text) == "function" then
-      local main = ret.Xmult_mod and "x" or ret.mult_mod and "m" or ret.chip_mod and "c"
+      local main = ret.Xmult_mod and "x" or ret.Xchip_mod and "xc" or ret.mult_mod and "m" or ret.chip_mod and "c"
+      if main ~= "xc" and ret.Xchip_mod then pcall(card_eval_status_text, src, "extra", nil, nil, nil, {message = msg_var("a_xmult", ret.Xchip_mod), colour = G.C.CHIPS}) end
       if main ~= "c" and ret.chip_mod then pcall(card_eval_status_text, src, "chips", ret.chip_mod) end
       if main ~= "m" and ret.mult_mod then pcall(card_eval_status_text, src, "mult", ret.mult_mod) end
     end
     if ret.Xmult_mod then ret.message = msg_var("a_xmult", ret.Xmult_mod)
+    elseif ret.Xchip_mod then ret.message = msg_var("a_xmult", ret.Xchip_mod)
     elseif ret.mult_mod then ret.message = msg_var("a_mult", ret.mult_mod)
     elseif ret.chip_mod then ret.message = msg_var("a_chips", ret.chip_mod) end
-    if ret.Xmult_mod or ret.mult_mod then ret.colour = G.C.MULT elseif ret.chip_mod then ret.colour = G.C.CHIPS end
+    if ret.Xmult_mod or ret.mult_mod then ret.colour = G.C.MULT elseif ret.chip_mod or ret.Xchip_mod then ret.colour = G.C.CHIPS end
     if next(ret) then return ret end
     return nil
   end
@@ -1185,6 +1211,10 @@ end
 
 require("functions/forge/forge_blocks")(R)
 require("functions/forge/forge_power3").rules(R)
+require("functions/forge/forge_editions").rules(R)
+require("functions/forge/forge_typedvars")(R)
+require("functions/forge/forge_negative")(R)
+require("functions/forge/forge_xchips")(R)
 
 return R
 end

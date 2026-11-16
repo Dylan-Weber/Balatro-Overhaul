@@ -433,7 +433,7 @@ function Game:press(x, y)
     self:hit(max(1, min(LANES, lane)))
 end
 
-r 9 2449 - -
+r 7 2449 - -
 l 314
     self.demo = false
     if self.state == "setup" and self.songs then

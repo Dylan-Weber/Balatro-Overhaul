@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 425
+l 461
 local R = require("functions/forge/forge_rules")
 local Store = require("functions/forge/forge_store")
 local Cat = require("functions/forge/forge_catalog")
@@ -71,9 +71,16 @@ T.run_line = function(kind, g)
   return ok and line or mod_loc(spec.label)
 end
 
-R.run_give = function(g)
+R.run_give = function(g, card, context)
   local Run = package.loaded["functions/forge/forge_run"]
-  if Run and Run.apply then Run.apply(g, nil) end
+  if not (Run and Run.apply) then return end
+  if g.id == "draw_cards" then
+    local x = {}
+    for k, v in pairs(g) do x[k] = v end
+    x.forge_context = context
+    return Run.apply(x, nil)
+  end
+  Run.apply(g, nil)
 end
 
 local function notify_removed(list)
@@ -149,14 +156,38 @@ local function card_ctx(card, context, extra)
   return ctx
 end
 
+local function put_xchips(ret, n, card)
+  if not n or n == 1 then return end
+  if rawget(_G, "SMODS") then
+    ret.playing_card = type(ret.playing_card) == "table" and ret.playing_card or {}
+    local pc = ret.playing_card
+    pc.x_chips = ((pc.x_chips and pc.x_chips > 0) and pc.x_chips or 1) * n
+    return
+  end
+  if R.xchips_ret then R.xchips_ret(ret, n, card) end
+end
+
 local function merge(ret, r, held)
   if type(r) ~= "table" then return end
+  if rawget(_G, "SMODS") then
+    local out = ret
+    ret = type(out.playing_card) == "table" and out.playing_card or {}
+    out.playing_card = ret
+    if r.x_chips and r.x_chips ~= 1 then ret.x_chips = ((ret.x_chips and ret.x_chips > 0) and ret.x_chips or 1) * r.x_chips end
+    r = setmetatable({x_chips = false}, {__index = r})
+  end
   if r.chips and r.chips > 0 then ret.chips = (ret.chips or 0) + r.chips end
   if r.mult and r.mult > 0 then ret.mult = (ret.mult or 0) + r.mult end
   if r.h_mult and r.h_mult > 0 then ret.h_mult = (ret.h_mult or 0) + r.h_mult end
   if r.x_mult and r.x_mult ~= 1 then
     local base = ret.x_mult and ret.x_mult > 0 and ret.x_mult or 1
     ret.x_mult = base * r.x_mult
+  end
+  if r.x_chips and r.x_chips ~= 1 then put_xchips(ret, r.x_chips) end
+  if type(r.extra) == "table" and r.extra.func then
+    ret.extra = ret.extra or {}
+    local before, f = ret.extra.func, r.extra.func
+    ret.extra.func = function() if before then before() end f() end
   end
   if r.dollars and r.dollars ~= 0 then
     ret.p_dollars = (ret.p_dollars or 0) + r.dollars
@@ -199,11 +230,15 @@ function H.eval_card(card, context, ret)
   local area = context.cardarea
   local held = area == G.hand and not context.end_of_round
   if not (area == G.play or held) then return ret end
+  if rawget(_G, "SMODS") and not context.main_scoring then return ret end
   local ctx = card_ctx(card, context)
   for _, it in ipairs(H.items_on(card)) do
     merge(ret, run_rules(card, ctx, it, "card", H.card_state(card, it.key)), held)
   end
   if area == G.play then
+    local Run = package.loaded["functions/forge/forge_run"]
+    local okx, nx = pcall(function() return Run and Run.card_bonus and Run.card_bonus(card, "xchips") end)
+    if okx and nx and nx ~= 1 then put_xchips(ret, nx, card) end
     for _, it in ipairs(H.run_items()) do
       local rctx = card_ctx(card, context)
       rctx.forge_self = nil
@@ -293,6 +328,7 @@ function H.score(chips, mult)
       if type(r) == "table" then
         if r.chip_mod then chips = chips + r.chip_mod; changed = true end
         if r.mult_mod then mult = mult + r.mult_mod; changed = true end
+        if r.Xchip_mod then chips = chips * r.Xchip_mod; changed = true end
         if r.Xmult_mod then mult = mult * r.Xmult_mod; changed = true end
       end
     end
@@ -338,7 +374,7 @@ end
 
 function H.item_vars(c, card)
   local T = require("functions/forge/forge_text")
-  return T.vars(nil, R.clean_vars(c and c.vars), H.item_state(c, card))
+  return T.vars(nil, R.clean_vars(c and c.vars), H.item_state(c, card), c and c.rules)
 end
 
 function H.item_of_key(key)

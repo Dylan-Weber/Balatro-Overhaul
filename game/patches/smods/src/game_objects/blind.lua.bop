@@ -131,7 +131,7 @@ function SMODS.get_new_blind(blind_type)
     
     if is_boss and G.GAME.perscribed_bosses[G.GAME.round_resets.ante] then
         ret_boss = G.GAME.perscribed_bosses[G.GAME.round_resets.ante]
-r 12 2343 %20%20%20%20%20%20%20%20 -
+r 31 2343 %20%20%20%20%20%20%20%20 -
 l 12
     elseif is_boss and G.FORCE_BOSS then
         return G.FORCE_BOSS
@@ -171,7 +171,7 @@ function SMODS.reset_blind_choices(choices)
 end
 
 -- completely bypass get_new_boss()
-r 12 2338 - -
+r 31 2338 - -
 l 2
 	return SMODS.get_new_blind("boss")
 end

@@ -1,4 +1,4 @@
-BOP 2
+BOP 1
 eol lf
 final 1
 base 0
@@ -315,7 +315,7 @@ payload = "SMODS.get_atlas(blind_choice.config.atlas) or G.ANIMATION_ATLAS['blin
 [[patches]]
 [patches.regex]
 target = 'functions/UI_definitions.lua'
-pattern = "(?<indent>[\t ]*)local temp_blind = AnimatedSprite\\(0,0,1.3,1.3, blind_atlas, blind_pos\\)"
+pattern = "(?<indent>[\t ]*)local temp_blind = AnimatedSprite\\(0,0,1.3,1.3, G.ANIMATION_ATLAS\\['blind_chips'\\], discovered and v.pos or G.b_undiscovered.pos\\)"
 position = 'at'
 payload = '''
 
@@ -323,7 +323,7 @@ local s = 1.3
 if math.ceil(#blind_tab/6) > 6 then
     s = s * 6/math.ceil(#blind_tab/6)
 end
-local temp_blind = AnimatedSprite(0,0,s,s, G.ANIMATION_ATLAS[discovered and v.atlas or 'blind_chips'] or blind_atlas, blind_pos)'''
+local temp_blind = AnimatedSprite(0,0,s,s, G.ANIMATION_ATLAS[discovered and v.atlas or 'blind_chips'], discovered and v.pos or G.b_undiscovered.pos)'''
 line_prepend = '$indent'
 
 [[patches]]
@@ -355,11 +355,11 @@ payload = ''
 [[patches]]
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
-pattern = 'table.sort(blind_tab, function (a, b) return (a.order or 999) < (b.order or 999) end)'
+pattern = 'table.sort(blind_tab, function (a, b) return a.order < b.order end)'
 match_indent = true
 position = 'at'
 payload = '''
-table.sort(blind_tab, function(a, b) return (a.order or 999) + (a.boss and a.boss.showdown and 1000 or 0) < (b.order or 999) + (b.boss and b.boss.showdown and 1000 or 0) end)'''
+table.sort(blind_tab, function(a, b) return a.order + (a.boss and a.boss.showdown and 1000 or 0) < b.order + (b.boss and b.boss.showdown and 1000 or 0) end)'''
 
 # add_round_eval_row()
 [[patches]]
@@ -412,8 +412,8 @@ end
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
 pattern = '''
-r 15 1545 - -
-r 15 1546 - -
+r 30 1545 - -
+r 30 1546 - -
 l 13
 '''
 match_indent = true
@@ -428,8 +428,8 @@ local text_table = G.localization.descriptions[target.set][target.key].text_pars
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
 pattern = '''
-r 15 4097 - -
-r 15 4098 - -
+r 30 4097 - -
+r 30 4098 - -
 l 20
 '''
 match_indent = true
@@ -451,7 +451,7 @@ local loc_name = localize{type = 'name_text', key = target.key or blind.key, set
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
 pattern = '''
-r 15 4104 - -
+r 30 4104 - -
 l 12
 '''
 match_indent = true
@@ -465,7 +465,7 @@ ability_text[#ability_text + 1] = {n=G.UIT.R, config={align = "cm"}, nodes=SMODS
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
 pattern = '''
-r 15 2965 - -
+r 30 2965 - -
 l 16
 '''
 match_indent = true
@@ -483,7 +483,7 @@ end
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
 pattern = '''
-r 15 2974 - -
+r 30 2974 - -
 l 14
 '''
 match_indent = true
@@ -499,10 +499,10 @@ target = 'functions/common_events.lua'
 pattern = '''
 if not v.boss then
 
-r 12 2353 - -
-r 12 2354 %20%20%20%20 -
-r 12 2355 - -
-r 12 2354 %20%20%20%20 -
+r 31 2353 - -
+r 31 2354 %20%20%20%20 -
+r 31 2355 - -
+r 31 2354 %20%20%20%20 -
 l 20
 end
 '''
@@ -524,10 +524,10 @@ elseif v.in_pool and type(v.in_pool) == 'function' then
     then
         eligible_bosses[k] = res and true or nil
     end
-r 12 2353 - -
+r 31 2353 - -
 l 1
     eligible_bosses[k] = res and true or nil
-r 12 2355 - -
+r 31 2355 - -
 l 90
     eligible_bosses[k] = res and true or nil
 end
@@ -632,9 +632,9 @@ target = 'game.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 9 1863 - -
+r 7 1863 - -
 r 2 703 - -
-r 9 1865 %20%20%20%20 -
+r 7 1865 %20%20%20%20 -
 l 24
 end
 '''
@@ -660,7 +660,7 @@ target = 'game.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 9 2177 - -
+r 7 2177 - -
 l 12
 '''
 payload = '''
@@ -674,7 +674,7 @@ target = 'game.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 9 2039 - -
+r 7 2039 - -
 l 14
 '''
 payload = '''
@@ -691,7 +691,7 @@ match_indent = true
 position = 'at'
 pattern = '''
 r 2 91 - -
-l 36
+l 14
 '''
 payload = '''
 self[self.current_slot or ''] = nil
@@ -706,29 +706,7 @@ target = 'functions/state_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-if bl_name == 'Small Blind' then
-'''
-payload = '''
-if G.GAME.round_resets.blind_states.Small == 'Current' then
-'''
-[[patches]]
-[patches.pattern]
-target = 'functions/state_events.lua'
-match_indent = true
-position = 'at'
-pattern = '''
-elseif bl_name == 'Big Blind' then
-'''
-payload = '''
-elseif G.GAME.round_resets.blind_states.Big == 'Current' then
-'''
-[[patches]]
-[patches.pattern]
-target = 'functions/state_events.lua'
-match_indent = true
-position = 'at'
-pattern = '''
-r 16 258 - -
+r 15 258 - -
 l 10
 '''
 payload = '''
@@ -740,7 +718,7 @@ target = 'functions/state_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 16 260 - -
+r 15 260 - -
 l 21
 '''
 payload = '''
@@ -763,7 +741,7 @@ target = 'game.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-e 9 297 - - =21,+%20%73%65%6C%66%2E%62%5F%75%6E%64%69%73%63%6F%76%65%72%65%64%20%6F%72,=89
+r 7 297 - -
 l 23
 '''
 payload = '''
@@ -788,7 +766,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 1521 - -
+r 30 1521 - -
 l 12
 '''
 payload = '''
@@ -802,7 +780,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 12 2364 - -
+r 31 2364 - -
 l 4
 '''
 payload = '''

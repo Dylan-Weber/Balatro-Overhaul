@@ -1,0 +1,29 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 16
+return {
+    descriptions={
+        Enhanced={
+            m_wild={
+                text={
+                    "可以视作",
+                    "任何花色",
+                    "{C:attention}无视{}Boss盲注的限制条件",
+                },
+            },
+        },
+        Stake={
+            stake_blue={
+                text={
+                    "Shop items cost {C:money}+$1{}",
+                    "Rerolls go up by {C:money}$2{} each",
+r 48 2544 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 5
+                },
+            },
+        },
+    },
+}
+end

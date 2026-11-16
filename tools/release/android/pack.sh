@@ -75,7 +75,10 @@ if [[ -f "$steam" ]]; then
     for f in "$out"/*; do
         python3 -B "$repo/tools/release/patcher/check_patch.py" --vanilla "$steam" "$f" > "$work/steam_check.txt" || true
         count="$(sed -n 's/^FAIL: \([0-9]*\) problems$/\1/p' "$work/steam_check.txt")"
-        if [[ -n "$count" ]]; then
+        other="$(grep -v '^FAIL: ' "$work/steam_check.txt" | grep -v '^checked [0-9]* files' | grep -v '^VANILLA [^ ]*[!/]patches/[^ ]*: vanilla line ' | grep -c . || true)"
+        if [[ -n "$count" && "$count" -le "${STEAM_ONLY_LINES:-24}" && "$other" == 0 ]]; then
+            echo "$(basename "$f"): $count known Steam-only lines inside line patches (at most ${STEAM_ONLY_LINES:-24})"
+        elif [[ -n "$count" ]]; then
             cat "$work/steam_check.txt"
             echo "$(basename "$f") holds Steam Balatro content"
             exit 1

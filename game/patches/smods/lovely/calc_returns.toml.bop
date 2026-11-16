@@ -15,7 +15,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 15 919 - -
+r 30 919 - -
 l 10
 '''
 payload = '''
@@ -27,13 +27,13 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 925 - -
+r 30 925 - -
 l 4
 args.text:pulse(0.5)
 '''
 payload = '''
 if type(args.text) == 'string' then
-r 15 925 %20%20%20%20 -
+r 30 925 %20%20%20%20 -
 l 16
     args.text:pulse(0.5)
 end

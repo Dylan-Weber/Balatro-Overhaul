@@ -104,7 +104,7 @@ pattern = "valid_idol_cards[#valid_idol_cards+1] = v"
 match_indent = true
 position = "at"
 payload = """if not SMODS.has_no_suit(v) and not SMODS.has_no_rank(v) then
-r 12 2277 %20%20%20%20 -
+r 31 2277 %20%20%20%20 -
 l 10
 end"""
 
@@ -116,7 +116,7 @@ pattern = "valid_mail_cards[#valid_mail_cards+1] = v"
 match_indent = true
 position = "at"
 payload = """if not SMODS.has_no_rank(v) then
-r 12 2293 %20%20%20%20 -
+r 31 2293 %20%20%20%20 -
 l 10
 end"""
 
@@ -128,7 +128,7 @@ pattern = "valid_castle_cards[#valid_castle_cards+1] = v"
 match_indent = true
 position = "at"
 payload = """if not SMODS.has_no_suit(v) then
-r 12 2317 %20%20%20%20 -
+r 31 2317 %20%20%20%20 -
 l 17
 end"""
 
@@ -147,8 +147,8 @@ pattern = "G.GAME.cards_played[scoring_hand[i].base.value].suits[scoring_hand[i]
 match_indent = true
 position = "at"
 payload = """if not SMODS.has_no_suit(scoring_hand[i]) then
-r 16 652 %20%20%20%20 -
-l 147
+r 15 652 %20%20%20%20 -
+l 182
 end"""
 
 # Card:generate_UIBox_ability_table()
@@ -295,12 +295,7 @@ match_indent = true
 [[patches]]
 [patches.pattern]
 target = "card.lua"
-pattern = '''
-r 3 349 - -
-r 3 229 - -
-r 3 351 - -
-l 36
-G.GAME.used_jokers[k] = true'''
+pattern = "if not G.OVERLAY_MENU then "
 position = "before"
 payload = '''if self.ability and not initial and not delay_sprites then
   self.front_hidden = self:should_hide_front()

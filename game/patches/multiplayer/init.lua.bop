@@ -165,7 +165,7 @@ function MP.init()
     pcall(function()
         if G.FUNCS and G.FUNCS.go_to_menu then
             local _original_go_to_menu = G.FUNCS.go_to_menu
-r 13 2981 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2981 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 60
                 pcall(function()
                     if G and G.GAME and G.GAME.multiplayer and bom_rejoin and bom_rejoin.on_quit_to_menu

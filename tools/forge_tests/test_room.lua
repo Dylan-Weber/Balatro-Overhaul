@@ -108,6 +108,17 @@ check("bad payload", select(2, R.enter("{}")) == "not_room" and not R.active())
 local t = require("bot.sim.json").decode(raw)
 t.room = 99
 check("newer payload", select(2, R.enter(require("bot.sim.json").encode(t))) == "newer")
+t.room = R.V
+check("current room format accepted", R.enter(require("bot.sim.json").encode(t)) == true)
+R.leave()
+profile("typed")
+Store.put({id = "ttt111", name = "Suit Chooser", rarity = 1, cost = 4, mode = "advanced", vars = {{name = "Chosen", type = "suit", start = "random"}},
+  rules = {{when = "blind_selected", give = {{id = "var_pick", var = 1, v = "random"}}}, {when = "card_scored", only = {{id = "suit", v = "var:1"}}, give = {{id = "mult", n = 5}}}}})
+local traw = R.pack()
+local tt = traw and require("bot.sim.json").decode(traw)
+check("typed room format", tt and tonumber(tt.room) == 10 and R.V >= 10)
+check("typed room enter", R.enter(traw) == true and Store.get("mproom01") and Store.get("mproom01").vars[1].type == "suit")
+R.leave()
 t.room, t.id = 1, "abcd12"
 check("normal mod is not a room", select(2, R.enter(require("bot.sim.json").encode(t))) == "not_room")
 

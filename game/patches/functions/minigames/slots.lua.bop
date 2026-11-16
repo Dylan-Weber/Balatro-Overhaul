@@ -154,7 +154,7 @@ function Game:pay()
     self.t = 0
 end
 
-r 9 2449 - -
+r 7 2449 - -
 l 106
     local all = true
     for i = 1, 3 do

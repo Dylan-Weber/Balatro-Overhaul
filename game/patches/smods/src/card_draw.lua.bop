@@ -26,17 +26,17 @@ end
 -- draw_from: draw the sprite on another object
 -- code mostly borrowed from vanilla
 function SMODS.CanvasSprite:draw_from(other_obj, ms, mr, mx, my)
-r 30 181 %20%20%20%20 -
-r 30 182 %20%20%20%20 -
-r 30 183 %20%20%20%20 -
-r 30 184 %20%20%20%20 -
-r 30 185 %20%20%20%20 -
-r 30 186 %20%20%20%20 -
+r 26 181 %20%20%20%20 -
+r 26 182 %20%20%20%20 -
+r 26 183 %20%20%20%20 -
+r 26 184 %20%20%20%20 -
+r 26 185 %20%20%20%20 -
+r 26 186 %20%20%20%20 -
 l 3
     love.graphics.draw(
         self.canvas,
         self.sprite,
-r 30 190 %20%20%20%20%20%20%20%20 -
+r 26 190 %20%20%20%20%20%20%20%20 -
 l 5
         0,
         0,
@@ -61,7 +61,7 @@ end
 SMODS.clean_up_children_ignore = {center = true, shadow = true, back = true, h_popup = true, front = true}
 function SMODS.clean_up_children(t)
 	local ignore = SMODS.clean_up_children_ignore
-r 11 131 %20%20%20%20 -
+r 13 131 %20%20%20%20 -
 l 54
         if not ignore[k] then
             if type(v) == 'table' and v.remove then v:remove() end
@@ -422,7 +422,7 @@ SMODS.DrawStep {
         if self.canvas_text and (self.config.center.discovered or self.bypass_discovery_center) then
             for _, sprite in ipairs(self.canvas_text[1] and self.canvas_text or {self.canvas_text}) do
                 love.graphics.push()
-r 19 278 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 12 278 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 30
                 sprite.canvas:renderTo(love.graphics.clear, 0, 0, 0, 0)
                 local text = love.graphics.newText(sprite.font, {sprite.text_colour or G.C.UI.TEXT_LIGHT, sprite.ref_table and sprite.ref_table[sprite.ref_value] or sprite.text})

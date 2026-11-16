@@ -156,7 +156,7 @@ local function show_invite()
     S.invite_open = inv
     S.invite = nil
     local msg = L("{name} invites you to their lobby."):gsub("{name}", function() return tostring(inv.name ~= "" and inv.name or inv.from or "?") end)
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 171
     G.FUNCS.overlay_menu{definition = create_UIBox_generic_options({back_func = "social_invite_later", no_back = true, contents = {
         {n = G.UIT.R, config = {align = "cm", padding = 0.1}, nodes = {txt(L("LOBBY INVITE"), 0.6, G.C.GOLD)}},
@@ -329,7 +329,7 @@ local function register_funcs()
     G.FUNCS.social_emote_open_run = function()
         if bom_emotes and bom_emotes.picker_open and bom_emotes.picker_open() then return end
         S.run_back = nil
-r 23 214 %20%20%20%20%20%20%20%20 -
+r 17 214 %20%20%20%20%20%20%20%20 -
 l 12
             if bom_spectate and bom_spectate.is_open and bom_spectate.is_open() then
                 S.run_back = function() bom_spectate.reopen() end
@@ -343,7 +343,7 @@ l 12
     G.FUNCS.social_invite_join = function()
         local inv = S.invite_open
         S.invite_open = nil
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 6
         if not inv then return end
         if bom_ui and bom_ui.show_connecting_screen then bom_ui.show_connecting_screen() end
@@ -351,7 +351,7 @@ l 6
     end
     G.FUNCS.social_invite_later = function()
         S.invite_open = nil
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 54
     end
 end

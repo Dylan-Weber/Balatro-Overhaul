@@ -1,0 +1,13 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_crash_handler.001"
+target = '=[SMODS _ "src/crash_handler.lua"]'
+pattern = '''^(?<pre>)[\t ]*if V and V\(MODDED_VERSION or '0\.0\.0'\) ~= V\(RELEASE_VERSION or '0\.0\.0'\) then\n[\t ]*table\.insert\(err, '\\n\\nDevelopment version of Steamodded detected! If you are not actively developing a mod, please try using the latest release instead\.\\n\\n'\)\n[\t ]*end\n[\t ]*\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+times = 1

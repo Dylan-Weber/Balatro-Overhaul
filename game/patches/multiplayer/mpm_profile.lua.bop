@@ -365,7 +365,7 @@ local function tab_history()
 end
 
 function P.open(tab)
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 20
     P.hist.items = nil
     P.hist.status = nil
@@ -387,7 +387,7 @@ function P.init()
         local m = menu()
         if m and m.active then return G.FUNCS.exit_overlay_menu() end
         if G.FUNCS.open_multiplayer_menu then return G.FUNCS.open_multiplayer_menu() end
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 70
     end
     G.FUNCS.mpm_name_save = function() P.save_name() end

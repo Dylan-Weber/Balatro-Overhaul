@@ -12,9 +12,9 @@ priority = -5
 [[patches]]
 [patches.pattern]
 target = "functions/UI_definitions.lua"
-pattern = "local challenge_unlocked = (G.PROFILES[G.SETTINGS.profile].challenges_unlocked and (G.PROFILES[G.SETTINGS.profile].challenges_unlocked >= k)) or (k > 20)"
+pattern = "local challenge_unlocked = G.PROFILES[G.SETTINGS.profile].challenges_unlocked and (G.PROFILES[G.SETTINGS.profile].challenges_unlocked >= k)"
 position = 'at'
-payload = "local challenge_unlocked = SMODS.challenge_is_unlocked(v, k) or (k > 20 and not v.mod)"
+payload = "local challenge_unlocked = SMODS.challenge_is_unlocked(v, k)"
 match_indent = true
 
 # function G.UIDEF.challenges() - fix challenge unlock count
@@ -22,15 +22,15 @@ match_indent = true
 [patches.pattern]
 target = "functions/UI_definitions.lua"
 pattern = """
-r 15 5239 - -
+r 30 5239 - -
 l 4
 """
 position = 'at'
 payload = """
 local unlock_count = 0
-r 15 5233 - -
+r 30 5233 - -
 l 59
-    if SMODS.challenge_is_unlocked(v, k) or (k > 20 and not v.mod) then
+    if SMODS.challenge_is_unlocked(v, k) then
         unlock_count = unlock_count + 1
     end
 end
@@ -89,7 +89,7 @@ times = 1
 [patches.pattern]
 target = "game.lua"
 pattern = '''
-r 9 2066 - -
+r 7 2066 - -
 l 14
 '''
 position = "after"
@@ -105,12 +105,12 @@ match_indent = true
 [patches.pattern]
 target = "game.lua"
 pattern = '''
-r 9 2352 - -
+r 7 2352 - -
 l 3
 '''
 position = "after"
 payload = '''
-r 15 5923 - -
+r 30 5923 - -
 l 23
 '''
 match_indent = true

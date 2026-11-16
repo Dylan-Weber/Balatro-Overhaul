@@ -1,0 +1,14 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_https.001"
+target = '=[lovely SMODS.https "libs/https/smods-https.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*local succ, https = pcall\(require, "https"\)\n)'''
+position = "at"
+payload = '''
+${pre}if isThread then pcall(require, "love.filesystem") end
+${post}'''
+times = 1

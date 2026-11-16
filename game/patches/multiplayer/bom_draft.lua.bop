@@ -234,7 +234,7 @@ local function show()
         if ok then return end
     end
     S.open = true
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 147
     local args = setmetatable({
         id = "mp_draft", title = L("DECK DRAFT"), compact = true,

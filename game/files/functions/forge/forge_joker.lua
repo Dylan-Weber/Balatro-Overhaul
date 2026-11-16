@@ -55,8 +55,9 @@ function FJ.doubled(data)
   return out
 end
 
-function FJ.atlas_from_data(name, data)
+function FJ.atlas_from_data(name, data, px, py)
   if not (data and G and G.ASSET_ATLAS) then return nil end
+  px, py = px or 71, py or 95
   local s = scale_setting()
   local src = s == 2 and FJ.doubled(data) or data
   local ok, img = pcall(love.graphics.newImage, src, {mipmaps = true, dpiscale = s})
@@ -64,9 +65,9 @@ function FJ.atlas_from_data(name, data)
   local filter = (s == 1 or (G.SETTINGS.GRAPHICS.perf_texture_filter == 2)) and "nearest" or "linear"
   pcall(img.setFilter, img, filter, filter)
   local old = G.ASSET_ATLAS[name]
-  local atlas = old or {name = name, px = 71, py = 95, type = "asset_atli"}
+  local atlas = old or {name = name, px = px, py = py, type = "asset_atli"}
   atlas.image = img
-  atlas.px, atlas.py = 71, 95
+  atlas.px, atlas.py = px, py
   G.ASSET_ATLAS[name] = atlas
   FJ.atlas_cache[name] = data
   return atlas
@@ -345,10 +346,16 @@ function FJ.install_hooks()
   if type(generate_card_ui) == "function" then
     local orig = generate_card_ui
     generate_card_ui = function(_c, full_UI_table, specific_vars, ...)
-      if _c and _c.forge and specific_vars == nil and FJ.vars_for then
+      local plain = specific_vars == nil or (type(specific_vars) == "table" and specific_vars[1] == nil and not specific_vars.debuffed)
+      if _c and _c.forge and plain and FJ.vars_for then
         local card = FJ.describing
         local ok, v = pcall(FJ.vars_for, _c, card)
-        if ok and type(v) == "table" then specific_vars = v end
+        if ok and type(v) == "table" then
+          if type(specific_vars) == "table" then
+            for k, x in pairs(specific_vars) do if type(k) ~= "number" then v[k] = x end end
+          end
+          specific_vars = v
+        end
       end
       return orig(_c, full_UI_table, specific_vars, ...)
     end

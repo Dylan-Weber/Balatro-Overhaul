@@ -97,9 +97,16 @@ def apktool_cmd():
     return [tool]
 
 
+def version_file(game_dir):
+    for g in (game_dir / "overhaul" / "version.lua", game_dir / "globals.lua"):
+        if g.is_file() and re.search(r"OVERHAUL_VERSION\s*=", g.read_text(errors="replace")):
+            return g
+    return None
+
+
 def read_overhaul_version(game_dir):
-    g = game_dir / "globals.lua"
-    if g.is_file():
+    g = version_file(game_dir)
+    if g:
         m = re.search(r"OVERHAUL_VERSION\s*=\s*['\"]([0-9][0-9A-Za-z.\-]*)['\"]", g.read_text(errors="replace"))
         if m:
             return m.group(1)
@@ -909,7 +916,7 @@ def build_apk(args, icon_game=None):
     if ks.name.endswith(".env") or ("release" in ks.name.lower() and not getattr(args, "allow_any_key", False)):
         die("refusing keystore %s: the maker only signs with its own player key" % ks)
     version = info.get("version_name", "0.0")
-    if game_dir and (game_dir / "globals.lua").is_file():
+    if game_dir and version_file(game_dir):
         version = read_overhaul_version(game_dir)
     final = out_dir / (getattr(args, "out_name", None) or ("BalatroOverhaul-%s.apk" % version))
     work = Path(tempfile.mkdtemp(prefix="overhaul-apk-", dir=args.work or None))

@@ -10,7 +10,7 @@ function M.init(bom_ui)
     local function _show_mp_overlay(ref_name, definition)
         if not G or not G.FUNCS or not G.FUNCS.overlay_menu then return end
         G.SETTINGS = G.SETTINGS or {}
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 30
         bom_ui.overlay({definition = definition})
         G[ref_name] = G.OVERLAY_MENU
@@ -436,7 +436,7 @@ l 50
                 UIBox_button({ label = { mod_loc("Cancel") }, button = "mp_cancel_connecting", minw = 2.5, minh = 0.5, colour = G.C.RED, scale = 0.35 }),
             }},
         }})
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 714
         bom_ui.overlay({definition = definition})
         G.MP_CONNECTING_OVERLAY = G.OVERLAY_MENU

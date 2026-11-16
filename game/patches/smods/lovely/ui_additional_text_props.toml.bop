@@ -16,10 +16,10 @@ position = "at"
 payload = """local final_line = SMODS.localize_box(lines, args)
     if args.type == 'text' then return final_line end
     if not args.nodes and args.type == 'name' then args.nodes = {} end
-r 11 1811 %20%20%20%20 -
+r 13 1811 %20%20%20%20 -
 l 1
 end
-r 11 1763 - -
+r 13 1763 - -
 l 69
     local final_name = {}
 
@@ -90,7 +90,7 @@ end) then
 [patches.pattern]
 target = "functions/misc_functions.lua"
 pattern = '''
-r 11 1745 - -
+r 13 1745 - -
 l 35
 '''
 position = 'at'
@@ -127,7 +127,7 @@ target = 'engine/text.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 32 86 - -
+r 28 86 - -
 l 10
 '''
 payload = '''
@@ -139,7 +139,7 @@ target = 'engine/text.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 32 95 - -
+r 28 95 - -
 l 22
 '''
 payload = '''
@@ -163,7 +163,7 @@ target = 'engine/text.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 32 134 - -
+r 28 134 - -
 l 22
 '''
 payload = '''
@@ -187,7 +187,7 @@ target = 'engine/text.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 32 33 - -
+r 28 33 - -
 l 12
 '''
 payload = '''
@@ -201,7 +201,7 @@ target = 'engine/text.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 32 151 - -
+r 28 151 - -
 l 13
 '''
 payload = '''
@@ -216,7 +216,7 @@ target = 'engine/text.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 32 152 - -
+r 28 152 - -
 l 13
 '''
 payload = '''
@@ -231,7 +231,7 @@ target = 'engine/text.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 32 258 - -
+r 28 258 - -
 l 21
 '''
 payload = '''
@@ -254,14 +254,14 @@ target = 'engine/text.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 32 167 - -
-r 32 270 %20%20%20%20 -
+r 28 167 - -
+r 28 270 %20%20%20%20 -
 l 4
 '''
 payload = '''
 for k=start_index, end_index do
     local letter = self.strings[self.focused_string].letters[k]
-r 32 270 %20%20%20%20 -
+r 28 270 %20%20%20%20 -
 l 9
 '''
 
@@ -272,7 +272,7 @@ target = 'engine/text.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 32 64 - -
+r 28 64 - -
 l 15
 '''
 payload = '''
@@ -289,8 +289,8 @@ target = 'engine/text.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 32 22 - -
-l 27
+r 28 22 - -
+l 14
 '''
 payload = '''
 self.config.marquee = self.config.marquee and not G.SETTINGS.reduced_motion
@@ -305,10 +305,11 @@ target = 'game.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-mv:update(upd_dt)
+r 7 2632 - -
+l 12
 '''
 payload = '''
-mv:update(upd_dt, self.real_dt)
+v:update(dt*self.SPEEDFACTOR, self.real_dt)
 '''
 
 # Add outline_colour_opacity
@@ -318,14 +319,14 @@ target = 'engine/ui.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 24 798 - -
-r 24 799 - -
+r 29 798 - -
+r 29 799 - -
 l 3
 '''
 payload = '''
 local old_outline_opacity
-r 24 798 - -
-r 24 799 - -
+r 29 798 - -
+r 29 799 - -
 l 13
     if self.config.outline_colour_opacity then
         old_outline_opacity = self.config.outline_colour[4]
@@ -340,7 +341,7 @@ target = 'engine/ui.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 24 818 - -
+r 29 818 - -
 l 15
 '''
 payload = '''
@@ -357,7 +358,7 @@ target = 'engine/ui.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 24 834 - -
+r 29 834 - -
 l 9
 '''
 payload = '''
@@ -368,8 +369,8 @@ if self.config.strikethrough and self.config.strikethrough[4] > 0.01 then
         self.config.strikethrough[4] = self.config.strikethrough[4] * self.config.strikethrough_colour_opacity
     end
     prep_draw(self, 1)
-r 24 732 %20%20%20%20 -
-r 17 115 %20%20%20%20 -
+r 29 732 %20%20%20%20 -
+r 22 115 %20%20%20%20 -
 l 14
     love.graphics.setColor(self.config.strikethrough)
     self:draw_pixellated_strikethough('line', parallax_dist)
@@ -385,8 +386,8 @@ if self.config.underline and self.config.underline[4] > 0.01 then
         self.config.underline[4] = self.config.underline[4] * self.config.underline_colour_opacity
     end
     prep_draw(self, 1)
-r 24 732 %20%20%20%20 -
-r 17 115 %20%20%20%20 -
+r 29 732 %20%20%20%20 -
+r 22 115 %20%20%20%20 -
 l 14
     love.graphics.setColor(self.config.underline)
     self:draw_pixellated_under('line', parallax_dist)
@@ -402,8 +403,8 @@ if self.config.overline and self.config.overline[4] > 0.01 then
         self.config.overline[4] = self.config.overline[4] * self.config.overline_colour_opacity
     end
     prep_draw(self, 1)
-r 24 732 %20%20%20%20 -
-r 17 115 %20%20%20%20 -
+r 29 732 %20%20%20%20 -
+r 22 115 %20%20%20%20 -
 l 16
     love.graphics.setColor(self.config.overline)
     self:draw_pixellated_over('line', parallax_dist)
@@ -421,7 +422,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 12 887 - -
+r 31 887 - -
 l 52
 '''
 payload = '''
@@ -475,8 +476,8 @@ payload = '''
 self.font_buffer = self.font
 self.font = self.strings[self.focused_string].font or self.font_buffer or G.LANG.font
 self.text_offset = {
-r 32 17 %20%20%20%20 -
-r 32 18 %20%20%20%20 -
+r 28 17 %20%20%20%20 -
+r 28 18 %20%20%20%20 -
 l 47
 }
 '''
@@ -525,10 +526,10 @@ if letter.text_outline or self.config.text_outline then
                     0.5*(letter.dims.x - letter.offset.x + x*outline_scale)*self.font.FONTSCALE/G.TILESIZE -self.shadow_parrallax.x*self.scale/(G.TILESIZE),
                     0.5*(letter.dims.y + y*outline_scale)*self.font.FONTSCALE/G.TILESIZE -self.shadow_parrallax.y*self.scale/(G.TILESIZE), 
                     letter.r or 0,
-r 32 276 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 32 276 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 32 278 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 32 279 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 28 276 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 28 276 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 28 278 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 28 279 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 25
                 )
             end
@@ -555,16 +556,16 @@ if letter.text_outline or self.config.text_outline then
                     0.5*(letter.dims.x - letter.offset.x + x*outline_scale)*self.font.FONTSCALE/G.TILESIZE + _shadow_norm.x,
                     0.5*(letter.dims.y - letter.offset.y + y*outline_scale)*self.font.FONTSCALE/G.TILESIZE + _shadow_norm.y, 
                     letter.r or 0,
-r 32 304 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 32 304 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 32 306 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 32 307 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 28 304 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 28 304 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 28 306 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 28 307 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 4
                 )
             end
         end
     end
-r 32 297 %20%20%20%20 -
+r 28 297 %20%20%20%20 -
 l 11
 end
 '''
@@ -577,7 +578,7 @@ target = 'functions/misc_functions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 11 1643 - -
+r 13 1643 - -
 l 4
 '''
 payload = '''

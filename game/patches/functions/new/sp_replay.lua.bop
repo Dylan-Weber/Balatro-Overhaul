@@ -541,7 +541,7 @@ function SR.install()
   if G and G.FUNCS and type(G.FUNCS.start_run) == "function" and not SR._start_wrapped then
     SR._start_wrapped = true
     local orig = G.FUNCS.start_run
-r 13 2958 %20%20%20%20 -
+r 32 2958 %20%20%20%20 -
 l 100
       if SR.launch and playing_back() then
         if e ~= nil then

@@ -12,15 +12,15 @@ priority = -10
 [[patches]]
 [patches.pattern]
 target = "functions/UI_definitions.lua"
-pattern = "if G.PROFILES[G.SETTINGS.profile].all_unlocked or G.PROFILES[G.SETTINGS.profile].debug_unlocked then max_stake = 12 end"
+pattern = "if G.PROFILES[G.SETTINGS.profile].all_unlocked then max_stake = 8 end"
 position = "at"
-payload = "if G.PROFILES[G.SETTINGS.profile].all_unlocked or G.PROFILES[G.SETTINGS.profile].debug_unlocked then max_stake = #G.P_CENTER_POOLS['Stake'] end"
+payload = "if G.PROFILES[G.SETTINGS.profile].all_unlocked then max_stake = #G.P_CENTER_POOLS['Stake'] end"
 match_indent = true
 
 [[patches]]
 [patches.pattern]
 target = "functions/UI_definitions.lua"
-pattern = "for i = 1, math.min(max_stake+1, 12) do"
+pattern = "for i = 1, math.min(max_stake+1, 8) do"
 position = "at"
 payload = "for i = 1, math.min(max_stake+1, #G.P_CENTER_POOLS['Stake']) do"
 match_indent = true
@@ -203,8 +203,8 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 13 738 - -
-r 13 739 - -
+r 32 738 - -
+r 32 739 - -
 l 13
 '''
 payload = '''
@@ -219,18 +219,20 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 5465 - -
-l 1
-if G.PROFILES[G.SETTINGS.profile].all_unlocked or G.PROFILES[G.SETTINGS.profile].debug_unlocked then max_stake = #G.P_CENTER_POOLS['Stake'] end
-r 15 5484 - -
+r 30 5465 - -
+l 2
+if G.PROFILES[G.SETTINGS.profile].all_unlocked then max_stake = #G.P_CENTER_POOLS['Stake'] end
+
+r 30 5484 - -
 l 3
 '''
 payload = '''
 --[[
-r 15 5465 - -
-l 1
-if G.PROFILES[G.SETTINGS.profile].all_unlocked or G.PROFILES[G.SETTINGS.profile].debug_unlocked then max_stake = #G.P_CENTER_POOLS['Stake'] end
-r 15 5484 - -
+r 30 5465 - -
+l 2
+if G.PROFILES[G.SETTINGS.profile].all_unlocked then max_stake = #G.P_CENTER_POOLS['Stake'] end
+  
+r 30 5484 - -
 l 10
 ]]--
 '''
@@ -242,8 +244,8 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 5445 - %20
-l 34
+r 30 5445 - %20
+l 21
 '''
 payload = '''
 local t, res = {}, {}
@@ -265,10 +267,11 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-{n=G.UIT.T, config={text = localize{type = 'name_text', key = _stake_center.key, set = _stake_center.set}, scale = 0.35, colour = name_colour}}
+r 30 5454 - -
+l 12
 '''
 payload = '''
-{n=G.UIT.T, config={text = localize{type = 'name_text', key = t.key, set = t.set}, scale = 0.35, colour = name_colour}}
+{n=G.UIT.T, config={text = localize{type = 'name_text', key = t.key, set = t.set}, scale = 0.35, colour = G.C.WHITE}}
 '''
 
 # Stake loc_vars pt 3
@@ -278,7 +281,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 3193 - -
+r 30 3193 - -
 l 19
 '''
 payload = '''
@@ -299,7 +302,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 3147 - -
+r 30 3147 - -
 l 17
 '''
 payload = '''

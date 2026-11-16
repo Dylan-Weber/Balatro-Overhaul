@@ -2,6 +2,119 @@
 
 What each version brings to players. The game shows this file in About > Changelog and in the What's new window on the title screen, in English, French or Spanish.
 
+## 2.1 | 2026-11-16
+
+### en Overhaul 2.1
+
++ [Phones] iPhone and iPad: install the app with AltStore or SideStore (it is not on the App Store), import your own Steam Balatro.exe from the Files app and it gets patched on the device. Ported by JohnG210, thanks a lot!
++ [Mods] Mods work like on PC: Overhaul leaves Balatro's files and the official Steamodded untouched and applies its changes after your mods, so many mods that broke now just work.
++ [Gameplay] Tally Joker: a line under each Joker shows its value and its chances, and what it adds to the cards you pick. Turn it off in Settings > Helpers.
++ [The Forge] Edition editor: start from any game edition or one of the 12 Overhaul shines, pick its shine, colour and strength, and draw your own look on top.
++ [The Forge] XChips: Jokers, and every other kind of creation, can multiply your Chips.
++ [The Forge] Downsides: Jokers can cost money, give -Chips or -Mult, take hands or discards, or make the Blind bigger.
++ [The Forge] Variables can hold a suit, a rank, a poker hand, an edition, an enhancement or a seal, and "Set a variable" can pick one at random.
++ [The Forge] New rules: "Every N times", make a Joker with an edition, draw cards, copy a random Joker, count cards or Jokers with an edition, and packs that put one edition on every card.
++ [The Forge] Card text is one free text box: type with your own keyboard and paint words in any colour.
++ [The Forge] Try it in a run: Back to the Forge in the pause menu takes you straight back to the builder.
++ [The Forge] Builder: settings line up in even columns, every rule can be removed, editions can have no shine, and the pixel editor gets Replace colour (key C) and Save.
++ [The Forge] Creations that use these features need Overhaul 2.1 or later.
++ [Gameplay] Mouse wheel keys: map Play, Discard or any action to wheel up or down in Keyboard keys.
++ [Gameplay] Score preview: the hand name stays visible and long scores shrink to fit (GitHub #39).
++ [Everything else] In-game keyboard setting (Settings > Controls): off on PC, on on phones. When it is off, every text field uses your own keyboard.
++ [Phones] Texture packs (Malverk): tap a pack, then Apply.
++ [Phones] A long press works as a right click for mods that use one, like Saturn.
++ [Phones] With mods in landscape, the Blind choice no longer cuts off long boss texts.
++ [Mods] Custom Run options work with mods: no boss blinds, showdown bosses only, and turning off card types in the shop.
++ [Mods] Big-number mods like Talisman or Amulet: "Score reached", Jimbo's comments and the best hand finder work again.
++ [Mods] Mod stakes: Overhaul's extra stake effects stay off them, and their wins count as Gold Stake wins.
++ [Mods] With mods: card sleeves and ranked cosmetics show on cards, Forge editions show up in runs, the phone vibrates on level up, and Forge Tags and Blinds you turned off stay hidden.
++ [Mods] Smoother with Steamodded: less work every frame.
++ [Multiplayer] "Decks to pick from" is now on the lobby's Players tab, next to Deck.
+- Fixed: the game no longer gets slower the longer you play with Jokers.
+- Fixed: windows no longer flash or jump to the top left when they refresh.
+- Fixed: crashes with Frost_Utils, Maximus, Spectrallib and Cryptid.
+- Fixed on phones: crashes at start on some Android phones, at the title screen with mods, and when leaving the shop while the screen turned.
+- Fixed: a crash when a replay recording stopped.
+- Fixed: your vouchers work from the start of a custom deck run and keep working with Cryptid, and your booster packs open with their cards with Cryptid.
+- Fixed: with mods, Forge rules on cards and decks score once per card again.
+- Fixed: what you draw for an edition shows on the cards, and your editions show their look in Creations.
+- Fixed: Tag art shows everywhere, your Vouchers sit in pairs in the Collection, and "ERROR in 7" is gone.
+- Fixed on phones: the shop gives the same buttons as on PC for every card (GitHub #38), The Wheel's "1 in 7" has the right size, and Settings search opens the right page.
+
+### fr Overhaul 2.1
+
++ [Téléphones] iPhone et iPad : installez l'app avec AltStore ou SideStore (elle n'est pas sur l'App Store), importez votre propre Balatro.exe de Steam depuis l'app Fichiers et il est patché sur l'appareil. Porté par JohnG210, un grand merci !
++ [Mods] Les mods marchent comme sur PC : Overhaul laisse intacts les fichiers de Balatro et le Steamodded officiel et applique ses changements après vos mods, donc beaucoup de mods qui plantaient marchent maintenant.
++ [Jeu] Tally Joker : une ligne sous chaque Joker montre sa valeur et ses chances, et ce qu'il ajoute aux cartes choisies. Désactivable dans Réglages > Aides.
++ [La Forge] Éditeur d'éditions : partez de n'importe quelle édition du jeu ou d'un des 12 éclats Overhaul, choisissez son éclat, sa couleur et sa force, et dessinez votre propre motif par-dessus.
++ [La Forge] XChips : les Jokers, et toutes les autres créations, peuvent multiplier vos Jetons.
++ [La Forge] Défauts : les Jokers peuvent coûter de l'argent, donner -Jetons ou -Multi, retirer des mains ou des défausses, ou agrandir la Blinde.
++ [La Forge] Les variables peuvent contenir une couleur, une valeur, une main de poker, une édition, une amélioration ou un sceau, et « Régler une variable » peut en tirer une au hasard.
++ [La Forge] Nouvelles règles : « Toutes les N fois », créer un Joker avec une édition, piocher des cartes, copier un Joker au hasard, compter les cartes ou Jokers avec une édition, et des paquets qui mettent une édition sur chaque carte.
++ [La Forge] Le texte de carte est une seule zone libre : tapez avec votre propre clavier et peignez les mots de n'importe quelle couleur.
++ [La Forge] Essayer en partie : Retour à la Forge dans le menu pause vous ramène directement au constructeur.
++ [La Forge] Constructeur : les réglages s'alignent en colonnes régulières, chaque règle peut être retirée, les éditions peuvent n'avoir aucun éclat, et l'éditeur de pixels gagne Remplacer la couleur (touche C) et Enregistrer.
++ [La Forge] Les créations qui utilisent ces nouveautés demandent Overhaul 2.1 ou plus récent.
++ [Jeu] Touches de la molette : associez Jouer, Défausser ou n'importe quelle action à la molette vers le haut ou le bas dans Touches du clavier.
++ [Jeu] Aperçu du score : le nom de la main reste visible et les longs scores rétrécissent pour tenir (GitHub #39).
++ [Tout le reste] Réglage Clavier du jeu (Réglages > Contrôles) : désactivé sur PC, activé sur téléphone. Désactivé, chaque champ de texte utilise votre propre clavier.
++ [Téléphones] Packs de textures (Malverk) : touchez un pack, puis Appliquer.
++ [Téléphones] Un appui long fait un clic droit pour les mods qui en utilisent un, comme Saturn.
++ [Téléphones] Avec des mods en paysage, le choix de la Blinde ne coupe plus les longs textes de boss.
++ [Mods] Les options de Partie perso marchent avec les mods : pas de Blindes boss, seulement les boss finaux, et retirer des types de cartes de la boutique.
++ [Mods] Mods de grands nombres comme Talisman ou Amulet : « Score atteint », les commentaires de Jimbo et le chercheur de meilleure main remarchent.
++ [Mods] Mises des mods : les effets de mise en plus d'Overhaul ne s'y ajoutent plus, et leurs victoires comptent comme des victoires en Mise d'or.
++ [Mods] Avec des mods : les étuis et cosmétiques classés s'affichent sur les cartes, les éditions de la Forge apparaissent en partie, le téléphone vibre quand une main monte de niveau, et les Badges et Blindes de la Forge désactivés restent cachés.
++ [Mods] Plus fluide avec Steamodded : moins de travail à chaque image.
++ [Multijoueur] « Jeux au choix » est maintenant dans l'onglet Joueurs du salon, à côté de Jeu.
+- Corrigé : le jeu ne ralentit plus à mesure que vous jouez avec des Jokers.
+- Corrigé : les fenêtres ne clignotent plus et ne sautent plus en haut à gauche quand elles se rafraîchissent.
+- Corrigé : des plantages avec Frost_Utils, Maximus, Spectrallib et Cryptid.
+- Corrigé sur téléphone : des plantages au lancement sur certains téléphones Android, à l'écran titre avec des mods, et en quittant la boutique pendant que l'écran tournait.
+- Corrigé : un plantage quand l'enregistrement d'un replay s'arrêtait.
+- Corrigé : vos bons marchent dès le début d'une partie avec un jeu perso et continuent de marcher avec Cryptid, et vos paquets s'ouvrent avec leurs cartes avec Cryptid.
+- Corrigé : avec des mods, les règles de la Forge sur les cartes et les jeux comptent de nouveau une seule fois par carte.
+- Corrigé : ce que vous dessinez pour une édition apparaît sur les cartes, et vos éditions montrent leur aspect dans Créations.
+- Corrigé : l'art des Badges s'affiche partout, vos Bons vont par paires dans la Collection, et « ERROR in 7 » a disparu.
+- Corrigé sur téléphone : la boutique donne les mêmes boutons que sur PC pour chaque carte (GitHub #38), le « 1 sur 7 » de La Roue a la bonne taille, et la recherche des Réglages ouvre la bonne page.
+
+### es Overhaul 2.1
+
++ [Móviles] iPhone y iPad: instala la app con AltStore o SideStore (no está en la App Store), importa tu propio Balatro.exe de Steam desde la app Archivos y se parchea en el dispositivo. Portado por JohnG210, ¡muchas gracias!
++ [Mods] Los mods funcionan como en PC: Overhaul deja intactos los archivos de Balatro y el Steamodded oficial y aplica sus cambios después de tus mods, así que muchos mods que fallaban ahora funcionan.
++ [Jugabilidad] Tally Joker: una línea bajo cada comodín muestra su valor y sus probabilidades, y lo que suma a las cartas que eliges. Se apaga en Ajustes > Ayudas.
++ [La Forja] Editor de ediciones: empieza desde cualquier edición del juego o uno de los 12 brillos Overhaul, elige su brillo, su color y su fuerza, y dibuja tu propio diseño encima.
++ [La Forja] XChips: los comodines, y cualquier otra creación, pueden multiplicar tus fichas.
++ [La Forja] Desventajas: los comodines pueden costar dinero, dar -fichas o -multi, quitar manos o descartes, o agrandar la ciega.
++ [La Forja] Las variables pueden guardar un palo, un valor, una mano de póker, una edición, una mejora o un sello, y «Fijar una variable» puede elegir una al azar.
++ [La Forja] Reglas nuevas: «Cada N veces», crear un comodín con una edición, robar cartas, copiar un comodín al azar, contar cartas o comodines con una edición, y sobres que ponen una edición en cada carta.
++ [La Forja] El texto de carta es un solo cuadro libre: escribe con tu propio teclado y pinta palabras de cualquier color.
++ [La Forja] Probar en partida: Volver a la Forja en el menú de pausa te lleva directo al constructor.
++ [La Forja] Constructor: los ajustes se alinean en columnas regulares, cada regla se puede quitar, las ediciones pueden no tener brillo, y el editor de píxeles gana Reemplazar color (tecla C) y Guardar.
++ [La Forja] Las creaciones que usan estas novedades necesitan Overhaul 2.1 o más reciente.
++ [Jugabilidad] Teclas de la rueda: asigna Jugar, Descartar o cualquier acción a la rueda arriba o abajo en Teclas del teclado.
++ [Jugabilidad] Vista previa de puntuación: el nombre de la mano sigue visible y las puntuaciones largas se encogen para caber (GitHub #39).
++ [Todo lo demás] Ajuste Teclado del juego (Ajustes > Controles): apagado en PC, encendido en móviles. Apagado, cada campo de texto usa tu propio teclado.
++ [Móviles] Packs de texturas (Malverk): toca un pack y luego Aplicar.
++ [Móviles] Una pulsación larga hace clic derecho para los mods que lo usan, como Saturn.
++ [Móviles] Con mods en horizontal, la elección de ciega ya no corta los textos largos de jefe.
++ [Mods] Las opciones de Partida personalizada funcionan con mods: sin ciegas jefe, solo jefes finales y quitar tipos de cartas de la tienda.
++ [Mods] Mods de números grandes como Talisman o Amulet: «Puntuación alcanzada», los comentarios de Jimbo y el buscador de mejor mano vuelven a funcionar.
++ [Mods] Apuestas de mods: los efectos de apuesta extra de Overhaul ya no se suman a ellas, y sus victorias cuentan como victorias en apuesta de oro.
++ [Mods] Con mods: las fundas y los cosméticos de clasificatoria se ven en las cartas, las ediciones de la Forja aparecen en partida, el móvil vibra al subir de nivel una mano, y las etiquetas y ciegas de la Forja que apagaste siguen ocultas.
++ [Mods] Más fluido con Steamodded: menos trabajo en cada fotograma.
++ [Multijugador] «Barajas para elegir» ahora está en la pestaña Jugadores de la sala, junto a Baraja.
+- Corregido: el juego ya no se vuelve más lento cuanto más juegas con comodines.
+- Corregido: las ventanas ya no parpadean ni saltan arriba a la izquierda al refrescarse.
+- Corregido: cierres con Frost_Utils, Maximus, Spectrallib y Cryptid.
+- Corregido en móviles: cierres al iniciar en algunos móviles Android, en la pantalla de título con mods, y al salir de la tienda mientras la pantalla giraba.
+- Corregido: un cierre cuando se detenía la grabación de una repetición.
+- Corregido: tus cupones funcionan desde el inicio de una partida con baraja propia y siguen funcionando con Cryptid, y tus sobres se abren con sus cartas con Cryptid.
+- Corregido: con mods, las reglas de la Forja en cartas y barajas vuelven a contar una sola vez por carta.
+- Corregido: lo que dibujas para una edición sale en las cartas, y tus ediciones muestran su aspecto en Creaciones.
+- Corregido: el arte de las etiquetas se ve en todas partes, tus cupones van en pares en la Colección, y «ERROR in 7» ya no aparece.
+- Corregido en móviles: la tienda da los mismos botones que en PC para cada carta (GitHub #38), el «1 en 7» de La Rueda tiene el tamaño correcto, y la búsqueda de Ajustes abre la página correcta.
+
 ## 2.0.7 | 2026-11-15
 
 ### en Overhaul 2.0.7

@@ -131,7 +131,7 @@ end
 if UIBox and not P.hooked then
   P.hooked = true
   local raw_init = UIBox.init
-r 24 18 %20%20 -
+r 29 18 %20%20 -
 l 69
     if args and type(args.definition) == 'table' and P.wanted(args) then
       local pop = P.popup or (args.config and args.config.instance_type == 'POPUP')
@@ -202,8 +202,8 @@ end
 if UIBox and not P.eval_hooked then
   P.eval_hooked = true
   local raw_add = UIBox.add_child
-r 24 330 %20%20 -
-l 214
+r 29 330 %20%20 -
+l 239
     local id = type(node) == 'table' and node.config and node.config.id
     if self == G.round_eval and type(node) == 'table' and node.n ~= G.UIT.T and not (type(id) == 'string' and id:find('^dollar_row')) and P.on() and P.unit() then
       pcall(P.boost, node, P.unit(), P.floor_px())
@@ -373,6 +373,8 @@ function P.blind_text(lines, run_info, blind)
     return P.rewrap_parsed(lines, 0.32, w, max, blind_vars(blind))
   end
   local out = P.rewrap(lines, 0.32, w, max)
+  local lead = type(lines) == 'table' and type(lines[1]) == 'string' and lines[1]:match('^%s+')
+  if lead and type(out) == 'table' and type(out[1]) == 'string' and out ~= lines and not out[1]:find('^%s') then out[1] = lead .. out[1] end
   if type(out) ~= 'table' or #out <= 2 then return out end
   local tail = {}
   for i = 3, #out do tail[#tail + 1] = out[i] end
@@ -404,6 +406,15 @@ local function add_tail(n, tail, d)
   return false
 end
 
+function P.mark_prefix(n, d)
+  if type(n) ~= 'table' or d > 40 then return end
+  local c = n.config
+  if n.n == G.UIT.T and type(c) == 'table' and c.func == 'HUD_blind_debuff_prefix' and not c.pt_k and type(c.scale) == 'number' and c.scale > 0.321 then
+    c.pt_k = c.scale / 0.32
+  end
+  for i = 1, table.maxn(n.nodes or {}) do P.mark_prefix(n.nodes[i], d + 1) end
+end
+
 if not P.blind_wrapped and rawget(_G, 'create_UIBox_blind_choice') then
   P.blind_wrapped = true
   local raw_bc = create_UIBox_blind_choice
@@ -413,9 +424,23 @@ if not P.blind_wrapped and rawget(_G, 'create_UIBox_blind_choice') then
     local tail = P.blind_tail
     P.blind_tail = nil
     if tail and type(t) == 'table' then pcall(add_tail, t, tail, 0) end
+    if type(t) == 'table' then pcall(P.mark_prefix, t, 0) end
     local k = P.blind_k()
     if k > 1 and not run_info and type(t) == 'table' then pcall(widen, t, k, 0) end
     return t
+  end
+end
+
+if not P.prefix_wrapped and G.FUNCS and type(G.FUNCS.HUD_blind_debuff_prefix) == 'function' then
+  P.prefix_wrapped = true
+  local raw_prefix = G.FUNCS.HUD_blind_debuff_prefix
+  G.FUNCS.HUD_blind_debuff_prefix = function(e, ...)
+    local r = raw_prefix(e, ...)
+    local c = e and e.config
+    if c and c.pt_k and c.pt_k > 1.001 and type(c.scale) == 'number' and c.scale > 0 and c.scale < 0.32 * c.pt_k - 0.001 then
+      c.scale = c.scale * c.pt_k
+    end
+    return r
   end
 end
 end

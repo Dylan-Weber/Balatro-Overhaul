@@ -7,7 +7,7 @@ The Balatro Overhaul is free software under the GNU GPL v3 (see [LICENSE](LICENS
 | Project | By | Licence | What the Overhaul uses |
 |---|---|---|---|
 | [Balatro Multiplayer](https://github.com/Balatro-Multiplayer/BalatroMultiplayer) | Virtualized and the BMP team | GPL v3 | The multiplayer is based on it. Parts of the multiplayer code were ported from BalatroMultiplayer 0.3.3. |
-| [Steamodded](https://github.com/Steamodded/smods) | The Steamodded team | GPL v3 | Bundled in `assets/smods` and modified for the Overhaul. The changes are listed in `assets/smods/OVERHAUL_CHANGES.md`. The licence text is in `assets/smods/LICENSE` and in [LICENSES](LICENSES). |
+| [Steamodded](https://github.com/Steamodded/smods) | The Steamodded team | GPL v3 | Bundled unchanged in `assets/smods`. The Overhaul changes it at load time with patches in `assets/overhaul/late/smods_*_auto.toml`; the changes are listed in `assets/overhaul/STEAMODDED_CHANGES.md`. The licence text is in `assets/smods/LICENSE` and in [LICENSES](LICENSES). |
 | [Balatro-DeckCreator](https://github.com/adambennett/Balatro-DeckCreator) | adambennett | GPL v3 | The Deck Creator is ported from version 1.2.2. |
 | [Cryptid](https://github.com/MathIsFun0/Cryptid) | MathIsFun_ and the Cryptid team | GPL v3 | Some of the Deck Creator's random-value logic follows Cryptid's. |
 | nativefs | megagrump | MIT | File access library used by Steamodded. |
@@ -28,7 +28,7 @@ Ported from Balatro-DeckCreator 1.2.2 (adambennett):
 
 Follows Cryptid's logic (MathIsFun_ and the Cryptid team): the random-value functions in `assets/functions/deck_creator_hooks.lua`.
 
-Steamodded is in `assets/smods`, modified, with the list of changes in `assets/smods/OVERHAUL_CHANGES.md`.
+Steamodded is in `assets/smods`, unchanged; the Overhaul's changes to it are listed in `assets/overhaul/STEAMODDED_CHANGES.md`.
 
 ## Not included
 

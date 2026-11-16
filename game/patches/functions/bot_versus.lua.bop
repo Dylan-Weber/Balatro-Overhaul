@@ -88,8 +88,8 @@ function V.update(dt)
         if prof and (not prof.name or (bom_room and bom_room.is_default_name and bom_room.is_default_name(prof.name))) then
             prof.name = V.bot_name()
         end
-r 16 1212 %20%20%20%20%20%20%20%20 -
-r 16 1213 %20%20%20%20%20%20%20%20 -
+r 15 1212 %20%20%20%20%20%20%20%20 -
+r 15 1213 %20%20%20%20%20%20%20%20 -
 l 15
         if not (bom_room and bom_room.join) then
             log("multiplayer is not available")
@@ -106,7 +106,7 @@ l 15
         elseif age > 45 then
             if (V.join_tries or 0) < 3 then
                 log("join timed out, trying again")
-r 13 1825 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1825 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 162
                 set_stage("menu")
             else

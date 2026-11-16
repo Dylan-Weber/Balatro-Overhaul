@@ -6,6 +6,9 @@ Cat.ENHANCEMENTS = {"m_bonus", "m_mult", "m_wild", "m_glass", "m_steel", "m_ston
 Cat.SEALS = {"Red", "Blue", "Gold", "Purple"}
 Cat.EDITIONS = {"foil", "holo", "polychrome"}
 Cat.SHADERS = {"foil", "holo", "polychrome", "negative"}
+local FShine = require("functions/forge/forge_shine")
+Cat.SHINES = FShine.ids()
+Cat.SHINE_COLOURS = FShine.colour_ids()
 Cat.SETS = {"Tarot", "Planet", "Spectral", "Joker"}
 Cat.RARITY = {1, 2, 3, 4}
 Cat.PACKS = {"Arcana", "Celestial", "Spectral", "Standard", "Buffoon", "Forge"}
@@ -40,7 +43,7 @@ Cat.KINDS = {
     adv_fields = {{id = "held_xmult", label = "XMult while held", type = "num", num = n(1, 3, 1, 0.25, "x")}, {id = "held_money", label = "$ held at round end", type = "num", num = n(0, 10, 0, 1, "$")}, {id = "breaks", label = "Breaks: 1 in", type = "num", num = n(0, 10, 0)}, {id = "no_rank", label = "No rank or suit", type = "toggle", def = false}, {id = "retrigger", label = "Scores again", type = "num", num = n(0, 0, 0), new = true}, {id = "always", label = "Always scores", type = "toggle", def = false}}},
   {id = "seal", label = "Seal", plural = "Seals", set = "Seal", sample = "Red", shape = "playing", effects = "seal", simple_max = 1, max = 3, fields = {}},
   {id = "edition", label = "Edition", plural = "Editions", set = "Edition", sample = "foil", shape = "card",
-    fields = {{id = "shader", label = "Shine", type = "choice", options = Cat.SHADERS, def = "foil"}, {id = "chips", label = "+Chips", type = "num", num = n(0, 200, 50, 5)}, {id = "mult", label = "+Mult", type = "num", num = n(0, 30, 0)}, {id = "xmult", label = "XMult", type = "num", num = n(1, 3, 1, 0.1, "x")}},
+    fields = {{id = "shader", label = "Shine", type = "choice", options = Cat.SHINES, def = "foil"}, {id = "tint", label = "Shine colour", type = "choice", options = Cat.SHINE_COLOURS, def = "original"}, {id = "power", label = "Shine strength", type = "num", num = n(25, 200, 100, 25, "%")}, {id = "chips", label = "+Chips", type = "num", num = n(0, 200, 50, 5)}, {id = "mult", label = "+Mult", type = "num", num = n(0, 30, 0)}, {id = "xmult", label = "XMult", type = "num", num = n(1, 3, 1, 0.1, "x")}},
     adv_fields = {{id = "slot", label = "+1 slot (like Negative)", type = "toggle", def = false}, {id = "weight", label = "How often it shows", type = "num", num = n(1, 20, 5)}, {id = "sell", label = "+$ sell value", type = "num", num = n(0, 0, 0, 1, "$"), new = true}}},
   {id = "tag", label = "Tag", plural = "Tags", set = "Tag", sample = "tag_double", shape = "tag", effects = "tag", simple_max = 1, max = 3,
     fields = {},
@@ -52,7 +55,7 @@ Cat.KINDS = {
     fields = {},
     adv_fields = {{id = "base", label = "On top of", type = "choice", options = Cat.STAKES, def = "stake_white"}}},
   {id = "deck", label = "Deck", plural = "Decks", set = "Back", sample = "b_red", shape = "back", effects = "deck", simple_max = 3, max = 8, whens = "run", fields = {}},
-  {id = "booster", label = "Booster pack", plural = "Booster packs", set = "Booster", sample = "p_arcana_normal_1", shape = "card",
+  {id = "booster", label = "Booster", plural = "Booster packs", set = "Booster", sample = "p_arcana_normal_1", shape = "card",
     fields = {{id = "pack", label = "Cards inside", type = "choice", options = Cat.PACKS, def = "Arcana"}, {id = "size", label = "Size", type = "choice", options = Cat.PACK_SIZES, def = "Normal"}, {id = "cost", label = "Cost", type = "num", num = n(2, 12, 4, 1, "$")}},
     adv_fields = {{id = "shown", label = "Cards shown", type = "num", num = n(2, 6, 3)}, {id = "choose", label = "Cards to take", type = "num", num = n(1, 3, 1)}, {id = "weight", label = "How often it shows", type = "num", num = n(1, 20, 4)}, {id = "requires", label = "Appears in shops", type = "choice", options = Cat.VOUCHERS, def = "none", none = true, dynamic = "voucher", new = true}, {id = "own_only", label = "Only my creations", type = "toggle", def = false, new = true}}},
   {id = "collab", label = "Collab", plural = "Collabs", set = "Collab", sample = "H_K", shape = "playing",
@@ -226,6 +229,7 @@ Cat.RUN = {
   run("chips", "+Chips", n(-1e15, 1e15, 30, 5), "{C:chips}%s{} Chips", {args = {"n"}, sign = true, whens = Cat.SCORE_WHEN, simple = true}),
   run("mult", "+Mult", n(-1e15, 1e15, 4, 1), "{C:mult}%s{} Mult", {args = {"n"}, sign = true, whens = Cat.SCORE_WHEN, simple = true}),
   run("xmult", "XMult", n(0.05, 1e15, 1.5, 0.05, "x"), "{X:mult,C:white}%s{} Mult", {args = {"n"}, whens = Cat.SCORE_WHEN, simple = true}),
+  run("xchips", "XChips", n(0.05, 1e15, 1.5, 0.05, "x"), "{X:chips,C:white}%s{} Chips", {args = {"n"}, whens = Cat.SCORE_WHEN, simple = true}),
 }
 
 local SHOP_BASE = {}
@@ -338,7 +342,7 @@ end
 Cat.JOKER = {
   when_simple = {card_scored = true, card_held = true, hand_played = true, discard = true, blind_selected = true, round_end = true},
   only_simple = {hand = true, suit = true, rank = true, first_hand = true, last_hand = true, money = true, boss = true, chance = true},
-  give_simple = {chips = true, mult = true, xmult = true, money = true, retrigger = true, gain_mult = true, create = true, level_up = true, make_card = true},
+  give_simple = {chips = true, mult = true, xmult = true, xchips = true, money = true, retrigger = true, gain_mult = true, create = true, level_up = true, make_card = true},
 }
 
 Cat.LIFT_IDS = {chips = true, mult = true, scored_chips = true, scored_mult = true, scored_retrigger = true, levels = true, level_up = true, add_cards = true, free_rerolls = true}
@@ -356,7 +360,7 @@ end
 Cat.FREE = {
   cost = {0, 1e9}, select = {0, 100}, levels = {1, 1e6}, chips = {0, 1e15}, mult = {0, 1e15}, xmult = {1, 1e15}, money = {0, 1e9},
   held_xmult = {1, 1e15}, held_money = {0, 1e9}, breaks = {0, 1e6}, weight = {0, 1e6}, size = {0.05, 1e6}, reward = {0, 1e9}, min_ante = {1, 1e6},
-  shown = {1, 10}, choose = {1, 10}, max_buys = {1, 1e6}, retrigger = {0, 1000}, sell = {0, 1e9},
+  shown = {1, 10}, choose = {1, 10}, max_buys = {1, 1e6}, retrigger = {0, 1000}, sell = {0, 1e9}, power = {0, 400},
 }
 Cat.FREE_EFFECT = {
   hand_size = {-1e3, 1e3}, joker_slots = {-1e3, 1e3}, consumable_slots = {-1e3, 1e3}, hands = {-1e3, 1e3}, discards = {-1e3, 1e3},
@@ -499,6 +503,10 @@ function Cat.need_v(c)
   if type(c) ~= "table" then return 1 end
   local k = Cat.kind(c.kind)
   local need = 1
+  if c.kind == "edition" and type(c.fields) == "table" then
+    local f = c.fields
+    if FShine.overhaul(f.shader) or (f.tint ~= nil and f.tint ~= "original") or (f.power ~= nil and tonumber(f.power) ~= 100) then need = FShine.V end
+  end
   for _, list in ipairs({k.fields or {}, k.adv_fields or {}}) do
     for _, f in ipairs(list) do
       local raw
@@ -586,7 +594,7 @@ function Cat.values(what, base_only)
 end
 
 local RARITY_NAME = {"Common", "Uncommon", "Rare", "Legendary"}
-local SHADER_NAME = {foil = "Foil", holo = "Holographic", polychrome = "Polychrome", negative = "Negative"}
+local SHADER_NAME = {foil = "Foil", holo = "Holographic", polychrome = "Polychrome", negative = "Negative", none = "No shine"}
 local SEAL_NAME = {Red = "Red Seal", Blue = "Blue Seal", Gold = "Gold Seal", Purple = "Purple Seal"}
 local PLAIN = {now = "Right away", shop = "At the next shop", round = "At the next round", Normal = "Normal", Jumbo = "Jumbo", Mega = "Mega",
   RED = "Red", BLUE = "Blue", GREEN = "Green", PURPLE = "Purple", ORANGE = "Orange", GOLD = "Gold", BLACK = "Black", none = "Nothing", all = "Every hand",
@@ -603,6 +611,10 @@ end
 function Cat.value_label(what, v)
   local T = require("functions/forge/forge_text")
   if v == nil then return "" end
+  if what == "pack_edition" then
+    if v == "none" then return mod_loc("As usual") end
+    what = "shader"
+  end
   if what == "card" then return R.card_label(v) end
   if Cat.own_ok(what, v) then return R.own_label(Cat.OWN_WHAT[what], v) end
   if what == "rarity3" then what = "rarity" end
@@ -635,6 +647,8 @@ function Cat.value_label(what, v)
     if v == "all" then return mod_loc("Every hand") end
     return T and T.hand_name(v) or v
   end
+  if what == "tint" then return FShine.colour_label(v) end
+  if (what == "edition" or what == "shader") and FShine.overhaul(v) then return FShine.name(v) end
   if what == "edition" or what == "shader" then
     local key = ({foil = "e_foil", holo = "e_holo", polychrome = "e_polychrome", negative = "e_negative"})[v]
     return (key and game_name("Edition", key)) or mod_loc(SHADER_NAME[v] or v)
@@ -660,6 +674,7 @@ function Cat.field_values(f)
   local list = {}
   if f.none then list[1] = "none" end
   for _, v in ipairs(f.options or {}) do list[#list + 1] = v end
+  if f.own then for _, v in ipairs(R.own_values(f.own)) do list[#list + 1] = v end end
   if f.all then list[#list + 1] = "all" end
   return list
 end
@@ -668,8 +683,10 @@ function Cat.field_what(f)
   if f.id == "rarity" then return "rarity" end
   if f.id == "hand" then return "hand" end
   if f.id == "shader" then return "shader" end
+  if f.id == "tint" then return "tint" end
   if f.id == "suit" then return "suit" end
   if f.id == "requires" then return "voucher" end
+  if f.id == "edition" and f.own == "edition" then return "pack_edition" end
   if f.id == "base" then return "base" end
   return "plain"
 end
@@ -868,7 +885,7 @@ local function register()
   if not mod_loc_register then return end
   mod_loc_register{
     fr = {
-      ["Joker"] = "Joker", ["Tarot"] = "Tarot", ["Planet"] = "Planète", ["Spectral"] = "Spectral", ["Voucher"] = "Bon", ["Enhancement"] = "Amélioration", ["Seal"] = "Sceau", ["Edition"] = "Édition", ["Tag"] = "Badge", ["Blind"] = "Blinde", ["Stake"] = "Mise", ["Deck"] = "Jeu", ["Booster pack"] = "Paquet", ["Collab"] = "Collab",
+      ["Joker"] = "Joker", ["Tarot"] = "Tarot", ["Planet"] = "Planète", ["Spectral"] = "Spectral", ["Voucher"] = "Bon", ["Enhancement"] = "Amélioration", ["Seal"] = "Sceau", ["Edition"] = "Édition", ["Tag"] = "Badge", ["Blind"] = "Blinde", ["Stake"] = "Mise", ["Deck"] = "Jeu", ["Booster pack"] = "Paquet", ["Booster"] = "Paquet", ["Collab"] = "Collab",
       ["Jokers"] = "Jokers", ["Tarots"] = "Tarots", ["Planets"] = "Planètes", ["Spectrals"] = "Spectrales", ["Vouchers"] = "Bons", ["Enhancements"] = "Améliorations", ["Seals"] = "Sceaux", ["Editions"] = "Éditions", ["Tags"] = "Badges", ["Blinds"] = "Blindes", ["Stakes"] = "Mises", ["Decks"] = "Jeux", ["Booster packs"] = "Paquets", ["Collabs"] = "Collabs",
       ["Rarity"] = "Rareté", ["Cost"] = "Prix", ["Blueprint copies it"] = "Copiable par Blueprint", ["Can be Eternal"] = "Peut être Éternel", ["Can be Perishable"] = "Peut être Périssable",
       ["Cards to pick"] = "Cartes à choisir", ["Poker hand"] = "Main de poker", ["Levels"] = "Niveaux", ["Chips per level"] = "Jetons par niveau", ["Mult per level"] = "Multi par niveau", ["Needs first"] = "Demande d'abord",
@@ -915,13 +932,13 @@ local function register()
       ["Destroys {C:attention}%d{} random card in hand"] = "Détruit {C:attention}%d{} carte au hasard en main", ["Sets money to {C:money}$0{}"] = "L'argent passe à {C:money}0 ${}", ["{C:red}-1{} hand size"] = "{C:red}-1{} taille de main",
       ["Adds {C:attention}%d{} enhanced face cards to the deck"] = "Ajoute {C:attention}%d{} figures améliorées au jeu", ["Adds {C:dark_edition}%s{} to a random Joker"] = "Ajoute {C:dark_edition}%s{} à un Joker au hasard", ["Give a voucher"] = "Donner un bon", ["Gives the {C:attention}%s{} voucher for free"] = "Donne le bon {C:attention}%s{} gratuitement", ["Makes a {C:attention}%s{} Joker"] = "Crée un Joker {C:attention}%s{}",
       ["Right away"] = "Tout de suite", ["At the next shop"] = "À la prochaine boutique", ["At the next round"] = "À la prochaine manche", ["Normal"] = "Normal", ["Jumbo"] = "Jumbo", ["Mega"] = "Méga",
-      ["Red"] = "Rouge", ["Blue"] = "Bleu", ["Green"] = "Vert", ["Purple"] = "Violet", ["Orange"] = "Orange", ["Gold"] = "Or", ["Black"] = "Noir", ["Nothing"] = "Rien", ["Every hand"] = "Toutes les mains",
+      ["Red"] = "Rouge", ["Blue"] = "Bleu", ["Green"] = "Vert", ["Purple"] = "Violet", ["Orange"] = "Orange", ["Gold"] = "Or", ["Black"] = "Noir", ["Nothing"] = "Rien", ["No shine"] = "Sans brillance", ["Every hand"] = "Toutes les mains",
       ["Arcana"] = "Arcane", ["Celestial"] = "Céleste", ["Standard"] = "Standard", ["Buffoon"] = "Bouffon", ["Forge creations"] = "Créations de la Forge", ["Only my creations"] = "Seulement mes créations",
       ["Common"] = "Commun", ["Uncommon"] = "Peu commun", ["Rare"] = "Rare", ["Legendary"] = "Légendaire", ["Foil"] = "Brillante", ["Holographic"] = "Holographique", ["Polychrome"] = "Polychrome", ["Negative"] = "Négatif",
       ["Red Seal"] = "Sceau rouge", ["Blue Seal"] = "Sceau bleu", ["Gold Seal"] = "Sceau d'or", ["Purple Seal"] = "Sceau violet",
     },
     es = {
-      ["Joker"] = "Comodín", ["Tarot"] = "Tarot", ["Planet"] = "Planeta", ["Spectral"] = "Espectral", ["Voucher"] = "Cupón", ["Enhancement"] = "Mejora", ["Seal"] = "Sello", ["Edition"] = "Edición", ["Tag"] = "Etiqueta", ["Blind"] = "Ciega", ["Stake"] = "Apuesta", ["Deck"] = "Baraja", ["Booster pack"] = "Sobre", ["Collab"] = "Collab",
+      ["Joker"] = "Comodín", ["Tarot"] = "Tarot", ["Planet"] = "Planeta", ["Spectral"] = "Espectral", ["Voucher"] = "Cupón", ["Enhancement"] = "Mejora", ["Seal"] = "Sello", ["Edition"] = "Edición", ["Tag"] = "Etiqueta", ["Blind"] = "Ciega", ["Stake"] = "Apuesta", ["Deck"] = "Baraja", ["Booster pack"] = "Sobre", ["Booster"] = "Sobre", ["Collab"] = "Collab",
       ["Jokers"] = "Jokers", ["Tarots"] = "Tarots", ["Planets"] = "Planetas", ["Spectrals"] = "Espectrales", ["Vouchers"] = "Cupones", ["Enhancements"] = "Mejoras", ["Seals"] = "Sellos", ["Editions"] = "Ediciones", ["Tags"] = "Etiquetas", ["Blinds"] = "Ciegas", ["Stakes"] = "Apuestas", ["Decks"] = "Barajas", ["Booster packs"] = "Sobres", ["Collabs"] = "Collabs",
       ["Rarity"] = "Rareza", ["Cost"] = "Precio", ["Blueprint copies it"] = "Blueprint lo copia", ["Can be Eternal"] = "Puede ser Eterno", ["Can be Perishable"] = "Puede ser Perecedero",
       ["Cards to pick"] = "Cartas a elegir", ["Poker hand"] = "Mano de póker", ["Levels"] = "Niveles", ["Chips per level"] = "Fichas por nivel", ["Mult per level"] = "Multi por nivel", ["Needs first"] = "Necesita antes",
@@ -968,7 +985,7 @@ local function register()
       ["Destroys {C:attention}%d{} random card in hand"] = "Destruye {C:attention}%d{} carta al azar de la mano", ["Sets money to {C:money}$0{}"] = "El dinero pasa a {C:money}$0{}", ["{C:red}-1{} hand size"] = "{C:red}-1{} tamaño de mano",
       ["Adds {C:attention}%d{} enhanced face cards to the deck"] = "Añade {C:attention}%d{} figuras mejoradas a la baraja", ["Adds {C:dark_edition}%s{} to a random Joker"] = "Añade {C:dark_edition}%s{} a un comodín al azar", ["Give a voucher"] = "Dar un cupón", ["Gives the {C:attention}%s{} voucher for free"] = "Da el cupón {C:attention}%s{} gratis", ["Makes a {C:attention}%s{} Joker"] = "Crea un comodín {C:attention}%s{}",
       ["Right away"] = "Al momento", ["At the next shop"] = "En la próxima tienda", ["At the next round"] = "En la próxima ronda", ["Normal"] = "Normal", ["Jumbo"] = "Jumbo", ["Mega"] = "Mega",
-      ["Red"] = "Rojo", ["Blue"] = "Azul", ["Green"] = "Verde", ["Purple"] = "Morado", ["Orange"] = "Naranja", ["Gold"] = "Oro", ["Black"] = "Negro", ["Nothing"] = "Nada", ["Every hand"] = "Todas las manos",
+      ["Red"] = "Rojo", ["Blue"] = "Azul", ["Green"] = "Verde", ["Purple"] = "Morado", ["Orange"] = "Naranja", ["Gold"] = "Oro", ["Black"] = "Negro", ["Nothing"] = "Nada", ["No shine"] = "Sin brillo", ["Every hand"] = "Todas las manos",
       ["Arcana"] = "Arcano", ["Celestial"] = "Celestial", ["Standard"] = "Estándar", ["Buffoon"] = "Bufón", ["Forge creations"] = "Creaciones de la Forja", ["Only my creations"] = "Solo mis creaciones",
       ["Common"] = "Común", ["Uncommon"] = "Poco común", ["Rare"] = "Raro", ["Legendary"] = "Legendario", ["Foil"] = "Laminada", ["Holographic"] = "Holográfica", ["Polychrome"] = "Polícroma", ["Negative"] = "Negativa",
       ["Red Seal"] = "Sello rojo", ["Blue Seal"] = "Sello azul", ["Gold Seal"] = "Sello de oro", ["Purple Seal"] = "Sello morado",
@@ -1000,6 +1017,7 @@ if mod_loc_register then
 end
 
 require("functions/forge/forge_power3").cat(Cat)
+require("functions/forge/forge_editions").cat(Cat)
 Cat.JOKER.when_simple.passive = true
 
 return Cat

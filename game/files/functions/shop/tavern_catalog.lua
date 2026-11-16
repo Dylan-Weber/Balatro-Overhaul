@@ -421,7 +421,7 @@ function C.build(env)
     if ta ~= tb then return ta < tb end
     local ra, rb = C.RARITY_INDEX[a.rarity] or 1, C.RARITY_INDEX[b.rarity] or 1
     if ra ~= rb then return ra < rb end
-    return a.name < b.name
+    return tostring(a.name) < tostring(b.name)
   end)
   return list, by_id
 end

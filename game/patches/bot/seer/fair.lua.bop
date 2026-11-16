@@ -73,7 +73,7 @@ local function shuffle(list, n, key)
     for i = n, 2, -1 do
         local j = floor(unit(key, i) * i) + 1
         if j > i then j = i end
-r 11 215 %20%20%20%20%20%20%20%20 -
+r 13 215 %20%20%20%20%20%20%20%20 -
 l 638
     end
 end

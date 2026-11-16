@@ -500,7 +500,7 @@ function SB.tick()
 end
 
 local _sb_game_update = Game.update
-r 9 2449 - -
+r 7 2449 - -
 l 39
   _sb_game_update(self, dt)
   pcall(SB.tick)

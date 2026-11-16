@@ -17,7 +17,7 @@ position = 'after'
 pattern = '''
 G.playing_cards = {}
 
-r 9 1672 - -
+r 7 1672 - -
 l 20
 '''
 payload = '''

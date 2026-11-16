@@ -1,0 +1,308 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 136
+local FS = {}
+
+FS.V = 12
+
+FS.VANILLA = {
+  {id = "foil", shader = "foil"},
+  {id = "holo", shader = "holo"},
+  {id = "polychrome", shader = "polychrome"},
+  {id = "negative", shader = "negative_shine"},
+}
+
+FS.OVERHAUL = {
+  {id = "tshine_scan", name = "Hologram"},
+  {id = "tshine_gleam", name = "Voucher Gleam"},
+  {id = "tshine_sweep", name = "Booster Shine"},
+  {id = "tshine_gold", name = "Gilded Gleam"},
+  {id = "tshine_glitter", name = "Holo Foil"},
+  {id = "tshine_void", name = "Negative Foil"},
+  {id = "tshine_prism", name = "Prism"},
+  {id = "tshine_molten", name = "Gilded"},
+  {id = "tshine_spotlight", name = "Showcase"},
+  {id = "tshine_wave", name = "Fresh Pack"},
+  {id = "tshine_noir", name = "Dark Shine"},
+  {id = "tshine_ghost", name = "Spectral Glow"},
+}
+
+FS.COLOURS = {
+  {id = "original"},
+  {id = "red", name = "Red", hex = "fe5f55"},
+  {id = "orange", name = "Orange", hex = "fda200"},
+  {id = "gold", name = "Gold", hex = "eac058"},
+  {id = "lime", name = "Lime", hex = "9fdf2f"},
+  {id = "green", name = "Green", hex = "4bc292"},
+  {id = "teal", name = "Teal", hex = "1fbfbf"},
+  {id = "sky", name = "Sky", hex = "4fc3ff"},
+  {id = "blue", name = "Blue", hex = "009dff"},
+  {id = "violet", name = "Violet", hex = "8867a5"},
+  {id = "purple", name = "Purple", hex = "b44fff"},
+  {id = "pink", name = "Pink", hex = "ff6fcf"},
+  {id = "white", name = "White", hex = "ffffff"},
+  {id = "silver", name = "Silver", hex = "b8c0cc"},
+}
+
+FS.POWER = {lo = 25, hi = 200, def = 100, step = 25, fmt = "%"}
+
+local LOC = {
+  fr = {
+    ["Shine colour"] = "Couleur de l'éclat", ["Shine strength"] = "Force de l'éclat", ["As it is"] = "D'origine",
+    ["Red"] = "Rouge", ["Orange"] = "Orange", ["Gold"] = "Or", ["Lime"] = "Citron vert", ["Green"] = "Vert", ["Teal"] = "Sarcelle",
+    ["Sky"] = "Ciel", ["Blue"] = "Bleu", ["Violet"] = "Violet", ["Purple"] = "Pourpre", ["Pink"] = "Rose", ["White"] = "Blanc", ["Silver"] = "Argent",
+  },
+  es = {
+    ["Shine colour"] = "Color del brillo", ["Shine strength"] = "Fuerza del brillo", ["As it is"] = "Original",
+    ["Red"] = "Rojo", ["Orange"] = "Naranja", ["Gold"] = "Oro", ["Lime"] = "Lima", ["Green"] = "Verde", ["Teal"] = "Turquesa",
+    ["Sky"] = "Cielo", ["Blue"] = "Azul", ["Violet"] = "Violeta", ["Purple"] = "Púrpura", ["Pink"] = "Rosa", ["White"] = "Blanco", ["Silver"] = "Plata",
+  },
+}
+
+local function ml(s) return mod_loc and mod_loc(s) or s end
+
+local BY = {}
+for _, s in ipairs(FS.VANILLA) do BY[s.id] = s end
+for _, s in ipairs(FS.OVERHAUL) do s.shader = s.id; BY[s.id] = s end
+local COL = {}
+for _, c in ipairs(FS.COLOURS) do COL[c.id] = c end
+
+function FS.ids()
+  local out = {}
+  for _, s in ipairs(FS.VANILLA) do out[#out + 1] = s.id end
+  for _, s in ipairs(FS.OVERHAUL) do out[#out + 1] = s.id end
+  out[#out + 1] = "none"
+  return out
+end
+
+function FS.colour_ids()
+  local out = {}
+  for _, c in ipairs(FS.COLOURS) do out[#out + 1] = c.id end
+  return out
+end
+
+function FS.known(v) return BY[v] ~= nil end
+function FS.overhaul(v) return BY[v] ~= nil and BY[v].name ~= nil end
+function FS.name(v) return BY[v] and BY[v].name and ml(BY[v].name) or nil end
+
+function FS.colour_label(v)
+  if v == "original" or COL[v] == nil then return ml("As it is") end
+  return ml(COL[v].name)
+end
+
+function FS.colour_rgb(v)
+  local c = COL[v]
+  if not (c and c.hex) then return nil end
+  return {tonumber(c.hex:sub(1, 2), 16) / 255, tonumber(c.hex:sub(3, 4), 16) / 255, tonumber(c.hex:sub(5, 6), 16) / 255, 1}
+end
+
+function FS.sound_flag(v)
+  if v == "negative" or v == "tshine_void" or v == "tshine_noir" then return "negative" end
+  if v == "polychrome" or v == "tshine_prism" or v == "tshine_wave" or v == "tshine_ghost" then return "polychrome" end
+  if v == "holo" or v == "tshine_scan" or v == "tshine_glitter" or v == "tshine_spotlight" then return "holo" end
+  if v == "none" then return nil end
+  return "foil"
+end
+
+local TAIL = [[
+extern MY_HIGHP_OR_MEDIUMP vec4 fe_tint;
+extern MY_HIGHP_OR_MEDIUMP number fe_amt;
+MY_HIGHP_OR_MEDIUMP vec3 fe_hsl(MY_HIGHP_OR_MEDIUMP vec3 c)
+{
+    MY_HIGHP_OR_MEDIUMP number hi = max(c.r, max(c.g, c.b));
+    MY_HIGHP_OR_MEDIUMP number lo = min(c.r, min(c.g, c.b));
+    MY_HIGHP_OR_MEDIUMP number l = (hi + lo) * 0.5;
+    MY_HIGHP_OR_MEDIUMP number d = hi - lo;
+    if (d < 0.0001) return vec3(0., 0., l);
+    MY_HIGHP_OR_MEDIUMP number s = l > 0.5 ? d / (2. - hi - lo) : d / (hi + lo);
+    MY_HIGHP_OR_MEDIUMP number h = 0.;
+    if (hi == c.r) h = (c.g - c.b) / d + (c.g < c.b ? 6. : 0.);
+    else if (hi == c.g) h = (c.b - c.r) / d + 2.;
+    else h = (c.r - c.g) / d + 4.;
+    return vec3(h / 6., s, l);
+}
+MY_HIGHP_OR_MEDIUMP number fe_hue(MY_HIGHP_OR_MEDIUMP number p, MY_HIGHP_OR_MEDIUMP number q, MY_HIGHP_OR_MEDIUMP number t)
+{
+    if (t < 0.) t += 1.;
+    if (t > 1.) t -= 1.;
+    if (t < 1./6.) return p + (q - p) * 6. * t;
+    if (t < 0.5) return q;
+    if (t < 2./3.) return p + (q - p) * (2./3. - t) * 6.;
+    return p;
+}
+MY_HIGHP_OR_MEDIUMP vec3 fe_rgb(MY_HIGHP_OR_MEDIUMP vec3 c)
+{
+    if (c.y < 0.0001) return vec3(c.z);
+    MY_HIGHP_OR_MEDIUMP number q = c.z < 0.5 ? c.z * (1. + c.y) : c.z + c.y - c.z * c.y;
+    MY_HIGHP_OR_MEDIUMP number p = 2. * c.z - q;
+    return vec3(fe_hue(p, q, c.x + 1./3.), fe_hue(p, q, c.x), fe_hue(p, q, c.x - 1./3.));
+}
+r 34 18 - -
+l 164
+{
+    MY_HIGHP_OR_MEDIUMP vec4 o = fe_base_effect(colour, texture, texture_coords, screen_coords);
+    if (fe_tint.a > 0.5) {
+        MY_HIGHP_OR_MEDIUMP vec3 a = fe_hsl(clamp(o.rgb, 0., 1.));
+        MY_HIGHP_OR_MEDIUMP vec3 t = fe_hsl(fe_tint.rgb);
+        MY_HIGHP_OR_MEDIUMP number l = t.y < 0.05 ? mix(a.z, t.z, 0.5) : a.z;
+        o.rgb = fe_rgb(vec3(t.x, mix(a.y, t.y, 0.6), l));
+    }
+    o.a = clamp(o.a * fe_amt, 0., 1.);
+    return o;
+}
+]]
+
+FS.shaders = {}
+
+local function word(src, from, to)
+  return (src:gsub("%f[%w_]" .. from .. "%f[^%w_]", to))
+end
+
+function FS.build(name)
+  if FS.shaders[name] ~= nil then return FS.shaders[name] or nil end
+  FS.shaders[name] = false
+  local src = love.filesystem.read("resources/shaders/" .. name .. ".fs")
+  if not src then return nil end
+  local key = "fe_" .. name
+  src = word(src, name, key)
+  local n
+  src, n = src:gsub("vec4%s+effect%s*%(", "vec4 fe_base_effect(", 1)
+  if n ~= 1 then return nil end
+  local at = src:find("#ifdef VERTEX", 1, true)
+  if at then src = src:sub(1, at - 1) .. TAIL .. "\n" .. src:sub(at) else src = src .. "\n" .. TAIL end
+  local ok, sh = pcall(love.graphics.newShader, src)
+  if not ok then
+    print("[forge_shine] " .. name .. ": " .. tostring(sh))
+    return nil
+  end
+  G.SHADERS[key] = sh
+  FS.shaders[name] = key
+  return key
+end
+
+function FS.look_of(f)
+  f = f or {}
+  local v = f.shader or "foil"
+  if v == "none" or not BY[v] then return nil end
+  return {shader = BY[v].shader, tint = FS.colour_rgb(f.tint), amt = math.max(0, (tonumber(f.power) or 100) / 100)}
+end
+
+FS.arts = {}
+
+function FS.reset_art(id) if id then FS.arts[id] = nil else FS.arts = {} end end
+
+function FS.art(c)
+  if not (c and c.art and c.art.file) then return nil end
+  local info = love.filesystem.getInfo(c.art.file)
+  local stamp = info and ((info.modtime or 0) .. ":" .. (info.size or 0)) or ""
+  local hit = FS.arts[c.id]
+  if hit ~= nil and hit.file == c.art.file and hit.stamp == stamp then return hit.spr end
+  local ok, data = pcall(love.image.newImageData, c.art.file)
+  local spr = false
+  if ok and data and data:getWidth() == 71 and data:getHeight() == 95 then
+    local FJ = require("functions/forge/forge_joker")
+    local name = "forge_ed_" .. c.id
+    if FJ.atlas_from_data(name, data) and G.ASSET_ATLAS[name] then
+      spr = Sprite(0, 0, G.CARD_W, G.CARD_H, G.ASSET_ATLAS[name], {x = 0, y = 0})
+      spr.states.hover.can, spr.states.click.can, spr.states.drag.can, spr.states.collide.can = false, false, false, false
+    end
+  end
+  FS.arts[c.id] = {file = c.art.file, stamp = stamp, spr = spr}
+  return spr
+end
+
+local function send(key, look)
+  local sh = G.SHADERS[key]
+  local t = look.tint
+  sh:send("fe_tint", t and {t[1], t[2], t[3], 1} or {0, 0, 0, 0})
+  sh:send("fe_amt", look.amt or 1)
+end
+
+function FS.draw_shine(card, look)
+  local key = FS.build(look.shader)
+  local args = card.ARGS and card.ARGS.send_to_shader
+  if not key then
+    card.children.center:draw_shader(look.shader, nil, args)
+    return
+  end
+  send(key, look)
+  card.children.center:draw_shader(key, nil, args)
+  if look.shader ~= "negative_shine" and card.children.front and not (card.should_hide_front and card:should_hide_front()) then
+    card.children.front:draw_shader(key, nil, args)
+  end
+end
+
+function FS.draw_art(card, spr, look)
+  spr.role.draw_major = card
+  spr:draw_shader("dissolve", nil, nil, nil, card.children.center)
+  if look then
+    local key = FS.build(look.shader)
+    if key then
+      send(key, look)
+      spr:draw_shader(key, nil, card.ARGS and card.ARGS.send_to_shader, nil, card.children.center)
+    end
+  end
+end
+
+function FS.item_of(card)
+  local ed = card and card.edition
+  if not (ed and ed.forge) then return nil end
+  local Store = package.loaded["functions/forge/forge_store"]
+  return Store and Store.get_item and Store.get_item(ed.forge) or nil
+end
+
+function FS.card_look(card)
+  if card.forge_look ~= nil then return card.forge_look or nil, card.forge_look_art end
+  local c = FS.item_of(card)
+  if not c then return nil end
+  local More = rawget(_G, "ForgeKinds") and ForgeKinds.more
+  local f = More and More.fields and More.fields(c) or c.fields
+  return FS.look_of(f), FS.art(c)
+end
+
+function FS.owns(card)
+  return card and (card.forge_look ~= nil or (card.edition and card.edition.forge ~= nil)) or false
+end
+
+function FS.draw(card)
+  local look, spr = FS.card_look(card)
+  if card.delay_edition and not card.forge_look then return end
+  if look then FS.draw_shine(card, look) end
+  if spr then FS.draw_art(card, spr, look) end
+end
+
+function FS.install()
+  if FS.installed then return end
+  local Hooks = package.loaded["overhaul.hooks"] or require("overhaul.hooks")
+  local S = rawget(_G, "SMODS")
+  if not (Hooks and S and S.DrawSteps and S.DrawSteps.edition) then return end
+  FS.installed = true
+  Hooks.wrap("SMODS.DrawSteps.edition", "func", function(orig) return function(self, layer, ...)
+    if FS.owns(self) then
+      local ok, err = pcall(FS.draw, self)
+      if not ok then print("[forge_shine] draw: " .. tostring(err)) end
+      return
+    end
+    return orig(self, layer, ...)
+  end end, {id = "forge.shine.edition"})
+end
+
+function FS.preview(card, look, art)
+  card.forge_look = look or false
+  card.forge_look_art = art
+  if not rawget(_G, "SMODS") and card.edition == nil and (look or art) then card.edition = {forge_preview = true} end
+end
+
+function FS.draw_plain(card)
+  local ok, err = pcall(FS.draw, card)
+  if not ok then print("[forge_shine] draw: " .. tostring(err)) end
+end
+
+if mod_loc_register then mod_loc_register(LOC) end
+
+_G.ForgeShine = FS
+
+return FS
+end

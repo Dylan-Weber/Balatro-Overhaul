@@ -114,7 +114,7 @@ function Game:key(k)
     if n and n >= 1 and n <= 4 then self:pick(n) end
 end
 
-r 9 2449 - -
+r 7 2449 - -
 l 77
     self.t = self.t + dt
     if self.state == "deal" and self.t >= DEAL then

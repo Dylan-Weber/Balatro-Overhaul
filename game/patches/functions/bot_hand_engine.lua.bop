@@ -70,7 +70,7 @@ local function state_hash()
         parts[#parts+1] = tostring(c.sort_id or i)
         parts[#parts+1] = c.highlighted and 'H' or '_'
     end
-r 12 2531 %20%20%20%20 -
+r 31 2531 %20%20%20%20 -
 l 83
         for _, j in ipairs(G.jokers.cards) do
             parts[#parts+1] = j.config.center.key
@@ -155,7 +155,7 @@ end
 local function enable_box_drag_targets(node, allow_drag)
     if not node then return end
 
-r 25 176 %20%20%20%20 -
+r 18 176 %20%20%20%20 -
 l 538
     if node.config then
         blocked = node.config.button or node.config.func == 'slider' or node.config.object ~= nil
@@ -1120,7 +1120,7 @@ local function build_run_context()
                     (G.hand and G.hand.cards and #G.hand.cards) or 5
     ctx.joker_names = {}
     ctx.uncommon_joker_count = 0
-r 12 2531 %20%20%20%20 -
+r 31 2531 %20%20%20%20 -
 l 256
         for _, j in ipairs(G.jokers.cards) do
             local n = (j.ability and j.ability.name) or ''
@@ -1378,7 +1378,7 @@ function BOT_ENGINE.analyze_shop()
     }
 
     local lineup = { chips = 0, mult = 0, xmult = 0, econ = 0, retrigger = 0, utility = 0, total = 0 }
-r 12 2531 %20%20%20%20 -
+r 31 2531 %20%20%20%20 -
 l 7
         for _, j in ipairs(G.jokers.cards) do
             local cat = classify_joker(j)
@@ -1387,7 +1387,7 @@ l 7
         end
     end
 
-r 12 1100 %20%20%20%20 -
+r 31 1100 %20%20%20%20 -
 l 42
         for _, card in ipairs(G.shop_jokers.cards) do
             local name = (card.ability and card.ability.name) or
@@ -1431,7 +1431,7 @@ l 42
     end
 
     results.voucher_ratings = {}
-r 12 1999 %20%20%20%20 -
+r 31 1999 %20%20%20%20 -
 l 121
         for _, card in ipairs(G.shop_vouchers.cards) do
             local name = (card.ability and card.ability.name) or
@@ -1554,7 +1554,7 @@ function BOT_ENGINE.analyze_pack()
     if is_joker then
         results.header = 'Joker Pack'
         local lineup = { chips = 0, mult = 0, xmult = 0, econ = 0, retrigger = 0, utility = 0, total = 0 }
-r 12 2531 %20%20%20%20%20%20%20%20 -
+r 31 2531 %20%20%20%20%20%20%20%20 -
 l 1064
             for _, j in ipairs(G.jokers.cards) do
                 local cat = classify_joker(j)

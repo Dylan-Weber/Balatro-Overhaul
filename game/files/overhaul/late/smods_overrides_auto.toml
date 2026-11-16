@@ -1,0 +1,269 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.001"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*local deck_usage = G\.PROFILES\[G\.SETTINGS\.profile\]\.deck_usage\[_deck_key\]\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}	local deck_usage = (G.PROFILES[G.SETTINGS.profile].deck_usage or {})[_deck_key]
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.002"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*local deck_usage = G\.PROFILES\[G\.SETTINGS\.profile\]\.deck_usage\[G\.GAME\.viewed_back\.effect\.center\.key\]\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}	local deck_usage = (G.PROFILES[G.SETTINGS.profile].deck_usage or {})[G.GAME.viewed_back.effect.center.key]
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.003"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>[\t ]*if v\.base\.value and not v_nr and not v\.debuff then mod_rank_tallies\[v\.base\.value\] = mod_rank_tallies\[v\.base\.value\] \+ 1 end\n[\t ]*end\n[\t ]*end\n[\t ]*local modded = face_tally ~= mod_face_tally\n[\t ]*for kk, vv in pairs\(mod_suit_tallies\) do\n[\t ]*modded = modded or \(vv ~= suit_tallies\[kk\]\)\n[\t ]*if modded then break end\n[\t ]*end\n[\t ]*\n[\t ]*if wheel_flipped > 0 then flip_col = mix_colours\(G\.C\.FILTER, G\.C\.WHITE, 0\.7\) end\n(?:[\t ]*[A-Za-z_][^\n]*\n)?[\t ]*\n[\t ]*local rank_cols = \{\}\n[\t ]*local temp_cols = \{\}\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local rank_chunk = ((UIK and UIK.touch and UIK.touch()) and not (PORTRAIT and PORTRAIT.on and PORTRAIT.on())) and 7 or 13
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.004"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*\{n = G\.UIT\.T, config = \{text = SMODS\.Ranks\[rank_name_mapping\[i\]\]\.shorthand, colour = G\.C\.JOKER_GREY, scale = 0\.35, shadow = true\}\},\}\},\n(?<post>[\t ]*\{n = G\.UIT\.C, config = \{align = "cr", minw = 0\.4\}, nodes = \{\n[\t ]*mod_delta and \{n = G\.UIT\.O, config = \{\n[\t ]*object = DynaText\(\{\n[\t ]*string = \{ \{ string = '' \.\. rank_tallies\[rank_name_mapping\[i\]\], colour = flip_col \}, \{ string = '' \.\. mod_rank_tallies\[rank_name_mapping\[i\]\], colour = G\.C\.BLUE \} \},\n[\t ]*colours = \{ G\.C\.RED \}, scale = 0\.4, y_offset = -2, silent = true, shadow = true, pop_in_rate = 10, pop_delay = 4\n[\t ]*\}\)\}\}\n[\t ]*or \{n = G\.UIT\.T, config = \{text = rank_tallies\[rank_name_mapping\[i\]\], colour = flip_col, scale = 0\.45, shadow = true \} \},\}\}\}\}\n[\t ]*\n[\t ]*if #temp_cols >= 13 then\n[\t ]*rank_cols\[#rank_cols \+ 1\] = \{\n[\t ]*n = G\.UIT\.C,\n[\t ]*config = \{ align = "cm" \},\n[\t ]*nodes = temp_cols\n[\t ]*\}\n[\t ]*temp_cols = \{\}\n[\t ]*end\n[\t ]*end\n[\t ]*end\n[\t ]*\n[\t ]*if #temp_cols > 0 then\n[\t ]*rank_cols\[#rank_cols \+ 1\] = \{\n[\t ]*n = G\.UIT\.C,\n[\t ]*config = \{ align = "cm" \},\n[\t ]*nodes = temp_cols\n[\t ]*\}\n[\t ]*end\n[\t ]*\n[\t ]*local tally_ui = \{\n[\t ]*-- base cards\n[\t ]*\{n = G\.UIT\.R, config = \{align = "cm", minh = 0\.05, padding = 0\.07\}, nodes = \{\n[\t ]*\{n = G\.UIT\.O, config = \{\n[\t ]*object = DynaText\(\{\n[\t ]*string = \{\n[\t ]*\{ string = localize\('k_base_cards'\), colour = G\.C\.RED \},\n[\t ]*modded and \{ string = localize\('k_effective'\), colour = G\.C\.BLUE \} or nil\n[\t ]*\},\n[\t ]*colours = \{ G\.C\.RED \}, silent = true, scale = 0\.4, pop_in_rate = 10, pop_delay = 4\n[\t ]*\}\)\n[\t ]*\}\}\}\},\n[\t ]*-- aces, faces and numbered cards\n[\t ]*\{n = G\.UIT\.R, config = \{align = "cm", minh = 0\.05, padding = 0\.1\}, nodes = \{\n[\t ]*tally_sprite\(\n[\t ]*\{ x = 1, y = 0 \},\n[\t ]*\{ \{ string = '' \.\. ace_tally, colour = flip_col \}, \{ string = '' \.\. mod_ace_tally, colour = G\.C\.BLUE \} \},\n[\t ]*\{ localize\('k_aces'\) \}\n[\t ]*\), --Aces\n[\t ]*tally_sprite\(\n[\t ]*\{ x = 2, y = 0 \},\n[\t ]*\{ \{ string = '' \.\. face_tally, colour = flip_col \}, \{ string = '' \.\. mod_face_tally, colour = G\.C\.BLUE \} \},\n[\t ]*\{ localize\('k_face_cards'\) \}\n[\t ]*\), --Face\n[\t ]*tally_sprite\(\n[\t ]*\{ x = 3, y = 0 \},\n[\t ]*\{ \{ string = '' \.\. num_tally, colour = flip_col \}, \{ string = '' \.\. mod_num_tally, colour = G\.C\.BLUE \} \},\n[\t ]*\{ localize\('k_numbered_cards'\) \}\n[\t ]*\), --Numbers\n[\t ]*\}\},\n[\t ]*\}\n[\t ]*-- add suit tallies\n[\t ]*local hidden_suits = \{\}\n[\t ]*for _, suit in ipairs\(suit_map\) do\n[\t ]*if suit_tallies\[suit\] == 0 and SMODS\.Suits\[suit\]\.in_pool and not SMODS\.add_to_pool\(SMODS\.Suits\[suit\], \{rank=''\}\) then\n[\t ]*hidden_suits\[suit\] = true\n[\t ]*end\n[\t ]*end\n[\t ]*local i = 1\n)'''
+position = "at"
+payload = '''
+${pre}					{n = G.UIT.T, config = {text = SMODS.Ranks[rank_name_mapping[i]].shorthand, colour = G.C.JOKER_GREY, scale = ((UIK and UIK.touch and UIK.touch()) and 0.42 or 0.35), shadow = true}},}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.005"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*if #temp_cols >= 13 then\n(?<post>[\t ]*rank_cols\[#rank_cols \+ 1\] = \{\n[\t ]*n = G\.UIT\.C,\n[\t ]*config = \{ align = "cm" \},\n[\t ]*nodes = temp_cols\n[\t ]*\}\n[\t ]*temp_cols = \{\}\n[\t ]*end\n[\t ]*end\n[\t ]*end\n[\t ]*\n[\t ]*if #temp_cols > 0 then\n[\t ]*rank_cols\[#rank_cols \+ 1\] = \{\n[\t ]*n = G\.UIT\.C,\n[\t ]*config = \{ align = "cm" \},\n[\t ]*nodes = temp_cols\n[\t ]*\}\n[\t ]*end\n[\t ]*\n[\t ]*local tally_ui = \{\n[\t ]*-- base cards\n[\t ]*\{n = G\.UIT\.R, config = \{align = "cm", minh = 0\.05, padding = 0\.07\}, nodes = \{\n[\t ]*\{n = G\.UIT\.O, config = \{\n[\t ]*object = DynaText\(\{\n[\t ]*string = \{\n[\t ]*\{ string = localize\('k_base_cards'\), colour = G\.C\.RED \},\n[\t ]*modded and \{ string = localize\('k_effective'\), colour = G\.C\.BLUE \} or nil\n[\t ]*\},\n[\t ]*colours = \{ G\.C\.RED \}, silent = true, scale = 0\.4, pop_in_rate = 10, pop_delay = 4\n[\t ]*\}\)\n[\t ]*\}\}\}\},\n[\t ]*-- aces, faces and numbered cards\n[\t ]*\{n = G\.UIT\.R, config = \{align = "cm", minh = 0\.05, padding = 0\.1\}, nodes = \{\n[\t ]*tally_sprite\(\n[\t ]*\{ x = 1, y = 0 \},\n[\t ]*\{ \{ string = '' \.\. ace_tally, colour = flip_col \}, \{ string = '' \.\. mod_ace_tally, colour = G\.C\.BLUE \} \},\n[\t ]*\{ localize\('k_aces'\) \}\n[\t ]*\), --Aces\n[\t ]*tally_sprite\(\n[\t ]*\{ x = 2, y = 0 \},\n[\t ]*\{ \{ string = '' \.\. face_tally, colour = flip_col \}, \{ string = '' \.\. mod_face_tally, colour = G\.C\.BLUE \} \},\n[\t ]*\{ localize\('k_face_cards'\) \}\n[\t ]*\), --Face\n[\t ]*tally_sprite\(\n[\t ]*\{ x = 3, y = 0 \},\n[\t ]*\{ \{ string = '' \.\. num_tally, colour = flip_col \}, \{ string = '' \.\. mod_num_tally, colour = G\.C\.BLUE \} \},\n[\t ]*\{ localize\('k_numbered_cards'\) \}\n[\t ]*\), --Numbers\n[\t ]*\}\},\n[\t ]*\}\n[\t ]*-- add suit tallies\n[\t ]*local hidden_suits = \{\}\n[\t ]*for _, suit in ipairs\(suit_map\) do\n[\t ]*if suit_tallies\[suit\] == 0 and SMODS\.Suits\[suit\]\.in_pool and not SMODS\.add_to_pool\(SMODS\.Suits\[suit\], \{rank=''\}\) then\n[\t ]*hidden_suits\[suit\] = true\n[\t ]*end\n[\t ]*end\n[\t ]*local i = 1\n)'''
+position = "at"
+payload = '''
+${pre}            if #temp_cols >= rank_chunk then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.006"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*definition = G\.GAME\.selected_back:generate_UI\(nil, 0\.7, 0\.5, G\.GAME\.challenge\), config = \{offset = \{ x = 0, y = 0 \} \}\n(?<post>[\t ]*\}\n[\t ]*\}\}\n)'''
+position = "at"
+payload = '''
+${pre}										definition = ui_touch_text(G.GAME.selected_back:generate_UI(nil, 0.7, 0.5, G.GAME.challenge), 1.2), config = {offset = { x = 0, y = 0 } }
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.007"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*\{n = G\.UIT\.T, config = \{text = SMODS\.Ranks\[rank_name_mapping\[i\]\]\.shorthand, colour = G\.C\.JOKER_GREY, scale = 0\.35, shadow = true\}\},\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}					{n = G.UIT.T, config = {text = SMODS.Ranks[rank_name_mapping[i]].shorthand, colour = G.C.JOKER_GREY, scale = ((UIK and UIK.touch and UIK.touch()) and 0.42 or 0.35), shadow = true}},}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.008"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*definition = G\.GAME\.selected_back:generate_UI\(nil, 0\.7, 0\.5, G\.GAME\.challenge\), config = \{offset = \{ x = 0, y = 0 \} \}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}										definition = ui_touch_text(G.GAME.selected_back:generate_UI(nil, 0.7, 0.5, G.GAME.challenge), 1.2), config = {offset = { x = 0, y = 0 } }
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.009"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*local joker_usage = G\.PROFILES\[G\.SETTINGS\.profile\]\.joker_usage\[_center\.key\] or \{\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}	local joker_usage = (G.PROFILES[G.SETTINGS.profile].joker_usage or {})[_center.key] or {}
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.010"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*if G\.PROFILES\[G\.SETTINGS\.profile\]\.deck_usage\[_deck_key\] and G\.PROFILES\[G\.SETTINGS\.profile\]\.deck_usage\[_deck_key\]\.wins_by_key then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}	if (G.PROFILES[G.SETTINGS.profile].deck_usage or {})[_deck_key] and (G.PROFILES[G.SETTINGS.profile].deck_usage or {})[_deck_key].wins_by_key then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.011"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*if G\.PROFILES\[G\.SETTINGS\.profile\]\.deck_usage\[_deck_key\]\.wins_by_key\[key\] then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}			if (G.PROFILES[G.SETTINGS.profile].deck_usage or {})[_deck_key].wins_by_key[key] then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.012"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*if G\.PROFILES\[G\.SETTINGS\.profile\]\.deck_usage\[_center\.key\] and\n[\t ]*G\.PROFILES\[G\.SETTINGS\.profile\]\.deck_usage\[_center\.key\]\.wins_by_key then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}	if (G.PROFILES[G.SETTINGS.profile].deck_usage or {})[_center.key] and
+	(G.PROFILES[G.SETTINGS.profile].deck_usage or {})[_center.key].wins_by_key then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.013"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*if G\.PROFILES\[G\.SETTINGS\.profile\]\.deck_usage\[_center\.key\]\.wins_by_key\[key\] then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}			if (G.PROFILES[G.SETTINGS.profile].deck_usage or {})[_center.key].wins_by_key[key] then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.014"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*local deck_usage = G\.PROFILES\[G\.SETTINGS\.profile\]\.deck_usage\[deck_key\]\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}		local deck_usage = (G.PROFILES[G.SETTINGS.profile].deck_usage or {})[deck_key]
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.015"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*local old_hand = self\.ability\.to_do_poker_hand\n)'''
+position = "at"
+payload = '''
+${pre}        table.sort(_poker_hands)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.016"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*function mt:send\(\.\.\.\)\n[\t ]*if self == SMODS\.shader_stub then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}	function mt:send(name, ...)
+		if self == SMODS.shader_stub or not self:hasUniform(name) then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.017"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*send\(self, \.\.\.\)\n[\t ]*end\n[\t ]*function mt:sendColor\(\.\.\.\)\n[\t ]*if self == SMODS\.shader_stub then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}		send(self, name, ...)
+	end
+	function mt:sendColor(name, ...)
+		if self == SMODS.shader_stub or not self:hasUniform(name) then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.018"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*sendColor\(self, \.\.\.\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}		sendColor(self, name, ...)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.019"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*function love\.graphics\.newShader\(code, other_code\)\n)'''
+position = "at"
+payload = '''
+${pre}    local glsl_builtins = {}
+    for w in ("radians degrees sin cos tan asin acos atan pow exp log exp2 log2 sqrt inversesqrt abs sign floor ceil fract mod min max clamp mix step smoothstep length distance dot cross normalize faceforward reflect refract matrixCompMult lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not"):gmatch("%S+") do glsl_builtins[w] = true end
+    local function strip_builtin_redefs(src)
+        local out, n = src, 0
+        for _, ty in ipairs({"float", "number", "vec2", "vec3", "vec4", "int", "bool"}) do
+            out = out:gsub("\n([ \t]*" .. ty .. "[ \t]+)([%a_][%w_]*)([ \t]*%b()[%s]*)(%b{})", function(head, name, args, body)
+                if glsl_builtins[name] then n = n + 1; return "\n" end
+            end)
+        end
+        return out, n
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.020"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*-- this only supports a single argument passed as code, file names are not supported\n)'''
+position = "at"
+payload = '''
+${pre}        if type(code) == "string" and not other_code and not string.find(code, '\n') and SMODS.renderer_name() == "OpenGL ES" and love.filesystem.getInfo(code, "file") then
+            code = love.filesystem.read(code) or code
+        end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.021"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>)[\t ]*if other_code or not string\.find\(code,'\\n'\) or love\.graphics\.getRendererInfo\(\) ~= "OpenGL ES" then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if other_code or not string.find(code,'\n') or SMODS.renderer_name() ~= "OpenGL ES" then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_overrides.022"
+target = '=[SMODS _ "src/overrides.lua"]'
+pattern = '''^(?<pre>[\t ]*if old_success then return old_shader end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}
+        local stripped, removed = strip_builtin_redefs("\n" .. code)
+        if removed > 0 then
+            local ok_s, s_shader = pcall(newShader, assert(lovely.apply_patches("GLSL_ES_PATCHES.fs", stripped)))
+            if ok_s then return s_shader end
+            ok_s, s_shader = pcall(newShader, stripped)
+            if ok_s then return s_shader end
+        end
+${post}'''
+times = 1

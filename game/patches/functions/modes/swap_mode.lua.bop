@@ -516,7 +516,7 @@ end
 
 function W.snapshot_table()
     local areas = {}
-r 11 1455 %20%20%20%20 -
+r 13 1455 %20%20%20%20 -
 l 22
         if type(v) == "table" and v.is and v:is(CardArea) then
             local ser = v:save()
@@ -540,7 +540,7 @@ l 22
 end
 
 local function flatten(t, prefix, out, depth)
-r 11 131 %20%20%20%20 -
+r 13 131 %20%20%20%20 -
 l 487
         local path = prefix .. "." .. tostring(k)
         if type(v) == "table" then
@@ -1030,7 +1030,7 @@ function W.banner(text)
     W.drop_banner()
     local born = now()
 r 1 112 %20%20%20%20 -
-r 5 123 %20%20%20%20%20%20%20%20 -
+r 4 123 %20%20%20%20%20%20%20%20 -
 l 23
         func = function()
             if G.STAGE ~= G.STAGES.RUN then return true end
@@ -1056,7 +1056,7 @@ l 23
             if not ok then return true end
             local box, at = W._banner, now()
 r 1 112 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 5 123 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 4 123 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 40
                 func = function()
                     if W._banner ~= box then return true end

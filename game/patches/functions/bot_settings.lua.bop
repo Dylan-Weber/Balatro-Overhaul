@@ -101,7 +101,7 @@ function S.load()
             out[k] = v
         end
     end
-r 11 131 %20%20%20%20 -
+r 13 131 %20%20%20%20 -
 l 25
         if S.DEFAULTS[k] ~= nil and type(v) == type(S.DEFAULTS[k]) then out[k] = v end
     end

@@ -1,0 +1,29 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_preflight_sharedUtil.001"
+target = '=[lovely SMODS.preflight.sharedUtil "src/preflight/sharedUtil.lua"]'
+pattern = '''^(?<pre>)[\t ]*balatro_ver = versionFile:match\("\[\^\\n\]\*"\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        balatro_ver = versionFile:match("[^\n]*"):match("^%S*")
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_preflight_sharedUtil.002"
+target = '=[lovely SMODS.preflight.sharedUtil "src/preflight/sharedUtil.lua"]'
+pattern = '''^(?<pre>)[\t ]*local _, _, major, minorFull, minor, patchFull, patch, rev = string\.find\(str, '\^\(%d\+\)\(%\.\?\(\[%d%\*\]\*\)\)\(%\.\?\(\[%d%\*\]\*\)\)\(\.\*\)\$'\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        local _, _, major, minorFull, minor, patchFull, patch, rev = string.find(tostring(str), '^(%d+)(%.?([%d%*]*))(%.?([%d%*]*))(.*)$$')
+        if not major then
+            if sendWarnMessage then sendWarnMessage('Invalid version "' .. tostring(str) .. '".', "Utils") end
+            major, minorFull, minor, patchFull, patch, rev = -1, "", "", "", "", ""
+        end
+${post}'''
+times = 1

@@ -54,7 +54,7 @@ match_indent = true
 [patches.pattern]
 target = 'functions/common_events.lua'
 pattern = '''
-r 12 986 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 986 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 24
 '''
 position = 'at'
@@ -80,12 +80,12 @@ $start SMODS.create_sprite($pre $key, $rest
 [patches.pattern]
 target = "game.lua"
 pattern = '''
-r 9 2893 - -
-r 9 2894 %20%20%20%20 %20
+r 7 2893 - -
+r 7 2894 %20%20%20%20 %20
 l 1
     love.graphics.push()
-r 9 2896 %20%20%20%20%20%20%20%20 -
-r 9 2897 %20%20%20%20%20%20%20%20 -
+r 7 2896 %20%20%20%20%20%20%20%20 -
+r 7 2897 %20%20%20%20%20%20%20%20 -
 l 19
     love.graphics.pop()
 end

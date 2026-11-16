@@ -744,7 +744,7 @@ function P.show_lobby()
         end
         footer = {{n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = rows}}
     end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 537
     G.FUNCS.overlay_menu{definition = UIK.window{zoom = false,
         id = "party",

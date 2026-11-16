@@ -342,7 +342,7 @@ end
 function R.show_overlay(spec)
     if not G or not G.FUNCS or not G.FUNCS.overlay_menu then return end
     local ok, err = pcall(function()
-r 13 1825 %20%20%20%20%20%20%20%20 -
+r 32 1825 %20%20%20%20%20%20%20%20 -
 l 39
         local rows = popup_rows(spec, function()
             pcall(function() if G.OVERLAY_MENU then G.FUNCS.exit_overlay_menu() end end)
@@ -383,10 +383,10 @@ local PACK_IN = "bo_rejoin_pack_in"
 local PACK_OUT = "bo_rejoin_pack_out"
 local PACK_SRC = [[
 if jit.arch == "arm64" or jit.arch == "arm" then jit.off() end
-r 26 1 - -
+r 19 1 - -
 l 1
 require "love.data"
-r 14 6 - -
+r 20 6 - -
 l 742
 require("love.filesystem")
 local ok_req = pcall(require, "engine/string_packer")
@@ -1130,7 +1130,7 @@ local function fix_pvp_state(d)
         bom_match.on_pvp_resolved(missed)
         bom_match.restore_counts(d)
         G.GAME.blind.pvp = true
-r 12 1718 %20%20%20%20%20%20%20%20 -
+r 31 1718 %20%20%20%20%20%20%20%20 -
 l 10
             pcall(function() G.hand:unhighlight_all() end)
         end
@@ -1142,11 +1142,11 @@ l 10
         G.GAME.current_round.hands_left = 0
         G.GAME.current_round.discards_left = 0
         bom_pvp_hud._pvp_finished_token = bom_pvp_hud.blind_token()
-r 12 1718 %20%20%20%20%20%20%20%20 -
+r 31 1718 %20%20%20%20%20%20%20%20 -
 l 2
             pcall(function() G.hand:unhighlight_all() end)
             pcall(function() G.FUNCS.draw_from_hand_to_discard() end)
-r 16 468 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 468 %20%20%20%20%20%20%20%20%20%20%20%20 -
 r 2 402 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 32
         end

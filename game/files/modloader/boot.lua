@@ -540,6 +540,31 @@ function Boot.backup_before_new_set(mods)
     return name
 end
 
+function Boot.late_files()
+    local list = {}
+    for _, f in ipairs(love.filesystem.getDirectoryItems("overhaul/late")) do
+        if f:sub(-5) == ".toml" then list[#list + 1] = "overhaul/late/" .. f end
+    end
+    table.sort(list)
+    return list
+end
+
+function Boot.start_plain()
+    local late = Boot.late_files()
+    if #late == 0 then return false end
+    local Engine = require("modloader.lovely")
+    Boot.engine = Engine
+    local t0 = love.timer and love.timer.getTime() or os.clock()
+    Engine.load(Boot.root, {enabled = {}, build = Boot.build_id(), late = late})
+    Engine.use_cache(Boot.root .. "/.cache_plain")
+    if Boot.aliases then for k, v in pairs(Boot.aliases) do Engine.aliases[k] = v end end
+    Engine.install()
+    Boot.plain_engine = true
+    note(string.format("overhaul patches on: %d files, %d patches, load %.3fs", #late, #Engine.patches,
+        (love.timer and love.timer.getTime() or os.clock()) - t0))
+    return true
+end
+
 function Boot.start()
     pcall(Boot.migrate)
     pcall(Boot.safe_check)
@@ -601,7 +626,7 @@ function Boot.start()
     local extra = {}
     if love.filesystem.getInfo(Boot.fork_dir .. "/lovely", "directory") then extra[Boot.fork_name] = Boot.fork_dir end
     local t0 = love.timer and love.timer.getTime() or os.clock()
-    Engine.load(Boot.root, {extra = extra, build = Boot.build_id(), enabled = set})
+    Engine.load(Boot.root, {extra = extra, build = Boot.build_id(), enabled = set, late = Boot.late_files()})
     if LOADING_SCREEN then pcall(LOADING_SCREEN.draw) end
     Engine.use_cache(paths.cache)
     if Boot.aliases then for k, v in pairs(Boot.aliases) do Engine.aliases[k] = v end end
@@ -633,7 +658,7 @@ function Boot.start()
             package.preload[p.name] = function() return nfs end
         end
     end
-    if not Boot.io_open and love.system and love.system.getOS() == "Android" then
+    if not Boot.io_open and love.system and (love.system.getOS() == "Android" or love.system.getOS() == "iOS") then
         Boot.io_open = io.open
         local save_dir = (love.filesystem.getSaveDirectory() or ""):gsub("/$", "")
         rawset(io, "open", function(name, mode, ...)
@@ -766,7 +791,7 @@ function Boot.stop_threads(timeout)
             elseif alive then
                 running = running + 1
                 names[#names + 1] = tostring(label)
-                if label == "engine/save_manager.lua" then saving = true end
+                if label == "engine/save_manager.lua" or label == "overhaul/save_thread.lua" then saving = true end
             end
         end
         if running > 0 then love.timer.sleep(0.01) end
@@ -1209,11 +1234,20 @@ function Boot.hook()
             local bootstrap = rawget(_G, "OVERHAUL_BOOTSTRAP")
             alias = type(bootstrap) == "table" and bootstrap.main or nil
         end
-        if alias and alias ~= "" then Boot.aliases = {[alias] = "main.lua", ["main.lua"] = "\0"} end
+        if Boot.start_main then
+            Boot.aliases = {["main.lua"] = "\0"}
+            if alias and alias ~= "" then Boot.aliases[alias] = "\0" end
+        elseif alias and alias ~= "" then
+            Boot.aliases = {[alias] = "main.lua", ["main.lua"] = "\0"}
+        end
         local ok, err = pcall(Boot.start)
         if not ok then
             note("boot failed: " .. tostring(err))
             if Boot.engine and Boot.engine.installed then error(err, 0) end
+        end
+        if not (Boot.engine and Boot.engine.installed) then
+            local ok_p, err_p = pcall(Boot.start_plain)
+            if not ok_p then note("overhaul patches failed: " .. tostring(err_p)) end
         end
         Boot.t_ready = love.timer and love.timer.getTime() or nil
         if Boot.t_hook and Boot.t_ready then note(string.format("boot %.3fs", Boot.t_ready - Boot.t_hook)) end

@@ -114,7 +114,7 @@ function Game:key(k)
     for i = 1, 3 do if self.cards[i].slot == slot then self:pick(i) return end end
 end
 
-r 9 2449 - -
+r 7 2449 - -
 l 98
     self.t = self.t + dt
     local step = dt / FLIP

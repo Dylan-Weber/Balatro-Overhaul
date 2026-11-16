@@ -59,7 +59,7 @@ function C.back_to(target)
     end
     local B = T.social()
     if B and B.back_to_origin then return B.back_to_origin() end
-r 13 1375 %20%20%20%20 -
+r 32 1375 %20%20%20%20 -
 l 7
 end
 
@@ -68,7 +68,7 @@ local function leave_panel()
     local from = S.chat_from
     if from == "lobby" and bom_ui and bom_ui.show_lobby then return bom_ui.show_lobby() end
     if from == "party" and bom_party and bom_party.show_lobby then return bom_party.show_lobby() end
-r 13 1375 %20%20%20%20 -
+r 32 1375 %20%20%20%20 -
 l 34
 end
 
@@ -104,7 +104,7 @@ end
 function C.open_optin(back, keep_note)
     S.chat_return = back or S.chat_return
     if not keep_note then S.note = nil end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 201
     local footer = {}
     if S.chat.allowed ~= false then
@@ -307,7 +307,7 @@ function C.open_panel(from)
     S.lobby_open = true
     S.lobby.unread = 0
     T.lobby_label()
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 120
     G.FUNCS.overlay_menu{definition = UIK.window{
         id = "mps_chat",
@@ -429,7 +429,7 @@ local function register_funcs()
         if target == "friends" then return C.back_to("friends") end
         if target == "lobby" and bom_ui and bom_ui.show_lobby then return bom_ui.show_lobby() end
         if target == "party" and bom_party and bom_party.show_lobby then return bom_party.show_lobby() end
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 86
     end
     G.FUNCS.mps_chat_back = function() leave_panel() end

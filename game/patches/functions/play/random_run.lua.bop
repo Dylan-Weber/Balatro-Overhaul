@@ -425,8 +425,8 @@ local function deck_panel(z)
   local area = CardArea(G.ROOM.T.x, G.ROOM.T.y, cw, ch, {card_limit = 1, type = 'title', highlight_limit = 0})
   local c = G.P_CENTERS[s.shown_deck or s.deck] or G.P_CENTERS.b_red
   local card = Card(area.T.x, area.T.y, cw, ch, nil, G.P_CENTERS.c_base, {bypass_back = c.pos})
-r 6 220 %20%20 -
-r 6 219 %20%20 -
+r 5 220 %20%20 -
+r 5 219 %20%20 -
 l 35
   area:emplace(card)
   card.facing, card.sprite_facing = 'back', 'back'
@@ -463,7 +463,7 @@ end
 
 local function swap(id, def)
   local e = G.OVERLAY_MENU and G.OVERLAY_MENU:get_UIE_by_ID(id)
-r 13 1300 %20%20 -
+r 32 1300 %20%20 -
 l 170
   if e.config.object then e.config.object:remove() end
   e.config.object = UIBox{definition = def, config = {offset = {x = 0, y = 0}, parent = e, type = 'cm'}}
@@ -635,10 +635,10 @@ G.FUNCS.play_random_start = function()
   local center = G.P_CENTERS[s.deck]
   if not (center and center.unlocked) then return end
   local custom = mode() == 'custom'
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 1
   if G.SAVED_GAME ~= nil and G.SAVED_GAME.GAME and not G.SAVED_GAME.GAME.won and not (G.GAME and G.GAME.seeded) then
-r 23 900 %20%20%20%20 -
+r 17 900 %20%20%20%20 -
 l 61
     G:save_settings()
   end

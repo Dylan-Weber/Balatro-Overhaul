@@ -15,7 +15,7 @@ target = 'functions/misc_functions.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 11 1879 - -
+r 13 1879 - -
 l 14
 '''
 payload = '''
@@ -31,12 +31,12 @@ match_indent = true
 position = 'at'
 pattern = '''
 for i = 1, 2 do
-r 9 3146 %20%20%20%20 -
+r 7 3146 %20%20%20%20 -
 l 3
 '''
 payload = '''
-for i = 1, (RunRules and RunRules.active and RunRules.active('pack_slots')) or (G.GAME.starting_params.boosters_in_shop + (G.GAME.modifiers.extra_boosters or 0)) do
-r 9 3146 %20%20%20%20 -
+for i=1, G.GAME.starting_params.boosters_in_shop + (G.GAME.modifiers.extra_boosters or 0) do
+r 7 3146 %20%20%20%20 -
 l 8
 '''
 # Custom deck functionality
@@ -62,13 +62,13 @@ target = 'game.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 9 3125 - -
-r 9 3126 %20%20%20%20 -
-r 9 3127 %20%20%20%20 -
-r 9 3128 %20%20%20%20 -
-r 9 3129 %20%20%20%20 -
+r 7 3125 - -
+r 7 3126 %20%20%20%20 -
+r 7 3127 %20%20%20%20 -
+r 7 3128 %20%20%20%20 -
+r 7 3129 %20%20%20%20 -
 r 3 1446 %20%20%20%20 -
-r 9 3131 %20%20%20%20 -
+r 7 3131 %20%20%20%20 -
 l 21
 end
 '''
@@ -91,7 +91,7 @@ target = 'functions/state_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 16 263 - -
+r 15 263 - -
 l 10
 '''
 payload = '''
@@ -103,7 +103,7 @@ target = 'game.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 9 2178 - -
+r 7 2178 - -
 l 12
 '''
 payload = '''
@@ -143,7 +143,7 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 13 2383 %20%20 -
+r 32 2383 %20%20 -
 l 11
 '''
 payload = '''
@@ -156,7 +156,7 @@ target = 'tag.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 9 3129 - -
+r 7 3129 - -
 l 13
 '''
 payload = '''
@@ -171,8 +171,8 @@ target = 'functions/state_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 16 311 - -
-r 16 312 - -
+r 15 311 - -
+r 15 312 - -
 l 23
 '''
 payload = '''
@@ -259,12 +259,12 @@ match_indent = true
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
 pattern = '''
-r 15 787 - -
+r 30 787 - -
 l 1
 local edition = {}
-r 15 789 - -
-r 15 790 - -
-r 15 791 - -
+r 30 789 - -
+r 30 790 - -
+r 30 791 - -
 l 1
 end
 r 3 1762 - -
@@ -280,7 +280,7 @@ payload = '''card:set_edition(poll_edition('illusion', nil, true, true))'''
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
 pattern = '''
-r 15 776 - -
+r 30 776 - -
 l 10
 '''
 position = 'at'

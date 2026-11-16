@@ -26,10 +26,10 @@ local function grab(path, header)
 end
 
 local env = {}
-setfenv(assert(loadstring(read("assets/globals.lua"):match("^(.-\n.-\n.-\n)"))), env)()
+setfenv(assert(loadstring(read("assets/overhaul/version.lua"))), env)()
 check(type(env.OVERHAUL_VERSION) == "string" and env.OVERHAUL_VERSION:match("^%d+$") ~= nil, "OVERHAUL_VERSION is a plain build number: " .. tostring(env.OVERHAUL_VERSION))
-check(env.OVERHAUL_NAME == "2.0.7", "OVERHAUL_NAME is the shown name: " .. tostring(env.OVERHAUL_NAME))
-check(env.VERSION == "V 2.0.7 - Overhaul", "VERSION shows the name: " .. tostring(env.VERSION))
+check(type(env.OVERHAUL_NAME) == "string" and env.OVERHAUL_NAME:match("^%d+%.%d+[%.%d]*$") ~= nil, "OVERHAUL_NAME is the shown name: " .. tostring(env.OVERHAUL_NAME))
+check(env.VERSION == "V " .. tostring(env.OVERHAUL_NAME) .. " - Overhaul", "VERSION shows the name: " .. tostring(env.VERSION))
 local build = env.OVERHAUL_VERSION
 
 local game_newer = grab("assets/functions/overhaul_update.lua", "function U.newer(a, b)")
@@ -54,7 +54,7 @@ local room_src = read("assets/multiplayer/bom_room.lua")
 local vt_start = room_src:find("local build_loc = false", 1, true)
 local vt_stop = room_src:find("\nend\n", vt_start, true)
 local vt = assert(loadstring("local bom_room = {}\n" .. room_src:sub(vt_start, vt_stop + 4) .. "\nreturn bom_room.version_text"))()
-check(vt(build) == "V 2.0.7 b" .. build, "MP: own build shows its name and build, got " .. tostring(vt(build)))
+check(vt(build) == "V " .. env.OVERHAUL_NAME .. " b" .. build, "MP: own build shows its name and build, got " .. tostring(vt(build)))
 check(vt("2.7") == "V 2.7", "MP: an old 2.x client shows its version")
 check(vt("31") == "an older version b31", "MP: another build shows its number")
 

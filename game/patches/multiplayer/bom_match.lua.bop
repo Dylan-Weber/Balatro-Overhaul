@@ -252,8 +252,8 @@ end
 function bom_match.set_starting_mp_run()
     bom_match._starting_mp_run = true
     if G and G.SETTINGS and not G.SETTINGS.tutorial_complete then
-r 16 1212 %20%20%20%20%20%20%20%20 -
-r 16 1213 %20%20%20%20%20%20%20%20 -
+r 15 1212 %20%20%20%20%20%20%20%20 -
+r 15 1213 %20%20%20%20%20%20%20%20 -
 l 632
     end
 end
@@ -1346,7 +1346,7 @@ function bom_match.apply_sudden_death_label()
     pcall(function()
         local loc = G and G.localization and G.localization.descriptions and G.localization.descriptions.Blind
         local e = loc and loc["bl_mp_nemesis"]
-r 13 1300 %20%20%20%20%20%20%20%20 -
+r 32 1300 %20%20%20%20%20%20%20%20 -
 l 108
         if (match.sudden_death or 0) > 0 then
             e.name = mod_loc("Sudden Death")
@@ -1464,10 +1464,10 @@ l 5
             func = function()
                 local ok, err = pcall(function()
                     if bom_ui and bom_ui.register_funcs then bom_ui.register_funcs() end
-r 13 1381 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
 
-r 23 214 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 214 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 11
                         pcall(function() G.OVERLAY_MENU:remove() end)
                         G.OVERLAY_MENU = nil
@@ -1480,7 +1480,7 @@ l 11
                     if def_ok and win_def then
                         bom_ui.overlay{
                             definition = win_def,
-r 13 1687 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1687 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 6
                         }
                     else
@@ -1491,7 +1491,7 @@ l 6
 r 1 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                             trigger = 'after', delay = 0.6,
-r 12 2241 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2241 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 20
                             func = function()
                                 pcall(function() bom_ui.show_debrief_popup() end)
@@ -1521,10 +1521,10 @@ l 5
             func = function()
                 local ok, err = pcall(function()
                     if bom_ui and bom_ui.register_funcs then bom_ui.register_funcs() end
-r 13 1381 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
 
-r 23 214 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 214 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 11
                         pcall(function() G.OVERLAY_MENU:remove() end)
                         G.OVERLAY_MENU = nil
@@ -1537,7 +1537,7 @@ l 11
                     if def_ok and lose_def then
                         bom_ui.overlay{
                             definition = lose_def,
-r 13 1687 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1687 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 6
                         }
                     else
@@ -1548,7 +1548,7 @@ l 6
 r 1 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                             trigger = 'after', delay = 0.6,
-r 12 2241 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2241 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 227
                             func = function()
                                 pcall(function() bom_ui.show_debrief_popup() end)
@@ -1777,8 +1777,8 @@ function bom_match.release_unplayed_pvp_blind()
     end)
     if slot == "Boss" and rr.blind_choices and rr.blind_choices.Boss == "bl_mp_nemesis" and G.blind_select_opts and G.FUNCS.reroll_boss then
         local rerolled = rr.boss_rerolled
-r 4 288 %20%20%20%20%20%20%20%20 -
-r 4 289 %20%20%20%20%20%20%20%20 -
+r 9 288 %20%20%20%20%20%20%20%20 -
+r 9 289 %20%20%20%20%20%20%20%20 -
 l 501
         rr.boss_rerolled = rerolled
     end

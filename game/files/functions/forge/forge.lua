@@ -28,7 +28,10 @@ ForgeMods = Mods
 FJ.text_for = function(c, lang) return Text.lines(c, lang) end
 FJ.vars_for = function(center, card)
   local c = center and center.forge_id and Store.get(center.forge_id)
-  return Text.vars(card, c and c.vars)
+  if card and card.ability and c and type(c.vars) == "table" and #c.vars > 0 and G.STAGE == G.STAGES.RUN and card.area and not (card.area.config and card.area.config.collection) then
+    pcall(require("functions/forge/forge_rules").vars_state, card, c.vars)
+  end
+  return Text.vars(card, c and c.vars, nil, c and c.rules)
 end
 
 function JokerForge.mods_tab() return ModsUI.tab() end

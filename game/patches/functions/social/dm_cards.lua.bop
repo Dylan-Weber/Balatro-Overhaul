@@ -202,7 +202,7 @@ end
 function DC.open(mode, code)
     DC.mode, DC.code, DC.page = mode, code, 1
     if G.CONTROLLER then G.CONTROLLER.text_input_hook = nil end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 69
     G.FUNCS.overlay_menu{definition = UIK.window{
         id = "social_dm_pick", compact = true, w = win_w() + 0.2,

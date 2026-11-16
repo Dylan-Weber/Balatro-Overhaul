@@ -3,7 +3,7 @@ local Guard = {blocked = {}, installed = false}
 local lfs = love.filesystem
 local system = love.system and love.system.getOS() or ""
 local windows = system == "Windows"
-local android = system == "Android"
+local android = system == "Android" or system == "iOS"
 
 local function norm(p)
     local abs = p:sub(1, 1) == "/"

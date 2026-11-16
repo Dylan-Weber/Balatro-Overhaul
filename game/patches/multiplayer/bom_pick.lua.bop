@@ -278,7 +278,7 @@ local function show(force)
         if ok then return end
     end
     S.open = true
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 170
     G.FUNCS.overlay_menu{definition = UIK.window{
         id = "mp_pick", title = L("MATCH PICKS"), compact = true, no_back = true,

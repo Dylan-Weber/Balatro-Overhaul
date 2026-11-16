@@ -196,7 +196,7 @@ function suit_palette_apply(changed)
     if changed then
         for _, v in pairs(G.I.CARD or {}) do
             if v.config and v.config.card and v.children.front and v.ability and v.ability.effect ~= 'Stone Card' then
-r 13 872 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 872 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 50
             end
         end
@@ -248,8 +248,8 @@ function suit_palette_custom_rows(items, save)
     end
 end
 
-r 13 1756 - -
-l 12
+r 32 1756 - -
+l 93
     G.SETTINGS.suit_palette = G.SETTINGS.colourblind_option and 'hc' or 'normal'
     suit_palette_apply(true)
 end
@@ -261,13 +261,11 @@ function suit_palette_ensure(name)
     if atlas.bom_pal_sig ~= signature(colours) then recolour(name, colours, full_cell) end
 end
 
-local change_collab_ref = G.FUNCS.change_collab
-r 13 868 - -
-l 81
+require("overhaul.hooks").wrap("G.FUNCS", "change_collab", function(change_collab_ref) return function(args)
     local r = change_collab_ref(args)
     for _, name in ipairs(collab_atlases()) do suit_palette_ensure(name) end
     return r
-end
+end end, {id = "suit_palettes.change_collab"})
 
 local set_render_ref = Game.set_render_settings
 function Game:set_render_settings(...)

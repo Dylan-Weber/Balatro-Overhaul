@@ -255,7 +255,7 @@ end
 
 G.FUNCS.open_match_recap = function()
     if not X.on(KEY) then return end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 20
     local def = M.window()
     if bom_ui and bom_ui.overlay then bom_ui.overlay({definition = def, config = {no_esc = true}}) else G.FUNCS.overlay_menu{definition = def} end

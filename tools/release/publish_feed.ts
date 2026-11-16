@@ -142,6 +142,17 @@ export async function zipVersion(file: string): Promise<string | undefined> {
   return /^ {2}overhaul_version = "([^"]+)",$/m.exec(src)?.[1];
 }
 
+export async function versionSource(root: string): Promise<string> {
+  for (const rel of ['assets/overhaul/version.lua', 'assets/globals.lua']) {
+    const f = Bun.file(join(root, rel));
+    if (await f.exists()) {
+      const src = await f.text();
+      if (/^OVERHAUL_VERSION\s*=/m.test(src)) return src;
+    }
+  }
+  return '';
+}
+
 export function globalsInfo(src: string): { version?: string; protocol: number; name?: string } {
   return {
     version: /^OVERHAUL_VERSION\s*=\s*'([^']+)'/m.exec(src)?.[1],
@@ -183,7 +194,7 @@ export function phonePatches(from: string, v: string, patchset: string): PhonePa
 
 async function publishPhone(o: PublishOpts, t: Target, v: string, patchset: string, globals: string): Promise<Manifest | null> {
   const info = globalsInfo(globals);
-  if (info.version !== v) { o.say(`phone patches skipped: assets/globals.lua says ${info.version ?? 'nothing'}, the feed ${v}`); return null; }
+  if (info.version !== v) { o.say(`phone patches skipped: the version file says ${info.version ?? 'nothing'}, the feed ${v}`); return null; }
   const current = parseManifest(await t.readManifest());
   const builds: Record<string, BuildEntry> = { ...(current?.builds ?? {}) };
   for (const p of phonePatches(o.from, v, patchset)) {
@@ -249,10 +260,10 @@ export async function publish(o: PublishOpts, target?: Target): Promise<ReleaseF
   const current = parseFeed(await t.readFeed());
   if (current) o.say(`published now: Overhaul ${current.latest.version}`);
   if (current && compareVersions(v, current.latest.version) <= 0 && !o.force) {
-    throw new Error(`Overhaul ${v} is not newer than the published ${current.latest.version}. Bump OVERHAUL_VERSION in assets/globals.lua and pack again (or pass --force).`);
+    throw new Error(`Overhaul ${v} is not newer than the published ${current.latest.version}. Bump OVERHAUL_VERSION in assets/overhaul/version.lua and pack again (or pass --force).`);
   }
   const body = JSON.stringify(feed, null, 2) + '\n';
-  const globals = o.globals ?? await Bun.file(join(root, 'assets/globals.lua')).text();
+  const globals = o.globals ?? await versionSource(root);
   if (o.dryRun) { o.say(`dry run, would upload ${patchsetName(v)} and feed.json to ${t.name}:\n${body}`); await publishPhone(o, t, v, zip, globals); return feed; }
   await publishPhone(o, t, v, zip, globals);
   o.say(`uploading ${patchsetName(v)} to ${t.name}`);

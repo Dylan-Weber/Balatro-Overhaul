@@ -1,0 +1,66 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.sound_manager.001"
+target = "engine/sound_manager.lua"
+pattern = '''^(?<pre>)[\t ]*if \(love\.system\.getOS\(\) == 'OS X' \)and \(jit\.arch == 'arm64' or jit\.arch == 'arm'\) then jit\.off\(\) end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}if (jit.arch == 'arm64' or jit.arch == 'arm') then jit.off() end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.sound_manager.002"
+target = "engine/sound_manager.lua"
+pattern = '''^(?<pre>)[\t ]*local s = \{sound = love\.audio\.newSource\("resources/sounds/"\.\.args\.sound_code\.\.'\.ogg', should_stream and "stream" or 'static'\)\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local ok, s = pcall(function()
+        return {sound = love.audio.newSource("resources/sounds/"..args.sound_code..'.ogg', should_stream and "stream" or 'static')}
+    end)
+    if not ok or not s then return end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.sound_manager.003"
+target = "engine/sound_manager.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*--If the request is for an update to the music track, handle it here\n)'''
+position = "at"
+payload = '''
+${pre}        if request.type == 'kill' then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.sound_manager.modded.001"
+target = "engine/sound_manager.lua"
+pattern = '''^(?<pre>)[\t ]*local c = SMODS_Sounds\[args\.sound_code\]\n[\t ]*local s = c and\n[\t ]*\{sound = love\.audio\.newSource\(love\.sound\.newDecoder\(c\.data\), c\.should_stream and 'stream' or 'static'\), per = c\.per, vol = c\.vol \} or\n[\t ]*\{sound = love\.audio\.newSource\("resources/sounds/"\.\.args\.sound_code\.\.'\.ogg', should_stream and "stream" or 'static'\)\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local ok, s = pcall(function()
+        local c = SMODS_Sounds[args.sound_code]
+        return c and
+        {sound = love.audio.newSource(love.sound.newDecoder(c.data), c.should_stream and 'stream' or 'static'), per = c.per, vol = c.vol } or
+        {sound = love.audio.newSource("resources/sounds/"..args.sound_code..'.ogg', should_stream and "stream" or 'static')}
+    end)
+    if not ok or not s then return end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.sound_manager.modded.002"
+target = "engine/sound_manager.lua"
+pattern = '''^(?<pre>)[\t ]*if request\.type == 'kill' then return end\n(?<post>[\t ]*if request\.type == 'kill' then return end\n)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+optional = true

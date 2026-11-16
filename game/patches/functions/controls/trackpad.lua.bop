@@ -177,8 +177,8 @@ function T.next_tab(dir)
     for _, v in ipairs(e.UIBox:get_group(nil, first.config.group) or {}) do
         if v.config.choice and v.config.button then choices[#choices + 1] = v end
     end
-r 23 1323 %20%20%20%20 -
-r 23 1324 %20%20%20%20%20%20%20%20 -
+r 17 1323 %20%20%20%20 -
+r 17 1324 %20%20%20%20%20%20%20%20 -
 l 54
             local loop = not (e.config.focus_args and e.config.focus_args.no_loop)
             local n = choices[k + dir] or (loop and choices[dir > 0 and 1 or #choices]) or nil
@@ -234,7 +234,7 @@ function T.back()
         r.node:click()
         return true
     end
-r 23 214 %20%20%20%20 -
+r 17 214 %20%20%20%20 -
 l 15
         pcall(c.key_press_update, c, "escape")
         return true
@@ -442,7 +442,7 @@ function T.init()
             T.restore_drag()
             T.down_xy = nil
             local r = release(self, x, y, ...)
-r 23 1046 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 1046 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 21
             return r
         end

@@ -24,11 +24,11 @@ function create_UIBox_quest_menu()
     return create_UIBox_generic_options({
       back_func = 'exit_overlay_menu',
       contents = {
-r 15 723 %20%20%20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20%20%20 -
 l 2
           {n=G.UIT.T, config={text = mod_loc("QUESTS"), scale = 0.55, colour = G.C.GOLD, shadow = true}}
         }},
-r 15 71 %20%20%20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20%20%20 -
 l 13
           {n=G.UIT.T, config={text = mod_loc("Play a run to unlock quests!"), scale = 0.35, colour = G.C.WHITE}}
         }},
@@ -43,12 +43,12 @@ l 13
   return create_UIBox_generic_options({
     back_func = 'exit_overlay_menu',
     contents = {
-r 15 71 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 3
         {n=G.UIT.T, config={text = mod_loc("QUESTS"), scale = 0.78, colour = G.C.GOLD, shadow = true}}
       }},
 
-r 15 71 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 244
         create_tabs({
           tabs = {
@@ -294,31 +294,31 @@ function create_UIBox_tavern_hub()
   return create_UIBox_generic_options({
     back_func = 'exit_overlay_menu',
     contents = {
-r 15 723 %20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20 -
 l 2
         {n=G.UIT.T, config={text = mod_loc("TAVERN"), scale = 0.6, colour = G.C.GOLD, shadow = true}}
       }},
-r 15 723 %20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20 -
 l 2
         UIBox_button({label = {mod_loc("QUESTS")}, button = 'open_quest_menu', minw = 5, minh = 1, colour = G.C.BLUE}),
       }},
-r 15 2760 %20%20%20%20%20%20 -
+r 30 2760 %20%20%20%20%20%20 -
 l 2
         UIBox_button({label = {mod_loc("PROFILE")}, button = 'open_profile_menu', minw = 5, minh = 1, colour = G.C.GREEN}),
       }},
-r 15 2760 %20%20%20%20%20%20 -
+r 30 2760 %20%20%20%20%20%20 -
 l 2
         UIBox_button({label = {mod_loc("SHOP")}, button = 'open_shop_menu', minw = 5, minh = 1, colour = G.C.MONEY}),
       }},
-r 15 2760 %20%20%20%20%20%20 -
+r 30 2760 %20%20%20%20%20%20 -
 l 2
         UIBox_button({label = {string.upper("Deck Creator")}, button = 'open_deck_creator', minw = 5, minh = 1, colour = G.C.PURPLE}),
       }},
-r 15 2760 %20%20%20%20%20%20 -
+r 30 2760 %20%20%20%20%20%20 -
 l 2
         rawget(_G, "JokerForge") and JokerForge.tavern_button() or nil,
       }},
-r 15 2760 %20%20%20%20%20%20 -
+r 30 2760 %20%20%20%20%20%20 -
 l 10
         UIBox_button({label = {mod_loc("SEED LIBRARY")}, button = 'open_seed_library', minw = 5, minh = 1, colour = G.C.SECONDARY_SET.Spectral}),
       }},
@@ -330,15 +330,15 @@ end
 
 function create_tavern_quest_tab()
   return {n=G.UIT.ROOT, config={align = "cm", colour = G.C.CLEAR, minw = 5, minh = 4}, nodes={
-r 15 723 %20%20%20%20 -
+r 30 723 %20%20%20%20 -
 l 2
       {n=G.UIT.T, config={text = mod_loc("DAILY QUESTS"), scale = 0.4, colour = G.C.GOLD}}
     }},
-r 15 71 %20%20%20%20 -
+r 30 71 %20%20%20%20 -
 l 2
       {n=G.UIT.T, config={text = mod_loc("Complete quests to earn rewards!"), scale = 0.3, colour = G.C.WHITE}}
     }},
-r 15 71 %20%20%20%20 -
+r 30 71 %20%20%20%20 -
 l 7
       {n=G.UIT.T, config={text = mod_loc("Check back after playing a run"), scale = 0.25, colour = G.C.GREY}}
     }},
@@ -347,11 +347,11 @@ end
 
 function create_tavern_shop_tab()
   return {n=G.UIT.ROOT, config={align = "cm", colour = G.C.CLEAR, minw = 5, minh = 4}, nodes={
-r 15 723 %20%20%20%20 -
+r 30 723 %20%20%20%20 -
 l 2
       {n=G.UIT.T, config={text = mod_loc("SHOP"), scale = 0.4, colour = G.C.GOLD}}
     }},
-r 15 71 %20%20%20%20 -
+r 30 71 %20%20%20%20 -
 l 6
       {n=G.UIT.T, config={text = mod_loc("Buy cosmetics with Balacoin!"), scale = 0.3, colour = G.C.WHITE}}
     }},
@@ -359,10 +359,10 @@ l 6
 end
 
 G.FUNCS.open_tavern_hub = function(e)
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 1
   local success, err = pcall(function()
-r 13 1382 %20%20%20%20 -
+r 32 1382 %20%20%20%20 -
 l 24
       definition = create_UIBox_tavern_hub()
     }
@@ -388,10 +388,10 @@ G.FUNCS.shop_banners = function(e) play_sound('highlight1') end
 G.FUNCS.shop_badges = function(e) play_sound('highlight1') end
 
 G.FUNCS.open_quest_menu = function(e)
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 1
   local success, err = pcall(function()
-r 13 1382 %20%20%20%20 -
+r 32 1382 %20%20%20%20 -
 l 16
       definition = create_UIBox_quest_menu()
     }
@@ -409,7 +409,7 @@ G.FUNCS.reroll_repeatable_quests = function(e)
     play_sound('highlight1')
     local ok, err = pcall(function() QuestManager.reroll_repeatable_quests() end)
     if not ok then print("[QUESTS] Reroll error: " .. tostring(err)) end
-r 13 1375 %20%20%20%20 -
+r 32 1375 %20%20%20%20 -
 r 1 112 %20%20%20%20 -
 l 20
       trigger = 'after',
@@ -432,7 +432,7 @@ G.FUNCS.claim_quest_reward = function(e)
   if QuestManager and QuestManager.claim_quest then
     local success = QuestManager.claim_quest(quest)
     if success then
-r 13 1375 %20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20 -
 r 1 112 %20%20%20%20%20%20 -
 l 214
         trigger = 'after',
@@ -649,7 +649,7 @@ local function seed_lib_refresh()
 end
 
 G.FUNCS.seed_lib_page = function(args)
-r 13 603 %20%20 -
+r 32 603 %20%20 -
 l 176
   _seed_lib_page = args.cycle_config.current_option
   seed_lib_refresh()
@@ -827,7 +827,7 @@ _FUNCS_mt.__index = function(t, key)
       local seeds = seed_library_get()
       local entry = seeds[edit_idx]
       if not entry then return end
-r 13 1375 %20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20 -
 l 14
       G.E_MANAGER:add_event(Event({trigger='after', delay=0.1, func=function()
         _seed_edit_target = edit_idx
@@ -843,7 +843,7 @@ l 14
       local seeds = seed_library_get()
       local entry = seeds[rename_idx]
       if not entry then return end
-r 13 1375 %20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20 -
 l 87
       G.E_MANAGER:add_event(Event({trigger='after', delay=0.1, func=function()
         _seed_lib_rename_target = rename_idx

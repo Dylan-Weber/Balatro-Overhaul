@@ -318,7 +318,7 @@ end
 
 function SX.open_blocked()
     if G.CONTROLLER then G.CONTROLLER.text_input_hook = nil end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 42
     SX.page = 1
     SX.ask_blocks()
@@ -362,7 +362,7 @@ function SX.open_nick(code)
     SX.nick_code = code
     SX.view.nick = SX.nick(code) or ""
     if G.CONTROLLER then G.CONTROLLER.text_input_hook = nil end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 116
     G.FUNCS.overlay_menu{definition = UIK.window{
         id = "social_nick", compact = true, w = win_w() + 0.2,

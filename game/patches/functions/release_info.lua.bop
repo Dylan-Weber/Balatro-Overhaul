@@ -200,9 +200,9 @@ function RI.card_node(key, w)
   local h = w * G.CARD_H / G.CARD_W
   local area = CardArea(0, 0, w, h, {card_limit = 1, type = 'title', highlight_limit = 0, card_w = w})
   local card = Card(0, 0, w, h, G.P_CARDS.empty, center, {bypass_discovery_center = true, bypass_discovery_ui = true, bypass_lock = true})
-r 6 220 %20%20 -
-r 6 219 %20%20 -
-l 317
+r 5 220 %20%20 -
+r 5 219 %20%20 -
+l 318
   area:emplace(card)
   return {n = G.UIT.O, config = {object = area}}
 end
@@ -219,13 +219,14 @@ RI.ABOUT = {
 RI.LICENCES = {
   {"Balatro", "By LocalThunk, published by Playstack. Not included: the Overhaul patches your own copy.", "All rights reserved"},
   {"LÖVE 11.5", "Game engine by the LÖVE Development Team. Its libraries (SDL2, LuaJIT, LuaSocket, OpenAL Soft, FreeType and more) are listed in license.txt.", "zlib licence"},
-  {"Steamodded", "Modding framework by the Steamodded team, shipped with its source and modified for the Overhaul. The changes are listed in OVERHAUL_CHANGES.md next to it.", "GNU GPL 3.0"},
+  {"Steamodded", "Modding framework by the Steamodded team, shipped unchanged with its source. The Overhaul's changes load on top of it and are listed in STEAMODDED_CHANGES.md.", "GNU GPL 3.0"},
   {"nativefs", "File access library by megagrump, used by Steamodded.", "MIT licence"},
   {"Balatro Mod Index", "The Workshop's list of mods, by Efe and its contributors.", "MIT licence"},
   {"Lovely Injector", "The Overhaul reads mods made for Lovely, by ethangreen-dev. The Overhaul's loader is its own code.", "MIT licence"},
   {"Balatro-DeckCreator", "The Deck Creator is ported from Balatro-DeckCreator by adambennett.", "GNU GPL 3.0"},
   {"Cryptid", "Some of the Deck Creator's random-value logic follows Cryptid, by MathIsFun_ and the Cryptid team.", "GNU GPL 3.0"},
   {"Balatro Multiplayer", "Based on Balatro Multiplayer by Virtualized and the BMP team: the multiplayer in this mod builds on their work. Thank you.", "GNU GPL 3.0"},
+  {"iPhone and iPad", "The iPhone and iPad version was made by JohnG210. Thank you!", "GNU GPL 3.0"},
   {"Fonts", "m6x11plus by Daniel Linssen, Noto Sans and Go Noto (SIL Open Font Licence). They come from your copy of Balatro.", "From your copy"},
   {"Music and sounds", "Balatro's soundtrack by LouisF and its sounds come from your copy of Balatro. The public release ships no one else's music.", "From your copy"},
   {"Balatro Overhaul", "Code, art and texts made for this mod. Free software: you may use, study, change and share it under the GPL, keeping the credits.", "GNU GPL 3.0"},
@@ -520,7 +521,7 @@ function RI.window(tab)
 end
 
 function RI.open(tab, from)
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 34
   if from ~= nil then RI.from = from end
   G.FUNCS.overlay_menu{definition = RI.window(tab)}
@@ -556,8 +557,8 @@ G.FUNCS.open_patreon = function(e)
 end
 
 local function open_credits(tab)
-r 13 1381 %20%20 -
-l 202
+r 32 1381 %20%20 -
+l 201
   G.FUNCS.overlay_menu{definition = G.UIDEF.credits({back = 'credits_back_about', tab = tab})}
 end
 
@@ -599,12 +600,11 @@ end
 
 function RI.news_groups(e, lang)
   local _, highs, rest = RI.entry_text(e, lang)
-  local groups, by = {}, {}
+  local groups = {}
   local function add(title, text)
-    local g = by[title]
-    if not g then
+    local g = groups[#groups]
+    if not g or g.title ~= title then
       g = {title = title, lines = {}}
-      by[title] = g
       groups[#groups + 1] = g
     end
     g.lines[#g.lines + 1] = text
@@ -760,8 +760,8 @@ function RI.open_whats_new(from)
   RI._wn_entry = e
   RI._wn_from = from
   UIK._pages.whats_new = 1
-r 13 1381 %20%20 -
-l 304
+r 32 1381 %20%20 -
+l 308
   G.FUNCS.overlay_menu{definition = RI.whats_new_def(e)}
   return true
 end
@@ -928,7 +928,7 @@ mod_loc_register{
     ["All rights reserved"] = "Tous droits réservés",
     ["Game engine by the LÖVE Development Team. Its libraries (SDL2, LuaJIT, LuaSocket, OpenAL Soft, FreeType and more) are listed in license.txt."] = "Moteur de jeu de la LÖVE Development Team. Ses bibliothèques (SDL2, LuaJIT, LuaSocket, OpenAL Soft, FreeType et d'autres) sont listées dans license.txt.",
     ["zlib licence"] = "Licence zlib",
-    ["Modding framework by the Steamodded team, shipped with its source and modified for the Overhaul. The changes are listed in OVERHAUL_CHANGES.md next to it."] = "Outil de modding de l'équipe Steamodded, fourni avec son code source, modifié pour l'Overhaul, changements listés dans OVERHAUL_CHANGES.md.",
+    ["Modding framework by the Steamodded team, shipped unchanged with its source. The Overhaul's changes load on top of it and are listed in STEAMODDED_CHANGES.md."] = "Outil de modding de l'équipe Steamodded, fourni tel quel avec son code source. Les changements de l'Overhaul s'appliquent au chargement, listés dans STEAMODDED_CHANGES.md.",
     ["GNU GPL 3.0"] = "GNU GPL 3.0",
     ["File access library by megagrump, used by Steamodded."] = "Bibliothèque d'accès aux fichiers de megagrump, utilisée par Steamodded.",
     ["MIT licence"] = "Licence MIT",
@@ -979,7 +979,7 @@ mod_loc_register{
     ["All rights reserved"] = "Todos los derechos reservados",
     ["Game engine by the LÖVE Development Team. Its libraries (SDL2, LuaJIT, LuaSocket, OpenAL Soft, FreeType and more) are listed in license.txt."] = "Motor de juego del LÖVE Development Team. Sus bibliotecas (SDL2, LuaJIT, LuaSocket, OpenAL Soft, FreeType y más) están en license.txt.",
     ["zlib licence"] = "Licencia zlib",
-    ["Modding framework by the Steamodded team, shipped with its source and modified for the Overhaul. The changes are listed in OVERHAUL_CHANGES.md next to it."] = "Herramienta de modding del equipo de Steamodded, incluida con su código fuente, modificado para el Overhaul, cambios en OVERHAUL_CHANGES.md.",
+    ["Modding framework by the Steamodded team, shipped unchanged with its source. The Overhaul's changes load on top of it and are listed in STEAMODDED_CHANGES.md."] = "Herramienta de modding del equipo de Steamodded, incluida tal cual con su código fuente. Los cambios del Overhaul se aplican al cargar, listados en STEAMODDED_CHANGES.md.",
     ["GNU GPL 3.0"] = "GNU GPL 3.0",
     ["File access library by megagrump, used by Steamodded."] = "Biblioteca de acceso a archivos de megagrump, usada por Steamodded.",
     ["MIT licence"] = "Licencia MIT",
@@ -1039,6 +1039,8 @@ mod_loc_register{
     ["Join the community and hear about updates first"] = "Rejoignez la communauté et soyez informé des mises à jour en premier",
     ["Source code, downloads and bug reports"] = "Code source, téléchargements et signalement de bugs",
     ["Special thanks"] = "Remerciements",
+    ["iPhone and iPad"] = "iPhone et iPad",
+    ["The iPhone and iPad version was made by JohnG210. Thank you!"] = "La version iPhone et iPad a été faite par JohnG210. Merci !",
   },
   es = {
     ["A free fan mod for Balatro: online multiplayer, new modes, quests, achievements, The Casino, the Forge and lots of quality of life."] = "Un mod gratuito hecho por fans para Balatro: multijugador en línea, modos nuevos, misiones, logros, el Casino, la Forja y muchas mejoras de comodidad.",
@@ -1062,6 +1064,8 @@ mod_loc_register{
     ["Join the community and hear about updates first"] = "Únete a la comunidad y entérate antes que nadie de las actualizaciones",
     ["Source code, downloads and bug reports"] = "Código fuente, descargas y reporte de errores",
     ["Special thanks"] = "Agradecimientos especiales",
+    ["iPhone and iPad"] = "iPhone y iPad",
+    ["The iPhone and iPad version was made by JohnG210. Thank you!"] = "La versión para iPhone y iPad la hizo JohnG210. ¡Gracias!",
   },
 }
 

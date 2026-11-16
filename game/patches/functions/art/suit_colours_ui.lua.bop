@@ -146,7 +146,7 @@ G.FUNCS.suit_custom_colours = function()
         suit_palette_set(palette_index('custom'))
         save()
     end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 9
     G.FUNCS.overlay_menu{definition = UIK.window{id = 'suit_colours', title = mod_loc("CUSTOM COLOURS"), build = build, back_func = 'customize_deck'}}
 end

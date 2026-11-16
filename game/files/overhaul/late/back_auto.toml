@@ -1,0 +1,49 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.back.001"
+target = "back.lua"
+pattern = '''^(?<pre>[\t ]*self\.pos = self\.pos or \{\}\n)[\t ]*self\.pos\.x = pos\.x\n[\t ]*self\.pos\.y = pos\.y\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    self.pos.x = pos.x or 4
+    self.pos.y = pos.y or 0
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.back.002"
+target = "back.lua"
+pattern = '''^(?<pre>)[\t ]*if not back_config\.unlock_condition then \n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if not back_config.unlock_condition or back_config.demo then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.back.003"
+target = "back.lua"
+pattern = '''^(?<pre>)[\t ]*self\.pos\.x = pos\.x\n[\t ]*self\.pos\.y = pos\.y\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    self.pos.x = (pos and pos.x) or 4
+    self.pos.y = (pos and pos.y) or 0
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.back.modded.001"
+target = "back.lua"
+pattern = '''^(?<pre>)[\t ]*if not back_config\.unlock_condition then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if not back_config.unlock_condition or back_config.demo then
+${post}'''
+optional = true

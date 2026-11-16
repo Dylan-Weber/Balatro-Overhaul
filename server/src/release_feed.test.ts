@@ -293,7 +293,7 @@ describe('publishing a release (tools/release/publish_feed.ts)', () => {
     await expect(publish(opts(dir, to, { globals: "OVERHAUL_VERSION = '0'\n" }))).rejects.toThrow(/no matching file/);
   });
 
-  it('skips the phone patches when globals.lua is another build', async () => {
+  it('skips the phone patches when the version file is another build', async () => {
     const dir = join(work, 'phone_skip');
     await pack(dir, '4.0');
     const to = join(work, 'pub_skip');

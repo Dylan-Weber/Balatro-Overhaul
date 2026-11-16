@@ -405,7 +405,7 @@ local function install_hooks()
 
     if G and G.FUNCS and G.FUNCS.toggle_shop then
         local orig_toggle = G.FUNCS.toggle_shop
-r 13 2481 %20%20%20%20%20%20%20%20 -
+r 32 2481 %20%20%20%20%20%20%20%20 -
 l 33
             if not (G.CONTROLLER and G.CONTROLLER.locks and G.CONTROLLER.locks.toggle_shop) then pcall(gemini_copy) end
             return orig_toggle(e)

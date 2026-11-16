@@ -26,7 +26,7 @@ payload = '''
 [patches.pattern]
 target = "cardarea.lua"
 pattern = '''
-r 6 283 - -
+r 5 283 - -
 l 22
 '''
 position = 'at'
@@ -50,12 +50,12 @@ target = 'cardarea.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 6 85 - -
+r 5 85 - -
 l 2
 '''
 payload = '''
-r 6 647 - -
-r 6 85 %20%20%20%20 -
+r 5 647 - -
+r 5 85 %20%20%20%20 -
 l 2
 end
 '''

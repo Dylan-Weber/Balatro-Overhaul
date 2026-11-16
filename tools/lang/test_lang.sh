@@ -4,10 +4,15 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
 cd "$REPO"
 RC=0
-luajit "$HERE/file_keys.lua" assets/localization | grep -E "^==|^MISSING" || true
-luajit "$HERE/file_keys.lua" assets/localization > /dev/null || RC=1
-luajit "$HERE/file_keys.lua" assets/smods/localization | grep -E "^==|^MISSING" || true
-luajit "$HERE/file_keys.lua" assets/smods/localization > /dev/null || RC=1
+luajit "$HERE/file_keys.lua" assets/localization assets/overhaul/localization | grep -E "^==|^MISSING" || true
+luajit "$HERE/file_keys.lua" assets/localization assets/overhaul/localization > /dev/null || RC=1
+SL="$(mktemp -d)"
+mkdir -p "$SL/empty"
+DRY_RUN_OUT="$SL/out" luajit tools/mods/dry_run.lua "$REPO" "$SL/empty" "$REPO/assets" "$REPO/assets/smods" > /dev/null 2>&1
+mkdir -p "$SL/loc" && cp assets/smods/localization/*.lua "$SL/loc/" && cp "$SL"/out/smods/localization/*.lua "$SL/loc/" 2>/dev/null
+luajit "$HERE/file_keys.lua" "$SL/loc" | sed "s|$SL/loc|assets/smods/localization (patched)|" | grep -E "^==|^MISSING" || true
+luajit "$HERE/file_keys.lua" "$SL/loc" > /dev/null || RC=1
+rm -rf "$SL"
 luajit "$HERE/launcher_keys.lua" tools/release/launcher/lang.lua || RC=1
 if [ "${AUDIT:-0}" = 1 ]; then
   export MENU_OUT="${MENU_OUT:-$REPO/.night/lang/shots}"

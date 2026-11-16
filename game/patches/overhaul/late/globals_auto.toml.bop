@@ -1,0 +1,222 @@
+BOP 2
+eol lf
+final 1
+base 0
+l 36
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.001"
+target = "globals.lua"
+pattern = '''^(?<pre>)[\t ]*self\.F_CRASH_REPORTS = false            --Send Crash reports over the internet\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    self.F_CRASH_REPORTS = true
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.002"
+target = "globals.lua"
+pattern = '''^(?<pre>)[\t ]*--loadstring\("\\105\\102\\32\\108\\111\\118\\101\\46\\115\\121\\115\\116\\101\\109\\46\\103\\101\\116\\79\\83\\40\\41\\32\\61\\61\\32\\39\\105\\79\\83\\39\\32\\111\\114\\32\\108\\111\\118\\101\\46\\115\\121\\115\\116\\101\\109\\46\\103\\101\\116\\79\\83\\40\\41\\32\\61\\61\\32\\39\\65\\110\\100\\114\\111\\105\\100\\39\\32\\116\\104\\101\\110\\10\\32\\32\\108\\111\\118\\101\\46\\101\\118\\101\\110\\116\\46\\113\\117\\105\\116\\40\\41\\10\\101\\110\\100\\10"\)\(\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.003"
+target = "globals.lua"
+pattern = '''^(?<pre>[\t ]*self\.F_SAVE_TIMER = 5\n[\t ]*self\.F_ENGLISH_ONLY = false\n)[\t ]*self\.F_CRASH_REPORTS = false\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        self.F_CRASH_REPORTS = true
+
+        self.F_MOBILE = false
+
+e 8 97 %20%20%20%20%20%20%20%20 - =7,-2,+%4C,=1,-1,+%4E%4B%54%52%45,=8
+l 15
+        self.F_DISP_USERNAME = (love.platform and love.platform.getLocalPlayerName) and love.platform.getLocalPlayerName() or nil
+
+        self.F_RUMBLE = 1
+        self.F_QUIT_BUTTON = true
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.004"
+target = "globals.lua"
+pattern = '''^(?<pre>)[\t ]*self\.F_CRASH_REPORTS = false\n(?<post>[\t ]*end\n)'''
+position = "at"
+payload = '''
+${pre}        self.F_CRASH_REPORTS = true
+e 8 97 %20%20%20%20%20%20%20%20 - =7,-2,+%4C,=1,-1,+%4E%4B%54%52%45,=8
+l 3
+    end
+
+    if love.system.getOS() == 'Linux' then
+r 8 47 %20%20%20%20%20%20%20%20 -
+l 3
+    end
+
+    if love.system.getOS() == 'Android' or love.system.getOS() == 'iOS' then
+e 8 40 %20%20%20%20%20%20%20%20 - =20,-1,+%31,=1
+l 1
+        self.F_DISCORD = nil
+r 8 48 %20%20%20%20%20%20%20%20 -
+l 3
+
+        self.F_RUMBLE = 1
+        self.F_CRASH_REPORTS = true
+e 8 68 %20%20%20%20%20%20%20%20 - =22,-3,+%66%61%6C%73,=1
+l 2
+        self.F_QUIT_BUTTON = love.system.getOS() == 'Android'
+        self.F_MOBILE = true
+e 8 97 %20%20%20%20%20%20%20%20 - =7,-2,+%4C,=1,-1,+%4E%4B%54%52%45,=8
+e 8 80 %20%20%20%20%20%20%20%20 - =12,+%4C%4F%41%44%49%4E%47%5F,=1,-1,+%41%52,=7
+r 8 72 %20%20%20%20%20%20%20%20 -
+l 137
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.005"
+target = "globals.lua"
+pattern = '''^(?<pre>)[\t ]*crashreports = false,\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        crashreports = true,
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.006"
+target = "globals.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*language = 'en-us',\n)'''
+position = "at"
+payload = '''
+${pre}        jimbo_comments_enabled = false,
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.007"
+target = "globals.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*play_button_pos = 2,\n)'''
+position = "at"
+payload = '''
+${pre}        haptic_feedback = true,
+        haptic_intensity = 50,
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.008"
+target = "globals.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*SOUND = \{\n)'''
+position = "at"
+payload = '''
+${pre}        profile_counters = {0, 0, 0},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.009"
+target = "globals.lua"
+pattern = '''^(?<pre>)[\t ]*crt = [^\n]*,\n[\t ]*bloom = 1\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            crt = (self.F_MOBILE and 30) or 70,
+            bloom = 1,
+            performance_mode = false,
+            perf_resolution = 1,
+            perf_shader_quality = 3,
+            perf_particles = true,
+            perf_particle_amount = 1,
+            perf_background = 1,
+            perf_gc_tuning = false,
+            perf_texture_filter = 1,
+            perf_canvas_caching = false,
+            perf_offscreen_culling = false,
+            perf_bg_anims = true,
+            perf_log = false,
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.010"
+target = "globals.lua"
+pattern = '''^(?<pre>)[\t ]*self\.TILE_W = 20\n[\t ]*self\.TILE_H = 11\.5\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    self.TILE_W = 21
+    self.TILE_H = 11.2
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.011"
+target = "globals.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*self\.STAGES = \{\n)'''
+position = "at"
+payload = '''
+${pre}    self.STATES.ASYNC_WAIT = 1001
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.012"
+target = "globals.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self\.STAGE_OBJECTS = \{\n)'''
+position = "at"
+payload = '''
+${pre}    self.STAGES.ASYNC_LIMBO = 1001
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.013"
+target = "globals.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self\.STAGE = self\.STAGES\.MAIN_MENU\n)'''
+position = "at"
+payload = '''
+${pre}    self.STAGE_OBJECTS[self.STAGES.ASYNC_LIMBO] = {}
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.014"
+target = "globals.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self\.CHALLENGE_WINS = 5\n)'''
+position = "at"
+payload = '''
+${pre}    self.HAPTIC_LEVEL = 0
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.globals.modded.001"
+target = "globals.lua"
+pattern = '''^(?<pre>)[\t ]*end\n[\t ]*\n[\t ]*if love\.system\.getOS\(\) == 'Android' or love\.system\.getOS\(\) == 'iOS' then\n[\t ]*self\.F_SAVE_TIMER = 5\n[\t ]*self\.F_DISCORD = true\n[\t ]*self\.F_NO_ACHIEVEMENTS = true\n[\t ]*self\.F_CRASH_REPORTS = false\n[\t ]*self\.F_SOUND_THREAD = true\n[\t ]*self\.F_VIDEO_SETTINGS = false\n[\t ]*self\.F_ENGLISH_ONLY = false\n[\t ]*self\.F_QUIT_BUTTON = false\n[\t ]*self\.F_MOBILE_UI = true\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+optional = true
+end

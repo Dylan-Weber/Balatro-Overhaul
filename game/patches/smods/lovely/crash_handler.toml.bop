@@ -30,7 +30,7 @@ target = 'game.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 9 2021 - -
+r 7 2021 - -
 l 4
 '''
 payload = '''

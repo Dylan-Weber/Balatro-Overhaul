@@ -4,7 +4,7 @@ final 1
 base 0
 l 1
 require("love.filesystem")
-r 26 1 - -
+r 19 1 - -
 l 161
 require "love.timer"
 

@@ -19,8 +19,8 @@ position = 'before'
 # match_indent = true
 line_prepend = '$indent'
 payload = '''
-r 12 1682 - -
-r 12 1694 - -
+r 31 1682 - -
+r 31 1694 - -
 l 17
     if not v.key then v.key = k end
     for kk, vv in pairs(G.SETTINGS.ACHIEVEMENTS_EARNED) do 
@@ -39,7 +39,7 @@ pattern = '''if G.GAME.challenge then return end'''
 position = "after"
 payload = '''
 fetch_achievements() -- Refreshes achievements
-r 12 1694 - -
+r 31 1694 - -
 l 24
     if (not v.earned) and (v.unlock_condition and type(v.unlock_condition) == 'function') and v:unlock_condition(args) then
         unlock_achievement(k)
@@ -65,20 +65,20 @@ pattern = '''local achievement_set = false
 if G.F_NO_ACHIEVEMENTS then return end'''
 position = "at"
 payload = '''local achievement_set = false
-r 12 1725 - -
-r 12 1727 - -
+r 31 1725 - -
+r 31 1727 - -
 l 3
 G:save_progress()
 
 if G.ACHIEVEMENTS[achievement_name] and G.ACHIEVEMENTS[achievement_name].mod then 
-r 12 1730 %20%20%20%20 -
-r 12 1731 %20%20%20%20%20%20%20%20 -
-r 12 1732 %20%20%20%20%20%20%20%20 -
-r 15 5391 %20%20%20%20%20%20%20%20 -
+r 31 1730 %20%20%20%20 -
+r 31 1731 %20%20%20%20%20%20%20%20 -
+r 31 1732 %20%20%20%20%20%20%20%20 -
+r 30 5391 %20%20%20%20%20%20%20%20 -
 l 1
     end
-r 12 1735 %20%20%20%20 -
-l 39
+r 31 1735 %20%20%20%20 -
+l 38
 end
 
 if achievement_set then 
@@ -92,10 +92,9 @@ match_indent = true
 [[patches]]
 [patches.regex]
 target = 'functions/common_events.lua'
-pattern = 'if G\.GAME\.seeded or G\.GAME\.challenge or G\.GAME\.modded_run then return end'
+pattern = 'if G\.GAME\.seeded or G\.GAME\.challenge then return end'
 position = 'at'
-payload = '''if G.GAME.modded_run then return end
-if not SMODS.config.seeded_unlocks and (G.GAME.seeded or G.GAME.challenge) then return end'''
+payload = 'if not SMODS.config.seeded_unlocks and (G.GAME.seeded or G.GAME.challenge) then return end'
 
 [[patches]]
 [patches.pattern]
@@ -108,7 +107,7 @@ payload = 'if (not G.GAME.seeded and not G.GAME.challenge) or SMODS.config.seede
 [[patches]]
 [patches.regex]
 target = 'functions/common_events.lua'
-pattern = 'if G\.GAME\.seeded and not G\.GAME\.daily then'
+pattern = 'if G\.GAME\.seeded then'
 position = 'at'
 payload = 'if false then'
 

@@ -221,7 +221,7 @@ function SC.open(code)
     SC.code = code
     SC.confirm_block = nil
     if G.CONTROLLER then G.CONTROLLER.text_input_hook = nil end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 84
     G.FUNCS.overlay_menu{definition = UIK.window{
         id = "social_card", compact = true, w = card_w() + 0.2,

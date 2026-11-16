@@ -646,7 +646,7 @@ G.FUNCS.run_mods_stake_back = function()
         if ok then return end
         print("[RunMods] stake back: " .. tostring(err))
     end
-r 13 1375 %20%20%20%20 -
+r 32 1375 %20%20%20%20 -
 l 85
 end
 

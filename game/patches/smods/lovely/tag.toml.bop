@@ -50,9 +50,9 @@ payload = '''
 [patches.pattern]
 target = "tag.lua"
 pattern = '''
-r 4 107 - -
-r 4 108 %20%20%20%20 -
-r 4 109 %20%20%20%20%20%20%20%20 %20%20%20%20%20%20%20
+r 9 107 - -
+r 9 108 %20%20%20%20 -
+r 9 109 %20%20%20%20%20%20%20%20 %20%20%20%20%20%20%20
 l 7
     end
 end
@@ -76,13 +76,62 @@ target = 'tag.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 4 108 - -
-l 51
+r 9 108 - -
+l 19
 '''
 payload = '''
 if G.GAME.orbital_choices and G.GAME.orbital_choices[G.GAME.round_resets.ante] and G.GAME.orbital_choices[G.GAME.round_resets.ante][self.ability.blind_type] then
 '''
 
+
+# create_UIBox_your_collection_tags()
+[[patches]]
+[patches.regex]
+target = "functions/UI_definitions.lua"
+pattern = "(?<indent>[\t ]*)local tag_matrix = \\{(\n.*){6}"
+position = 'at'
+line_prepend = '$indent'
+payload = '''
+local tag_matrix = {}
+local counter = 0
+local tag_tab = {}
+local tag_pool = {}
+if G.ACTIVE_MOD_UI then
+r 30 3917 %20%20%20%20 -
+l 7
+        if v.mod and G.ACTIVE_MOD_UI.id == v.mod.id then tag_pool[k] = v end
+    end
+else
+    tag_pool = G.P_TAGS
+end
+for k, v in pairs(tag_pool) do
+    counter = counter + 1
+r 30 3918 %20%20%20%20 -
+l 70
+end
+for i = 1, math.ceil(counter / 6) do
+    table.insert(tag_matrix, {})
+end'''
+
+[[patches]]
+[patches.regex]
+target = "functions/UI_definitions.lua"
+pattern = '''(?<indent>[\t ]*)v\.children\.alert\.states\.collide\.can = false\n[\s\S]{8}end\n[\s\S]{8}return true\n[\s\S]{4}end\)\n[\s\S]{2}\}\)\)\n{3}'''
+position = 'after'
+line_prepend = '$indent'
+payload = '''
+local table_nodes = {}
+for i = 1, math.ceil(counter / 6) do
+    table.insert(table_nodes, {n=G.UIT.R, config={align = "cm"}, nodes=tag_matrix[i]})
+end'''
+
+[[patches]]
+[patches.regex]
+target = "functions/UI_definitions.lua"
+pattern = '''(?<indent>[\t ]*)\{\n[\s\S]{10}\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=tag_matrix\[1\]},[\s\S]*tag_matrix\[4\]\},\n[\s\S]{8}\}'''
+position = 'at'
+line_prepend = '$indent'
+payload = '''table_nodes'''
 
 # Tag:generate_UI()
 [[patches]]
@@ -129,12 +178,12 @@ pattern = "G.FUNCS.reroll_boss = function(e)"
 position = "after"
 match_indent = true
 payload = '''if not G.blind_select_opts then
-r 13 2802 %20%20%20%20 -
-r 13 2803 %20%20%20%20 -
-r 13 2804 %20%20%20%20 -
-r 13 2820 %20%20%20%20 -
-r 15 1266 %20%20%20%20 -
-r 13 2618 %20%20%20%20%20%20%20%20 -
+r 32 2802 %20%20%20%20 -
+r 32 2803 %20%20%20%20 -
+r 32 2804 %20%20%20%20 -
+r 32 2820 %20%20%20%20 -
+r 30 1266 %20%20%20%20 -
+r 32 2618 %20%20%20%20%20%20%20%20 -
 l 11
     end
     return true
@@ -147,7 +196,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 15 1446 - -
+r 30 1446 - -
 l 10
 '''
 payload = '''
@@ -159,7 +208,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 1489 - -
+r 30 1489 - -
 l 15
 '''
 payload = '''

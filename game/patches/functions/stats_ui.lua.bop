@@ -735,10 +735,10 @@ function SU.foot_scale(labels)
   return sc
 end
 
-r 15 2591 - -
+r 30 2591 - -
 l 1
   pcall(fetch_achievements)
-r 15 2604 %20%20 -
+r 30 2604 %20%20 -
 l 226
   return UIK.window{
     id = 'ostats',

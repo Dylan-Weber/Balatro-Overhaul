@@ -29,7 +29,7 @@ NO_PERMS = {"android.permission.RECORD_AUDIO", "android.permission.QUERY_ALL_PAC
 FILE_ACCESS_CODE = ("isExternalStorageManager", "MANAGE_APP_ALL_FILES_ACCESS_PERMISSION", "MANAGE_ALL_FILES_ACCESS_PERMISSION",
                     "requestLegacyExternalStorage", "files_ask", "files_ok")
 
-STEAM_ONLY_LINES = 0
+STEAM_ONLY_LINES = 24
 
 failures = []
 

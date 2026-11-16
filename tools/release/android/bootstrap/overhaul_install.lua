@@ -411,8 +411,11 @@ function M.carry()
 end
 
 function M.installed_name()
-	local src = love.filesystem.read(M.GAME_DIR .. "/globals.lua") or ""
-	return src:match("OVERHAUL_NAME%s*=%s*['\"]([^'\"]+)['\"]")
+	for _, rel in ipairs({"/overhaul/version.lua", "/globals.lua"}) do
+		local src = love.filesystem.read(M.GAME_DIR .. rel) or ""
+		local name = src:match("OVERHAUL_NAME%s*=%s*['\"]([^'\"]+)['\"]")
+		if name then return name end
+	end
 end
 
 function M.feed_for(vanilla)

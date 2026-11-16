@@ -535,7 +535,7 @@ function getDebugInfoForCrash()
     local t = "\nOptional features enabled: "
     local any_enabled
     for k, v in pairs(SMODS.optional_features) do
-r 12 2162 %20%20%20%20%20%20%20%20 -
+r 31 2162 %20%20%20%20%20%20%20%20 -
 l 109
             if next(v) then                        
                 t = t .. k .. ' ('
@@ -646,14 +646,14 @@ function injectStackTrace()
 
         sendErrorMessage("Oops! The game crashed\n" .. STP.stacktrace(msg), 'StackTrace')
 
-r 19 250 %20%20%20%20%20%20%20%20 -
+r 12 250 %20%20%20%20%20%20%20%20 -
 l 3
             return
         end
 
-r 19 254 %20%20%20%20%20%20%20%20 -
-r 19 255 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 19 256 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 12 254 %20%20%20%20%20%20%20%20 -
+r 12 255 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 12 256 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 6
                 return
             end
@@ -661,16 +661,16 @@ l 6
 
         -- Reset state.
         if love.mouse then
-r 23 152 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 19 264 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 19 265 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 152 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 12 264 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 12 265 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 4
             if love.mouse.isCursorSupported() then
                 love.mouse.setCursor()
             end
         end
-r 19 267 %20%20%20%20%20%20%20%20 -
-r 19 268 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 12 267 %20%20%20%20%20%20%20%20 -
+r 12 268 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 8
             for i, v in ipairs(love.joystick.getJoysticks()) do
                 v:setVibration()
@@ -680,8 +680,8 @@ l 8
             love.audio.stop()
         end
 
-r 19 274 %20%20%20%20%20%20%20%20 -
-r 19 275 %20%20%20%20%20%20%20%20 -
+r 12 274 %20%20%20%20%20%20%20%20 -
+r 12 275 %20%20%20%20%20%20%20%20 -
 l 6
 
         local background = {0, 0, 1}
@@ -689,8 +689,8 @@ l 6
             background = G.C.BLACK
         end
         love.graphics.clear(background)
-r 19 278 %20%20%20%20%20%20%20%20 -
-l 98
+r 12 278 %20%20%20%20%20%20%20%20 -
+l 102
 
         local trace = STP.stacktrace("", 3)
 
@@ -721,6 +721,10 @@ l 98
 
         if V and SMODS and SMODS.save_game and V(SMODS.save_game or '0.0.0') ~= V(SMODS.version or '0.0.0') then
             table.insert(err, 'This crash may be caused by continuing a run that was started on a previous version of Steamodded. Try creating a new run.')
+        end
+
+        if V and V(MODDED_VERSION or '0.0.0') ~= V(RELEASE_VERSION or '0.0.0') then
+            table.insert(err, '\n\nDevelopment version of Steamodded detected! If you are not actively developing a mod, please try using the latest release instead.\n\n')
         end
 
         if not V and not smods_dupe then
@@ -789,7 +793,7 @@ l 98
             end
         end
 
-r 19 285 %20%20%20%20%20%20%20%20 -
+r 12 285 %20%20%20%20%20%20%20%20 -
 l 17
             if not love.graphics.isActive() then
                 return
@@ -808,7 +812,7 @@ l 17
                     love.graphics.getWidth() - (pos / 2) + arrowSize, arrowSize * 2,
                     love.graphics.getWidth() - (pos / 2) - arrowSize, arrowSize * 2)
             end
-r 11 123 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 123 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 24
         end
 
@@ -834,7 +838,7 @@ l 24
                 })
             end
             if G.SAVE_MANAGER and G.SAVE_MANAGER.channel then
-r 9 1218 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 1218 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 13
                     type = 'kill'
                 })
@@ -849,11 +853,11 @@ l 13
         return function()
             love.event.pump()
 
-r 19 299 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 12 299 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 if e == "quit" then
                     return a or 0
-r 19 302 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 12 302 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 29
                     return 1
                 elseif e == "keypressed" and a == "c" and love.keyboard.isDown("lctrl", "rctrl") then
@@ -884,8 +888,8 @@ l 29
                     copyToClipboard()
                 elseif e == "gamepadpressed" and (b == "b" or b == "back" or b == "start") then
                     return 1
-r 19 304 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 19 305 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 12 304 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 12 305 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 21
                     if #name == 0 or name == "Untitled" then
                         name = "Game"
@@ -908,7 +912,7 @@ l 21
             draw()
 
             if love.timer then
-r 19 318 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 12 318 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 10
             end
         end

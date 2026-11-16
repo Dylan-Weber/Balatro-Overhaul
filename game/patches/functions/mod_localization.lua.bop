@@ -6345,7 +6345,7 @@ BOTLATRO_TRANSLATIONS.fr["Bot-latro players run on the server and play like real
 BOTLATRO_TRANSLATIONS.es["Bot-latro players run on the server and play like real players"] = "Los jugadores Bot-latro funcionan en el servidor y juegan como jugadores reales"
 for lang, t in pairs(BOTLATRO_TRANSLATIONS) do
   MOD_TRANSLATIONS[lang] = MOD_TRANSLATIONS[lang] or {}
-r 11 131 %20%20 -
+r 13 131 %20%20 -
 l 331
     if MOD_TRANSLATIONS[lang][k] == nil or MOD_TRANSLATIONS[lang][k] == k then MOD_TRANSLATIONS[lang][k] = v end
   end
@@ -6678,7 +6678,7 @@ SWEEP_TRANSLATIONS.fr["BALACOIN:"] = "BALACOIN :"
 SWEEP_TRANSLATIONS.es["BALACOIN:"] = "BALACOIN:"
 for lang, t in pairs(SWEEP_TRANSLATIONS) do
   MOD_TRANSLATIONS[lang] = MOD_TRANSLATIONS[lang] or {}
-r 11 131 %20%20 -
+r 13 131 %20%20 -
 l 122
     if MOD_TRANSLATIONS[lang][k] == nil or MOD_TRANSLATIONS[lang][k] == k then MOD_TRANSLATIONS[lang][k] = v end
   end
@@ -6726,8 +6726,8 @@ function mod_loc_register(t)
 end
 
 mod_loc_register{
-  fr = {["Also built on"] = "Aussi construit sur", ["Multiplayer based on"] = "Multijoueur basé sur", ["by Virtualized and the BMP team"] = "par Virtualized et l'équipe BMP"},
-  es = {["Also built on"] = "También construido sobre", ["Multiplayer based on"] = "Multijugador basado en", ["by Virtualized and the BMP team"] = "por Virtualized y el equipo de BMP"},
+  fr = {["Also built on"] = "Aussi construit sur", ["Multiplayer based on"] = "Multijoueur basé sur", ["by Virtualized and the BMP team"] = "par Virtualized et l'équipe BMP", ["iOS port"] = "Portage iOS"},
+  es = {["Also built on"] = "También construido sobre", ["Multiplayer based on"] = "Multijugador basado en", ["by Virtualized and the BMP team"] = "por Virtualized y el equipo de BMP", ["iOS port"] = "Versión para iOS"},
 }
 
 mod_loc_register{

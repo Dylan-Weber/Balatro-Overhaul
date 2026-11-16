@@ -1,0 +1,80 @@
+BOP 2
+eol lf
+final 1
+base 0
+l 70
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.text.001"
+target = "engine/text.lua"
+pattern = '''^(?<pre>[\t ]*DynaText = Moveable:extend\(\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}local text_utf8_ok, text_utf8 = pcall(require, 'utf8')
+local letter_cache = setmetatable({}, {__mode = 'k'})
+local function dynatext_letter(font, c)
+    local by_char = letter_cache[font]
+    if not by_char then
+        by_char = {}
+        letter_cache[font] = by_char
+    end
+    local t = by_char[c]
+    if not t then
+        t = love.graphics.newText(font, c)
+        by_char[c] = t
+    end
+    return t
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.text.002"
+target = "engine/text.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*local old_letter = old_letters and old_letters\[current_letter\] or nil\n)'''
+position = "at"
+payload = '''
+${pre}                    if text_utf8_ok and not text_utf8.len(c) then c = '?' end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.text.003"
+target = "engine/text.lua"
+pattern = '''^(?<pre>)[\t ]*local let_tab = \{letter = [A-Za-z_.:]+\(self\.font\.FONT, c\), char = c, scale = old_letter and old_letter\.scale or part_scale\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    local let_tab = {letter = dynatext_letter(self.font.FONT, c), char = c, scale = old_letter and old_letter.scale or part_scale}
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.text.004"
+target = "engine/text.lua"
+pattern = '''^(?<pre>)[\t ]*0\)\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    0))*self.font.render_scale/G.TILESIZE/10
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.text.005"
+target = "engine/text.lua"
+pattern = '''^(?<pre>)[\t ]*if self\.config\.float then letter\.offset\.y = \(G\.SETTINGS\.reduced_motion and 0 or 1\)\*math\.sqrt\(self\.scale\)\*\(2\+\(self\.font\.FONTSCALE/G\.TILESIZE\)\*2000\*math\.sin\(2\.666\*G\.TIMERS\.REAL\+200\*k\)\) \+ 60\*\(letter\.scale-1\) end\n[\t ]*if self\.config\.bump then letter\.offset\.y = \(G\.SETTINGS\.reduced_motion and 0 or 1\)\*self\.bump_amount\*math\.sqrt\(self\.scale\)\*7\*math\.max\(0, \(5\+self\.bump_rate\)\*math\.sin\(self\.bump_rate\*G\.TIMERS\.REAL\+200\*k\) - 3 - self\.bump_rate\) end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if self.config.float then letter.offset.y = (G.SETTINGS.reduced_motion and 0 or 1)*math.sqrt(self.scale)*(7*self.font.render_scale/(G.TILESIZE*10))*(1.5*math.sin(2.666*G.TIMERS.REAL+200*k)) end
+e 28 235 %20%20%20%20%20%20%20%20 - =121,+%28%28,=1,+%2A%73%65%6C%66%2E%66%6F%6E%74%2E%72%65%6E%64%65%72%5F%73%63%61%6C%65%2F%28%47%2E%54%49%4C%45%53%49%5A%45%2A%31%30%29%29,=98,+%29,=4
+l 2
+${post}'''
+times = 1
+end

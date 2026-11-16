@@ -188,7 +188,7 @@ function bom_room.show_name_prompt(reason, name, retry)
     G.FUNCS.mp_name_save = function()
         pcall(function()
             G:save_settings()
-r 15 5391 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 5391 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 20
         end)
         if bom_room.is_default_name(my_profile_name()) then return end
@@ -210,7 +210,7 @@ l 20
         end)
         G.FUNCS.open_multiplayer_menu()
     end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 12
     bom_ui.overlay({ definition = create_UIBox_generic_options({ back_func = "mp_name_cancel", no_back = true, contents = {
         { n = G.UIT.R, config = { align = "cm", padding = 0.1 }, nodes = {
@@ -224,7 +224,7 @@ l 12
         }},
         { n = G.UIT.R, config = { align = "cm", minh = 0.8, padding = 0.1 }, nodes = {
             create_text_input({
-r 15 5387 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 5387 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 542
                 ref_table = profile, ref_value = 'name', extended_corpus = true, keyboard_offset = 2,
             }),

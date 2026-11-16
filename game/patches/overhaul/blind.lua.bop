@@ -1,0 +1,26 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 9
+local Hooks = require("overhaul.hooks")
+
+local function playing(card)
+    if SMODS then return card.playing_card end
+    return card.area ~= G.jokers
+end
+
+Hooks.wrap("Blind", "debuff_card", function(orig) return function(self, card, ...)
+    if self.boss and playing(card) and card.config and card.config.center and card.config.center.key == 'm_wild' then
+r 2 651 %20%20%20%20%20%20%20%20 -
+l 9
+        return
+    end
+    return orig(self, card, ...)
+end end, {id = "overhaul.blind.wild_immune"})
+
+Hooks.wrap("SMODS", "is_showdown_ante", function(orig) return function(...)
+    if G.GAME and G.GAME.modifiers and G.GAME.modifiers.boss_always_finisher then return true end
+    return orig(...)
+end end, {id = "overhaul.blind.always_finisher"})
+end

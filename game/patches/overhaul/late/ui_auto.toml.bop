@@ -1,0 +1,614 @@
+BOP 2
+eol lf
+final 1
+base 0
+l 108
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.001"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self:calculate_xywh\(self\.UIRoot, self\.T\)\n)'''
+position = "at"
+payload = '''
+${pre}    self.building = true
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.002"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*self:align_to_major\(\)\n)'''
+position = "at"
+payload = '''
+${pre}    self.building = nil
+    if self.recalc_pending then
+        self.recalc_pending = nil
+        self:recalculate()
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.003"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*function UIBox:calculate_xywh\(node, _T, recalculate, _scale\)\n)'''
+position = "at"
+payload = '''
+${pre}local ui_utf8_ok, ui_utf8 = pcall(require, 'utf8')
+local function ui_valid_text(s)
+    if type(s) ~= 'string' or not ui_utf8_ok then return s end
+    local ok, pos = ui_utf8.len(s)
+    local n = 0
+    while not ok and pos and n < 256 do
+        s = s:sub(1, pos - 1) .. '?' .. s:sub(pos + 1)
+        ok, pos = ui_utf8.len(s)
+        n = n + 1
+    end
+    return ok and s or '?'
+end
+
+local function ui_text_string(v)
+    if type(v) ~= 'table' then return tostring(v) end
+    local mt = getmetatable(v)
+    if mt and mt.__tostring then return tostring(v) end
+    if type(v.array) == 'table' and v.sign ~= nil then
+        local n = #v.array <= 1 and (v.sign == -1 and -1 or 1) * (tonumber(v.array[1]) or 0) or math.huge
+        return rawget(_G, 'number_format') and tostring(number_format(n)) or tostring(n)
+    end
+    local parts = {}
+    for _, p in ipairs(v) do parts[#parts + 1] = ui_text_string(p) end
+    return table.concat(parts, ' ')
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.004"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*node\.config\.text_drawable = nil\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.005"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*if node\.config\.func and not recalculate then G\.FUNCS\[node\.config\.func\]\(node\) end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                if node.config.func and not recalculate then local _fn = G.FUNCS[node.config.func]; if type(_fn) == 'function' then _fn(node) end end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.006"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*node\.config\.lang = node\.config\.lang or G\.LANG\n)'''
+position = "at"
+payload = '''
+${pre}            if type(node.config.text) ~= 'string' then node.config.text = ui_text_string(node.config.text) end
+            node.config.text = ui_valid_text(node.config.text)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.007"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>[\t ]*node\.config\.lang = node\.config\.lang or G\.LANG\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}            local td = node.config.text_drawable
+            if td then
+                if node.config.text_drawable_font ~= node.config.lang.font.FONT then
+r 29 135 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 188
+                elseif node.config.text_drawable_text ~= node.config.text then
+                    td:set(node.config.text)
+                    node.config.text_drawable_text = node.config.text
+                end
+            end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.008"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*if not node\.parent or true then self:calculate_xywh\(self\.UIRoot, self\.T, true\); self\.UIRoot:set_wh\(\); self\.UIRoot:set_alignment\(\) end--self:recalculate\(\) end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if not node.parent then self:calculate_xywh(self.UIRoot, self.T, true); self.UIRoot:set_wh(); self.UIRoot:set_alignment() end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.009"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>[\t ]*if v\.draw_children then v:draw_children\(\) end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}            local more = self.draw_more and self.draw_more[k]
+            if more then
+                for i = #more, 1, -1 do
+                    local m = more[i]
+                    if m.REMOVED or m.UIBox ~= self then table.remove(more, i) end
+                end
+                for _, m in ipairs(more) do
+                    if m.draw_self then m:draw_self() else m:draw() end
+                    if m.draw_children then m:draw_children() end
+                end
+            end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.010"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*--Calculate the correct dimensions and width/height and offset for each node\n)'''
+position = "at"
+payload = '''
+${pre}    if self.building then self.recalc_pending = true return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.011"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>[\t ]*Moveable\.drag\(self,offset\)\n)[\t ]*Moveable\.move\(self\.UIRoot, [^\n]*\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    --Moveable.move(self.UIRoot, dt)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.012"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*Moveable\.init\(self,\{T = _T\}\)\n)'''
+position = "at"
+payload = '''
+${pre}        local again = self.VT ~= nil
+        local mv = G.MOVEABLES
+        local so = not G.STAGE_OBJECT_INTERRUPT and G.STAGE_OBJECTS[G.STAGE]
+        local mv_n, so_n = #mv, so and #so or 0
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.013"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self\.states\.click\.can = false\n)'''
+position = "at"
+payload = '''
+${pre}        if again then
+            if #mv > mv_n and mv[#mv] == self then mv[#mv] = nil end
+            if so and #so > so_n and so[#so] == self then so[#so] = nil end
+        end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.014"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*self\.UIBox\.draw_layers\[self\.config\.draw_layer\] = self\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        local dl, cur = self.UIBox.draw_layers, self.UIBox.draw_layers[self.config.draw_layer]
+        if cur and cur ~= self and not cur.REMOVED and cur.UIBox == self.UIBox then
+            self.UIBox.draw_more = self.UIBox.draw_more or {}
+            local more = self.UIBox.draw_more[self.config.draw_layer] or {}
+            self.UIBox.draw_more[self.config.draw_layer] = more
+            local seen = false
+            for _, m in ipairs(more) do if m == self then seen = true end end
+            if not seen then more[#more + 1] = self end
+        else
+            dl[self.config.draw_layer] = self
+            local more = self.UIBox.draw_more and self.UIBox.draw_more[self.config.draw_layer]
+            if more then for i = #more, 1, -1 do if more[i] == self then table.remove(more, i) end end end
+        end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.015"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*if self\.config and self\.config\.func and \(\(\(self\.config\.button_UIE or self\.config\.button\) and self\.config\.func ~= 'set_button_pip'\) or self\.config\.insta_func\) then G\.FUNCS\[self\.config\.func\]\(self\) end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if self.config and self.config.func and (((self.config.button_UIE or self.config.button) and self.config.func ~= 'set_button_pip') or self.config.insta_func) then local _fn = G.FUNCS[self.config.func]; if type(_fn) == 'function' then _fn(self) end end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.016"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self\.config\.lang = self\.config\.lang or G\.LANG\n)'''
+position = "at"
+payload = '''
+${pre}        self.config.text = ui_valid_text(self.config.text)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.017"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*end\n[\t ]*\n[\t ]*if self\.config\.ref_table and self\.config\.ref_table\[self\.config\.ref_value\] ~= self\.config\.prev_value then\n)'''
+position = "at"
+payload = '''
+${pre}        self.config.text_drawable_font = self.config.lang.font.FONT
+        self.config.text_drawable_text = self.config.text
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.018"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*self\.config\.text = tostring\(self\.config\.ref_table\[self\.config\.ref_value\]\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        self.config.text = ui_valid_text(tostring(self.config.ref_table[self.config.ref_value]))
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.019"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>[\t ]*self\.config\.text_drawable:set\(self\.config\.text\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}        self.config.text_drawable_text = self.config.text
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.020"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*self\.ARGS\.button_colours\[2\] = \(\(\(collided_button\.config\.hover and collided_button\.states\.hover\.is\) or \(collided_button\.last_clicked and collided_button\.last_clicked > G\.TIMERS\.REAL - 0\.1\)\) and G\.C\.UI\.HOVER or nil\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            self.ARGS.button_colours[2] = (((collided_button.config.hover and collided_button.states.hover.is and ((not G.CONTROLLER.HID.touch) or G.CONTROLLER.is_cursor_down)) or (collided_button.last_clicked and collided_button.last_clicked > G.TIMERS.REAL - 0.1)) and G.C.UI.HOVER or nil)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.021"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>[\t ]*love\.graphics\.pop\(\)\n[\t ]*end\n[\t ]*end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if self.config.pulse_border then
+e 29 820 %20%20%20%20%20%20%20%20 - =5,-1,+%62,=1,-1,+%72%64%65%72%5F%70,=1,+%6C,=1,+%65,=14,-1,+%62,=1,-1,+%72%64%65%72%5F%70,=1,+%6C,=1,+%65,=23
+l 2
+        local lw = math.max(0, math.cos(6*(G.TIMERS.REAL - self.border_pulse_timer)) + 1)
+        prep_draw(self, 1)
+r 29 784 %20%20%20%20%20%20%20%20 -
+e 29 785 %20%20%20%20%20%20%20%20 - =33,-2,=1
+e 29 786 %20%20%20%20%20%20%20%20 - =40,-5,+%42%4C%41%43%4B,=16
+r 29 762 %20%20%20%20%20%20%20%20 -
+r 29 788 %20%20%20%20%20%20%20%20 -
+r 29 789 %20%20%20%20%20%20%20%20 -
+l 35
+        love.graphics.pop()
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.022"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*function UIElement:draw_pixellated_rect\(_type, _parallax, _emboss, _progress\)\n)'''
+position = "at"
+payload = '''
+${pre}local PIX_VERTS = {}
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.023"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*self\.pixellated_rect = \{\n[\t ]*w = self\.VT\.w,\n[\t ]*h = self\.VT\.h,\n[\t ]*sw = self\.shadow_parrallax\.x,\n[\t ]*sh = self\.shadow_parrallax\.y,\n[\t ]*progress = \(_progress or 1\),\n[\t ]*fill = \{vertices = \{\}\},\n[\t ]*shadow = \{vertices = \{\}\},\n[\t ]*line = \{vertices = \{\}\},\n[\t ]*emboss = \{vertices = \{\}\},\n[\t ]*line_emboss = \{vertices = \{\}\},\n[\t ]*parallax = _parallax\n[\t ]*\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        local pr = self.pixellated_rect
+        if pr and pr.fill and pr.shadow and pr.line and pr.emboss and pr.line_emboss then
+            pr.w, pr.h = self.VT.w, self.VT.h
+            pr.sw, pr.sh = self.shadow_parrallax.x, self.shadow_parrallax.y
+            pr.progress = (_progress or 1)
+            pr.parallax = _parallax
+            if not _emboss then
+                local e, le = pr.emboss.vertices, pr.line_emboss.vertices
+                for i = #e, 1, -1 do e[i] = nil end
+                for i = #le, 1, -1 do le[i] = nil end
+            end
+        else
+r 29 863 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+                w = self.VT.w,
+                h = self.VT.h,
+r 29 866 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 867 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 868 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 869 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 870 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 871 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 872 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 873 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 168
+                parallax = _parallax
+            }
+        end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.024"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*local vertices = \{\n[\t ]*subw/2, subh/2-ext_up,\n[\t ]*0,4\*res-ext_up,\n[\t ]*1\*res,4\*res-ext_up,\n[\t ]*1\*res,2\*res-ext_up,\n[\t ]*2\*res,2\*res-ext_up,\n[\t ]*2\*res,1\*res-ext_up,\n[\t ]*4\*res,1\*res-ext_up,\n[\t ]*4\*res,0\*res-ext_up,\n[\t ]*subw,0\*res-ext_up,\n[\t ]*subw,1\*res-ext_up,\n[\t ]*subw\+2\*res,1\*res-ext_up,\n[\t ]*subw\+2\*res,2\*res-ext_up,\n[\t ]*subw\+3\*res,2\*res-ext_up,\n[\t ]*subw\+3\*res,4\*res-ext_up,\n[\t ]*totw,4\*res-ext_up,\n[\t ]*totw,subh-ext_up,\n[\t ]*subw\+3\*res, subh-ext_up,\n[\t ]*subw\+3\*res, subh\+2\*res-ext_up,\n[\t ]*subw\+2\*res, subh\+2\*res-ext_up,\n[\t ]*subw\+2\*res, subh\+3\*res-ext_up,\n[\t ]*subw, subh\+3\*res-ext_up,\n[\t ]*subw, toth-ext_up,\n[\t ]*4\*res, toth-ext_up,\n[\t ]*4\*res, subh\+3\*res-ext_up,\n[\t ]*2\*res, subh\+3\*res-ext_up,\n[\t ]*2\*res, subh\+2\*res-ext_up,\n[\t ]*1\*res, subh\+2\*res-ext_up,\n[\t ]*1\*res, subh-ext_up,\n[\t ]*0, subh-ext_up,\n[\t ]*0,4\*res-ext_up,\n[\t ]*\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        local V = PIX_VERTS
+        V[1], V[2], V[3], V[4], V[5], V[6], V[7], V[8], V[9], V[10],
+        V[11], V[12], V[13], V[14], V[15], V[16], V[17], V[18], V[19], V[20],
+        V[21], V[22], V[23], V[24], V[25], V[26], V[27], V[28], V[29], V[30],
+        V[31], V[32], V[33], V[34], V[35], V[36], V[37], V[38], V[39], V[40],
+        V[41], V[42], V[43], V[44], V[45], V[46], V[47], V[48], V[49], V[50],
+        V[51], V[52], V[53], V[54], V[55], V[56], V[57], V[58], V[59], V[60] =
+            subw/2,
+            subh/2-ext_up,
+            0,
+            4*res-ext_up,
+            1*res,
+            4*res-ext_up,
+            1*res,
+            2*res-ext_up,
+            2*res,
+            2*res-ext_up,
+            2*res,
+            1*res-ext_up,
+            4*res,
+            1*res-ext_up,
+            4*res,
+            0*res-ext_up,
+            subw,
+            0*res-ext_up,
+            subw,
+            1*res-ext_up,
+            subw+2*res,
+            1*res-ext_up,
+            subw+2*res,
+            2*res-ext_up,
+            subw+3*res,
+            2*res-ext_up,
+            subw+3*res,
+            4*res-ext_up,
+            totw,
+            4*res-ext_up,
+            totw,
+            subh-ext_up,
+            subw+3*res,
+            subh-ext_up,
+            subw+3*res,
+            subh+2*res-ext_up,
+            subw+2*res,
+            subh+2*res-ext_up,
+            subw+2*res,
+            subh+3*res-ext_up,
+            subw,
+            subh+3*res-ext_up,
+            subw,
+            toth-ext_up,
+            4*res,
+            toth-ext_up,
+            4*res,
+            subh+3*res-ext_up,
+            2*res,
+            subh+3*res-ext_up,
+            2*res,
+            subh+2*res-ext_up,
+            1*res,
+            subh+2*res-ext_up,
+            1*res,
+            subh-ext_up,
+            0,
+            subh-ext_up,
+            0,
+            4*res-ext_up
+        local vertices = V
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.025"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*function UIElement:update\(dt\)\n)'''
+position = "at"
+payload = '''
+${pre}function release_tutorial_buttons()
+    rawset(G, 'DISABLED_BUTTONS', nil)
+end
+
+local function sync_tutorial_lock(e)
+    local locked = G.DISABLED_BUTTONS
+    if locked and e.config.button and not e.tutorial_disabled then
+        local readable = G.OVERLAY_TUTORIAL and G.OVERLAY_TUTORIAL.overhaul
+        for _, name in ipairs(locked) do
+            if e.config.button == name then
+                e.tutorial_disabled, e.disable_button = name, true
+                if not readable then e.config.button = nil end
+            end
+        end
+    elseif not locked and e.tutorial_disabled then
+        e.config.button, e.tutorial_disabled, e.disable_button = e.config.button or e.tutorial_disabled, nil, nil
+    end
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.026"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*G\.ARGS\.FUNC_TRACKER = G\.ARGS\.FUNC_TRACKER or \{\}\n)'''
+position = "at"
+payload = '''
+${pre}    sync_tutorial_lock(self)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.027"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*G\.FUNCS\[self\.config\.func\]\(self\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        local _fn = G.FUNCS[self.config.func]; if type(_fn) == 'function' then _fn(self) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.028"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*G\.FUNCS\[self\.config\.button\]\(self\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        local _btn_fn = G.FUNCS[self.config.button]; if type(_btn_fn) == 'function' then _btn_fn(self) end
+        local touch = G.CONTROLLER.touch_control
+        touch.only_hover = G.ROOM
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.029"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*if v\.children\[1\]\.config\.chosen then return v\.children\[1\]:put_focused_cursor\(\) end\n[\t ]*end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            if v.children[1] and v.children[1].config.chosen then return v.children[1]:put_focused_cursor() end
+        end
+        local function chosen(n, d)
+            if d > 6 then return end
+            for _, c in pairs(n.children or {}) do
+                if type(c) == 'table' and c.config then
+                    if c.config.chosen and c.config.button then return c end
+                    local f = chosen(c, d + 1)
+                    if f then return f end
+                end
+            end
+        end
+        local c = chosen(self, 0)
+        if c then return c:put_focused_cursor() end
+r 29 1004 %20%20%20%20%20%20%20%20 -
+l 81
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.030"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if self\.parent then self\.parent:release\(other\) end\n)'''
+position = "at"
+payload = '''
+${pre}    local on_release = self.config.release_func
+    if on_release then on_release(other) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.031"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>[\t ]*return true\n[\t ]*end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}local function ui_set_recursive(node, recursive, apply)
+  apply(node)
+  if recursive and type(node.children) == 'table' then
+    for _, child in pairs(node.children) do
+      if type(child) == 'table' and child.is and child:is(UIElement) then ui_set_recursive(child, true, apply) end
+    end
+  end
+end
+
+function UIElement:set_zoom(zoom, recursive)
+  ui_set_recursive(self, recursive, function(n) n.zoom = zoom end)
+end
+
+function UIElement:set_hover_state(state, recursive)
+  ui_set_recursive(self, recursive, function(n) if n.states and n.states.hover then n.states.hover.is = state end end)
+end
+
+function UIElement:set_drag_state(state, recursive)
+  ui_set_recursive(self, recursive, function(n) if n.states and n.states.drag then n.states.drag.is = state end end)
+end
+
+function UIElement:set_created_on_pause(state, recursive)
+  ui_set_recursive(self, recursive, function(n) n.created_on_pause = state end)
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.modded.001"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)[\t ]*if node\.config\.text_drawable_font ~= node\.config\.lang\.font\.FONT then\n(?<post>[\t ]*node\.config\.text_drawable = nil\n[\t ]*elseif node\.config\.text_drawable_text ~= node\.config\.text then\n[\t ]*td:set\(node\.config\.text\)\n[\t ]*node\.config\.text_drawable_text = node\.config\.text\n[\t ]*end\n[\t ]*end\n[\t ]*local tx = \(node\.config\.font or node\.config\.lang\.font\)\.FONT:getWidth\(node\.config\.text\)\*\(node\.config\.font or node\.config\.lang\.font\)\.squish\*scale\*G\.TILESCALE\*\(node\.config\.font or node\.config\.lang\.font\)\.FONTSCALE\n)'''
+position = "at"
+payload = '''
+${pre}                if node.config.text_drawable_font ~= (node.config.font or node.config.lang.font).FONT then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.modded.002"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>[\t ]*self\.config\.text_drawable = love\.graphics\.newText\(\(self\.config\.font or self\.config\.lang\.font\)\.FONT, \{G\.C\.WHITE,self\.config\.text\}\)\n)[\t ]*self\.config\.text_drawable_font = self\.config\.lang\.font\.FONT\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        self.config.text_drawable_font = (self.config.font or self.config.lang.font).FONT
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.ui.modded.003"
+target = "engine/ui.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if self\.config\.pulse_border then\n[\t ]*self\.border_pulse_timer = self\.border_pulse_timer or G\.TIMERS\.REAL\n[\t ]*local lw = math\.max\(0, math\.cos\(6\*\(G\.TIMERS\.REAL - self\.border_pulse_timer\)\) \+ 1\)\n[\t ]*prep_draw\(self, 1\)\n[\t ]*love\.graphics\.scale\(\(1\)/\(G\.TILESIZE\)\)\n[\t ]*love\.graphics\.setLineWidth\(lw \+ 1\)\n[\t ]*love\.graphics\.setColor\(adjust_alpha\(G\.C\.BLACK, 0\.2\*lw, true\)\)\n[\t ]*self:draw_pixellated_rect\('fill', parallax_dist\)\n[\t ]*love\.graphics\.setColor\(self\.config\.colour\[4\] > 0 and mix_colours\(G\.C\.WHITE, self\.config\.colour, 0\.8\) or G\.C\.WHITE\)\n[\t ]*self:draw_pixellated_rect\('line', parallax_dist\)\n[\t ]*love\.graphics\.pop\(\)\n[\t ]*end\n[\t ]*\n[\t ]*if old_outline_opacity then\n)'''
+position = "at"
+payload = '''
+${pre}
+${post}'''
+optional = true
+end

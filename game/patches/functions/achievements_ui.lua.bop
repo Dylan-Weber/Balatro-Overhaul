@@ -614,11 +614,11 @@ function create_achievement_detail_popup(achievement_id)
     local rar_col = safe_get_color(ach.rarity)
     
     local detail_nodes = {
-r 15 723 %20%20%20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20%20%20 -
 l 2
             {n=G.UIT.T, config={text = display_name, scale = 0.5, colour = unlocked and G.C.GOLD or G.C.WHITE, shadow = true}}
         }},
-r 15 71 %20%20%20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20%20%20 -
 l 85
             {n=G.UIT.T, config={text = mod_loc(ach.rarity or "Common"), scale = 0.35, colour = rar_col}}
         }},

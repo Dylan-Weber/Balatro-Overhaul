@@ -85,7 +85,7 @@ function B.close_state()
 end
 
 local function show_overlay(definition)
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 43
     bom_ui.overlay({ definition = definition })
 end
@@ -130,7 +130,7 @@ function B.show_create()
         local m = B.create_modes()[c.mode] or {}
         B.create(c.visibility == 1 and "public" or "private", m)
     end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 632
     G.FUNCS.overlay_menu{ definition = UIK.window{zoom = false,
         id = "mp_create",
@@ -764,7 +764,7 @@ function B.show_mods_required(info)
         B.show_mods_required(B.info)
     end
     local contents = {}
-r 25 176 %20%20%20%20 -
+r 18 176 %20%20%20%20 -
 l 267
     if to_normal then
         contents[#contents + 1] = row_of({ text(mod_loc("NORMAL GAME ROOM"), 0.6, G.C.GOLD) }, { padding = 0.1 })

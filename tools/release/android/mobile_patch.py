@@ -237,9 +237,15 @@ def lua_value(v, indent=""):
 
 
 def overhaul_version(tree):
-    try:
-        text = tree.read("globals.lua").decode("utf-8", "replace")
-    except (KeyError, OSError):
+    text = None
+    for name in ("overhaul/version.lua", "globals.lua"):
+        try:
+            text = tree.read(name).decode("utf-8", "replace")
+        except (KeyError, OSError):
+            continue
+        if re.search(r"OVERHAUL_VERSION\s*=", text):
+            break
+    if text is None:
         return "0"
     m = re.search(r"OVERHAUL_VERSION\s*=\s*['\"]([0-9][0-9A-Za-z.\-]*)['\"]", text)
     return m.group(1) if m else "0"

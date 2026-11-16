@@ -1,4 +1,4 @@
-BOP 2
+BOP 1
 eol lf
 final 1
 base 0
@@ -15,7 +15,7 @@ target = 'game.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 9 2021 - -
+r 7 2021 - -
 l 13
 '''
 payload = '''
@@ -30,7 +30,7 @@ target = 'cardarea.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 6 13 - -
+r 5 13 - -
 l 29
 '''
 payload = '''
@@ -61,7 +61,7 @@ target = 'cardarea.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 6 639 - -
+r 5 639 - -
 l 33
 '''
 payload = '''
@@ -96,7 +96,7 @@ target = 'cardarea.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 6 94 - -
+r 5 94 - -
 l 19
 '''
 payload = '''
@@ -117,7 +117,7 @@ target = 'cardarea.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 6 265 - -
+r 5 265 - -
 l 16
 '''
 payload = '''
@@ -191,8 +191,8 @@ target = 'cardarea.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 6 266 - -
-r 6 267 - -
+r 5 266 - -
+r 5 267 - -
 l 14
 '''
 payload = '''
@@ -208,11 +208,11 @@ target = 'cardarea.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-e 6 287 - - =84,+%6C%61%6E%67%20%3D%20%47%2E%4C%41%4E%47%55%41%47%45%53%5B%27%65%6E%2D%75%73%27%5D%2C%20,=21
+r 5 287 - -
 l 12
 '''
 payload = '''
-{n=G.UIT.T, config={ref_table = self.config.card_limits, ref_value = 'display_slots', scale = 0.3, lang = G.LANGUAGES['en-us'], colour = G.C.WHITE}},
+{n=G.UIT.T, config={ref_table = self.config.card_limits, ref_value = 'display_slots', scale = 0.3, colour = G.C.WHITE}},
 '''
 
 # Add negative info_queue support
@@ -222,7 +222,7 @@ target = 'game.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 9 2239 - -
+r 7 2239 - -
 l 10
 '''
 payload = '''
@@ -234,8 +234,8 @@ target = 'game.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 9 2245 - -
-l 21
+r 7 2245 - -
+l 10
 '''
 payload = '''
 {card_limit = self.GAME.starting_params.joker_slots, type = 'joker', highlight_limit = 1, negative_info = 'joker'})
@@ -246,10 +246,11 @@ target = 'game.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-{card_limit = self.GAME.starting_params.hand_size, type = 'hand', sort = (G.SETTINGS.default_hand_sort == 2) and 'suit desc' or 'desc'})
+r 7 2258 - -
+l 10
 '''
 payload = '''
-{card_limit = self.GAME.starting_params.hand_size, type = 'hand', negative_info = 'playing_card', sort = (G.SETTINGS.default_hand_sort == 2) and 'suit desc' or 'desc'})
+{card_limit = self.GAME.starting_params.hand_size, type = 'hand', negative_info = 'playing_card'})
 '''
 [[patches]]
 [patches.pattern]
@@ -257,7 +258,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 643 - -
+r 30 643 - -
 l 10
 '''
 payload = '''
@@ -269,7 +270,7 @@ target = 'game.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 9 2262 - -
+r 7 2262 - -
 l 13
 '''
 payload = '''
@@ -284,7 +285,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 12 2740 - -
+r 31 2740 - -
 l 55
 '''
 payload = '''
@@ -341,7 +342,7 @@ target = 'functions/state_events.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 16 367 - -
+r 15 367 - -
 l 11
 '''
 payload = '''
@@ -354,7 +355,7 @@ target = 'functions/state_events.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 16 363 - -
+r 15 363 - -
 l 22
 '''
 payload = '''
@@ -378,7 +379,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 15 5576 - -
+r 30 5576 - -
 l 10
 '''
 payload = '''
@@ -390,7 +391,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 15 5599 - -
+r 30 5599 - -
 l 21
 '''
 payload = '''
@@ -413,18 +414,18 @@ target = 'cardarea.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 6 45 - -
-r 6 46 %20%20%20%20 -
-r 6 47 %20%20%20%20%20%20%20%20 -
+r 5 45 - -
+r 5 46 %20%20%20%20 -
+r 5 47 %20%20%20%20%20%20%20%20 -
 l 4
     end
 end
 '''
 payload = '''
-r 6 45 - -
+r 5 45 - -
 l 1
     if self == G.deck and G.GAME.blind then
-r 6 47 %20%20%20%20%20%20%20%20 -
+r 5 47 %20%20%20%20%20%20%20%20 -
 l 11
     end
 end
@@ -437,7 +438,7 @@ target = 'game.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 9 3236 - -
+r 7 3236 - -
 l 6
 '''
 payload = '''

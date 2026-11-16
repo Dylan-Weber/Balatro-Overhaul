@@ -511,7 +511,7 @@ function R.show_results()
             G.FUNCS.open_multiplayer_menu()
             return
         end
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 539
     end
     G.FUNCS.mp_ranked_results_view = function()
@@ -1052,7 +1052,7 @@ local function coll_card(area, it)
     else
         card = Card(x, y, G.CARD_W, G.CARD_H, G.P_CARDS.empty, G.P_CENTERS.c_base)
     end
-r 6 219 %20%20%20%20 -
+r 5 219 %20%20%20%20 -
 l 9
     if owned then
         card.mp_cosmetic = it
@@ -1295,7 +1295,7 @@ end
 function U.register()
     events()
     G.FUNCS.mp_open_ranked = function()
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 12
         G.FUNCS.overlay_menu{definition = window_def()}
         R.request_profile()
@@ -1309,7 +1309,7 @@ l 12
         local m = menu()
         if m and m.active then return G.FUNCS.exit_overlay_menu() end
         if G.FUNCS.open_multiplayer_menu then return G.FUNCS.open_multiplayer_menu() end
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 17
     end
     G.FUNCS.mp_ranked_queue = function() U.queue_start() end
@@ -1328,7 +1328,7 @@ l 17
     end
     for _, c in ipairs(COLL) do
         G.FUNCS["mp_ranked_coll_" .. c.slot] = function()
-r 13 1381 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 12
             G.FUNCS.overlay_menu{definition = U.coll_def(c.slot)}
         end
@@ -1342,7 +1342,7 @@ l 12
         U.areas = nil
         local P = rawget(_G, "mpm_profile")
         if P and P.open then return P.open("cosmetics") end
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 85
         G.FUNCS.overlay_menu{definition = window_def()}
     end

@@ -1145,7 +1145,7 @@ end
 function PM.open(key)
   if key then PM.sel.mode = key end
   PM.sel.grid, PM.page.grid = nil, nil
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 112
   G.FUNCS.overlay_menu{definition = PM.def()}
 end
@@ -1259,8 +1259,8 @@ end
 
 G.FUNCS.bo_play_continue = function()
   if not saved() then return end
-r 13 1825 %20%20 -
-e 13 1842 %20%20 - =35,+%63%6F%70%79%5F%74%61%62%6C%65%28,=12,+%29,=2
+r 32 1825 %20%20 -
+e 32 1842 %20%20 - =35,+%63%6F%70%79%5F%74%61%62%6C%65%28,=12,+%29,=2
 l 21
 end
 
@@ -1283,7 +1283,7 @@ G.FUNCS.bo_play_new_run = function()
     G.viewed_sleeve = sleeve.key
   end
   pcall(function() G:save_settings() end)
-r 13 1825 %20%20 -
+r 32 1825 %20%20 -
 l 110
   local RR = rawget(_G, 'RunRules')
   if RR then RR.disarm() end
@@ -1395,7 +1395,7 @@ local function prepare(from_game_over)
   local RR = rawget(_G, 'RunRules')
   if RR and RR.disarm then RR.disarm() end
   if G.CUSTOM_RUN then G.CUSTOM_RUN.enabled = false end
-r 15 5225 %20%20 -
+r 30 5225 %20%20 -
 l 50
   if G._cr_select_custom_tab then PM.sel.mode = 'custom' end
   G._cr_select_custom_tab = nil

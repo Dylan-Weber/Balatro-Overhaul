@@ -47,7 +47,7 @@ function create_UIBox_multiplayer_lobby()
             colour = { 1, 1, 1, 0.1 }, padding = 0.034 }, nodes = {} }
     end
 
-r 15 2252 %20%20%20%20 -
+r 30 2252 %20%20%20%20 -
 l 100
         { n = G.UIT.R, config = { align = "cm", padding = 0.085 }, nodes = {
             { n = G.UIT.T, config = { text = mod_loc("MULTIPLAYER"), scale = 0.80,
@@ -149,7 +149,7 @@ function bom_ui.register_funcs()
     if G.FUNCS.open_multiplayer_menu and G.FUNCS.mp_return_to_lobby and G.FUNCS.mp_leave_lobby then return end
 
     G.FUNCS.open_multiplayer_menu = function(e)
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 22
         local success, err = pcall(function()
             bom_ui.overlay{
@@ -173,7 +173,7 @@ l 22
     end
 
     G.FUNCS.open_join_lobby = function(e)
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 32
         local success, err = pcall(function()
             bom_ui.overlay{
@@ -207,7 +207,7 @@ l 32
             end
         end)
         pcall(function()
-r 13 1825 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1825 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
         end)
 r 1 112 %20%20%20%20%20%20%20%20 -
@@ -262,7 +262,7 @@ l 39
             if bom_match and bom_match.reset then bom_match.reset() end
         end)
         pcall(function()
-r 13 1825 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1825 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
         end)
 r 1 112 %20%20%20%20%20%20%20%20 -
@@ -300,8 +300,8 @@ l 22
         end)
         pcall(function()
             if e and e.config then
-r 13 58 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 311 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 58 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 311 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 201
             end
             if e and e.children then

@@ -1,0 +1,16 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_loc_es_ES.001"
+target = '=[SMODS _ "localization/es_ES.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*c_types = '#1# Tipos',\n)'''
+position = "at"
+payload = '''
+${pre}            a_blind_size = "#1# al tamaño de la ciega",
+            a_xblind_size = "X#1# al tamaño de la ciega",
+            a_xblind_size_minus = "-X#1# al tamaño de la ciega",
+${post}'''
+times = 1

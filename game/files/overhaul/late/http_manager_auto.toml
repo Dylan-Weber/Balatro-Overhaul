@@ -1,0 +1,13 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.http_manager.modded.001"
+target = "engine/http_manager.lua"
+pattern = '''^(?<pre>)[\t ]*if request\.type == 'kill' then return end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+optional = true

@@ -93,7 +93,7 @@ local load_all_files = Game.load_all_files
 Game.load_all_files = function(self, retry)
   if not modded() then return load_all_files(self, retry) end
   if not retry then pcall(seed_first_modded_profile) end
-e 9 1212 %20%20 - =2,-2,=1,-1,+%4F%41%44,=13,-2,=1,-1,+%4F%41%44,=14
+e 7 1212 %20%20 - =2,-2,=1,-1,+%4F%41%44,=13,-2,=1,-1,+%4F%41%44,=14
 l 36
   if not G.LOAD_HANDLER.modded then
     G.LOAD_HANDLER.LOCAL_FILES, G.LOAD_HANDLER.FILE_NAMES = file_lists()
@@ -131,9 +131,15 @@ local function default_name(key)
 end
 
 local load_profile = Game.load_profile
-r 9 845 - -
-l 34
+r 7 845 - -
+l 40
   if not modded() then return load_profile(self, _profile) end
+  local current = G.SETTINGS.profile
+  if not INDEX[current] then
+    local saved = G.FILES and G.FILES['settings.jkr']
+    G.SETTINGS.profile = type(saved) == "table" and INDEX[saved.profile] and saved.profile or modded_key(current)
+    if _profile == current then _profile = G.SETTINGS.profile end
+  end
   _profile = modded_key(_profile)
   G.PROFILES[_profile] = G.PROFILES[_profile] or {}
   G.SETTINGS.profile_counters[_profile] = G.SETTINGS.profile_counters[_profile] or 0
@@ -167,7 +173,7 @@ local function modded_profile_select_ui()
     tabs[i] = {label = i, chosen = G.focused_profile == k, tab_definition_function = G.UIDEF.profile_option, tab_definition_function_args = k}
   end
   local t = create_UIBox_generic_options({padding = 0, contents = {
-r 15 5343 %20%20%20%20 -
+r 30 5343 %20%20%20%20 -
 l 8
       create_tabs({tabs = tabs, snap_to_nav = true}),
     }},
@@ -177,37 +183,37 @@ l 8
 end
 
 local profile_select_ui = G.UIDEF.profile_select
-r 15 5339 - -
+r 30 5339 - -
 l 5
   if not modded() then return profile_select_ui() end
   return modded_profile_select_ui()
 end
 
 local profile_select = G.FUNCS.profile_select
-r 13 1661 - -
+r 32 1661 - -
 l 1
   if not modded() then return profile_select(e) end
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 4
   G.focused_profile = modded_key(G.SETTINGS.profile)
   for _, k in ipairs(KEYS) do
     if k ~= G.focused_profile and love.mod_filesystem.getInfo(k .. '/profile.jkr') then G:load_profile(k) end
   end
-r 13 242 %20%20 -
+r 32 242 %20%20 -
 l 5
   G.FUNCS.overlay_menu{definition = modded_profile_select_ui()}
 end
 
 local function restart_after_switch(err)
   print("profile switch: mods did not reload, restarting: " .. tostring(err))
-r 13 229 %20%20 -
+r 32 229 %20%20 -
 l 5
   pcall(function()
     local S = rawget(_G, "SMODS")
     if S and S.save_all_config then S.save_all_config() end
     G:save_settings()
     G:save_progress()
-r 15 5391 %20%20%20%20 -
+r 30 5391 %20%20%20%20 -
 l 21
   end)
   local L = rawget(_G, "MODLOADER")

@@ -152,7 +152,7 @@ end
 if Game and Game.update and not MG._update_wrapped then
     MG._update_wrapped = true
     local update = Game.update
-r 9 2449 %20%20%20%20 -
+r 7 2449 %20%20%20%20 -
 l 7
         update(self, dt)
         if not MG.booted then MG.boot() end

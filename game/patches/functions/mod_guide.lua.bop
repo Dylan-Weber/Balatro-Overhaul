@@ -64,21 +64,21 @@ local function build_two_columns(title, left_lines, right_lines)
 end
 
 G.FUNCS.guide_back_to_guide_tab = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 5
     definition = create_UIBox_settings('Guide')
   }
 end
 
 G.FUNCS.guide_back_to_settings = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 5
     definition = create_UIBox_settings('Guide')
   }
 end
 
 G.FUNCS.open_guide_overview = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 24
     definition = build_single_column(mod_loc("BALATRO OVERHAUL"), {
       {text = mod_loc("Welcome to Balatro Overhaul!"), scale = 0.45, colour = "ORANGE"},
@@ -104,7 +104,7 @@ l 24
 end
 
 G.FUNCS.open_guide_modmenu = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 29
     definition = build_two_columns(mod_loc("CHEATS"),
       {
@@ -135,7 +135,7 @@ l 29
 end
 
 G.FUNCS.open_guide_customruns = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 30
     definition = build_two_columns(mod_loc("CUSTOM RUNS"),
       {
@@ -167,7 +167,7 @@ l 30
 end
 
 G.FUNCS.open_guide_progression = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 30
     definition = build_two_columns(mod_loc("PROGRESSION"),
       {
@@ -199,7 +199,7 @@ l 30
 end
 
 G.FUNCS.open_guide_quests = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 31
     definition = build_two_columns(mod_loc("QUESTS"),
       {
@@ -232,7 +232,7 @@ l 31
 end
 
 G.FUNCS.open_guide_profile = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 28
     definition = build_two_columns(mod_loc("CUSTOMIZATION"),
       {
@@ -262,7 +262,7 @@ l 28
 end
 
 G.FUNCS.open_guide_shop = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 35
     definition = build_two_columns(mod_loc("MARKET"),
       {
@@ -299,7 +299,7 @@ G.FUNCS.open_guide_filters = function(e)
 end
 
 G.FUNCS.open_guide_stakes = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 34
     definition = build_two_columns(mod_loc("CREATIVE STAKES (9-12)"),
       {
@@ -335,7 +335,7 @@ _G.create_guide_page_content = nil
 _G.build_guide_pages = nil
 
 G.FUNCS.open_guide_multiplayer = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 33
     definition = build_two_columns(mod_loc("GAME MODES"),
       {
@@ -370,7 +370,7 @@ l 33
 end
 
 G.FUNCS.open_guide_mp_ranked = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 32
     definition = build_two_columns(mod_loc("RANKED"),
       {
@@ -404,7 +404,7 @@ l 32
 end
 
 G.FUNCS.open_guide_mp_rules = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 35
     definition = build_two_columns(mod_loc("MATCH RULES"),
       {
@@ -441,7 +441,7 @@ l 35
 end
 
 G.FUNCS.open_guide_mp_emotes = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 27
     definition = build_two_columns(mod_loc("EMOTES & CHAT"),
       {
@@ -470,7 +470,7 @@ l 27
 end
 
 G.FUNCS.open_guide_mp_replays = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 25
     definition = build_two_columns(mod_loc("REPLAYS"),
       {
@@ -497,7 +497,7 @@ l 25
 end
 
 G.FUNCS.open_guide_mp_mods = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 21
     definition = build_two_columns(mod_loc("MODS IN MP"),
       {
@@ -520,7 +520,7 @@ l 21
 end
 
 G.FUNCS.open_guide_handoptimizer = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 24
     definition = build_single_column(mod_loc("HAND OPTIMIZER"), {
       {text = mod_loc("Finds the best hand you can play."), scale = 0.42, colour = "ORANGE"},
@@ -546,7 +546,7 @@ _G.create_guide_page_content = nil
 _G.build_guide_pages = nil
 
 G.FUNCS.open_guide_deck_creator = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 27
     definition = build_two_columns(mod_loc("DECK CREATOR"),
       {
@@ -575,7 +575,7 @@ l 27
 end
 
 G.FUNCS.open_guide_jimbo_comments = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 23
     definition = build_single_column(mod_loc("JIMBO COMMENTS"), {
       {text = mod_loc("Jimbo reacts to your run!"), scale = 0.42, colour = "ORANGE"},
@@ -600,7 +600,7 @@ end
 print("[MOD GUIDE] V8.0 Individual Category Windows Loaded - 13 categories (+ Deck Creator + Jimbo Comments)!")
 
 G.FUNCS.open_guide_modded_game = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 27
     definition = build_two_columns(mod_loc("MODDED GAME"),
       {
@@ -629,7 +629,7 @@ l 27
 end
 
 G.FUNCS.open_guide_mods_workshop = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 26
     definition = build_two_columns(mod_loc("MODS & WORKSHOP"),
       {
@@ -657,7 +657,7 @@ l 26
 end
 
 G.FUNCS.open_guide_tavern = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 31
     definition = build_two_columns(mod_loc("THE CASINO"),
       {
@@ -690,7 +690,7 @@ l 31
 end
 
 G.FUNCS.open_guide_performance = function(e)
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 1318
     definition = build_two_columns(mod_loc("PERFORMANCE"),
       {

@@ -374,7 +374,7 @@ l 4
           local ok, card = pcall(Card, G.ROOM.T.x, G.ROOM.T.y, G.CARD_W, G.CARD_H, nil, center,
             {bypass_discovery_center = true, bypass_discovery_ui = true})
           if ok and card then
-r 15 4156 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 4156 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 9
             pcall(card.apply_to_run, card, center)
             G.E_MANAGER:add_event(Event({func = function() pcall(card.remove, card) return true end}))
@@ -417,13 +417,13 @@ local function rule_rows(ids, getter, colour)
     if r then
       rows[#rows + 1] = {n=G.UIT.R, config={align = "cl", padding = 0.03}, nodes={
         {n=G.UIT.C, config={align = "cm", minw = 0.12, minh = 0.12, r = 0.06, colour = colour}, nodes={}},
-r 15 1934 %20%20%20%20%20%20%20%20 -
-r 15 388 %20%20%20%20%20%20%20%20 -
-r 15 392 %20%20%20%20%20%20%20%20%20%20 -
+r 30 1934 %20%20%20%20%20%20%20%20 -
+r 30 388 %20%20%20%20%20%20%20%20 -
+r 30 392 %20%20%20%20%20%20%20%20%20%20 -
 l 2
             {n=G.UIT.T, config={text = mod_loc(r.name), scale = 0.34, colour = colour}}
           }},
-r 15 392 %20%20%20%20%20%20%20%20%20%20 -
+r 30 392 %20%20%20%20%20%20%20%20%20%20 -
 l 54
             {n=G.UIT.T, config={text = mod_loc(r.desc), scale = 0.28, colour = G.C.UI.TEXT_DARK}}
           }},
@@ -479,11 +479,11 @@ end
 
 local function stat_box(label, value, colour)
   return {n=G.UIT.C, config={align = "cm", padding = 0.06, r = 0.1, colour = G.C.BLACK, minw = 2.1, minh = 0.95}, nodes={
-r 6 297 %20%20%20%20 -
+r 5 297 %20%20%20%20 -
 l 2
       {n=G.UIT.T, config={text = label, scale = 0.28, colour = G.C.UI.TEXT_INACTIVE}}
     }},
-r 6 297 %20%20%20%20 -
+r 5 297 %20%20%20%20 -
 l 39
       {n=G.UIT.T, config={text = value, scale = 0.5, colour = colour, shadow = true}}
     }},
@@ -524,7 +524,7 @@ local function create_daily_ui()
   pcall(function() stake_sprite = get_stake_sprite(R.stake, 0.45) end)
 
   local deck_col = {n=G.UIT.C, config={align = "tm", padding = 0.08, r = 0.1, colour = G.C.L_BLACK, minw = 3.1}, nodes={
-r 6 297 %20%20%20%20 -
+r 5 297 %20%20%20%20 -
 l 8
       {n=G.UIT.T, config={text = deck_name(R.deck), scale = 0.4, colour = G.C.WHITE, shadow = true, maxw = 3}}
     }},
@@ -534,7 +534,7 @@ l 8
     deck_desc and {n=G.UIT.R, config={align = "cm", r = 0.1, colour = G.C.WHITE, padding = 0.05}, nodes={
       {n=G.UIT.O, config={object = UIBox{definition = deck_desc, config = {offset = {x = 0, y = 0}}}}}
     }} or nil,
-r 15 71 %20%20%20%20 -
+r 30 71 %20%20%20%20 -
 l 16
       stake_sprite and {n=G.UIT.O, config={object = stake_sprite}} or nil,
       {n=G.UIT.B, config={w = 0.08, h = 0.1}},
@@ -552,7 +552,7 @@ l 16
         {n=G.UIT.O, config={object = jokers}}
       }},
     }},
-r 15 1934 %20%20%20%20 -
+r 30 1934 %20%20%20%20 -
 l 11
     {n=G.UIT.C, config={align = "cm", padding = 0.05, r = 0.1, colour = G.C.L_BLACK}, nodes={
       {n=G.UIT.T, config={text = localize('k_vouchers_cap'), scale = 0.3, colour = G.C.UI.TEXT_LIGHT, vert = true, shadow = true}},
@@ -565,7 +565,7 @@ l 11
 
   local rules_row = {n=G.UIT.R, config={align = "cm", padding = 0.05}, nodes={
     rule_panel(mod_loc("Twists"), G.C.RED, rule_rows(R.twists, DY.twist, G.C.RED), 3.3),
-r 15 1934 %20%20%20%20 -
+r 30 1934 %20%20%20%20 -
 l 7
     rule_panel(mod_loc("Boon"), G.C.GREEN, rule_rows(R.boons, DY.boon, G.C.GREEN), 2.9),
   }}
@@ -574,15 +574,15 @@ l 7
   local note = modded > 0 and mod_loc("Today's pools include your mods' content") or mod_loc("Same rules for everyone today")
 
   return {n=G.UIT.ROOT, config={align = "cm", colour = G.C.CLEAR, minw = 9.6, minh = 7}, nodes={
-r 15 71 %20%20%20%20 -
+r 30 71 %20%20%20%20 -
 l 2
       {n=G.UIT.C, config={align = "cm", padding = 0.08, r = 0.1, colour = G.C.BLACK, minw = 9.4}, nodes={
         {n=G.UIT.C, config={align = "cl", minw = 4.6}, nodes={
-r 15 392 %20%20%20%20%20%20%20%20%20%20 -
+r 30 392 %20%20%20%20%20%20%20%20%20%20 -
 l 2
             {n=G.UIT.T, config={text = mod_loc("DAILY RUN"), scale = 0.55, colour = G.C.GOLD, shadow = true}}
           }},
-r 15 392 %20%20%20%20%20%20%20%20%20%20 -
+r 30 392 %20%20%20%20%20%20%20%20%20%20 -
 l 13
             {n=G.UIT.T, config={text = today .. "  " .. mod_loc("Seed") .. " " .. R.seed, scale = 0.28, colour = G.C.UI.TEXT_INACTIVE}}
           }},
@@ -597,20 +597,20 @@ l 13
         }},
       }},
     }},
-r 15 71 %20%20%20%20 -
+r 30 71 %20%20%20%20 -
 l 1
       deck_col,
-r 15 1934 %20%20%20%20%20%20 -
+r 30 1934 %20%20%20%20%20%20 -
 l 2
       {n=G.UIT.C, config={align = "tm"}, nodes={start_row, rules_row}},
     }},
-r 15 71 %20%20%20%20 -
+r 30 71 %20%20%20%20 -
 l 1
       stat_box(mod_loc("Today"), status, status_col),
-r 15 1934 %20%20%20%20%20%20 -
+r 30 1934 %20%20%20%20%20%20 -
 l 1
       stat_box(mod_loc("Streak"), tostring(streak), G.C.GOLD),
-r 15 1934 %20%20%20%20%20%20 -
+r 30 1934 %20%20%20%20%20%20 -
 l 19
       stat_box(mod_loc("Best streak"), tostring(math.max(pd.best_streak or 0, streak)), G.C.WHITE),
     }},
@@ -631,14 +631,14 @@ function G.UIDEF.daily_run_info()
     return {n=G.UIT.ROOT, config={align = "cm", colour = G.C.CLEAR}, nodes={}}
   end
   return {n=G.UIT.ROOT, config={align = "cm", colour = G.C.CLEAR, padding = 0.1}, nodes={
-r 15 71 %20%20%20%20 -
+r 30 71 %20%20%20%20 -
 l 2
       {n=G.UIT.T, config={text = mod_loc("DAILY RUN") .. "  " .. tostring(R.date), scale = 0.5, colour = G.C.GOLD, shadow = true}}
     }},
-r 15 71 %20%20%20%20 -
+r 30 71 %20%20%20%20 -
 l 1
       rule_panel(mod_loc("Twists"), G.C.RED, rule_rows(R.twists, DY.twist, G.C.RED), 3.6),
-r 15 1934 %20%20%20%20%20%20 -
+r 30 1934 %20%20%20%20%20%20 -
 l 35
       rule_panel(mod_loc("Boon"), G.C.GREEN, rule_rows(R.boons, DY.boon, G.C.GREEN), 3.2),
     }},

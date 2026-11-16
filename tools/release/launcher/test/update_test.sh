@@ -37,8 +37,8 @@ old_version="$(sed -n 's/^  overhaul_version = "\(.*\)",$/\1/p' "$rel/patchset/m
 
 new_version="${NEW_VERSION:-99}"
 cp -a --reflink=auto "$repo/assets" "$work/assets_new"
-rm "$work/assets_new/globals.lua"
-sed "s/^OVERHAUL_VERSION = .*/OVERHAUL_VERSION = '$new_version'/" "$repo/assets/globals.lua" > "$work/assets_new/globals.lua"
+rm "$work/assets_new/overhaul/version.lua"
+sed "s/^OVERHAUL_VERSION = .*/OVERHAUL_VERSION = '$new_version'/" "$repo/assets/overhaul/version.lua" > "$work/assets_new/overhaul/version.lua"
 python3 -B "$repo/tools/release/patcher/make_patch.py" --vanilla "$vanilla" --assets "$work/assets_new" \
     --exclude "$repo/tools/release/EXCLUDE.txt" --out "$work/new_patchset" | tail -1
 zipf="$work/srv/new/patchset-$new_version.zip"
@@ -92,14 +92,14 @@ check offline "^OK Could not check for updates"
 launcher broken "$(feed broken)" update
 check broken "^FAIL The update download is damaged"
 check broken "rc=6"
-grep -q "OVERHAUL_VERSION = '$old_version'" "$game/globals.lua" && say "ok   broken: the installed $old_version is untouched" || { say "FAIL broken changed the install"; fail=1; }
+grep -q "OVERHAUL_VERSION = '$old_version'" "$game/overhaul/version.lua" && say "ok   broken: the installed $old_version is untouched" || { say "FAIL broken changed the install"; fail=1; }
 [[ ! -e "$save/Overhaul.new" ]] && say "ok   broken: no staging folder left" || { say "FAIL staging folder left"; fail=1; }
 launcher format2 "$(feed format2)" update
 check format2 "^FAIL Overhaul $new_version needs a newer launcher"
 launcher new "$(feed new)" update
 check new "^update $new_version http://127.0.0.1:$port/new/patchset-$new_version.zip"
 check new "^OK installed $new_version, 751 files\|^OK installed $new_version, 7[0-9][0-9] files"
-grep -q "OVERHAUL_VERSION = '$new_version'" "$game/globals.lua" && say "ok   new: installed globals.lua says $new_version" || { say "FAIL new: globals.lua not updated"; fail=1; }
+grep -q "OVERHAUL_VERSION = '$new_version'" "$game/overhaul/version.lua" && say "ok   new: installed overhaul/version.lua says $new_version" || { say "FAIL new: overhaul/version.lua not updated"; fail=1; }
 python3 -B "$repo/tools/release/patcher/roundtrip_check.py" "$game" --assets "$work/assets_new" --manifest "$work/new_patchset/manifest.lua" > "$work/roundtrip.txt" 2>&1
 check roundtrip "^OK"
 ls "$save/updates" > "$work/updates_dir.txt"

@@ -38,8 +38,8 @@ old_version="$(sed -n 's/^  overhaul_version = "\(.*\)",$/\1/p' "$rel/patchset/m
 new_version="${NEW_VERSION:-99}"
 
 cp -a --reflink=auto "$repo/assets" "$work/assets_new"
-rm "$work/assets_new/globals.lua"
-sed "s/^OVERHAUL_VERSION = .*/OVERHAUL_VERSION = '$new_version'/" "$repo/assets/globals.lua" > "$work/assets_new/globals.lua"
+rm "$work/assets_new/overhaul/version.lua"
+sed "s/^OVERHAUL_VERSION = .*/OVERHAUL_VERSION = '$new_version'/" "$repo/assets/overhaul/version.lua" > "$work/assets_new/overhaul/version.lua"
 python3 -B "$repo/tools/release/patcher/make_patch.py" --vanilla "$vanilla" --assets "$work/assets_new" \
     --exclude "$repo/tools/release/EXCLUDE.txt" --out "$work/new_patchset" | tail -1 | sed 's/^/feedsrv: /'
 mkdir -p "$work/pack_new"
@@ -114,7 +114,7 @@ open(p, "wb").write(bytes(d))
 EOF
     launcher broken "$feed" update
     check broken "^FAIL The update download is damaged"
-    grep -q "OVERHAUL_VERSION = '$old_version'" "$game/globals.lua" && say "ok   broken: the installed $old_version is untouched" || { say "FAIL broken changed the install"; fail=1; }
+    grep -q "OVERHAUL_VERSION = '$old_version'" "$game/overhaul/version.lua" && say "ok   broken: the installed $old_version is untouched" || { say "FAIL broken changed the install"; fail=1; }
     [[ ! -e "$save/Overhaul.new" ]] && say "ok   broken: no staging folder left" || { say "FAIL staging folder left"; fail=1; }
     cp "$work/good.zip" "$work/pub/patchset-$new_version.zip"
     python3 -B - "$work/pub/feed.json" <<'EOF'
@@ -131,7 +131,7 @@ EOF
     rm "$work/pub/patchset-$new_version.zip"
     launcher missing "$feed" update
     check missing "^FAIL"
-    grep -q "OVERHAUL_VERSION = '$old_version'" "$game/globals.lua" && say "ok   missing: the installed $old_version is untouched" || { say "FAIL missing changed the install"; fail=1; }
+    grep -q "OVERHAUL_VERSION = '$old_version'" "$game/overhaul/version.lua" && say "ok   missing: the installed $old_version is untouched" || { say "FAIL missing changed the install"; fail=1; }
     publish pub_min --from "$work/pack_new" --force --min-launcher "$(( $(sed -n 's/^P.FORMAT = \([0-9]*\)$/\1/p' "$repo/tools/release/launcher/feed.lua") + 1 ))"
     launcher minlauncher "$feed" update
     check minlauncher "^FAIL Overhaul $new_version needs a newer launcher"
@@ -141,7 +141,7 @@ EOF
     launcher new "$feed" update
     check new "^update $new_version http://127.0.0.1:$port/release/patchset-$new_version.zip"
     check new "^OK installed $new_version,"
-    grep -q "OVERHAUL_VERSION = '$new_version'" "$game/globals.lua" && say "ok   new: installed globals.lua says $new_version" || { say "FAIL new: globals.lua not updated"; fail=1; }
+    grep -q "OVERHAUL_VERSION = '$new_version'" "$game/overhaul/version.lua" && say "ok   new: installed overhaul/version.lua says $new_version" || { say "FAIL new: overhaul/version.lua not updated"; fail=1; }
     python3 -B "$repo/tools/release/patcher/roundtrip_check.py" "$game" --assets "$work/assets_new" --manifest "$work/new_patchset/manifest.lua" > "$work/roundtrip.txt" 2>&1
     check roundtrip "^OK"
     [[ "$(sha256sum < "$XDG_DATA_HOME/love/Overhaul/1/profile.jkr")" == "$save_sum" ]] && say "ok   new: the save is untouched" || { say "FAIL new: the save changed"; fail=1; }

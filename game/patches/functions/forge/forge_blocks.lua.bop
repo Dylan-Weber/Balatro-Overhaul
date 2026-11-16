@@ -57,7 +57,7 @@ return function(R)
   end
 
   local function match_ok(v)
-    return R.member(R.MATCH_BASE, v) or R.member(R.ENHANCEMENTS, v) or R.own_id("enhancement", v) ~= nil
+    return R.member(R.MATCH_BASE, v) or R.member(R.ENHANCEMENTS, v) or R.own_id("enhancement", v) ~= nil or (R.ed_ok ~= nil and R.ed_ok(v))
   end
 
   local function scoring(context)

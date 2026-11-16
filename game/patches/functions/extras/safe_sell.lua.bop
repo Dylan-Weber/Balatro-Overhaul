@@ -57,7 +57,7 @@ function M.blocks(e)
         return false
     end
     card.safe_sell_at = now
-r 13 2165 %20%20%20%20 -
+r 32 2165 %20%20%20%20 -
 l 45
     pcall(M.mark, e, true)
     pcall(function() card:juice_up(0.3, 0.3) end)

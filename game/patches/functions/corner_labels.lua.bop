@@ -32,7 +32,7 @@ local function measure(font, text)
             local canvas = love.graphics.newCanvas(cw, ch)
             love.graphics.push("all")
             love.graphics.setCanvas(canvas)
-r 19 278 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 12 278 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
             love.graphics.clear(0, 0, 0, 0)
 r 3 4413 %20%20%20%20%20%20%20%20%20%20%20%20 -
@@ -40,7 +40,7 @@ l 3
             love.graphics.setColor(1, 1, 1, 1)
             love.graphics.setFont(font)
             love.graphics.print(text, pad, pad)
-r 11 112 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 112 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 53
             love.graphics.pop()
             local data = canvas:newImageData()
@@ -95,7 +95,7 @@ function CL.draw(text, x, y, opts)
     local w, h, ink, vink = CL.box(text, scale, font)
     if opts.anchor == "tr" then x = x - w end
     love.graphics.push()
-r 19 278 %20%20%20%20 -
+r 12 278 %20%20%20%20 -
 l 149
     local bg = opts.bg or {0, 0, 0, 0.75}
     love.graphics.setColor(bg[1], bg[2], bg[3], bg[4] or 1)

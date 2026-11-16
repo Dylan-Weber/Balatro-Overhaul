@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 247
+l 245
 HUD_SCALE = HUD_SCALE or {}
 local H = HUD_SCALE
 
@@ -71,9 +71,7 @@ wrap_def('create_UIBox_HUD')
 wrap_def('create_UIBox_HUD_blind')
 
 local function wrap_func(name, field, recalc)
-  local raw = G.FUNCS[name]
-  if type(raw) ~= 'function' then return end
-  G.FUNCS[name] = function(e, ...)
+  require("overhaul.hooks").wrap("G.FUNCS", name, function(raw) return function(e, ...)
     local r = raw(e, ...)
     local c = e and e.config
     local k = c and c.hud_k
@@ -91,7 +89,7 @@ local function wrap_func(name, field, recalc)
       if recalc and c.scale > 0 and e.UIBox then e.UIBox:recalculate(true) end
     end
     return r
-  end
+  end end, {id = "hud_scale." .. name})
 end
 
 function H.wrap_funcs()
@@ -250,7 +248,7 @@ end
 
 local raw_update = Game and Game.update
 if raw_update then
-r 9 2449 %20%20 -
+r 7 2449 %20%20 -
 l 4
     raw_update(self, dt)
     H.tick()

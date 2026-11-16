@@ -476,7 +476,7 @@ function Game:score_step()
     if total >= self.target then K.flash(G.C.GOLD, 0.2) end
 end
 
-r 9 2449 - -
+r 7 2449 - -
 l 201
     self.t = self.t + dt
     local ease = min(1, dt * 12)

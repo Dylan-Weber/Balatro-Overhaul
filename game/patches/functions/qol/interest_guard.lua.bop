@@ -77,7 +77,7 @@ function M.wrap()
             if c then
                 local ok, pass = pcall(M.check, c, c.cost, e)
                 if ok and not pass then
-r 13 2165 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2165 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 25
                     return false
                 end
@@ -104,7 +104,7 @@ l 25
             if c and shop_area(c) then
                 local ok, pass = pcall(M.check, c, c.cost, e)
                 if ok and not pass then
-r 13 2165 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2165 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 42
                     return
                 end

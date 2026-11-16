@@ -23,6 +23,9 @@ MIN_EDIT_RATIO = 0.75
 MIN_CUT_RATIO = 0.5
 
 
+START_FILES = {"conf.lua", "main.lua"}
+
+
 def sha(data):
     return hashlib.sha256(data).hexdigest()
 
@@ -277,6 +280,8 @@ class Builder:
             hit = self.v.corpus.get(key) if len(key) > MIN_LINE else None
             other = None if hit else self.other_hit(key)
             near = self.closest(key, (base, other[0])) if other else None
+            if other and not near:
+                near = self.closest(key, sorted(self.v.text))
             if near:
                 if run:
                     ops.append(b"l %d" % len(run))
@@ -365,15 +370,25 @@ class Builder:
     def add(self, rel, data):
         v = self.v
         e = {"path": rel, "size": len(data), "sha256": sha(data)}
+        base = rel[len("balatro/"):] if rel.startswith("balatro/") else rel
+        if rel in START_FILES:
+            e["kind"] = "own"
+            e["file"] = "files/" + rel
+            self.write(e["file"], data)
+            self.stats[e["kind"]] += 1
+            return e
         if v.files.get(rel) == data:
             e["kind"] = "keep"
             e["src"] = self.use(rel)
+        elif base != rel and v.files.get(base) == data:
+            e["kind"] = "copy"
+            e["src"] = self.use(base)
         elif e["sha256"] in v.by_sha:
             e["kind"] = "copy"
             e["src"] = self.use(v.by_sha[e["sha256"]])
-        elif rel in v.text and is_text(rel, data):
+        elif base in v.text and is_text(rel, data):
             e["kind"] = "patch"
-            e["patch"] = self.text_patch(rel, data, rel)
+            e["patch"] = self.text_patch(rel, data, base)
         elif rel in v.files and rel.lower().endswith(".png") and data[:8] == b"\x89PNG\r\n\x1a\n":
             e["kind"] = "image"
             e["src"] = self.use(rel)
@@ -391,12 +406,15 @@ class Builder:
 
 
 def overhaul_version(assets, key="OVERHAUL_VERSION"):
-    try:
-        with open(os.path.join(assets, "globals.lua"), encoding="utf-8") as f:
-            m = re.search(key + r"\s*=\s*['\"]([^'\"]+)", f.read())
-            return m.group(1) if m else "?"
-    except OSError:
-        return "?"
+    for rel in (os.path.join("overhaul", "version.lua"), "globals.lua"):
+        try:
+            with open(os.path.join(assets, rel), encoding="utf-8") as f:
+                m = re.search(r"^" + key + r"\s*=\s*['\"]([^'\"]+)", f.read(), re.M)
+                if m:
+                    return m.group(1)
+        except OSError:
+            pass
+    return "?"
 
 
 def overhaul_name(args):

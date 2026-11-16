@@ -572,7 +572,7 @@ end
 
 function RS.show(step)
   if RS.is_open() and (not step or step == RS.current()) then return RS.refresh() end
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 173
   G.FUNCS.overlay_menu{definition = RS.def(step or RS.last_step or 'deck')}
 end

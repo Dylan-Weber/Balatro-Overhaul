@@ -2,19 +2,20 @@ BOP 1
 eol lf
 final 1
 base 0
-r 26 1 - -
+r 19 1 - -
 l 4
 
 if jit.arch:find('^arm') then jit.off() end
 
 require "love.timer"
-r 14 6 - -
+r 20 6 - -
 l 1
 require "love.data"
-r 14 7 - -
-r 14 8 - -
-r 14 9 - -
-l 28
+r 20 7 - -
+r 20 8 - -
+r 20 9 - -
+l 29
+require "overhaul.string_packer"
 
 local requests = love.thread.getChannel("load_request")
 local replies = love.thread.getChannel("load_return")

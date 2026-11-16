@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 0
 base 0
-l 120
+l 111
 SMODS.GUI = {}
 SMODS.GUI.DynamicUIManager = {}
 
@@ -51,17 +51,8 @@ function SMODS.reset_stencil_stack()
     love.graphics.setStencilTest()
     love.graphics.stencil(function() end)
 end
-function SMODS.stencil_for(canvas)
-    local s = SMODS.stencil_canvas
-    if canvas and (not s or s:getPixelWidth() ~= canvas:getPixelWidth() or s:getPixelHeight() ~= canvas:getPixelHeight()) then
-        s = love.graphics.newCanvas(canvas:getWidth(), canvas:getHeight(), { format = "stencil8", readable = false, dpiscale = canvas:getDPIScale() })
-        SMODS.stencil_canvas = s
-    end
-    return s
-end
 function SMODS.reload_stencil_stack(full)
-    local current = love.graphics.getCanvas()
-    love.graphics.setCanvas({ current, depthstencil = SMODS.stencil_for(current) })
+    love.graphics.setCanvas({ love.graphics.getCanvas(), depthstencil = SMODS.stencil_canvas })
     if full then
         local stack_snapshot = SMODS.shallow_copy(SMODS.stencil_stack)
         SMODS.reset_stencil_stack()
@@ -123,7 +114,7 @@ function UIElement:draw_children(...)
                 local ds = math.max(G.WINDOWTRANS.w, G.WINDOWTRANS.h) * math.max(1 / self.VT.scale, 1) * G.TILESIZE * 3
 
                 if v and h then
-r 24 740 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 740 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 20
                         self:draw_pixellated_rect("fill", 0)
                     else
@@ -145,7 +136,7 @@ l 20
 end
 
 local old_collides_with_point = Node.collides_with_point
-r 17 143 - -
+r 22 143 - -
 l 169
     if self.collide_check_timer == G.TIMERS.REAL and self.collide_check_point == point then
 		return self.collide_check_result or false
@@ -316,8 +307,8 @@ end
 
 --
 
-r 31 49 - -
-l 103
+r 27 49 - -
+l 128
     local chunk, err = loadstring(str)
     if chunk then
         setfenv(chunk, {}) -- Use an empty environment to prevent access to potentially harmful functions
@@ -376,14 +367,39 @@ SMODS.smart_line_splitter = function(phrase, length, always_new_line)
 end
 
 local gameMainMenuRef = Game.main_menu
-local function no_version_ui() end
 function Game:main_menu(change_context)
     for k, v in pairs(G.C.SUITS) do
         G.FUNCS.update_suit_colours(k, G.SETTINGS.CUSTOM_DECK.Collabs[k])
     end
     gameMainMenuRef(self, change_context)
-    no_version_ui()
-    if not G.title_top or G.title_top.REMOVED then return end
+    UIBox({
+        definition = {
+            n = G.UIT.ROOT,
+            config = {
+                align = "cm",
+                colour = G.C.UI.TRANSPARENT_DARK
+            },
+            nodes = {
+                {
+                    n = G.UIT.T,
+                    config = {
+                        scale = 0.3,
+                        text = "Steamodded v" .. MODDED_VERSION,
+                        colour = G.C.UI.TEXT_LIGHT
+                    }
+                }
+            }
+        },
+        config = {
+            align = "tri",
+            bond = "Weak",
+            offset = {
+                x = 0,
+                y = 0.3
+            },
+            major = G.ROOM_ATTACH
+        }
+    })
 
     math.randomseed(os.time()) -- for creating a random card from a set
     local funcs = {}
@@ -421,13 +437,13 @@ function Game:main_menu(change_context)
                 
                 G.title_top:emplace(card)
                 card.no_ui = true
-r 15 4156 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 4156 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 
 r 1 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                     trigger = "after",
-r 9 1608 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 1608 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 27
                     blockable = false,
                     blocking = false,
@@ -456,7 +472,7 @@ l 27
 end
 
 local gameUpdateRef = Game.update
-r 9 2449 - -
+r 7 2449 - -
 l 111
     if G.STATE ~= G.STATES.SPLASH and G.MAIN_MENU_UI then
         local node = G.MAIN_MENU_UI:get_UIE_by_ID("main_menu_play")
@@ -569,7 +585,7 @@ function create_UIBox_mods(args)
         {
             label = localize("b_achievements"),
             chosen = SMODS.LAST_SELECTED_MOD_TAB == "achievements" or false,
-r 15 4803 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 4803 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 50
                 SMODS.LAST_SELECTED_MOD_TAB = "achievements"
                 return buildAchievementsTab(mod)
@@ -625,7 +641,7 @@ r 1 112 %20%20%20%20 -
 l 2
         blockable = false,
         func = function()
-r 12 660 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 660 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 10
             return true
         end
@@ -637,7 +653,7 @@ l 10
     return {
         label = label,
         chosen = SMODS.LAST_SELECTED_MOD_TAB == "mod_desc" or false,
-r 15 4803 %20%20%20%20%20%20%20%20 -
+r 30 4803 %20%20%20%20%20%20%20%20 -
 l 180
             local modNodes = {}
             local scale = 0.75 -- Scale factor for text
@@ -819,7 +835,7 @@ function buildAdditionsTab(mod)
     return (#leftside_nodes > 0 or #rightside_nodes > 0 ) and {
         label = localize("b_additions"),
         chosen = SMODS.LAST_SELECTED_MOD_TAB == "additions" or false,
-r 15 4803 %20%20%20%20%20%20%20%20 -
+r 30 4803 %20%20%20%20%20%20%20%20 -
 l 20
             SMODS.LAST_SELECTED_MOD_TAB = "additions"
             return {
@@ -841,7 +857,7 @@ end
 
 -- Disable alerts when in Additions tab
 local set_alerts_ref = set_alerts
-r 12 658 - -
+r 31 658 - -
 l 7
     if G.ACTIVE_MOD_UI then
     else
@@ -850,8 +866,8 @@ l 7
 end
 
 G.FUNCS.your_collection_other_gameobjects = function(e)
-r 13 1381 %20%20%20%20 -
-r 13 1382 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
+r 32 1382 %20%20%20%20 -
 l 80
       definition = create_UIBox_Other_GameObjects(),
     }
@@ -933,8 +949,8 @@ function create_UIBox_Other_GameObjects()
 end
 
 G.FUNCS.your_collection_consumables = function(e)
-r 13 1381 %20%20%20%20 -
-r 13 1382 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
+r 32 1382 %20%20%20%20 -
 l 19
       definition = create_UIBox_your_collection_consumables(),
     }
@@ -964,8 +980,8 @@ l 7
 end
 
 G.FUNCS.your_collection_consumables_page = function(args)
-r 13 603 %20%20%20%20 -
-r 23 214 %20%20 -
+r 32 603 %20%20%20%20 -
+r 17 214 %20%20 -
 l 93
     local uie = G.OVERLAY_MENU:get_UIE_by_ID('consumable_collection')
     if uie then
@@ -1060,8 +1076,8 @@ function buildAchievementsTab(mod, current_page)
         if not v then break end
         local temp_achievement = SMODS.create_sprite(0, 0, 1.1, 1.1, v.atlas or "achievements", v.earned and v.pos or v.hidden_pos)
         temp_achievement:define_draw_steps({
-r 15 662 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 663 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 662 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 663 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
         })
         if i == 1 then
@@ -1135,7 +1151,7 @@ l 47
             loc_name = (localize(v.key.."_hidden", 'achievement_names') ~= 'ERROR') and localize(v.key.."_hidden", 'achievement_names') or localize("hidden_achievement", 'achievement_names')
         else loc_name = localize(v.key, 'achievement_names') end
 
-r 15 4101 %20%20%20%20%20%20%20%20 -
+r 30 4101 %20%20%20%20%20%20%20%20 -
 l 1
         if loc_target then
 r 2 64 %20%20%20%20%20%20%20%20%20%20%20%20 -
@@ -1180,8 +1196,8 @@ l 40
 
     local t = {
         {n=G.UIT.C, config={}, nodes={
-r 15 229 %20%20%20%20%20%20%20%20 -
-r 6 297 %20%20%20%20%20%20%20%20 -
+r 30 229 %20%20%20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20%20%20 -
 l 22
             {n=G.UIT.R, config={align = "cm", padding = 0.1 }, nodes=achievement_matrix[1]},
             {n=G.UIT.R, config={align = "cm", padding = 0.1 }, nodes=achievement_matrix[2]},
@@ -1205,19 +1221,19 @@ l 22
 end
 
 G.FUNCS.achievments_tab_page = function(args)
-r 13 603 %20%20%20%20 -
+r 32 603 %20%20%20%20 -
 l 3
     achievement_matrix = {{},{}}
 
     local tab_contents = G.OVERLAY_MENU:get_UIE_by_ID('tab_contents')
-r 13 1308 %20%20%20%20 -
-r 13 1309 %20%20%20%20 -
+r 32 1308 %20%20%20%20 -
+r 32 1309 %20%20%20%20 -
 l 1
         definition = buildAchievementsTab(G.ACTIVE_MOD_UI, args.cycle_config.current_option),
-r 13 1311 %20%20%20%20%20%20%20%20 -
+r 32 1311 %20%20%20%20%20%20%20%20 -
 l 1
     }
-r 13 1313 %20%20%20%20 -
+r 32 1313 %20%20%20%20 -
 l 30
 end
 
@@ -1249,7 +1265,7 @@ end
 
 -- TODO: Make better solution
 local UIBox_button_ref = UIBox_button
-r 15 6376 - -
+r 30 6376 - -
 l 55
     local button = UIBox_button_ref(args)
     button.nodes[1].config.count = args.count
@@ -1306,49 +1322,49 @@ end
 function buildModtag(mod)
     local tag_atlas, tag_pos, tag_message, specific_vars = getModtagInfo(mod)
 
-r 4 496 %20%20%20%20 -
+r 9 496 %20%20%20%20 -
 l 2
     local units = 1.1
     local tag_sprite = SMODS.create_sprite(0, 0, 0.8*1, 0.8*1, SMODS.get_atlas(tag_atlas) or SMODS.get_atlas('tags'), tag_pos)
-r 4 499 %20%20%20%20 -
+r 9 499 %20%20%20%20 -
 l 3
     tag_sprite_tab = {n= G.UIT.C, config={align = "cm", padding = 0}, nodes={
         {n=G.UIT.O, config={w=units, h=units, colour = G.C.BLUE, object = tag_sprite, focus_with_object = true}},
     }}
-r 4 503 %20%20%20%20 -
-r 15 662 %20%20%20%20%20%20%20%20 -
-r 4 505 %20%20%20%20%20%20%20%20 -
+r 9 503 %20%20%20%20 -
+r 30 662 %20%20%20%20%20%20%20%20 -
+r 9 505 %20%20%20%20%20%20%20%20 -
 l 2
 		mod.icon_path and mod.disabled and {shader = 'dissolve', shadow_height = 0, tilt_shadow = 1} or nil, --this is really gross, blame thunk
     })
-r 4 507 %20%20%20%20 -
-r 4 508 %20%20%20%20 -
+r 9 507 %20%20%20%20 -
+r 9 508 %20%20%20%20 -
 l 1
     tag_sprite.states.click.can = true
-r 4 509 %20%20%20%20 -
-r 4 510 %20%20%20%20 -
+r 9 509 %20%20%20%20 -
+r 9 510 %20%20%20%20 -
 l 1
 
-r 4 513 %20%20%20%20 -
+r 9 513 %20%20%20%20 -
 r 2 429 %20%20%20%20%20%20%20%20 -
-r 4 515 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 4 516 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 4 517 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 9 515 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 9 516 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 9 517 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                     _self.hover_tilt = 3
-r 4 519 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 2730 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 2731 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 9 519 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2730 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2731 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 end
                 tag_sprite.ability_UIBox_table = generate_card_ui({set = "Other", discovered = false, key = tag_message}, nil, specific_vars, 'Other', nil, false)
-r 4 525 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 9 525 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 _self.config.h_popup_config ={align = 'tm', offset = {x= 0,y=-0.1},parent = _self}
                 Node.hover(_self)
-r 4 528 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 4 529 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 4 530 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 9 528 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 9 529 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 9 530 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 6
                     G:save_progress()
                 end
@@ -1356,12 +1372,12 @@ l 6
         end
     end
     tag_sprite.click = function(self)
-r 24 989 %20%20%20%20%20%20%20%20 -
-r 24 990 %20%20%20%20%20%20%20%20 -
+r 29 989 %20%20%20%20%20%20%20%20 -
+r 29 990 %20%20%20%20%20%20%20%20 -
 l 2
         G.FUNCS["openModUI_" .. mod.id](self)
     end
-r 4 537 %20%20%20%20 -
+r 9 537 %20%20%20%20 -
 l 7
     tag_sprite.update = function (self, dt)
         if not self.rescaled then
@@ -1370,7 +1386,7 @@ l 7
         end
     end
 
-r 4 539 %20%20%20%20 -
+r 9 539 %20%20%20%20 -
 l 397
 
     return tag_sprite_tab
@@ -1619,7 +1635,7 @@ local function createClickableModBox(modInfo, scale)
                                                 modInfo.blacklisted = true
                                             else
                                                 if modInfo.lovelyIgnored then
-                                                    require"SMODS.preflight.loader".enableFolder(modInfo.blacklist_name)
+                                                    NFS.remove(SMODS.MODS_DIR.. "/" .. modInfo.blacklist_name ..'/.lovelyignore')
                                                     modInfo.lovelyIgnored = false
                                                 end
                                                 if modInfo.blacklisted then
@@ -1647,7 +1663,7 @@ local function createClickableModBox(modInfo, scale)
 end
 
 function G.FUNCS.openModsDirectory(options)
-    love.system.openURL(SMODS.MODS_DIR_REAL or SMODS.MODS_DIR)
+    love.system.openURL(SMODS.MODS_DIR)
 end
 
 function G.FUNCS.mods_buttons_page(options)
@@ -1671,7 +1687,7 @@ function G.FUNCS.mod_version_select(options)
     prev_mod.blacklisted = true
     local new_mod = modInfo.available_versions[tonumber(selected)]
     if new_mod.lovelyIgnored then
-        require"SMODS.preflight.loader".enableFolder(new_mod.blacklist_name)
+        NFS.remove(SMODS.MODS_DIR.. "/" .. new_mod.blacklist_name ..'/.lovelyignore')
         new_mod.lovelyIgnored = false
     end
     if modInfo.blacklisted then
@@ -1769,7 +1785,7 @@ function create_UIBox_mods_button()
                             {
                                 label = localize('b_mods'),
                                 chosen = true,
-r 15 4803 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 4803 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 64
                                     return SMODS.GUI.DynamicUIManager.initTab({
                                         updateFunctions = {
@@ -1835,7 +1851,7 @@ l 64
                             {
 
                                 label = localize('b_credits'),
-r 15 4803 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 4803 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 123
                                     return {
                                         n = G.UIT.ROOT,
@@ -1960,7 +1976,7 @@ l 123
                             },
                             {
                                 label = localize('b_config'),
-r 15 4803 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 4803 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 85
                                     return {
                                         n = G.UIT.ROOT,
@@ -2046,8 +2062,52 @@ function G.FUNCS.steamodded_github(e)
     love.system.openURL("https://github.com/Steamopollys/Steamodded")
 end
 
+function G.FUNCS.mods_button(e)
+r 32 1381 %20%20%20%20 -
+l 9
+    SMODS.LAST_SELECTED_MOD_TAB = nil
+    SMODS.IN_MODS_TAB = true
+
+    G.FUNCS.overlay_menu({
+        definition = create_UIBox_mods_button()
+    })
+end
+
+local create_UIBox_main_menu_buttonsRef = create_UIBox_main_menu_buttons
+r 30 6194 - -
+l 15
+    local modsButton = UIBox_button({
+        id = "mods_button",
+        minh = 1.55,
+        minw = 1.85,
+        col = true,
+        button = "mods_button",
+        colour = SMODS.mod_button_alert and (G.SETTINGS.reduced_motion and G.C.RED or SMODS.Gradients.warning_bg) or G.C.BOOSTER,
+        text_colour = (SMODS.mod_button_alert and not G.SETTINGS.reduced_motion) and SMODS.Gradients.warning_text or G.C.TEXT_LIGHT,
+        label = {localize('b_mods_cap')},
+        scale = 0.45 * 1.2
+    })
+    local menu = create_UIBox_main_menu_buttonsRef()
+    table.insert(menu.nodes[1].nodes[1].nodes, modsButton)
+    menu.nodes[1].nodes[1].config = {align = "cm", padding = 0.15, r = 0.1, emboss = 0.1, colour = G.C.L_BLACK, mid = true}
+    if SMODS.mod_button_alert then
+r 1 112 %20%20%20%20%20%20%20%20 -
+l 14
+            func = function()
+                if G.MAIN_MENU_UI then -- Wait until the ui is rendered before spawning the alert
+                    UIBox{definition = create_UIBox_card_alert(), config = {align="tri", offset = {x = 0.05, y = -0.05}, major = G.MAIN_MENU_UI:get_UIE_by_ID('mods_button'), can_collide = false}}
+                    return true
+                end
+            end,
+            blocking = false,
+            blockable = false
+        }))
+    end
+    return menu
+end
+
 local create_UIBox_profile_buttonRef = create_UIBox_profile_button
-r 15 6158 - -
+r 30 6158 - -
 l 12
     local profile_menu = create_UIBox_profile_buttonRef()
     profile_menu.nodes[1].config = {align = "cm", padding = 0.11, r = 0.1, emboss = 0.1, colour = G.C.L_BLACK}
@@ -2061,7 +2121,7 @@ function initGlobals()
 end
 
 function G.FUNCS.update_mod_list(args)
-r 13 603 %20%20%20%20 -
+r 32 603 %20%20%20%20 -
 l 9
     SMODS.GUI.DynamicUIManager.updateDynamicAreas({
         ["modsList"] = SMODS.GUI.dynamicModListContent(args.cycle_config.current_option)
@@ -2072,8 +2132,8 @@ end
 -- e.g. create_option_cycle({ current_option = 1 })  vs. SMODS.GUI.createOptionSelector({ current_option = "Page 1/2" })
 function SMODS.GUI.createOptionSelector(args)
     args = args or {}
-r 15 1870 %20%20%20%20 -
-r 15 1958 %20%20%20%20 -
+r 30 1870 %20%20%20%20 -
+r 30 1958 %20%20%20%20 -
 l 13
         'Option 1',
         'Option 2'
@@ -2088,98 +2148,98 @@ l 13
     end
     args.current_option_val = args.options[current_option_index]
     args.current_option = current_option_index
-r 15 1964 %20%20%20%20 -
-r 15 886 %20%20%20%20 -
-r 15 1966 %20%20%20%20 -
-r 15 1967 %20%20%20%20 -
-r 15 1968 %20%20%20%20 -
-r 15 1969 %20%20%20%20 -
-r 15 1970 %20%20%20%20 -
+r 30 1964 %20%20%20%20 -
+r 30 886 %20%20%20%20 -
+r 30 1966 %20%20%20%20 -
+r 30 1967 %20%20%20%20 -
+r 30 1968 %20%20%20%20 -
+r 30 1969 %20%20%20%20 -
+r 30 1970 %20%20%20%20 -
 l 2
     args.l = '<'
     args.r = '>'
-r 15 1973 %20%20%20%20 -
-r 15 1974 %20%20%20%20 -
+r 30 1973 %20%20%20%20 -
+r 30 1974 %20%20%20%20 -
 l 4
 
     local info = nil
     if args.info then
         info = {}
-r 15 1922 %20%20%20%20%20%20%20%20 -
-r 15 1923 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1981 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1922 %20%20%20%20%20%20%20%20 -
+r 30 1923 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1981 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
             }})
         end
-r 15 1927 %20%20%20%20%20%20%20%20 -
+r 30 1927 %20%20%20%20%20%20%20%20 -
 l 2
     end
 
-r 15 1987 %20%20%20%20 -
+r 30 1987 %20%20%20%20 -
 l 1
     local pips = {}
-r 15 1989 %20%20%20%20 -
-r 15 1990 %20%20%20%20%20%20%20%20 -
+r 30 1989 %20%20%20%20 -
+r 30 1990 %20%20%20%20%20%20%20%20 -
 l 2
     end
 
-r 15 1993 %20%20%20%20 -
+r 30 1993 %20%20%20%20 -
 l 2
 
     local t =
-r 15 1996 %20%20%20%20 -
-r 15 1997 %20%20%20%20%20%20%20%20 -
-r 15 1998 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1996 %20%20%20%20 -
+r 30 1997 %20%20%20%20%20%20%20%20 -
+r 30 1998 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
         }},
         args.mid and
-r 15 2001 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2002 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2001 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2002 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                         args.mid
                     }},
-r 15 2005 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2005 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 }}
-r 15 2007 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 6 297 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 6 297 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2010 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2007 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2010 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 }},
-r 15 2002 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2002 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 }},
-r 15 2005 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2005 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
             }}
         }},
-r 15 2017 %20%20%20%20%20%20%20%20 -
-r 15 2018 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2017 %20%20%20%20%20%20%20%20 -
+r 30 2018 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
         }},
     }}
 
-r 15 2022 %20%20%20%20 -
+r 30 2022 %20%20%20%20 -
 l 1
         t =
-r 15 2024 %20%20%20%20%20%20%20%20 -
-r 15 2025 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2026 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2027 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2024 %20%20%20%20%20%20%20%20 -
+r 30 2025 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2026 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2027 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
         }}
     else
         t =
-r 15 2031 %20%20%20%20%20%20%20%20 -
+r 30 2031 %20%20%20%20%20%20%20%20 -
 l 3
             t
         }}
     end
-r 15 2035 %20%20%20%20 -
-r 15 2036 %20%20%20%20%20%20%20%20 -
-r 15 2037 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2038 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2035 %20%20%20%20 -
+r 30 2036 %20%20%20%20%20%20%20%20 -
+r 30 2037 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2038 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 31
             }} or nil,
             t,
@@ -2434,8 +2494,8 @@ end
 
 G.FUNCS.SMODS_change_mipmap = function(args)
     SMODS.config.graphics_mipmap_level = args.to_key
-r 13 854 %20%20%20%20 -
-l 10
+r 32 854 %20%20%20%20 -
+l 8
     SMODS:save_mod_config()
 end
 
@@ -2444,13 +2504,11 @@ SMODS.card_collection_UIBox = function(_pool, rows, args)
     args.w_mod = args.w_mod or 1
     args.h_mod = args.h_mod or 1
     args.card_scale = args.card_scale or 1
-    if rawget(_G, 'PORTRAIT') and PORTRAIT.on() and PORTRAIT.collection_rows then rows = PORTRAIT.collection_rows(rows, args.w_mod, args.h_mod)
-    elseif COLL and COLL.wide_rows and UIK and UIK.wide_phone and UIK.wide_phone() then rows = COLL.wide_rows(rows, args.w_mod, args.h_mod) end
-r 15 489 %20%20%20%20 -
+r 30 489 %20%20%20%20 -
 l 2
     local pool = SMODS.collection_pool(_pool)
 
-r 15 3538 %20%20%20%20 -
+r 30 3538 %20%20%20%20 -
 l 8
     local cards_per_page = 0
     local row_totals = {}
@@ -2460,16 +2518,16 @@ l 8
         else
             row_totals[j] = cards_per_page
             cards_per_page = cards_per_page + rows[j]
-r 15 3540 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2460 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 3540 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2460 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 4
                 (args.w_mod*rows[j]+0.25)*G.CARD_W,
                 args.h_mod*G.CARD_H,
                 {card_limit = rows[j], type = args.area_type or 'title', highlight_limit = 0, collection = true}
             )
-r 15 3255 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 3546 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 3547 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 3255 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 3546 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 3547 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 11
             }})
         end
@@ -2482,10 +2540,10 @@ l 11
 
     G.FUNCS.SMODS_card_collection_page = function(e)
         if not e or not e.cycle_config then return end
-r 15 3558 %20%20%20%20%20%20%20%20 -
+r 30 3558 %20%20%20%20%20%20%20%20 -
 l 1
             for i = #G.your_collection[j].cards, 1, -1 do
-r 13 606 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 606 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 7
             c:remove()
             c = nil
@@ -2494,16 +2552,16 @@ l 7
         for j = 1, #rows do
             for i = 1, rows[j] do
             local center = pool[i+row_totals[j] + (cards_per_page*(e.cycle_config.current_option - 1))]
-r 13 614 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 614 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
             local card = Card(G.your_collection[j].T.x + G.your_collection[j].T.w/2, G.your_collection[j].T.y, G.CARD_W*args.card_scale, G.CARD_H*args.card_scale, G.P_CARDS.empty, (args.center and G.P_CENTERS[args.center]) or center)
             if args.modify_card then args.modify_card(card, center, i, j) end
             if not args.no_materialize then card:start_materialize(nil, i>1 or j>1) end
-r 15 3562 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 3562 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
             end
         end
-r 15 3566 %20%20%20%20%20%20%20%20 -
+r 30 3566 %20%20%20%20%20%20%20%20 -
 l 11
     end
 
@@ -2516,10 +2574,10 @@ l 11
         outline_colour = G.ACTIVE_MOD_UI and ((G.ACTIVE_MOD_UI.ui_config or {}).collection_outline_colour or
                 (G.ACTIVE_MOD_UI.ui_config or {}).outline_colour),
         back_func = (args and args.back_func) or G.ACTIVE_MOD_UI and "openModUI_"..G.ACTIVE_MOD_UI.id or 'your_collection', snap_back = args.snap_back, infotip = args.infotip, contents = {
-r 15 3569 %20%20%20%20%20%20%20%20%20%20 -
+r 30 3569 %20%20%20%20%20%20%20%20%20%20 -
 l 25
           (not args.hide_single_page or cards_per_page < #pool) and {n=G.UIT.R, config={align = "cm"}, nodes={
-            create_option_cycle({options = options, w = (rawget(_G, 'PORTRAIT') and PORTRAIT.on()) and 2.6 or 4.5, cycle_shoulders = not (rawget(_G, 'PORTRAIT') and PORTRAIT.on()), opt_callback = 'SMODS_card_collection_page', current_option = 1, colour = G.ACTIVE_MOD_UI and (G.ACTIVE_MOD_UI.ui_config or {}).collection_option_cycle_colour or G.C.RED, no_pips = true, focus_args = {snap_to = true, nav = 'wide'}})
+            create_option_cycle({options = options, w = 4.5, cycle_shoulders = true, opt_callback = 'SMODS_card_collection_page', current_option = 1, colour = G.ACTIVE_MOD_UI and (G.ACTIVE_MOD_UI.ui_config or {}).collection_option_cycle_colour or G.C.RED, no_pips = true, focus_args = {snap_to = true, nav = 'wide'}})
           }} or nil,
       }})
     return t
@@ -2543,7 +2601,7 @@ create_UIBox_your_collection_vouchers = function()
     return SMODS.card_collection_UIBox(G.P_CENTER_POOLS.Voucher, {4,4}, {
         area_type = 'voucher',
         modify_card = function(card, center, i, j)
-r 15 3765 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 3765 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 40
         end,
     })
@@ -2585,8 +2643,8 @@ create_UIBox_your_collection_seals = function()
 end
 
 G.FUNCS.your_collection_stickers = function(e)
-r 13 1381 %20%20%20%20 -
-r 13 1382 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
+r 32 1382 %20%20%20%20 -
 l 20
       definition = create_UIBox_your_collection_stickers(),
     }
@@ -2608,8 +2666,8 @@ create_UIBox_your_collection_stickers = function()
 end
 
 G.FUNCS.your_collection_poker_hands = function(e)
-r 13 1381 %20%20%20%20 -
-r 13 1382 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
+r 32 1382 %20%20%20%20 -
 l 25
       definition = create_UIBox_your_collection_poker_hands(),
     }
@@ -2636,7 +2694,7 @@ end
 
 -- warning for updating during run
 local igo = Game.init_game_object
-r 9 1862 - -
+r 7 1862 - -
 l 49
     local t = igo(self)
     t.smods_version = SMODS.version
@@ -2687,7 +2745,7 @@ function SMODS.GUI.hand_score_display_ui(scale)
     -- Outer shell container
     {n=G.UIT.R, config={align = "cm", id = 'hand_text_area', func = 'SMODS_scoring_calculation_function', colour = darken(G.C.BLACK, 0.1), r = 0.1, emboss = 0.05, padding = 0.03}, nodes={
         -- Inner shell container
-r 15 229 %20%20%20%20%20%20%20%20 -
+r 30 229 %20%20%20%20%20%20%20%20 -
 l 10
             -- Hand type display container
             SMODS.GUI.current_hand_ui(scale),
@@ -2699,9 +2757,9 @@ end
 
 function SMODS.GUI.current_hand_ui(scale)
     return
-r 15 1343 %20%20%20%20 -
-r 15 1344 %20%20%20%20%20%20%20%20 -
-r 15 1345 %20%20%20%20%20%20%20%20 -
+r 30 1343 %20%20%20%20 -
+r 30 1344 %20%20%20%20%20%20%20%20 -
+r 30 1345 %20%20%20%20%20%20%20%20 -
 l 6
         {n=G.UIT.T, config={ref_table = G.GAME.current_round.current_hand, ref_value='hand_level', scale = scale, colour = G.C.UI.TEXT_LIGHT, id = 'hand_level', shadow = true}},
     }}
@@ -2709,7 +2767,7 @@ end
 
 function SMODS.GUI.hand_chips_container(scale)
     return
-r 15 1348 %20%20%20%20 -
+r 30 1348 %20%20%20%20 -
 l 23
         -- Chips container
         SMODS.GUI.chips_container(scale),
@@ -2734,7 +2792,7 @@ end
 function SMODS.GUI.operator(scale)
     return
     {n=G.UIT.C, config={align = "cm", id = 'hand_operator_container'}, nodes={
-r 15 1355 %20%20%20%20%20%20%20%20 -
+r 30 1355 %20%20%20%20%20%20%20%20 -
 l 40
     }}
 end
@@ -2776,13 +2834,13 @@ G.FUNCS.hand_type_UI_set = function(e)
   if new_mult_text ~= G.GAME.current_round.current_hand[e.config.text] then
     G.GAME.current_round.current_hand[e.config.text] = new_mult_text
     e.config.object.scale = scale_number(G.GAME.current_round.current_hand[e.config.type], e.config.scale, 1000)
-r 13 1922 %20%20%20%20 -
+r 32 1922 %20%20%20%20 -
 l 4
     if not G.TAROT_INTERRUPT_PULSE then G.FUNCS.text_super_juice(e, math.max(0,math.floor(math.log10(type(G.GAME.current_round.current_hand[e.config.type]) == 'number' and math.abs(G.GAME.current_round.current_hand[e.config.type]) or 1)))) end
   end
 end
 
-r 15 2545 - -
+r 30 2545 - -
 l 42
     local t = {}
 
@@ -2826,18 +2884,18 @@ l 42
     }})
 
     local r = {n=G.UIT.R, config={align = "tm", minh = 1.35}, nodes={{n=G.UIT.R, config={align = "cm", minh = 0.3}, nodes = {}}}}
-r 15 2560 %20%20%20%20 -
-r 15 2561 %20%20%20%20 -
+r 30 2560 %20%20%20%20 -
+r 30 2561 %20%20%20%20 -
 l 1
 
-r 15 2568 %20%20%20%20 -
+r 30 2568 %20%20%20%20 -
 l 2
     for k, v in ipairs(G.COLLABS.options[_suit]) do
         conv_loc_options[k] = loc_options[v] or v
-r 15 2570 %20%20%20%20%20%20%20%20 -
+r 30 2570 %20%20%20%20%20%20%20%20 -
 l 1
     end
-r 15 2566 %20%20%20%20 -
+r 30 2566 %20%20%20%20 -
 l 28
 
     local collab_cycle = create_option_cycle({options = loc_options, w = 5.5, cycle_shoulders = true, curr_suit = _suit, opt_callback = 'change_collab', current_option = current_option, colour = G.C.RED, focus_args = {snap_to = true, nav = 'wide'}})
@@ -2867,7 +2925,7 @@ l 28
 
     G.FUNCS.update_collab_cards(current_option, _suit, true)
 
-r 15 2588 %20%20%20%20 -
+r 30 2588 %20%20%20%20 -
 l 61
 end
 
@@ -2930,7 +2988,7 @@ function SMODS.GUI.scrollbar(args)
 						minw = args.knob_w or (args.horizontal and args.h or args.w),
 						colour = args.knob_colour or G.C.WHITE,
 						r = 0,
-r 15 6431 %09%09%09%09%09%09 -
+r 30 6431 %09%09%09%09%09%09 -
 l 32
 						ref_value = args.ref_value,
 						min = args.min,
@@ -2964,7 +3022,7 @@ end
 
 function G.FUNCS.controller_scroll(root, velocity, button)
     local e = root.children[2]
-r 13 498 %20%20%20%20 -
+r 32 498 %20%20%20%20 -
 l 20
 	local scrollbar_track = e.UIBox
 	scrollbar_track.states.drag.can = true
@@ -2986,7 +3044,7 @@ l 20
 	if should_scroll and scrollbox then
 		local v = velocity
 		if e.config.scroll_dir == "h" and (button == "dpright" or button == "dpleft") then
-r 23 705 %09%09%09 -
+r 17 705 %09%09%09 -
 l 8
 				v = -v
 			end
@@ -2996,7 +3054,7 @@ l 8
 			ref_table[ref_value] = percent * (e.config.max - e.config.min) + e.config.min
             was_scrolled = true
 		elseif e.config.scroll_dir == "v" and (button == "dpup" or button == "dpdown") then
-r 23 699 %09%09%09 -
+r 17 699 %09%09%09 -
 l 19
 				v = -v
 			end
@@ -3017,7 +3075,7 @@ l 19
 end
 
 function G.FUNCS.scrollbar(e)
-r 13 498 %09 -
+r 32 498 %09 -
 l 154
 	local scrollbar_track = e.UIBox
 	scrollbar_track.states.drag.can = true
@@ -3192,7 +3250,7 @@ l 17
 end
 
 local uie_remove_ref = UIElement.remove
-r 24 1008 - -
+r 29 1008 - -
 l 25
     if self.config.dropdown_obj then
         self.config.dropdown_obj:remove()
@@ -3219,7 +3277,7 @@ end
 function G.FUNCS.update_dropdown_select(e)
     local args = e.config.args_table
     if type(args.is_option_disabled) == "function" and args.is_option_disabled(e.config.value) then
-r 13 58 %20%20%20%20%20%20%20%20 -
+r 32 58 %20%20%20%20%20%20%20%20 -
 l 176
         e.config.colour = args.disabled_colour or G.C.CLEAR
         e.config.hover = false
@@ -3397,7 +3455,7 @@ end
 -- #region blind tooltips
 
 local old_blind_popup = create_UIBox_blind_popup
-r 15 4093 - -
+r 30 4093 - -
 l 19
     local popup = old_blind_popup(blind, discovered, vars)
     popup.config.colour = darken(G.C.BLACK, 0.1)
@@ -3418,7 +3476,7 @@ l 19
   end 
 
 local old_blind_choice_UI = create_UIBox_blind_choice
-r 15 1485 - -
+r 30 1485 - -
 l 28
     local box = old_blind_choice_UI(type, run_info)
     local blind = G.P_BLINDS[G.GAME.round_resets.blind_choices[type]]
@@ -3448,7 +3506,7 @@ G.FUNCS.HUD_blind_badge = function(e)
                 e.config.colour = badge.config.colour or mod.badge_colour or G.C.DYN_UI.MAIN
                 e.config.shader = badge.config.shader or nil
                 e.config.emboss = 0.05
-r 13 2070 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2070 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 10
                 badge.config.shader = nil
                 badge.config.emboss = nil
@@ -3460,20 +3518,14 @@ l 10
             G.HUD_blind:remove()
             G.GAME.blind = Blind(0,0,2,1)
             G.HUD_blind = UIBox{
-r 9 2401 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 10
+r 7 2401 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 31
                 config = {major = G.HUD:get_UIE_by_ID('row_blind_bottom'), align = 'bmi', offset = {x=0,y=-10}, bond = 'Weak'}
             }
             G.GAME.blind:load(blind)
             G.GAME.blind_badge = {}
         end
     end
-end
-local smods_hud_blind_badge = G.FUNCS.HUD_blind_badge
-G.FUNCS.SMODS_HUD_blind_badge = function(e)
-    if G.FUNCS.HUD_blind_badge == smods_hud_blind_badge then return smods_hud_blind_badge(e) end
-r 13 2072 %20%20%20%20 -
-l 25
 end
 
 -- #endregion
@@ -3499,7 +3551,7 @@ function G.UIDEF.SMODS_current_stake()
     for i, key in ipairs(applied_stakes) do
         local _stake_center = G.P_STAKES[key]
         local order = _stake_center.order
-r 15 3191 %20%20%20%20%20%20%20%20 -
+r 30 3191 %20%20%20%20%20%20%20%20 -
 l 63
         if _stake_center then
             local t, res = {}, {}
@@ -3564,7 +3616,7 @@ l 63
 	end
 	
     return {n=G.UIT.ROOT, config={align = "cm", colour = G.C.CLEAR, r = 0.1, padding = 0.1}, nodes={
-r 15 71 %20%20%20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20%20%20 -
 l 38
             {n=G.UIT.T, config={text = 'Applied stakes', scale = 0.65, colour = G.C.WHITE}}
         }},
@@ -3604,7 +3656,7 @@ SMODS.GUI.CUSTOM_UI_SHAPES_FUNCTION = {
 SMODS.GUI.default_box_corner = { 0, 1, 1, 2, 2, 4, 4, }
 
 function SMODS.GUI.calculate_corners(vertices, config)
-r 29 6 %20%20%20%20 -
+r 24 6 %20%20%20%20 -
 l 19
     local ext_up = config.ext_up or 0
     local x_neg = config.x_neg

@@ -1,0 +1,140 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 107
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.blind.001"
+target = "blind.lua"
+pattern = '''^(?<pre>)[\t ]*if not self\.boss and self\.name then \n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local key = self.config and self.config.blind and self.config.blind.key or ''
+    if (not self.boss and self.name) or key:sub(1, 6) == 'bl_mp_' then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.blind.002"
+target = "blind.lua"
+pattern = '''^(?<pre>[\t ]*self:set_text\(\)\n)(?<post>[\t ]*\n)'''
+position = "at"
+payload = '''
+${pre}        pcall(function()
+            if self.boss and G.GAME.modifiers and G.GAME.modifiers.boss_additional_effect then
+                local suits = {'Hearts', 'Diamonds', 'Clubs', 'Spades'}
+                local random_suit = suits[math.ceil(pseudorandom(pseudoseed('apocalypse_boss')) * #suits)]
+                if not self.debuff then self.debuff = {} end
+                if not self.debuff.suit then
+                    self.debuff.suit = random_suit
+                end
+            end
+        end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.blind.003"
+target = "blind.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*self\.chips = [^\n]*get_blind_amount[^\n]*\n)'''
+position = "at"
+payload = '''
+${pre}        local creative_mult = 1
+        if get_creative_blind_multiplier then
+            creative_mult = get_creative_blind_multiplier()
+        elseif get_insanity_blind_multiplier then
+            creative_mult = get_insanity_blind_multiplier()
+        end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.blind.004"
+target = "blind.lua"
+pattern = '''^(?<pre>[\t ]*self\.chips = [^\n]*get_blind_amount[^\n]*\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}        self.chips = self.chips*creative_mult
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.blind.005"
+target = "blind.lua"
+pattern = '''^(?<pre>[\t ]*G\.HUD_blind:get_UIE_by_ID\("HUD_blind_count"\):juice_up\(\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}                            self.children.animatedSprite.atlas = G.ANIMATION_ATLAS[self.config.blind.atlas or 'blind_chips'] or self.children.animatedSprite.atlas
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.blind.006"
+target = "blind.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self\.children\.animatedSprite\.states\.visible = true\n)'''
+position = "at"
+payload = '''
+${pre}        self.children.animatedSprite.atlas = G.ANIMATION_ATLAS[self.config.blind.atlas or 'blind_chips'] or self.children.animatedSprite.atlas
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.blind.modded.001"
+target = "blind.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*elseif self\.name == 'Cerulean Bell' then \n)'''
+position = "at"
+payload = '''
+${pre}    end
+    local obj = self.config.blind
+    if obj.drawn_to_hand and type(obj.drawn_to_hand) == 'function' then
+        obj:drawn_to_hand()
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.blind.modded.002"
+target = "blind.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*local obj = self\.config\.blind\n[\t ]*if not self\.disabled and obj\.recalc_debuff and type\(obj\.recalc_debuff\) == 'function' then\n)'''
+position = "at"
+payload = '''
+${pre}    if self.boss and card.playing_card and card.config and card.config.center and card.config.center.key == 'm_wild' then
+r 2 651 %20%20%20%20%20%20%20%20 -
+l 25
+        return
+    end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.blind.modded.003"
+target = "blind.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if self\.children\.animatedSprite then self\.children\.animatedSprite:remove\(\) end\n[\t ]*self\.children\.animatedSprite = SMODS\.create_sprite\(self\.T\.x, self\.T\.y, self\.T\.w, self\.T\.h, self\.config\.blind\.atlas or 'blind_chips', self\.config\.blind\.pos or G\.P_BLINDS\.bl_small\.pos, self\.config\.blind\.sprite_args\)\n)'''
+position = "at"
+payload = '''
+${pre}        self.children.animatedSprite.atlas = G.ANIMATION_ATLAS[self.config.blind.atlas or 'blind_chips'] or self.children.animatedSprite.atlas
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.blind.modded.004"
+target = "blind.lua"
+pattern = '''^(?<pre>[\t ]*self\.children\.animatedSprite = SMODS\.create_sprite\(self\.T\.x, self\.T\.y, self\.T\.w, self\.T\.h, self\.config\.blind\.atlas or 'blind_chips', self\.config\.blind\.pos or G\.P_BLINDS\.bl_small\.pos, self\.config\.blind\.sprite_args\)\n)[\t ]*self\.children\.animatedSprite\.atlas = G\.ANIMATION_ATLAS\[self\.config\.blind\.atlas or 'blind_chips'\] or self\.children\.animatedSprite\.atlas\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+optional = true
+end

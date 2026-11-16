@@ -225,7 +225,19 @@ local function var_name(vars, i)
 end
 T.var_name = var_name
 
+local function var_slot(str, n)
+  return (tostring(str):gsub("\1VAR(%d)", function(k) return "#" .. (4 + tonumber(k)) .. "#" end))
+end
+
 function T.only_text(o, lang, vars)
+  local R0 = package.loaded["functions/forge/forge_rules"]
+  local ref = R0 and R0.var_ref and type(o) == "table" and R0.var_ref(o.v)
+  if ref then
+    local c = {}
+    for k, v in pairs(o) do c[k] = v end
+    c.v = "\1VAR" .. ref
+    return var_slot(T.only_text(c, lang, vars))
+  end
   local s = S[lang] or S.en
   local id = o.id
   local R = package.loaded["functions/forge/forge_rules"]
@@ -263,6 +275,21 @@ T.GAIN_WHO = {
 local give_base
 
 function T.give_text(g, lang, vars, when)
+  local R0 = package.loaded["functions/forge/forge_rules"]
+  local ref = R0 and R0.var_ref and type(g) == "table" and R0.var_ref(g.v)
+  if ref then
+    local c = {}
+    for k, v in pairs(g) do c[k] = v end
+    c.v = "\1VAR" .. ref
+    local r = T.give_text(c, lang, vars, when)
+    return type(r) == "string" and var_slot(r) or r
+  end
+  if type(g) == "table" and g.id == "var_pick" then
+    local s = S[lang] or S.en
+    local d = type(vars) == "table" and vars[g.var or 1]
+    local shown = (g.v == "random" or not (R0 and R0.var_show)) and T.random_word(lang) or R0.var_show(d and d.type, g.v, lang)
+    return string.format(s.var_set, var_name(vars, g.var), shown)
+  end
   local out = give_base(g, lang, vars, when)
   local kind = T.cur_kind
   if type(out) == "string" and kind and kind ~= "joker" then
@@ -340,19 +367,21 @@ end
 function T.sentence(rule, lang, vars)
   local s = S[lang] or S.en
   local out = T.when_text(rule.when, lang)
-  local conds, nots, chance = {}, {}, nil
+  local conds, nots, chance, every = {}, {}, nil, nil
   for _, o in ipairs(rule.only or {}) do
     if o.id == "chance" then chance = T.only_text(o, lang, vars)
+    elseif o.id == "every" then every = T.only_text(o, lang, vars)
     elseif o.neg then nots[#nots + 1] = T.only_text(o, lang, vars)
     else conds[#conds + 1] = T.only_text(o, lang, vars) end
   end
   if #conds > 0 then out = out .. ", " .. s["if"] .. " " .. table.concat(conds, " " .. s["and"] .. " ") end
   if #nots > 0 then out = out .. ", " .. s.unless .. " " .. table.concat(nots, " " .. s["and"] .. " ") end
   if chance then out = out .. ", " .. chance end
+  if every then out = out .. ", " .. every end
   local gives = {}
   for _, g in ipairs(rule.give or {}) do gives[#gives + 1] = T.give_text(g, lang, vars, rule.when) end
   if #gives == 0 then return nil end
-  if rule.when == "passive" and #conds == 0 and #nots == 0 and not chance then out = table.concat(gives, ", ")
+  if rule.when == "passive" and #conds == 0 and #nots == 0 and not chance and not every then out = table.concat(gives, ", ")
   else out = out .. ": " .. table.concat(gives, ", ") end
   local alts = {}
   for _, g in ipairs(rule.alt or {}) do alts[#alts + 1] = T.give_text(g, lang, vars, rule.when) end
@@ -419,7 +448,7 @@ function T.rule_lines(c, lang)
       for _, l in ipairs(T.wrap(cap(sen))) do out[#out + 1] = l end
     end
     for _, g in ipairs(rule.give or {}) do
-      if g.id == "gain_chips" or g.id == "gain_mult" or g.id == "gain_xmult" then gains[g.id] = true end
+      if g.id == "gain_chips" or g.id == "gain_mult" or g.id == "gain_xmult" or g.id == "gain_xchips" then gains[g.id] = true end
       if g.id == "dagger" then gains.gain_mult = true end
       if g.id == "create" or g.id == "make_card" then room = true end
       if g.var then used[g.var] = true end
@@ -432,6 +461,8 @@ function T.rule_lines(c, lang)
   if gains.gain_chips then now[#now + 1] = s.now_chips end
   if gains.gain_mult then now[#now + 1] = s.now_mult end
   if gains.gain_xmult then now[#now + 1] = s.now_xmult end
+  local RX = package.loaded["functions/forge/forge_rules"]
+  if gains.gain_xchips and RX and RX.xchips_now then now[#now + 1] = RX.xchips_now(lang) end
   if #now > 0 then out[#out + 1] = string.format(s.now, table.concat(now, "{C:inactive}, ")) end
   local shown = {}
   for i, v in ipairs(type(c.vars) == "table" and c.vars or {}) do
@@ -448,6 +479,11 @@ function T.rule_lines(c, lang)
     end
     if moves then out[#out + 1] = (R.TARGET_TEXT[lang] or R.TARGET_TEXT.en).changes end
   end
+  for i, rule in ipairs(c.rules or {}) do
+    for _, o in ipairs(rule.only or {}) do
+      if o.id == "every" then out[#out + 1] = string.format(T.LEFT[lang] or T.LEFT.en, 12 + i) end
+    end
+  end
   if room then out[#out + 1] = s.room end
   if c.kind and c.kind ~= "joker" then
     local p = G and G.GAME and G.GAME.probabilities and G.GAME.probabilities.normal or 1
@@ -456,16 +492,33 @@ function T.rule_lines(c, lang)
   return out
 end
 
-function T.vars(card, defs, state)
+T.RANDOM_WORD = {en = "random", fr = "au hasard", es = "al azar"}
+function T.random_word(lang) return T.RANDOM_WORD[lang] or T.RANDOM_WORD.en end
+
+T.LEFT = {en = "{C:inactive}(#%d# remaining){}", fr = "{C:inactive}(encore #%d#){}", es = "{C:inactive}(faltan #%d#){}"}
+
+function T.vars(card, defs, state, rules)
   local p = G and G.GAME and G.GAME.probabilities and G.GAME.probabilities.normal or 1
   local x = type(state) == "table" and state or card and card.ability and type(card.ability.extra) == "table" and card.ability.extra or {}
   local out = {fmt_n(p), fmt_n(tonumber(x.chips) or 0), fmt_n(tonumber(x.mult) or 0), fmt_n(tonumber(x.xmult) or 1)}
   local cur = type(x.vars) == "table" and x.vars or {}
+  local R = package.loaded["functions/forge/forge_rules"]
   for i = 1, 4 do
     local d = type(defs) == "table" and defs[i]
-    out[4 + i] = fmt_n(tonumber(cur[i]) or (d and tonumber(d.start)) or 0)
+    if d and d.type and d.type ~= "number" and R and R.var_show then
+      local v = cur[i]
+      if not R.var_ok(d.type, v) then v = d.start end
+      out[4 + i] = R.var_show(d.type, v)
+    else
+      out[4 + i] = fmt_n(tonumber(cur[i]) or (d and tonumber(d.start)) or 0)
+    end
   end
-  local R = package.loaded["functions/forge/forge_rules"]
+  for i, rule in ipairs(type(rules) == "table" and rules or {}) do
+    for _, o in ipairs(type(rule) == "table" and rule.only or {}) do
+      if type(o) == "table" and o.id == "every" and R and R.every_left then out[12 + i] = fmt_n(R.every_left(o, x, i)) end
+    end
+  end
+  if R and R.XCHIPS_SLOT then out[R.XCHIPS_SLOT] = fmt_n(tonumber(x.xchips) or 1) end
   if R and R.target_vars then
     local ok, t = pcall(R.target_vars)
     if ok and type(t) == "table" then for i = 1, 4 do out[8 + i] = t[i] end end

@@ -396,7 +396,7 @@ end
 
 G.FUNCS.open_minigames = function()
     if not MG.available() then return end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 20
     P.playing, P.hidden, P.kb, P.focus = nil, nil, nil, "list"
     G.FUNCS.overlay_menu{definition = MG.page()}
@@ -418,7 +418,7 @@ end
 
 function P.key(key)
     if not P.is_open() then return false end
-r 23 774 %20%20%20%20 -
+r 17 774 %20%20%20%20 -
 l 141
         G.FUNCS.open_tavern_hub()
         return true

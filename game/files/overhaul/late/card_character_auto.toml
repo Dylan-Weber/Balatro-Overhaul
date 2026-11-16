@@ -1,0 +1,103 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.card_character.001"
+target = "card_character.lua"
+pattern = '''^(?<pre>[\t ]*Card_Character = Moveable:extend\(\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}local function scale_def(node, s)
+    local c = node.config
+    if c then
+        for _, k in ipairs({'scale', 'minw', 'minh', 'maxw', 'padding'}) do
+            if c[k] then c[k] = c[k]*s end
+        end
+    end
+    for _, n in ipairs(node.nodes or {}) do scale_def(n, s) end
+    return node
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card_character.002"
+target = "card_character.lua"
+pattern = '''^(?<pre>)[\t ]*Moveable\.init\(self,args\.x or 1, args\.y or 1, args\.w or G\.CARD_W\*1\.1, args\.h or G\.CARD_H\*1\.1\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local s = args.scale or 1
+    Moveable.init(self,args.x or 1, args.y or 1, args.w or G.CARD_W*1.1*s, args.h or G.CARD_H*1.1*s)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card_character.003"
+target = "card_character.lua"
+pattern = '''^(?<pre>[\t ]*self\.config = \{args = args\}\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local card_w, card_h = G.CARD_W, G.CARD_H
+    G.CARD_W, G.CARD_H = card_w*s, card_h*s
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card_character.004"
+target = "card_character.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self\.children\.card\.states\.visible = false\n)'''
+position = "at"
+payload = '''
+${pre}    G.CARD_W, G.CARD_H = card_w, card_h
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card_character.005"
+target = "card_character.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self\.children\.button = UIBox\{\n)'''
+position = "at"
+payload = '''
+${pre}    local def = create_UIBox_character_button({button = button, func = func, colour = colour, update_func = update_func, maxw = 3})
+    if self.config.args.scale then scale_def(def, self.config.args.scale) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card_character.006"
+target = "card_character.lua"
+pattern = '''^(?<pre>)[\t ]*definition = create_UIBox_character_button\(\{button = button, func = func, colour = colour, update_func = update_func, maxw = 3\}\),\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        definition = def,
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card_character.007"
+target = "card_character.lua"
+pattern = '''^(?<pre>)[\t ]*definition = G\.UIDEF\.speech_bubble\(text_key, loc_vars\),\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        definition = self.config.args.scale and scale_def(G.UIDEF.speech_bubble(text_key, loc_vars), self.config.args.scale) or G.UIDEF.speech_bubble(text_key, loc_vars),
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card_character.modded.001"
+target = "card_character.lua"
+pattern = '''^(?<pre>)[\t ]*self\.children\.card = Card\(self\.T\.x, self\.T\.y, G\.CARD_W, G\.CARD_H, G\.P_CARDS\.empty, args\.center and G\.P_CENTERS\[args\.center\] or G\.P_CENTERS\.j_joker, \{bypass_discovery_center = true\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    self.children.card = Card(self.T.x, self.T.y, G.CARD_W, G.CARD_H, G.P_CARDS.empty, args.center and (type(args.center) == 'table' and args.center or G.P_CENTERS[args.center]) or G.P_CENTERS.j_joker, {bypass_discovery_center = true})
+${post}'''
+optional = true

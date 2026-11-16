@@ -144,7 +144,7 @@ SMODS.RunSelectPage({
     end,
     create_selection_card = function(self, card_key, card_number, area)
         local card = Card(area.T.x, area.T.y, G.CARD_W, G.CARD_H, nil, G.P_CENTERS[card_key] or G.P_CENTERS.b_red)
-r 15 3880 %20%20%20%20%20%20%20%20 -
+r 30 3880 %20%20%20%20%20%20%20%20 -
 l 48
         card.facing = 'back'
         card.children.back:remove()
@@ -194,10 +194,10 @@ SMODS.RunSelectPage({
     end,
     create_selection_card = function(self, stake_key, card_number, area)
         local card = Card(area.T.x, area.T.y, self.sprite_size.w, self.sprite_size.h, nil, G.P_CENTERS.j_joker, {stake = stake_key})
-r 9 1459 %20%20%20%20%20%20%20%20 -
+r 7 1459 %20%20%20%20%20%20%20%20 -
 l 1
         card.facing = 'back'
-r 15 3880 %20%20%20%20%20%20%20%20 -
+r 30 3880 %20%20%20%20%20%20%20%20 -
 l 12
         card.config.center = G.P_STAKES[stake_key]
 
@@ -211,13 +211,13 @@ l 12
         card.children.back:remove()
         card.children.back = SMODS.create_sprite(card.T.x, card.T.y, card.T.w, card.T.h, unlocked and G.P_STAKES[stake_key].atlas or 'locked_stake', unlocked and G.P_STAKES[stake_key].pos or {x=0, y=0}, card.config.center.sprite_args)
         card.children.back.draw = function(_sprite)
-r 11 1823 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 11 1824 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 11 1825 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1823 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1824 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1825 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
 
             if won or area == SMODS.RunSelect.Internals.stake_tower_holding then
-r 11 1827 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1827 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 38
                 if card.config.center.shiny then Sprite.draw_shader(_sprite, 'voucher', nil, _sprite.ARGS.send_to_shader) end
             else

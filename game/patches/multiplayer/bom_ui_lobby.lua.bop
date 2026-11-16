@@ -12,7 +12,7 @@ function M.init(bom_ui)
     local function _show_mp_overlay(ref_name, definition)
         if not G or not G.FUNCS or not G.FUNCS.overlay_menu then return end
         G.SETTINGS = G.SETTINGS or {}
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 116
         bom_ui.overlay({definition = definition})
         G[ref_name] = G.OVERLAY_MENU

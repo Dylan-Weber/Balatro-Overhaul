@@ -528,7 +528,7 @@ l 52
                 if not G.GAME.blind_on_deck then G.GAME.blind_on_deck = "Small" end
                 if not run_info then G.GAME.round_resets.blind_states[G.GAME.blind_on_deck] = "Select" end
 
-r 15 1491 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1491 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 6
                 type = type or "Small"
 
@@ -536,8 +536,8 @@ l 6
                 local is_pvp_slot = G.GAME.round_resets.pvp_blind_choices and G.GAME.round_resets.pvp_blind_choices[type]
                 local nemesis_blind_col = (nemesis or is_pvp_slot) and bom_nemesis.get_nemesis_key() or nil
 
-r 15 1494 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1495 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1494 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1495 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 11
                 }
 
@@ -550,21 +550,21 @@ l 11
                 end
 
                 blind_choice.animation = AnimatedSprite(0, 0, 1.4, 1.4, G.ANIMATION_ATLAS[blind_atlas], blind_pos)
-r 15 1499 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1499 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 5
                     { shader = "dissolve", shadow_height = 0.05 },
                     { shader = "dissolve" },
                 })
 
                 local extras = nil
-r 15 1212 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1212 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
 
-r 15 1506 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1507 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1506 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1507 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
 
-r 15 1509 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1509 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 3 312 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 3 313 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 50
@@ -618,11 +618,11 @@ l 50
                         },
                     }
                 elseif type == "Small" then
-r 15 1521 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1521 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 elseif type == "Big" then
-r 15 1521 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1524 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1521 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1524 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 14
                     local pdt1 = DynaText({ string = { { string = localize("ph_up_ante_1"), colour = G.C.FILTER } }, colours = { G.C.BLACK }, scale = 0.55, silent = true, pop_delay = 4.5, shadow = true, bump = true, maxw = 3 })
                     local pdt2 = DynaText({ string = { { string = localize("ph_up_ante_2"), colour = G.C.WHITE } }, colours = { G.C.CHANCE }, scale = 0.35, silent = true, pop_delay = 4.5, shadow = true, maxw = 3 })
@@ -650,7 +650,7 @@ l 10
                     and bom_nemesis.get_opponent_username()
                     or localize({ type = "name_text", key = blind_choice.config.key, set = "Blind" })
 
-r 15 1547 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1547 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 11
 
                 local insanity_mult = 1
@@ -663,7 +663,7 @@ l 11
                     blind_amt = "????"
                 end
 
-r 15 1546 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1546 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 16
                 if (nemesis or is_pvp_slot) and type == "Boss" and not party_kind() then
                     pcall(function()
@@ -681,10 +681,10 @@ l 16
                     if amt then blind_amt = amt end
                 end
 
-r 15 1550 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1550 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 local _reward = true
-r 15 1552 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1552 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 117
                 if blind_state == "Select" then blind_state = "Current" end
                 local run_info_colour = run_info and (

@@ -410,7 +410,7 @@ function O.open(tab)
 end
 
 function O.show()
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 175
   G.FUNCS.overlay_menu{definition = UIK.window{
     id = "forge_online",

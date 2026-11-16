@@ -279,10 +279,10 @@ local function render(t_now, fade)
     local w, h = love.graphics.getDimensions()
     local s = math.min(w / 1280, h / 720)
     local prev_font = love.graphics.getFont()
-r 11 112 %20%20%20%20 -
+r 13 112 %20%20%20%20 -
 l 1
     love.graphics.push()
-r 19 278 %20%20%20%20 -
+r 12 278 %20%20%20%20 -
 r 3 4413 %20%20%20%20 -
 l 15
     love.graphics.setScissor()
@@ -300,7 +300,7 @@ l 15
     if prev_font then love.graphics.setFont(prev_font) end
     love.graphics.pop()
     shot(st.shown)
-r 11 123 %20%20%20%20 -
+r 13 123 %20%20%20%20 -
 l 110
     if st.frames then
         local tp = now()

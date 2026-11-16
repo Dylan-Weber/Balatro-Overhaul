@@ -313,7 +313,7 @@ function ST.play_with(code, name)
     if type(code) ~= "string" or code == "" then return end
     if not ST.joinable() then return end
     ST.want = {code = code, name = name or "?", until_t = now() + ST.WANT_SECS}
-r 13 1825 %20%20%20%20 -
+r 32 1825 %20%20%20%20 -
 l 8
     if bom_ui and bom_ui.show_connecting_screen then pcall(bom_ui.show_connecting_screen) end
     if bom_room and bom_room.create then bom_room.create("private") end
@@ -323,7 +323,7 @@ function ST.party_with(codes)
     if type(codes) ~= "table" or #codes == 0 then return end
     if not ST.joinable() then return end
     ST.want = {codes = codes, name = L("Party"), until_t = now() + ST.WANT_SECS}
-r 13 1825 %20%20%20%20 -
+r 32 1825 %20%20%20%20 -
 l 11
     if bom_party and bom_party.create then bom_party.create("private", "br") end
 end
@@ -336,14 +336,14 @@ local function register_funcs()
         if not (e and e.kind == "invite") then return end
         drop(e)
         if not ST.joinable() then return end
-r 13 1825 %20%20%20%20%20%20%20%20 -
+r 32 1825 %20%20%20%20%20%20%20%20 -
 l 5
         if bom_ui and bom_ui.show_connecting_screen then pcall(bom_ui.show_connecting_screen) end
         if bom_room and bom_room.join then bom_room.join(e.room, {}) end
     end
     G.FUNCS.social_toast_later = function()
         local e = ST.cur
-r 13 1300 %20%20%20%20%20%20%20%20 -
+r 32 1300 %20%20%20%20%20%20%20%20 -
 l 55
         if e.kind == "invite" and not e.with_join then
             e.shown_until, e.dormant = nil, true

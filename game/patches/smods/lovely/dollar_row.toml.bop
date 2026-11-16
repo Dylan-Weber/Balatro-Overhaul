@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 25
+l 24
 [manifest]
 version = "1.0.0"
 dump_lua = true
@@ -17,7 +17,6 @@ target = "functions/common_events.lua"
 pattern = "if num_dollars > 60 then"
 position = "at"
 payload = '''
-if type(num_dollars) ~= 'number' and to_number then num_dollars = to_number(num_dollars) end
 if num_dollars > 60 or num_dollars < -60 then'''
 match_indent = true
 
@@ -29,17 +28,17 @@ position = "at"
 payload = '''
 if num_dollars < 0 then --if negative
 r 1 112 %20%20%20%20 -
-r 12 1025 %20%20%20%20%20%20%20%20 -
+r 31 1025 %20%20%20%20%20%20%20%20 -
 l 1
         func = function()
-r 12 1027 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 12 1028 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 1027 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 1028 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                     {n=G.UIT.O, config={object = DynaText({string = {localize('$')..format_ui_value(num_dollars)}, colours = {G.C.RED}, shadow = true, pop_in = 0, scale = 0.65, float = true})}}
                 }},
-r 12 1031 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 12 1033 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 12 1034 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 1031 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 1033 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 1034 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 43
             return true
         end

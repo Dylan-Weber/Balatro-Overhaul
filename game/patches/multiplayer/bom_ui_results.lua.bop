@@ -192,7 +192,7 @@ l 51
             bom_ui.destroy_match_hud()
             if G and G.GAME then G.GAME.multiplayer = nil end
 
-r 23 214 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 214 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
                 pcall(function() G.FUNCS.exit_overlay_menu() end)
             end
@@ -219,7 +219,7 @@ l 19
             bom_ui.destroy_match_hud()
             if G and G.GAME then G.GAME.multiplayer = nil end
 
-r 23 214 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 214 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
                 pcall(function() G.FUNCS.exit_overlay_menu() end)
             end
@@ -358,18 +358,18 @@ l 131
         local st = bom_match and bom_match.get_state and bom_match.get_state() or {}
         local opp = st.opp_name and st.opp_name ~= "" and st.opp_name or mod_loc("Your opponent")
         local where = mod_loc("Ante %s, %s"):format(tostring(st.current_ante or 1), mod_loc(ASC_BLINDS[st.current_blind] or "Small Blind"))
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 1
         bom_ui.overlay({ definition = create_UIBox_generic_options({ no_back = true, contents = {
-r 15 118 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 118 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 {n=G.UIT.T, config={text = mod_loc("OUT OF LIVES"), scale = 0.8, colour = G.C.RED, shadow = true}},
             }},
-r 15 71 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 {n=G.UIT.T, config={text = mod_loc("Waiting for %s to finish"):format(opp), scale = 0.45, colour = G.C.WHITE, shadow = true}},
             }},
-r 15 71 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 49
                 {n=G.UIT.T, config={text = mod_loc("They win if they get past %s"):format(where), scale = 0.4, colour = G.C.UI.TEXT_LIGHT, shadow = true}},
             }},
@@ -420,19 +420,19 @@ l 49
             }}
         end
         local contents = {
-r 15 723 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
                 {n=G.UIT.T, config={text = title .. " (" .. tostring(#jokers) .. ")", scale = 0.5, colour = G.C.UI.TEXT_LIGHT, shadow = true}},
             }},
             body,
-r 15 723 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 5
                 UIBox_button({id = "mp_end_jokers_toggle", button = "toggle_players_jokers", label = {bom_ui._showing_enemy_jokers and mod_loc("Show Yours") or mod_loc("Show Theirs")}, colour = G.C.ORANGE, minw = 3.4, maxw = 3.4, minh = 0.7, scale = 0.45, focus_args = {snap_to = true}}),
             }},
         }
         local t = create_UIBox_generic_options({ back_func = "mp_end_view_back", no_esc = true, contents = contents })
         t.config.id = "mp_end_jokers_UI"
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 54
         bom_ui.overlay({ definition = t, config = { no_esc = true } })
         if not waiting and #jokers > 0 then bom_ui.populate_joker_area(area, jokers) end
@@ -488,7 +488,7 @@ l 54
         end
         local t = create_UIBox_generic_options({ back_func = "mp_end_view_back", no_esc = true, contents = contents })
         t.config.id = "mp_end_deck_UI"
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 161
         bom_ui.overlay({ definition = t, config = { no_esc = true } })
     end
@@ -651,7 +651,7 @@ l 161
         nodes[#nodes + 1] = {n=G.UIT.R, config={align = "cm", minh = 0.2, minw = 0.1}, nodes={}}
         nodes[#nodes + 1] = {n=G.UIT.R, config={align = "cm"}, nodes={
             UIBox_button({id = 'mp_opp_jokers_btn', button = 'mp_view_opp_jokers', label = {mod_loc('Their Jokers')}, colour = G.C.ORANGE, minw = 1.65, maxw = 1.45, minh = _G._IS_DESKTOP and 0.7 or 0.85, scale = 0.4, col = true, focus_args = {nav = 'wide'}}),
-r 13 1864 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1864 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 130
             UIBox_button({id = 'mp_opp_deck_btn', button = 'view_nemesis_deck', label = {mod_loc('Their Deck')}, colour = G.C.ORANGE, minw = 1.65, maxw = 1.45, minh = _G._IS_DESKTOP and 0.7 or 0.85, scale = 0.4, col = true, focus_args = {nav = 'wide'}}),
         }}
@@ -783,8 +783,8 @@ l 130
         local top_score_nodes = {}
         pcall(function()
             top_score_nodes = {
-r 15 2761 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2762 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2761 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2762 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 6
             }
         end)
@@ -792,12 +792,12 @@ l 6
         local detail_nodes = {}
         pcall(function()
             detail_nodes = {
-r 15 2766 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2767 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2768 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2769 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2770 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2771 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2766 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2767 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2768 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2769 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2770 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2771 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 7
                 UIBox_button({button = 'copy_seed', label = {localize('b_copy')}, colour = G.C.BLUE, scale = (rawget(_G, 'UIK') and rawget(_G, 'UIK').touch()) and 0.38 or 0.3, minw = 2.3, minh = (rawget(_G, 'UIK') and rawget(_G, 'UIK').touch()) and 0.55 or 0.4}),
             }
@@ -806,8 +806,8 @@ l 7
         local right_score_nodes = {}
         pcall(function()
             right_score_nodes = {
-r 15 2775 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2776 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2775 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2776 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 8
             }
         end)
@@ -817,7 +817,7 @@ l 8
         local opp_title_cell = (not (bom_party and bom_party.active()) and showcase and showcase.title_cell and showcase.title_cell(showcase.opp_title(), 3, 0.3)) or {n = G.UIT.C, config = {}, nodes = {}}
 
         local all_contents = {
-r 6 297 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 8
                 {n=G.UIT.O, config={object = DynaText({string = {win and localize('ph_you_win') or mod_loc("YOU LOSE")}, colours = {win and G.C.EDITION or G.C.RED}, shadow = true, float = true, spacing = 10, rotate = true, scale = (UIK and UIK.touch and UIK.touch()) and 1.2 or 1.5, pop_in = 0.4, maxw = 8})}},
             }},
@@ -827,11 +827,11 @@ l 8
                 {n=G.UIT.C, config={align = "cm", minw = end_reason_text ~= "" and 0.4 or 0}, nodes={}},
                 {n=G.UIT.T, config={text = end_reason_text, scale = 0.35, colour = G.C.UI.TEXT_LIGHT, shadow = true, maxw = 7}},
             }},
-r 15 723 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 246 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 246 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                     {n=G.UIT.R, config={align = "cm", padding = 0.08}, nodes = top_score_nodes},
-r 6 297 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 12
                         {n=G.UIT.C, config={align = "tm", padding = 0.08}, nodes = detail_nodes},
                         {n=G.UIT.C, config={align = "tr", padding = 0.08}, nodes = right_score_nodes},
@@ -845,11 +845,11 @@ l 12
         local t = create_UIBox_generic_options({ padding = 0, bg_colour = eased, colour = G.C.BLACK, outline_colour = win and G.C.EDITION or G.C.RED, no_back = true, no_esc = true, contents = all_contents })
 
         if opts and opts.jimbo then
-r 15 2790 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2790 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 {n=G.UIT.C, config={align = "cm", padding = 0.6}, nodes={
-r 6 297 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 2792 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 2792 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 25
                     }},
                 }},

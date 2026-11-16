@@ -322,7 +322,7 @@ local function rebuild_playlist()
 
     if Jukebox.shuffle and #Jukebox.playlist > 1 then
         for i = #Jukebox.playlist, 2, -1 do
-r 11 214 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 214 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1582
             Jukebox.playlist[i], Jukebox.playlist[j] = Jukebox.playlist[j], Jukebox.playlist[i]
         end
@@ -1906,8 +1906,8 @@ local function mini_refresh_settings()
         local ok, def = pcall(mini_settings_ui)
         if not ok then return end
         G.OVERLAY_MENU = UIBox{definition = def, config = cfg}
-r 13 1353 %20%20%20%20%20%20%20%20 -
-r 13 1355 %20%20%20%20%20%20%20%20 -
+r 32 1353 %20%20%20%20%20%20%20%20 -
+r 32 1355 %20%20%20%20%20%20%20%20 -
 l 243
         old:remove()
     end

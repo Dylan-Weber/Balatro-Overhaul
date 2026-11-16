@@ -165,6 +165,7 @@ do
   check("catalog: big creation is v3", Cat.need_v({kind = "tarot", fields = {cost = 3}, effects = {{id = "money", n = 500}}}) == 3)
   check("catalog: normal creation is v1", Cat.need_v({kind = "tarot", fields = {cost = 3}, effects = {{id = "money", n = 5}}}) == 1)
   check("mods: creations count for the version", M.needs_v({}, {{kind = "tarot", effects = {{id = "money", n = 500}}}}) == 3 and M.needs_v({}, {}) == 1)
+  check("mods: xchips needs 2.1", M.needs_v({{rules = {{when = "hand_played", give = {{id = "xchips", n = 2}}}}}}, {}) == 10 and M.needs_v({{rules = {{when = "hand_played", give = {{id = "gain_xchips", n = 0.1}}}}}}, {}) == 10)
   local raw = json.encode({format = "forgemod", v = 1, need = M.V + 1, id = "abcd12", name = "Later", jokers = {{id = "x1", name = "X", rules = {}}}})
   local mod, err = M.parse(raw)
   check("mods: need above this game is refused as newer", mod == nil and err == "newer")

@@ -411,8 +411,8 @@ local function checkbox(o, disabled)
   local s = touch() and 1.15 or 1
   local args = {ref_table = o.ref_table or {}, ref_value = o.ref_value or 'value', active_colour = disabled and UIK.C.inactive or (o.colour or G.C.RED), inactive_colour = G.C.BLACK}
   local check = Sprite(0, 0, 0.5 * s, 0.5 * s, G.ASSET_ATLAS["icons"], {x = 1, y = 0})
-r 15 1916 %20%20 -
-r 15 1917 %20%20 -
+r 30 1916 %20%20 -
+r 30 1917 %20%20 -
 l 699
   return {n = G.UIT.C, config = {align = 'cm', r = 0.1, colour = G.C.BLACK}, nodes = {
     {n = G.UIT.C, config = {align = 'cm', r = 0.1, padding = 0.03, minw = 0.4 * s, minh = 0.4 * s, outline_colour = disabled and G.C.UI.TEXT_INACTIVE or G.C.WHITE, outline = 1.2 * s, line_emboss = 0.5 * s,
@@ -1113,7 +1113,7 @@ function UIK.open_tab(key)
   if not (args and find_tab(args, key)) then return end
   args._cur = key
   UIK._last_tab[args.id] = key
-r 23 214 %20%20 -
+r 17 214 %20%20 -
 l 87
     for _, t in ipairs(args.tabs) do
       local b = G.OVERLAY_MENU:get_UIE_by_ID('uik_tab_' .. t.key)

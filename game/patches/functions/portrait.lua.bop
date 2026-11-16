@@ -180,7 +180,7 @@ function P.orient_popup(kind)
   if kind == 'stuck' then
     footer[1] = UIK.button{label = L('orient_try_again'), button = 'orient_msg_retry', colour = UIK.C.ok, w = math.min(w * 0.5, 3.6), h = touch and 0.9 or 0.7, scale = touch and 0.5 or 0.45}
   end
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 406
   G.FUNCS.overlay_menu{definition = UIK.window{
     id = 'orient_msg', compact = true, w = w,
@@ -588,7 +588,7 @@ end
 
 local raw_move = CardArea and CardArea.move
 if raw_move then
-r 6 229 %20%20 -
+r 5 229 %20%20 -
 l 7
     if self ~= G.hand or not P.on() or G.STATE == G.STATES.TUTORIAL or not (G.play and G.play.T) then return raw_move(self, dt) end
     local up = not G.deck_preview and (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.DRAW_TO_HAND)
@@ -643,7 +643,7 @@ function set_screen_positions(...)
   if G.STAGE == G.STAGES.MAIN_MENU and G.title_top and P.on() then
     local top, sh = P.screen_span()
     G.title_top.T.y = math.max(0.3 - top, top + 0.34 * sh - G.title_top.T.h / 2)
-r 12 37 %20%20%20%20 -
+r 31 37 %20%20%20%20 -
 l 15
   end
   return r
@@ -660,7 +660,7 @@ function P.layout_run()
   if not (G.STAGE == G.STAGES.RUN and G.hand and G.jokers) then return end
   P.layout_hud()
   drop_labels()
-r 9 1672 %20%20 -
+r 7 1672 %20%20 -
 l 490
   if G.blind_select and G.blind_select.alignment and G.STATE == G.STATES.BLIND_SELECT then
     if P.on() then
@@ -1152,7 +1152,7 @@ function P.drag_targets(card)
     local y = math.max(top, b - P.ZONE_H)
     return y, math.max(1, b - y)
   end
-r 13 2158 %20%20 -
+r 32 2158 %20%20 -
 l 10
   local ay, ah = above(area)
   if D.S_buy and D.S_buy_and_use then
@@ -1164,8 +1164,8 @@ l 10
   if D.C_sell then zone(D.C_sell, E, j.y - 0.2, fw, j.h + 0.4) end
   if D.J_sell then zone(D.J_sell, E, c.y - 0.2, d.x - 0.15 - E, c.h + 0.4) end
   if D.C_use then
-r 13 2270 %20%20%20%20 -
-l 433
+r 32 2270 %20%20%20%20 -
+l 435
       zone(D.C_use, E, c.y + c.h + 0.3, fw, P.ZONE_H)
     else
       zone(D.C_use, E, ay, fw, ah)
@@ -1472,7 +1472,11 @@ end
 function P.deck_def(t)
   local function walk(n)
     if type(n) ~= 'table' then return end
-    if n.n == G.UIT.O and n.config then deck_row(n.config.object) end
+    if n.n == G.UIT.O and n.config then
+      local o = n.config.object
+      deck_row(o)
+      if type(o) == 'table' and o.UIRoot and P.deck_live(o) then o:recalculate() end
+    end
     for _, c in ipairs(n.nodes or {}) do walk(c) end
   end
   walk(t)
@@ -1509,6 +1513,7 @@ function P.deck_live(box)
       b:recalculate()
     end
   end
+  return #boxes > 0
 end
 
 if G.UIDEF and G.UIDEF.deck_info then
@@ -1520,14 +1525,11 @@ if G.UIDEF and G.UIDEF.deck_info then
   end
 end
 
-if G.UIDEF and G.UIDEF.view_deck then
-  local raw_vd = G.UIDEF.view_deck
-  G.UIDEF.view_deck = function(...)
-    local t = raw_vd(...)
-    if P.on() and type(t) == 'table' then pcall(P.deck_def, t) end
-    return t
-  end
-end
+require("overhaul.hooks").wrap("G.UIDEF", "view_deck", function(raw_vd) return function(...)
+  local t = raw_vd(...)
+  if P.on() and type(t) == 'table' then pcall(P.deck_def, t) end
+  return t
+end end, {id = "portrait.view_deck"})
 
 for _, name in ipairs({'create_UIBox_game_over', 'create_UIBox_win'}) do
   local raw = rawget(_G, name)
@@ -1599,7 +1601,7 @@ local function main_menu_rebuild()
   if G.collection_alert then G.collection_alert:remove() G.collection_alert = nil end
   set_main_menu_UI()
   if set_alerts then pcall(set_alerts) end
-r 9 1672 %20%20 -
+r 7 1672 %20%20 -
 l 241
   local logo = G.SPLASH_LOGO
   if logo and logo.role and logo.role.major == G.title_top then
@@ -1842,7 +1844,7 @@ function P.load_state(o, s)
       a.text.current_position = t.pos
       if a.ref_table and a.ref_value and t.value ~= nil then a.ref_table[a.ref_value] = t.value end
       if s.hooked == i and G.CONTROLLER then
-r 24 1015 %20%20%20%20%20%20%20%20 -
+r 29 1015 %20%20%20%20%20%20%20%20 -
 l 76
         P._rehook = i
         G.E_MANAGER:add_event(Event({blockable = false, blocking = false, timer = 'REAL', func = function()
@@ -1940,7 +1942,7 @@ l 18
     if G.OVERLAY_MENU == true then G.OVERLAY_MENU = nil end
     P._rf_box = nil
     if G.OVERLAY_MENU and not P.on() then pcall(P.unflow, G.OVERLAY_MENU) end
-r 23 214 %20%20%20%20 -
+r 17 214 %20%20%20%20 -
 l 10
       local def = G.OVERLAY_MENU.definition
       local a = UIK and UIK._win
@@ -1953,8 +1955,8 @@ l 10
           print("[PORTRAIT] rebuild failed: " .. tostring(err))
           if G.OVERLAY_MENU == true then G.OVERLAY_MENU = nil end
 r 3 349 %20%20%20%20%20%20%20%20%20%20 -
-r 13 1367 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 1363 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1367 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1363 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 938
           end
         end
@@ -1999,7 +2001,7 @@ P.SHOP_AREAS = {'shop_jokers', 'shop_vouchers', 'shop_booster'}
 
 function P.rebuild_shop()
   local old = G.shop
-  if not (old and not old.REMOVED and old.alignment and old.alignment.offset and G.STATE == G.STATES.SHOP and not (G.pack_cards and not G.pack_cards.REMOVED) and G.UIDEF and G.UIDEF.shop and G.hand) then return end
+  if not (old and not old.REMOVED and old.alignment and old.alignment.offset and G.STATE == G.STATES.SHOP and not (G.CONTROLLER and G.CONTROLLER.locks.toggle_shop) and not (G.pack_cards and not G.pack_cards.REMOVED) and G.UIDEF and G.UIDEF.shop and G.hand) then return end
   local keep = {}
   for _, k in ipairs(P.SHOP_AREAS) do keep[k] = G[k] end
   local sign = G.SHOP_SIGN

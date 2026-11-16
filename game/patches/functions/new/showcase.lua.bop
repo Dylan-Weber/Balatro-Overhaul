@@ -207,7 +207,7 @@ local function card_area(keys, scale, w)
   for _, k in ipairs(keys) do if is_joker(k) then list[#list + 1] = k end end
   if #list == 0 then return nil end
   local was = G.SETTINGS.paused
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 216
   local ok, area = pcall(function()
     local a = CardArea(0, 0, w or (#list * cw * 1.08), ch, {card_limit = #list, card_w = cw, type = "title_2", highlight_limit = 0})
@@ -425,7 +425,7 @@ function SC.open_picker(slot)
   if d.j[SC.pick.slot] ~= "" then
     footer[1] = UIK.button{label = L("REMOVE"), button = "bo_sc_remove", colour = UIK.C.danger, id = "bo_sc_remove"}
   end
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 51
   G.FUNCS.overlay_menu{definition = UIK.window{id = "bo_sc_pick", title = L("PICK A JOKER"),
     tabs = {{key = "jokers", label = L("Jokers"), build = build_picker}},

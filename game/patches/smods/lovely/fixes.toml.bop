@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 28
+l 38
 [manifest]
 version = "1.0.0"
 dump_lua = true
@@ -20,19 +20,29 @@ position = 'after'
 match_indent = true
 payload = "args = args or {}"
 
+## Allows running the game without Steam being active
+# love.load()
+[[patches]]
+[patches.regex]
+target = 'main.lua'
+pattern = "(?<indent>[\t ]*)if not \\(st.init and st:init\\(\\)\\) then\n[\t ]*(?<quit>love.event.quit\\(\\))"
+position = 'at'
+root_capture = 'quit'
+payload = 'st = nil'
+
+
 ## Prevents the game from crashing when hitting play with a corrupt/invalid save file
 # G.FUNCS.can_continue(e)
 [[patches]]
 [patches.pattern]
 target = 'functions/button_callbacks.lua'
-pattern = "G.SAVED_GAME = G.SAVED_GAME or savefile"
+pattern = "if G.SAVED_GAME ~= nil then G.SAVED_GAME = STR_UNPACK(G.SAVED_GAME) end"
 position = 'after'
 match_indent = true
 payload = """
-if type(G.SAVED_GAME) ~= 'table' then
-    G.SAVED_GAME = nil
-r 13 57 %20%20%20%20 -
-r 13 58 %20%20%20%20 -
+if G.SAVED_GAME == nil then
+r 32 57 %20%20%20%20 -
+r 32 58 %20%20%20%20 -
 l 16
     return _can_continue
 end
@@ -51,7 +61,7 @@ payload = '''
 end
 if G.GAME.blind.name and G.GAME.blind.name ~= '' then
 r 2 126 %20%20%20%20 -
-l 104
+l 113
 end'''
 line_prepend = '$indent'
 
@@ -77,6 +87,15 @@ position = "after"
 payload = """    if G.STATE == G.STATES.TAROT_PACK or G.STATE == G.STATES.PLANET_PACK or G.STATE == G.STATES.SPECTRAL_PACK
         or G.STATE == G.STATES.BUFFOON_PACK or G.STATE == G.STATES.STANDARD_PACK or G.STATE == G.STATES.SMODS_BOOSTER_OPENED then return end"""
 match_indent = true
+
+## Set `G.your_collection.config.collection` to true in all cases
+# create_UIBox_your_collection_seals()
+[[patches]]
+[patches.regex]
+target = 'functions/UI_definitions.lua'
+pattern = '''\{card_limit = 4, type = 'title', highlight_limit = 0\}'''
+position = 'at'
+payload = '''{card_limit = 4, type = 'title', highlight_limit = 0, collection = true}'''
 
 ## Save and load Card.unique_val, edition options
 # Card:save()
@@ -162,7 +181,7 @@ l 4
 end
 if type(center) == 'string' then
     assert(G.P_CENTERS[center], ("Could not find center \"%s\""):format(center))
-r 12 2121 %20%20%20%20 -
+r 31 2121 %20%20%20%20 -
 l 1
 end
 r 3 227 - -
@@ -314,7 +333,7 @@ SMODS.recalc_debuff(_card)"""
 [patches.regex]
 target = 'blind.lua'
 pattern = '''
-if self\.name == 'Crimson Heart' and not self\.disabled and card\.area == G\.jokers then\s*
+if self\.name == 'Crimson Heart' and not self\.disabled and card\.area == G\.jokers then\s+
 ((?<indent>[\t ]*)return)'''
 root_capture = '$1'
 position = "at"
@@ -353,7 +372,7 @@ position = 'at'
 payload = """
 elseif self.name == 'Crimson Heart' then
 r 2 211 %20%20%20%20%20%20%20%20 -
-l 244
+l 305
             v.ability.crimson_heart_chosen = nil
         end
     elseif self.name == 'The Manacle' and not self.disabled then"""
@@ -437,9 +456,9 @@ match_indent = true
 [[patches]]
 [patches.pattern]
 target = "functions/state_events.lua"
-pattern = "if G.GAME.round_resets.ante == win_ante and G.GAME.blind:get_type() == 'Boss' and not G.GAME.mp_blind_loss_pending and not G.GAME.mp_round_lost then"
+pattern = "if G.GAME.round_resets.ante == G.GAME.win_ante and G.GAME.blind:get_type() == 'Boss' then"
 position = "at"
-payload = "if not G.GAME.won and G.GAME.round_resets.ante >= win_ante and G.GAME.blind_on_deck == 'Boss' and not G.GAME.mp_blind_loss_pending and not G.GAME.mp_round_lost then"
+payload = "if not G.GAME.won and G.GAME.round_resets.ante >= G.GAME.win_ante and G.GAME.blind_on_deck == 'Boss' then"
 match_indent = true
 
 
@@ -483,6 +502,22 @@ position = "at"
 payload = 'if #G.P_CENTER_POOLS.Planet <= args.planet_count then'
 
 # wtf
+[[patches]]
+[patches.pattern]
+target = "engine/animatedsprite.lua"
+match_indent = true
+pattern = "for _, v in pairs(G.ANIMATIONS) do"
+position = "at"
+payload = 'for k, v in pairs(G.ANIMATIONS) do'
+
+[[patches]]
+[patches.pattern]
+target = "engine/animatedsprite.lua"
+match_indent = true
+pattern = "for _, v in pairs(G.I.SPRITE) do"
+position = "at"
+payload = 'for k, v in pairs(G.I.SPRITE) do'
+
 ## Make vanilla enhancement jokers work with extra enhancements
 
 # Steel Joker
@@ -490,7 +525,7 @@ payload = 'if #G.P_CENTER_POOLS.Planet <= args.planet_count then'
 [patches.pattern]
 target = "card.lua"
 match_indent = true
-pattern = 'if v.config.center and (v.config.center.name == "Steel Card") then self.ability.steel_tally = self.ability.steel_tally+1 end'
+pattern = "if v.config.center == G.P_CENTERS.m_steel then self.ability.steel_tally = self.ability.steel_tally+1 end"
 position = "at"
 payload = "if SMODS.has_enhancement(v, 'm_steel') then self.ability.steel_tally = self.ability.steel_tally+1 end"
 
@@ -499,7 +534,7 @@ payload = "if SMODS.has_enhancement(v, 'm_steel') then self.ability.steel_tally 
 [patches.pattern]
 target = "card.lua"
 match_indent = true
-pattern = 'if v.config.center and (v.config.center.name == "Stone Card") then self.ability.stone_tally = self.ability.stone_tally+1 end'
+pattern = "if v.config.center == G.P_CENTERS.m_stone then self.ability.stone_tally = self.ability.stone_tally+1 end"
 position = "at"
 payload = "if SMODS.has_enhancement(v, 'm_stone') then self.ability.stone_tally = self.ability.stone_tally+1 end"
 
@@ -535,7 +570,7 @@ payload = "if SMODS.has_enhancement(val, 'm_glass') then shattered_glass = shatt
 [patches.pattern]
 target = "card.lua"
 match_indent = true
-pattern = 'if v.config.center and (v.config.center.name ~= "Default Base") then self.ability.driver_tally = self.ability.driver_tally+1 end'
+pattern = "if v.config.center ~= G.P_CENTERS.c_base then self.ability.driver_tally = self.ability.driver_tally+1 end"
 position = "at"
 payload = "if next(SMODS.get_enhancements(v)) then self.ability.driver_tally = self.ability.driver_tally+1 end"
 # Basegame fix for the reroll vouchers redeem function when only the center but no card object exists
@@ -563,7 +598,7 @@ payload = """G.GAME.current_round.reroll_cost = math.max(0, G.GAME.current_round
 [[patches]]
 [patches.pattern]
 target = "functions/button_callbacks.lua"
-pattern = "if G.pack_cards and G.pack_cards.cards and (G.pack_cards.cards[1]) and"
+pattern = "if G.pack_cards and (G.pack_cards.cards[1]) and"
 position = "at"
 payload = '''
 if G.pack_cards and (not (G.GAME.STOP_USE and G.GAME.STOP_USE > 0)) and
@@ -591,6 +626,51 @@ if G.SETTINGS.paused and key ~= 'to_do' then return math.random() end
 """
 match_indent = true
 
+# Fixes Steam API not loading on unix
+[[patches]]
+[patches.pattern]
+target = 'main.lua'
+match_indent = true
+position = 'after'
+pattern = '--To control when steam communication happens, make sure to send updates to steam as little as possible'
+payload = '''local cwd = SMODS.NFS.getWorkingDirectory()
+SMODS.NFS.setWorkingDirectory(love.filesystem.getSourceBaseDirectory())
+'''
+
+[[patches]]
+[patches.pattern]
+target = 'main.lua'
+match_indent = true
+position = 'before'
+pattern = '--Set up the render window and the stage for the splash screen, then enter the gameloop with :update'
+payload = '''SMODS.NFS.setWorkingDirectory(cwd)
+'''
+
+[[patches]]
+[patches.pattern]
+target = "main.lua"
+pattern = '''if os == 'OS X' or os == 'Windows' then'''
+position = "at"
+payload = '''if os == 'OS X' or os == 'Windows' or os == 'Linux' then'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "main.lua"
+pattern = '''if os == 'OS X' then'''
+position = "at"
+payload = '''if os == 'OS X' or os == 'Linux' then'''
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "main.lua"
+pattern = "st = require 'luasteam'"
+position = "at"
+payload = """local success, _st = pcall(require, 'luasteam')
+if success then st = _st else sendWarnMessage(_st, "LuaSteam"); st = {} end"""
+match_indent = true
+
 # copy_card: Reorder timings
 [[patches]]
 [patches.pattern]
@@ -598,12 +678,12 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 12 2161 - -
-r 12 2162 %20%20%20%20 %20
-r 12 2163 %20%20%20%20%20%20%20%20 -
+r 31 2161 - -
+r 31 2162 %20%20%20%20 %20
+r 31 2163 %20%20%20%20%20%20%20%20 -
 l 1
     else
-r 12 2165 %20%20%20%20%20%20%20%20 -
+r 31 2165 %20%20%20%20%20%20%20%20 -
 l 16
     end
 end
@@ -621,12 +701,12 @@ pattern = '''
 return new_card
 '''
 payload = '''
-r 12 2161 - -
-r 12 2162 %20%20%20%20 %20
-r 12 2163 %20%20%20%20%20%20%20%20 -
+r 31 2161 - -
+r 31 2162 %20%20%20%20 %20
+r 31 2163 %20%20%20%20%20%20%20%20 -
 l 1
     else
-r 12 2165 %20%20%20%20%20%20%20%20 -
+r 31 2165 %20%20%20%20%20%20%20%20 -
 l 37
     end
 end
@@ -665,7 +745,7 @@ match_indent = true
 pattern = 'new_card:set_edition(other.edition or {}, nil, true)'
 payload = '''
 for k,v in pairs(other.edition or {}) do
-r 12 2162 %20%20%20%20 -
+r 31 2162 %20%20%20%20 -
 l 25
         new_card.edition[k] = copy_table(v)
     else
@@ -770,8 +850,8 @@ match_indent = true
 target = 'game.lua'
 match_indent = true
 position = 'after'
-pattern = 'recursive_init(temp_profile, G.PROFILES[_profile])'
-payload = '''if convert_save_data and G.P_STAKES then convert_save_data(G.PROFILES[_profile], true) end'''
+pattern = 'recursive_init(temp_profile, G.PROFILES[G.SETTINGS.profile])'
+payload = '''if convert_save_data and G.P_STAKES then convert_save_data(G.PROFILES[G.SETTINGS.profile], true) end'''
 
 # Card:remove()
 [[patches]]
@@ -822,7 +902,7 @@ target = 'functions/misc_functions.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 11 206 - -
+r 13 206 - -
 l 13
 '''
 payload = '''
@@ -837,9 +917,9 @@ target = 'functions/misc_functions.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 11 1627 - -
-r 11 1628 - -
-r 11 1629 - -
+r 13 1627 - -
+r 13 1628 - -
+r 13 1629 - -
 l 11
 '''
 payload = '''
@@ -852,7 +932,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 12 1934 - -
+r 31 1934 - -
 l 20
 '''
 payload = '''
@@ -874,7 +954,7 @@ match_indent = true
 [patches.pattern]
 target = "functions/common_events.lua"
 pattern = '''
-r 12 2581 - -
+r 31 2581 - -
 l 23
 '''
 position = "at"
@@ -900,7 +980,7 @@ match_indent = true
 position = 'at'
 pattern = '''
 r 3 715 - -
-l 34
+l 12
 '''
 payload = '''
 (self.ability.consumeable or SMODS.UndiscoveredCompat[self.ability.set]) and
@@ -913,10 +993,11 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-(_profile == G.SETTINGS.profile and not G.PROFILES[G.SETTINGS.profile].all_unlocked and not G.PROFILES[G.SETTINGS.profile].debug_unlocked) and {n=G.UIT.R, config={align = "cm", padding = 0, minh = 0.7}, nodes={
+r 30 5424 - -
+l 10
 '''
 payload = '''
-(_profile == G.SETTINGS.profile and (#G.P_LOCKED > 0 or (not G.PROFILES[G.SETTINGS.profile].all_unlocked and not G.PROFILES[G.SETTINGS.profile].debug_unlocked))) and {n=G.UIT.R, config={align = "cm", padding = 0, minh = 0.7}, nodes={
+(_profile == G.SETTINGS.profile and (#G.P_LOCKED > 0 or not G.PROFILES[G.SETTINGS.profile].all_unlocked)) and {n=G.UIT.R, config={align = "cm", padding = 0, minh = 0.7}, nodes={
 '''
 [[patches]]
 [patches.pattern]
@@ -924,10 +1005,11 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-if G.PROFILES[G.SETTINGS.profile].all_unlocked or G.PROFILES[G.SETTINGS.profile].debug_unlocked or e.config.disable_button then
+r 32 307 - -
+l 10
 '''
 payload = '''
-if #G.P_LOCKED == 0 and (G.PROFILES[G.SETTINGS.profile].all_unlocked or G.PROFILES[G.SETTINGS.profile].debug_unlocked or e.config.disable_button) then
+if #G.P_LOCKED == 0 and (G.PROFILES[G.SETTINGS.profile].all_unlocked or e.config.disable_button) then
 '''
 [[patches]]
 [patches.pattern]
@@ -935,7 +1017,7 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 13 336 - -
+r 32 336 - -
 l 12
 '''
 payload = '''
@@ -949,11 +1031,11 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 12 559 - %20
-r 12 560 %20%20%20%20 -
+r 31 559 - %20
+r 31 560 %20%20%20%20 -
 l 1
 else
-r 12 562 %20%20%20%20 -
+r 31 562 %20%20%20%20 -
 l 7
 end
 '''

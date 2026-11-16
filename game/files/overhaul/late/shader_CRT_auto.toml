@@ -1,0 +1,36 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.shader_CRT.001"
+target = "CRT.fs"
+pattern = '''^(?<pre>)[\t ]*\n(?<post>[\t ]*extern MY_HIGHP_OR_MEDIUMP number bloom_fac;\n)'''
+position = "at"
+payload = '''
+${pre}extern MY_HIGHP_OR_MEDIUMP number noise_fac;
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.shader_CRT.002"
+target = "CRT.fs"
+pattern = '''^(?<pre>)[\t ]*\n(?<post>[\t ]*MY_HIGHP_OR_MEDIUMP number x = \(tc\.x - mod\(tc\.x, 0\.002\)\) \* \(tc\.y - mod\(tc\.y, 0\.0013\)\) \* time \* 1000\.0;\n)'''
+position = "at"
+payload = '''
+${pre}    if (noise_fac > 0.0000001) {
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.shader_CRT.003"
+target = "CRT.fs"
+pattern = '''^(?<pre>)[\t ]*\n(?<post>[\t ]*\}\n)'''
+position = "at"
+payload = '''
+${pre}        rgb_result = (1.0-clamp( noise_fac*artifact_amplifier, 0.0,1.0 ))*rgb_result + dx * clamp( noise_fac*artifact_amplifier, 0.0,1.0 ) * vec3(1.0,1.0,1.0);
+${post}'''
+times = 1

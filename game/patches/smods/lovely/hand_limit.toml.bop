@@ -15,7 +15,7 @@ target = 'functions/misc_functions.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 11 1877 - -
+r 13 1877 - -
 l 13
 '''
 payload = '''
@@ -30,7 +30,7 @@ target = 'game.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 9 2039 - -
+r 7 2039 - -
 l 13
 '''
 payload = '''
@@ -45,7 +45,7 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 13 2049 - %20
+r 32 2049 - %20
 l 12
 '''
 payload = '''
@@ -59,7 +59,7 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 13 2093 - %20
+r 32 2093 - %20
 l 12
 '''
 payload = '''
@@ -73,8 +73,8 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 15 990 - -
-r 15 991 %20%20%20%20 -
+r 30 990 - -
+r 30 991 %20%20%20%20 -
 l 14
 }},
 '''
@@ -90,16 +90,16 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 629 - -
-r 15 997 %20%20%20%20 -
+r 30 629 - -
+r 30 997 %20%20%20%20 -
 l 2
 }}'''
 payload = '''
-r 15 629 - -
-r 15 997 %20%20%20%20 -
+r 30 629 - -
+r 30 997 %20%20%20%20 -
 l 1
 }},
-r 15 629 - -
+r 30 629 - -
 l 3
     {n=G.UIT.T, config={ref_table = SMODS.hand_limit_strings, ref_value = 'discard', scale = text_scale * 0.65, colour = G.C.UI.TEXT_LIGHT}}
 }},

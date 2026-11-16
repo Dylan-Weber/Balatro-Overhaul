@@ -298,7 +298,7 @@ function AchievementManager.serialize(tbl, indent, depth)
 
     parts[#parts+1] = "{\n"
 
-r 11 326 %20%20%20%20 -
+r 13 326 %20%20%20%20 -
 l 118
         iterations = iterations + 1
         if iterations > MAX_ITERATIONS then break end
@@ -418,7 +418,7 @@ function AchievementManager.unlock_achievement(achievement_id)
     pcall(function()
         if G then
             G.SETTINGS = G.SETTINGS or {}
-r 12 1682 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 1682 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 242
             G.SETTINGS.ACHIEVEMENTS_EARNED[achievement_id] = true
             if not G.ACHIEVEMENTS and fetch_achievements then fetch_achievements() end
@@ -995,7 +995,7 @@ function AchievementManager.on_run_end(won, final_score, run_time, deck_key)
             end
 
             local stake = 1
-            if G and G.GAME then stake = G.GAME.stake or 1 end
+            if G and G.GAME then stake = get_current_stake and get_current_stake() or G.GAME.stake or 1 end
             if stake >= 1 then AchievementManager.update_progress("stake_white", 1) end
             if stake >= 2 then AchievementManager.update_progress("stake_red", 1) end
             if stake >= 3 then AchievementManager.update_progress("stake_green", 1) end

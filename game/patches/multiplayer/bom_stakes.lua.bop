@@ -159,12 +159,12 @@ function S.sprite(key, scale)
     spr.states.drag.can = false
     if d.shine then
         spr.draw = function(_sprite)
-r 11 1823 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1823 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
             _sprite.ARGS.send_to_shader[1] = math.min(_sprite.VT.r * 3, 1) + G.TIMERS.REAL / 18 + (_sprite.juice and _sprite.juice.r * 20 or 0) + 1
-r 11 1825 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 11 1827 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 11 1828 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1825 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1827 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1828 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 57
         end
     end
@@ -223,7 +223,7 @@ end
 local function blind_amount(ante, scaling)
     local amounts = AMOUNTS[scaling]
     if not amounts then return nil end
-r 11 925 %20%20%20%20 -
+r 13 925 %20%20%20%20 -
 l 188
     if ante <= 8 then return amounts[math.floor(ante)] end
     local k = 0.75

@@ -151,7 +151,7 @@ end
 
 function H.record(won, result)
   local e = H.snapshot(won, result)
-r 13 1300 %20%20 -
+r 32 1300 %20%20 -
 l 26
   local list = H.load()
   for _, old in ipairs(list) do
@@ -179,7 +179,7 @@ function H.record_mp()
   local g = G and G.GAME
   if not g or g.bo_hist_mp_done then return end
   local e = H.snapshot(st.match_result == "win", st.match_result == "draw" and "draw" or (st.match_result == "win" and "win" or "lose"))
-r 13 1300 %20%20 -
+r 32 1300 %20%20 -
 l 397
   g.bo_hist_mp_done = true
   e.mode = "mp"
@@ -578,7 +578,7 @@ end
 function H.open(page)
   if page then H.page = page end
   H.list = nil
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 19
   G.FUNCS.overlay_menu{definition = UIK.window{id = "bo_hist", title = L("RUN HISTORY"),
     tabs = {{key = "runs", label = L("Runs"), build = build_list}}, compact = #H.load() == 0, w = #H.load() == 0 and UIK.portrait() and UIK.DLG_PORT_W or nil,
@@ -599,7 +599,7 @@ function H.open_detail(id)
     local s, sc = button_label(L("WATCH REPLAY"), bw, bs)
     footer[#footer + 1] = UIK.button{label = s, button = "bo_hist_watch", ref_table = {id = id}, colour = UIK.C.accent, w = bw, scale = sc, id = "bo_hist_watch"}
   end
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 31
   G.FUNCS.overlay_menu{definition = UIK.window{id = "bo_hist_detail", title = L("RUN DETAILS"),
     tabs = {{key = "run", label = L("Run"), build = build_detail}},
@@ -632,7 +632,7 @@ G.FUNCS.bo_hist_open = function() H.open() end
 G.FUNCS.bo_hist_back = function()
   local from = H.from
   if from and G.FUNCS[from] then return G.FUNCS[from]() end
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 24
 end
 G.FUNCS.bo_hist_prev = function() H.page = (H.page or 1) - 1; UIK.refresh() end
@@ -658,7 +658,7 @@ G.FUNCS.bo_hist_watch = function(e)
   if entry and entry.replay and RP and RP.watch then
     local P, from, hist = rawget(_G, "bom_playback"), H.from, entry.id
     if P then P.back_to = { id = entry.replay, fn = function() H.from = from; H.open_detail(hist) end } end
-r 13 1375 %20%20%20%20 -
+r 32 1375 %20%20%20%20 -
 l 75
     RP.watch(entry.replay)
   end

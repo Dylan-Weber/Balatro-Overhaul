@@ -15,14 +15,14 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 12 2349 - -
+r 31 2349 - -
 l 5
 '''
 payload = '''
 -- Use SMODS object weight system when enabled
 if SMODS.optional_features.object_weights then
     local ret_boss = SMODS.poll_object({type = 'Blind', seed = 'boss'})
-r 12 2344 %20%20%20%20 -
+r 31 2344 %20%20%20%20 -
 l 11
     return ret_boss
 end
@@ -35,7 +35,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 15 742 - -
+r 30 742 - -
 l 13
 '''
 payload = '''
@@ -50,7 +50,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 12 2109 - %20
+r 31 2109 - %20
 l 14
 '''
 payload = '''
@@ -66,7 +66,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 12 1915 - -
+r 31 1915 - -
 l 4
 '''
 payload = '''

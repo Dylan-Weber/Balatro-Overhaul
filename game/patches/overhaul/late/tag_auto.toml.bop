@@ -1,0 +1,112 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 52
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.tag.001"
+target = "tag.lua"
+pattern = '''^(?<pre>)[\t ]*self\.tally = G\.GAME\.tag_tally or 0\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    self.tally = (G.GAME and G.GAME.tag_tally) or 0
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.tag.002"
+target = "tag.lua"
+pattern = '''^(?<pre>)[\t ]*G\.GAME\.tag_tally = G\.GAME\.tag_tally and \(G\.GAME\.tag_tally \+ 1\) or 1\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if G.GAME then
+        G.GAME.tag_tally = (G.GAME.tag_tally or 0) + 1
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.tag.003"
+target = "tag.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*update_hand_text\(\{sound = 'button', volume = 0\.7, pitch = 0\.8, delay = 0\.3\}, \{\n)'''
+position = "at"
+payload = '''
+${pre}                if not (self.ability.orbital_hand and G.GAME.hands[self.ability.orbital_hand]) then
+                    local hands = {}
+                    for k, v in pairs(G.GAME.hands) do if v.visible then hands[#hands + 1] = k end end
+                    table.sort(hands)
+                    self.ability.orbital_hand = pseudorandom_element(hands, pseudoseed('orbital'))
+                end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.tag.004"
+target = "tag.lua"
+pattern = '''^(?<pre>)[\t ]*create_shop_card_ui\(card, 'Joker', _context\.area\)\n[\t ]*card\.states\.visible = false\n[\t ]*self:yep\('\+', G\.C\.GREEN,function\(\) \n[\t ]*card:start_materialize\(\)\n[\t ]*card\.ability\.couponed = true\n[\t ]*card:set_cost\(\)\n[\t ]*return true\n[\t ]*end\)\n[\t ]*end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                create_shop_card_ui(card, 'Joker', _context.area)
+r 30 4156 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 9 287 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 3 1446 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 9 361 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 49
+                    card:set_cost()
+                    return true
+                end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.tag.005"
+target = "tag.lua"
+pattern = '''^(?<pre>)[\t ]*return card\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            end
+            return card
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.tag.006"
+target = "tag.lua"
+pattern = '''^(?<pre>[\t ]*tag_sprite\.config = \{tag = self, force_focus = true\}\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    tag_sprite:tilt_on_touch()
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.tag.modded.001"
+target = "tag.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*tag_sprite:tilt_on_touch\(\)\n[\t ]*tag_sprite\.prototype = function\(sprite_obj\) return SMODS\.Tag\.get_prototype_object\(sprite_obj\) end\n)'''
+position = "at"
+payload = '''
+${pre}    tag_sprite.prototype = function(sprite_obj) return SMODS.Tag.get_prototype_object(sprite_obj) end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.tag.modded.002"
+target = "tag.lua"
+pattern = '''^(?<pre>)[\t ]*tag_sprite\.prototype = function\(sprite_obj\) return SMODS\.Tag\.get_prototype_object\(sprite_obj\) end\n(?<post>[\t ]*\n)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+optional = true
+end

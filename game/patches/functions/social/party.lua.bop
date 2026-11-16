@@ -106,7 +106,7 @@ end
 
 function SP.open()
     if G.CONTROLLER then G.CONTROLLER.text_input_hook = nil end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 59
     SP.page = 1
     G.FUNCS.overlay_menu{definition = UIK.window{

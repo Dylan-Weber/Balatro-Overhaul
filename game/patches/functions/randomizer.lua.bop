@@ -105,7 +105,7 @@ function RZ.roll(v, tag, kind, cap)
 end
 
 local function roll_table(t, tag, xnames)
-r 11 131 %20%20%20%20 -
+r 13 131 %20%20%20%20 -
 l 137
         if type(v) == 'number' and v ~= 0 then
             t[k] = RZ.roll(v, tag .. '_' .. tostring(k), (RZ.XKEYS[k] or (xnames and xnames[k])) and 'x' or nil, RZ.CAPS[k])

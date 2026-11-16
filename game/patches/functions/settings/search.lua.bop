@@ -181,8 +181,8 @@ end
 function S.go(e)
   if not (e and e.cat and S.find_cat(e.cat)) then return end
   if G.CONTROLLER and G.CONTROLLER.screen_keyboard then
-r 24 1015 %20%20%20%20 -
-l 49
+r 29 1015 %20%20%20%20 -
+l 66
     S.after_keyboard(function() S.go(e) end)
     return
   end
@@ -190,9 +190,26 @@ l 49
   S.state.query = ''
   S.last_q = ''
   S.cur = e.cat
-  UIK._pages['set_p_' .. e.cat] = S.page_of(S.find_cat(e.cat), e.id)
+  local pid = 'set_p_' .. e.cat
+  UIK._pages[pid] = S.page_of(S.find_cat(e.cat), e.id)
   S.flash_id = e.id
   S.open(true)
+  local function shown()
+    local body = G.OVERLAY_MENU and G.OVERLAY_MENU:get_UIE_by_ID('uik_body')
+    local box = body and body.config.object
+    return box and box.get_UIE_by_ID and box:get_UIE_by_ID(e.id) ~= nil
+  end
+  if not shown() and (S.pages_n or 1) > 1 then
+    local start = UIK._pages[pid] or 1
+    for _, p in ipairs({start - 1, start + 1, start - 2, start + 2}) do
+      if p >= 1 and p <= (S.pages_n or 1) then
+        UIK._pages[pid] = p
+        UIK.refresh()
+        if shown() then break end
+      end
+    end
+    if not shown() then UIK._pages[pid] = start UIK.refresh() end
+  end
   play_sound('paper1', 1.1, 0.5)
   G.E_MANAGER:add_event(Event({blocking = false, blockable = false, func = function()
     local body = G.OVERLAY_MENU and G.OVERLAY_MENU:get_UIE_by_ID('uik_body')

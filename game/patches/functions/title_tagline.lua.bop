@@ -59,7 +59,7 @@ function title_tagline_attach(change_context)
             self.title_port = port
             self.alignment.offset.x = port and 0 or 0.27*logo.T.w
             self.alignment.offset.y = port and (0.5*logo.T.h + 0.2) or 0.25*logo.T.h
-r 5 52 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 4 52 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 60
         end
         if port then self.T.r = sway*0.5 end
@@ -121,7 +121,7 @@ local function title_fan_align(area)
             {dx = -0.24, dy = 0, r = -0.12},
             {dx = 0.24, dy = 0, r = 0.12},
         }
-r 6 215 %20%20%20%20%20%20%20%20 -
+r 5 215 %20%20%20%20%20%20%20%20 -
 l 15
             local f = fan[k]
             if not card.states.drag.is and f then
@@ -138,7 +138,7 @@ local function title_new_card(area, center, front, edition)
     local card = Card(area.T.x, area.T.y, w, h, front, center, {bypass_discovery_center = true, bypass_discovery_ui = true})
     card.no_ui = true
     card.ambient_tilt = 0.0
-r 6 219 %20%20%20%20 -
+r 5 219 %20%20%20%20 -
 l 66
     if edition then card:set_edition({[edition] = true}, true, true) end
     return card

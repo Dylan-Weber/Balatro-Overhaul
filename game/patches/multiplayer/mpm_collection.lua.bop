@@ -513,7 +513,7 @@ function C.window(tab)
 end
 
 function C.open(tab)
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 17
     G.FUNCS.overlay_menu{definition = C.window(tab)}
 end
@@ -532,7 +532,7 @@ function C.init()
     G.FUNCS.mpm_coll_back = function()
         local m = rawget(_G, "mpm_menu")
         if m and m.active then return G.FUNCS.exit_overlay_menu() end
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 41
     end
     G.FUNCS.mpm_coll_vanilla = function(e)

@@ -676,7 +676,7 @@ function S:solve(setup, opts, progress)
     local n_port = opts.n_portfolio or #portfolio
     local boost = opts.boost or S.BOOST
     local boost_antes = opts.boost_antes or 1
-r 21 1 %20%20%20%20 -
+r 14 1 %20%20%20%20 -
 l 109
     local t0 = clock()
     local best

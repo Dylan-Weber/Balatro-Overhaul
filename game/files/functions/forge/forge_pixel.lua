@@ -262,6 +262,15 @@ function P.fill(d, x, y, c, tol, every)
   return n
 end
 
+function P.replace_colour(d, old, new)
+  if old == nil or new == nil or old == new then return 0 end
+  local n = 0
+  for i = 1, d.w * d.h do
+    if d.px[i] == old and (not d.sel or d.sel.mask[i]) then d.px[i] = new; n = n + 1 end
+  end
+  return n
+end
+
 function P.brush_offsets(size)
   size = math.max(1, math.floor(size or 1))
   local out = {}

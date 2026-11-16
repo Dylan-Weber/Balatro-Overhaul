@@ -520,7 +520,7 @@ function SMODS.compat_0_9_8.with_compat(func)
     init_localization_ref = init_localization
     local captured_loc = {}
     G.localization = SMODS.compat_0_9_8.loc_proxy(captured_loc)
-r 11 1521 %20%20%20%20 -
+r 13 1521 %20%20%20%20 -
 l 19
         G.localization = localization_ref
         init_localization_ref()

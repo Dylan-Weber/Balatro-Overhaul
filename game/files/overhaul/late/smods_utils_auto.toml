@@ -1,0 +1,181 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.001"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*function SMODS\._save_d_u\(o\)\n)'''
+position = "at"
+payload = '''
+${pre}function SMODS.renderer_name()
+    if SMODS._renderer_name == nil then
+        local ok, name = pcall(love.graphics.getRendererInfo)
+        if ok and type(name) == "string" then
+            SMODS._renderer_name = name
+        else
+            local os_name = love.system and love.system.getOS and love.system.getOS() or ""
+            SMODS._renderer_name = (os_name == "Android" or os_name == "iOS") and "OpenGL ES" or "OpenGL"
+        end
+    end
+    return SMODS._renderer_name
+end
+
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.002"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*G:save_progress\(\)\n)'''
+position = "at"
+payload = '''
+${pre}    local meta = G.FILES and G.FILES[G.SETTINGS.profile .. '/' .. 'meta.jkr'] or {}
+    if type(meta) == 'string' then meta = STR_UNPACK(meta) or {} end
+    meta = {
+        unlocked = copy_table(meta.unlocked or {}),
+        discovered = copy_table(meta.discovered or {}),
+        alerted = copy_table(meta.alerted or {}),
+    }
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.003"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)[\t ]*if not love\.filesystem\.getInfo\(G\.SETTINGS\.profile \.\. ''\) then\n[\t ]*love\.filesystem\.createDirectory\(G\.SETTINGS\.profile \.\.\n[\t ]*''\)\n[\t ]*end\n[\t ]*if not love\.filesystem\.getInfo\(G\.SETTINGS\.profile \.\. '/' \.\. 'meta\.jkr'\) then\n[\t ]*love\.filesystem\.append\(\n[\t ]*G\.SETTINGS\.profile \.\. '/' \.\. 'meta\.jkr', 'return \{\}'\)\n[\t ]*end\n[\t ]*\n[\t ]*convert_save_to_meta\(\)\n[\t ]*\n[\t ]*local meta = STR_UNPACK\(get_compressed\(G\.SETTINGS\.profile \.\. '/' \.\. 'meta\.jkr'\) or 'return \{\}'\)\n[\t ]*meta\.unlocked = meta\.unlocked or \{\}\n[\t ]*meta\.discovered = meta\.discovered or \{\}\n[\t ]*meta\.alerted = meta\.alerted or \{\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.004"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>[\t ]*end\n)(?<post>[\t ]*if not v\.discovered and meta\.discovered\[k\] then\n)'''
+position = "at"
+payload = '''
+${pre}            local default_seen = v.discovered and not v.mod
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.005"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)[\t ]*if v\.discovered and meta\.alerted\[k\] or v\.set == 'Back' or v\.start_alerted then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            if v.discovered and meta.alerted[k] or v.set == 'Back' or v.start_alerted or default_seen then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.006"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*end\n[\t ]*\n[\t ]*function SMODS\.process_loc_text\(ref_table, ref_value, loc_txt, key\)\n)'''
+position = "at"
+payload = '''
+${pre}    G:save_progress()
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.007"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*-- move setting enhancement into card creation\n)'''
+position = "at"
+payload = '''
+${pre}    if type(t) == 'table' and type(t.is) == 'function' and Card and t:is(Card) then return t end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.008"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*if \(\(G or \{\}\)\.SOUND_MANAGER or \{\}\)\.channel then\n)'''
+position = "at"
+payload = '''
+${pre}    if MODLOADER and MODLOADER.restart then
+        MODLOADER.restart()
+        return
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.009"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*local scale = G\.GAME\.modifiers\.scaling\n)'''
+position = "at"
+payload = '''
+${pre}    if ante > 1 and ante < 8 and ante ~= math.floor(ante) then
+        local lo = math.floor(ante)
+        local a, b = SMODS.get_blind_amount(lo), SMODS.get_blind_amount(lo + 1)
+        return a + (b - a) * (ante - lo)
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.010"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)[\t ]*if not is_array then table\.sort\(pool, function\(a,b\) return a\.order < b\.order end\) end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if not is_array then table.sort(pool, function(a,b) return (a.order or 999) < (b.order or 999) end) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.011"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)[\t ]*if G\.GAME\.challenge then t\[#t \+ 1\] = \{ object = SMODS\.Challenges\[G\.GAME\.challenge\], scored_card = G\.deck and G\.deck\.cards\[1\] or G\.deck, set = "Challenge", key = SMODS\.Challenges\[G\.GAME\.challenge\]\.id \} end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if G.GAME.challenge and SMODS.Challenges[G.GAME.challenge] then t[#t + 1] = { object = SMODS.Challenges[G.GAME.challenge], scored_card = G.deck and G.deck.cards[1] or G.deck, set = "Challenge", key = SMODS.Challenges[G.GAME.challenge].id } end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.012"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)[\t ]*if G\.F_MOBILE_UI then desc_scale = desc_scale\*1\.5 end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if G.F_MOBILE_UI then desc_scale = 1.5*desc_scale end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.013"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)[\t ]*challenge_unlocked = challenge_unlocked or G\.PROFILES\[G\.SETTINGS\.profile\]\.all_unlocked\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    challenge_unlocked = challenge_unlocked or G.PROFILES[G.SETTINGS.profile].all_unlocked or G.PROFILES[G.SETTINGS.profile].debug_unlocked
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_utils.014"
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = '''^(?<pre>)[\t ]*if G\.PROFILES\[G\.SETTINGS\.profile\]\.all_unlocked then return true end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if G.PROFILES[G.SETTINGS.profile].all_unlocked or G.PROFILES[G.SETTINGS.profile].debug_unlocked then return true end
+${post}'''
+times = 1

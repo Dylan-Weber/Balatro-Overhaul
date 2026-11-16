@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 464
+l 468
 local S = SettingsUI
 local L = function(s) return mod_loc(s) end
 
@@ -34,6 +34,7 @@ function S.defaults()
   if GR.show_online_status == nil then GR.show_online_status = true end
   if GR.show_mode_indicator == nil then GR.show_mode_indicator = true end
   if St.score_preview_enabled == nil then St.score_preview_enabled = false end
+  if St.tally_joker == nil then St.tally_joker = true end
   if GR.performance_mode == nil then GR.performance_mode = false end
   St.joker_display = false
   if St.drag_select == nil then St.drag_select = true end
@@ -48,6 +49,7 @@ function S.defaults()
   if St.mute_unfocused == nil then St.mute_unfocused = false end
   if St.default_hand_sort == nil then St.default_hand_sort = 1 end
   if St.keyboard_play == nil then St.keyboard_play = true end
+  if St.ingame_keyboard == nil then St.ingame_keyboard = (G.F_MOBILE or rawget(_G, "_IS_DESKTOP") == false) and true or false end
   if St.safe_sell == nil then St.safe_sell = false end
   if St.spectate_follow == nil then St.spectate_follow = true end
   if GR.portrait_fill == nil then GR.portrait_fill = false end
@@ -106,8 +108,8 @@ function S.speedrun_rows()
 end
 
 mod_loc_register{
-  fr = {["Custom game speed"] = "Vitesse de jeu personnalisée", ["Type any speed from 0.5 to 100, then Enter"] = "Tapez une vitesse de 0,5 à 100, puis Entrée"},
-  es = {["Custom game speed"] = "Velocidad de juego personalizada", ["Type any speed from 0.5 to 100, then Enter"] = "Escribe una velocidad de 0,5 a 100 y pulsa Intro"},
+  fr = {["In-game keyboard"] = "Clavier du jeu", ["Type with on-screen keys, not your own keyboard"] = "Taper avec les touches à l'écran, pas votre clavier", ["Custom game speed"] = "Vitesse de jeu personnalisée", ["Type any speed from 0.5 to 100, then Enter"] = "Tapez une vitesse de 0,5 à 100, puis Entrée"},
+  es = {["In-game keyboard"] = "Teclado del juego", ["Type with on-screen keys, not your own keyboard"] = "Escribir con teclas en pantalla, no con tu teclado", ["Custom game speed"] = "Velocidad de juego personalizada", ["Type any speed from 0.5 to 100, then Enter"] = "Escribe una velocidad de 0,5 a 100 y pulsa Intro"},
 }
 
 S.SPEED_MIN, S.SPEED_MAX = 0.5, 100
@@ -234,6 +236,7 @@ local function helpers(pool)
   return {
     {title = "Scoring", items = {
       take(pool, 'set_score_preview'),
+      take(pool, 'set_tally_joker'),
     }},
     {title = "Hand Optimizer", items = {
       UIK.toggle{id = 'set_optimizer', label = L("Hand Optimizer"), info = lock_opt and host or L("Suggests the best hand to play"), ref_table = St, ref_value = 'hand_optimizer', disabled = lock_opt,
@@ -255,6 +258,7 @@ local function controls(pool)
     local ok, list = pcall(C.settings_rows)
     if ok then input = rows_of(list) end
   end
+  input[#input + 1] = UIK.toggle{id = 'set_ingame_keyboard', label = L("In-game keyboard"), info = L("Type with on-screen keys, not your own keyboard"), ref_table = G.SETTINGS, ref_value = 'ingame_keyboard', callback = save}
   return {
     {title = "Input", items = input},
     {title = "Shortcuts", items = {take(pool, 'set_qol_speed_key'), take(pool, 'set_qol_mute_keys')}},
@@ -467,7 +471,7 @@ local function account()
   local profile = {
     UIK.action{id = 'set_profile', label = L("Profile"), info = L("Switch or manage save profiles"), button_label = L("Open"), button = 'profile_select', colour = UIK.C.accent},
   }
-r 15 6197 %20%20 -
+r 30 6197 %20%20 -
 l 115
     profile[#profile + 1] = UIK.action{id = 'set_language', label = L("Language"), info = L("Change the game language"), button_label = L("Open"), button = 'language_selection', colour = UIK.C.accent}
   end

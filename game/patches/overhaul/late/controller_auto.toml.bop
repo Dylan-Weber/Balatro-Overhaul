@@ -1,0 +1,834 @@
+BOP 2
+eol lf
+final 1
+base 0
+l 47
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.001"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>[\t ]*self\.released_on = \{target = nil, handled = true, prev_target = nil\} --The node that the cursor 'Released' on, like letting go of LMB\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}--Touch controller
+self.touch_control = {s_tap = {handled = true}, l_press = {handled = true}}
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.002"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*getGamepadAxis = function\(\) return 0 end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    getGamepadAxis = function() return 0 end,
+    setVibration = function() end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.003"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*self\.HID\.pointer = HID_type == 'mouse' or HID_type == 'axis_cursor' or HID_type == 'touch'\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        self.HID.pointer = HID_type == 'mouse' or HID_type == 'axis_cursor'-- or HID_type == 'touch'
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.004"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self\.HID\.touch = HID_type == 'touch'\n)'''
+position = "at"
+payload = '''
+${pre}        if self.HID.touch ~= (HID_type == 'touch') then 
+r 17 147 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 5 662 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 152
+                v:set_ranks()
+            end
+        end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.005"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*function Controller:update\(dt\)\n)'''
+position = "at"
+payload = '''
+${pre}local function held_time(c)
+    return c.cursor_up.time - c.cursor_down.time
+end
+
+local function mark_release_target(c)
+    local dropped = c.dragging.prev_target
+    for _, node in ipairs(c.collision_list) do
+        if node.states.hover.can and not node.states.drag.is and node ~= dropped then
+            if node.states.release_on.can then
+                c.released_on.target, c.released_on.handled = node, false
+            end
+            return
+        end
+    end
+end
+
+local function touch_press(c)
+    local over = c.cursor_hover.target
+    if over and over.states.hover.can then c.finger_focus = over end
+    local open = over and over == c.hovering.target and over.children and over.children.h_popup
+    c.touch_control.tip_open = open and not (over.can_long_press and over:can_long_press()) and over or nil
+    c.touch_control.clear_touch = true
+end
+
+local function touch_release(c)
+    local down = c.cursor_down
+    if not down.target then return end
+    local tc = c.touch_control
+    if down.distance < G.MIN_CLICK_DIST and down.duration < 0.2 then
+        if down.target.states.click.can and not tc.l_press.target then
+            tc.s_tap.target, tc.s_tap.time, tc.s_tap.handled = down.target, held_time(c), false
+        end
+    elseif c.dragging.prev_target then
+        mark_release_target(c)
+    end
+end
+
+local function touch_track_focus(c)
+    local tc = c.touch_control
+    c.finger_cursor = c.finger_cursor or G.ROOM
+    local focus = c.finger_focus
+    if focus and (focus == G.ROOM or (not c.is_cursor_down and focus ~= c.finger_cursor)) then
+        c.finger_focus, focus = nil, nil
+    end
+    if focus and c.is_cursor_down and focus:can_long_press() and c.cursor_down.duration > 0.2
+        and not tc.l_press.target and not tc.l_pressed then
+        tc.l_press.target, tc.l_press.handled = focus, false
+    end
+end
+
+local function touch_dispatch(c)
+    local tc, hover = c.touch_control, c.hovering
+    local focus = c.finger_focus
+    local holds_still = focus and not focus:can_long_press()
+    if holds_still and focus ~= hover.target and focus:can_hover_on_drag() then
+        hover.target, hover.handled = focus, false
+    end
+    if not tc.s_tap.handled then
+        local tapped = tc.s_tap.target
+        if tapped.single_tap then
+            tapped:single_tap()
+            if c.finger_focus and not c.finger_focus:can_long_press() and tc.tip_open ~= tapped then
+                hover.target, hover.handled = tapped, false
+            end
+        else
+            tapped:click()
+        end
+        tc.s_tap.handled, tc.clear_touch, tc.tip_open = true, nil, nil
+    end
+    if not tc.l_press.handled then
+        hover.target, hover.handled = tc.l_press.target, false
+        tc.l_pressed, tc.l_press.handled = c.finger_focus, true
+    end
+    if tc.clear_touch or not c.finger_focus then
+        tc.l_press.target, tc.l_pressed, tc.s_tap.target = nil, nil, nil
+        hover.target, hover.handled = nil, false
+        tc.clear_touch = nil
+    end
+    if tc.l_pressed then hover.target = c.finger_focus end
+    local drag = c.dragging
+    if not drag.handled and c.cursor_down.duration and c.cursor_down.duration > 0.1 then
+        create_drag_target_from_card(drag.target)
+        drag.handled = true
+    end
+end
+
+function Controller:drop_touch()
+    rawset(self.touch_control, 'clear_touch', true)
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.006"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>[\t ]*function Controller:update\(dt\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local sk = self.screen_keyboard
+    if sk and (sk.REMOVED or (sk.parent and sk.parent.REMOVED)) then
+        if not sk.REMOVED then sk:remove() end
+        self.screen_keyboard = nil
+        if self.text_input_hook and self.text_input_hook.REMOVED then self.text_input_hook = nil end
+        self:mod_cursor_context_layer(-1)
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.007"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*if self\.HID\.pointer and not \(self\.HID\.mouse or self\.HID\.touch\) and not self\.interrupt\.focus then \n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if self.HID.pointer and not (self.HID.mouse) and not self.interrupt.focus then 
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.008"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*self\.dragging\.prev_target = self\.dragging\.target\n)'''
+position = "at"
+payload = '''
+${pre}    self.finger_cursor = self.cursor_hover.target
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.009"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if self\.cursor_down\.target\.states\.drag\.can then\n)'''
+position = "at"
+payload = '''
+${pre}        --TOUCH
+e 17 1125 %20%20%20%20%20%20%20%20 - =34,-15
+e 17 398 %20%20%20%20%20%20%20%20 - -4,=22
+l 2
+            touch_press(self)
+        --NON TOUCH
+e 17 1125 %20%20%20%20%20%20%20%20 - =34,-15
+l 4
+        else
+
+        end
+        --BOTH
+e 17 1125 %20%20%20%20%20%20%20%20 - =34,-15
+l 23
+        self.cursor_down.distance, self.cursor_down.duration = 0, 0
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.010"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self\.dragging\.target\.states\.drag\.is = false\n)'''
+position = "at"
+payload = '''
+${pre}            self.finger_cursor = self.dragging.target
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.011"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*--Now, handle the Cursor release\n(?:[\t ]*--[^\n]*\n)*[\t ]*--Was the Cursor release in the same location as the Cursor press and within Cursor timeout\?\n(?:[\t ]*--[^\n]*\n)*[\t ]*if self\.cursor_down\.target then \n(?:[\t ]*--[^\n]*\n)*[\t ]*if \(not self\.cursor_down\.target\.click_timeout or self\.cursor_down\.target\.click_timeout\*G\.SPEEDFACTOR > self\.cursor_up\.time - self\.cursor_down\.time\) then\n(?:[\t ]*--[^\n]*\n)*[\t ]*if Vector_Dist\(self\.cursor_down\.T, self\.cursor_up\.T\) < G\.MIN_CLICK_DIST then \n(?:[\t ]*--[^\n]*\n)*[\t ]*if self\.cursor_down\.target\.states\.click\.can then\n(?:[\t ]*--[^\n]*\n)*[\t ]*self\.clicked\.target = self\.cursor_down\.target\n(?:[\t ]*--[^\n]*\n)*[\t ]*self\.clicked\.handled = false\n(?:[\t ]*--[^\n]*\n)*[\t ]*end\n(?:[\t ]*--[^\n]*\n)*[\t ]*--if not, was the Cursor dragging some other thing\?\n(?:[\t ]*--[^\n]*\n)*[\t ]*elseif self\.dragging\.prev_target and self\.cursor_up\.target and self\.cursor_up\.target\.states\.release_on\.can then \n(?:[\t ]*--[^\n]*\n)*[\t ]*self\.released_on\.target = self\.cursor_up\.target\n(?:[\t ]*--[^\n]*\n)*[\t ]*self\.released_on\.handled = false\n(?:[\t ]*--[^\n]*\n)*[\t ]*end\n(?:[\t ]*--[^\n]*\n)*[\t ]*end\n(?:[\t ]*--[^\n]*\n)*[\t ]*end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        --TOUCH
+e 17 1125 %20%20%20%20%20%20%20%20 - =34,-15
+e 17 398 %20%20%20%20%20%20%20%20 - -4,=22
+l 2
+            touch_release(self)
+        --NON TOUCH
+e 17 1125 %20%20%20%20%20%20%20%20 - =34,-15
+l 1
+        else
+r 17 340 %20%20%20%20%20%20%20%20%20%20%20%20 %20
+e 17 341 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 - =3,-1,=82,-14,=46,-1,=5
+r 17 342 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 %20
+r 17 343 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 344 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
+                            self.clicked.time = held_time(self)
+r 17 345 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
+                        end
+r 17 347 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+e 17 420 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 %20 =12,-4,+%64,=1,+%61%67%67,=20
+l 6
+                        mark_release_target(self)
+                    end
+                end
+            end
+        end
+        --BOTH
+e 17 1125 %20%20%20%20%20%20%20%20 - =34,-15
+l 1
+    
+r 17 339 %20%20%20%20%20%20%20%20 -
+l 11
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.012"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*--Cursor is currently hovering over something\n[\t ]*if self\.cursor_hover\.target and self\.cursor_hover\.target\.states\.hover\.can and \(not self\.HID\.touch or self\.is_cursor_down\) then \n[\t ]*self\.hovering\.target = self\.cursor_hover\.target\n[\t ]*if self\.hovering\.prev_target and self\.hovering\.prev_target ~= self\.hovering\.target then self\.hovering\.prev_target\.states\.hover\.is = false end\n[\t ]*self\.hovering\.target\.states\.hover\.is = true\n[\t ]*self\.hovering\.target:set_offset\(self\.cursor_hover\.T, 'Hover'\)\n[\t ]*elseif \(self\.cursor_hover\.target == nil or \(self\.HID\.touch and not self\.is_cursor_down\)\) and self\.hovering\.target then\n[\t ]*self\.hovering\.target\.states\.hover\.is = false\n[\t ]*self\.hovering\.target = nil\n[\t ]*end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    --TOUCH
+e 17 1125 %20%20%20%20 - =34,-15
+e 17 398 %20%20%20%20 - -4,=22
+l 2
+        touch_track_focus(self)
+    --NON TOUCH
+e 17 1125 %20%20%20%20 - =34,-15
+l 1
+    else
+r 17 357 %20%20%20%20%20%20%20%20%20 -
+e 17 1189 %20%20%20%20%20%20%20%20 %20 -4,=8,+%63%75%72%73%6F%72%5F,=5,-3,=17,+%63%75%72%73%6F%72%5F,=5,-3,=15,-1,+%68,=1,-3,+%76%65%72,=9
+r 17 359 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 360 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 361 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 362 %20%20%20%20%20%20%20%20%20%20%20%20 -
+e 17 820 %20%20%20%20%20%20%20%20 - +%65%6C%73%65,=8,+%63%75%72%73%6F%72%5F,=5,-3,=7,+%20%3D%3D%20%6E%69%6C,=25,-9,=5
+r 17 364 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 365 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 3
+        end
+    end
+    --BOTH
+e 17 1125 %20%20%20%20 - =34,-15
+l 11
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.013"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*--The clicked object\n[\t ]*if not self\.clicked\.handled then\n[\t ]*self\.clicked\.target:click\(\)\n[\t ]*self\.clicked\.handled = true\n[\t ]*end\n[\t ]*\n[\t ]*--Process registry clicks\n[\t ]*self:process_registry\(\)\n[\t ]*\n[\t ]*--The object being dragged\n[\t ]*if self\.dragging\.target then\n[\t ]*self\.dragging\.target:drag\(\)\n[\t ]*end\n[\t ]*\n[\t ]*--The object released on\n[\t ]*if not self\.released_on\.handled and self\.dragging\.prev_target then\n[\t ]*if self\.dragging\.prev_target == self\.hovering\.target then self\.hovering\.target:stop_hover\(\);self\.hovering\.target = nil end\n[\t ]*self\.released_on\.target:release\(self\.dragging\.prev_target\)\n[\t ]*self\.released_on\.handled = true\n[\t ]*end\n[\t ]*\n[\t ]*--The object being hovered over\n[\t ]*if self\.hovering\.target then\n[\t ]*self\.hovering\.target:set_offset\(self\.cursor_hover\.T, 'Hover'\)\n[\t ]*if self\.hovering\.prev_target ~= self\.hovering\.target then \n[\t ]*if self\.hovering\.target ~= self\.dragging\.target and not self\.HID\.touch then               \n[\t ]*self\.hovering\.target:hover\(\) \n[\t ]*elseif self\.HID\.touch then\n[\t ]*local _ID =  self\.hovering\.target\.ID\n[\t ]*G\.E_MANAGER:add_event\(Event\(\{\n[\t ]*trigger = 'after',\n[\t ]*blockable = false, \n[\t ]*blocking = false,\n[\t ]*delay = G\.MIN_HOVER_TIME,\n[\t ]*func = function\(\)\n[\t ]*if self\.hovering\.target and _ID == self\.hovering\.target\.ID then\n[\t ]*self\.hovering\.target:hover\(\) \n[\t ]*end\n[\t ]*return true\n[\t ]*end\n[\t ]*\}\)\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    --touch
+e 17 398 %20%20%20%20 - -4,=22
+l 1
+        touch_dispatch(self)
+r 17 333 %20%20%20%20%20%20%20%20 -
+r 17 382 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+        end
+
+r 17 385 %20%20%20%20%20%20%20%20 -
+r 17 386 %20%20%20%20%20%20%20%20 -
+r 17 388 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 389 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+        end
+
+e 17 372 %20%20%20%20%20%20%20%20 %20 =12,-2,+%68%6F%76%65%72,=1,-4,+%6E%67,=13
+r 17 393 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 397 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 %20
+r 17 361 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 362 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
+
+e 17 395 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 %20 =2,+%20%73%65%6C%66%2E%68%6F%76%65%72%69%6E%67%2E%70%72%65%76%5F%74%61%72%67%65%74%20%61%6E%64,=55
+e 17 364 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 - =14,+%70%72%65%76%5F,=30
+r 17 413 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
+                end
+r 17 420 %20%20%20%20%20%20%20%20%20%20%20%20 -
+e 17 364 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 - =14,+%70%72%65%76%5F,=30
+r 17 413 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
+            end
+e 17 374 %20%20%20%20%20%20%20%20%20%20%20%20 - =5,-2,+%68%6F%76%65%72,=1,-4,+%6E%67,=15
+l 3
+        end
+    else
+        --The clicked object
+r 17 372 %20%20%20%20%20%20%20%20 -
+r 17 373 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 374 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+        end
+
+r 17 377 %20%20%20%20%20%20%20%20 -
+r 17 378 %20%20%20%20%20%20%20%20 -
+l 1
+
+r 17 380 %20%20%20%20%20%20%20%20 -
+r 17 333 %20%20%20%20%20%20%20%20 -
+r 17 382 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+        end
+
+r 17 385 %20%20%20%20%20%20%20%20 -
+r 17 386 %20%20%20%20%20%20%20%20 -
+r 17 387 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 388 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 389 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+        end
+
+r 17 392 %20%20%20%20%20%20%20%20 -
+r 17 393 %20%20%20%20%20%20%20%20 -
+r 17 362 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 395 %20%20%20%20%20%20%20%20%20%20%20%20 %20
+e 17 396 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 =48,-23,=4
+r 17 397 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 %20
+r 17 398 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 399 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 1 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 3
+                        trigger = 'after',
+                        blockable = false, 
+                        blocking = false,
+r 17 404 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
+                        func = function()
+e 17 406 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 - =3,+%28,=55,+%29,=5
+r 17 397 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 %20
+l 4
+                            end
+                        return true
+                        end
+                    }))
+r 17 412 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 %20
+r 17 413 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 13
+                    end
+                end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.014"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*if self\.hovering\.prev_target then\n[\t ]*self\.hovering\.prev_target:stop_hover\(\)\n[\t ]*end\n[\t ]*end\n[\t ]*elseif self\.hovering\.prev_target then\n[\t ]*self\.hovering\.prev_target:stop_hover\(\)\n[\t ]*end\n[\t ]*if self\.hovering\.target and self\.hovering\.target == self\.dragging\.target and not self\.HID\.touch then\n[\t ]*self\.hovering\.target:stop_hover\(\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        elseif self.hovering.prev_target then
+r 17 413 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
+        end
+e 17 423 %20%20%20%20%20%20%20%20 - =73,-23,=4
+r 17 424 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+        end
+    end
+e 17 291 %20%20%20%20 %20 =8,+%69,=1,-3,=8,-1,+%64,=1,+%77%6E,=5
+l 3
+        local down = self.cursor_down
+        down.distance = math.max(down.distance or 0, Vector_Dist(down.T, self.cursor_hover.T))
+        down.duration = G.TIMERS.UPTIME - down.time
+e 17 340 %20%20%20%20%20%20%20%20 - =15,-4,+%75%70,=12
+r 17 1069 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+        end
+    end
+e 17 321 %20%20%20%20 - =12,+%69%73%5F,=11,-8,=5
+r 17 340 %20%20%20%20%20%20%20%20 -
+r 17 1046 %20%20%20%20%20%20%20%20%20%20%20%20 -
+e 17 1046 %20%20%20%20%20%20%20%20%20%20%20%20 - =17,+%64%69%73,=2,-2,+%6E%63,=1,-1,=6
+e 17 1046 %20%20%20%20%20%20%20%20%20%20%20%20 - =17,+%64%75%72%61,=1,-5,+%69%6F%6E,=6
+l 68
+        end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.015"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*--If there is something being dragged, we want to treat the left stick as a cursor input\n[\t ]*if self\.dragging\.target and math\.abs\(l_stick_x\) \+ math\.abs\(l_stick_y\) > 0\.1 then \n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        local slide_stick = self.held_button_times['a'] and G.hand and G.STATE == G.STATES.SELECTING_HAND and self.focused.target and self.focused.target.area == G.hand
+            and not (G.SETTINGS and G.SETTINGS.drag_select == false)
+        if self.dragging.target and not slide_stick and math.abs(l_stick_x) + math.abs(l_stick_y) > 0.1 then 
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.016"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*self\.axis_buttons\.l_stick\.current = math\.abs\(l_stick_x\) > math\.abs\(l_stick_y\) and\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                local ax, ay, prev = math.abs(l_stick_x), math.abs(l_stick_y), self.axis_buttons.l_stick.previous
+                local horiz = ax > ay
+                if prev == 'dpleft' or prev == 'dpright' then
+                    horiz = not (ay > ax*1.7)
+                elseif prev == 'dpup' or prev == 'dpdown' then
+                    horiz = ax > ay*1.7
+                end
+                self.axis_buttons.l_stick.current = horiz and
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.017"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self:L_cursor_release\(\)\n[\t ]*end\n)'''
+position = "at"
+payload = '''
+${pre}        self.PAD_SLIDE = nil
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.018"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>[\t ]*key = key,\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}                physical = dt ~= nil,
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.019"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*G\.FUNCS:exit_overlay_menu\(\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                local root = G.OVERLAY_MENU.UIRoot
+                local back = root and root.config and root.config.back_func
+                if back and G.ESC_BACK_FUNCS and G.ESC_BACK_FUNCS[back] and type(G.FUNCS[back]) == 'function' then
+                    self:mod_cursor_context_layer(-1)
+r 29 973 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
+                    G.FUNCS[back]({config = {}, UIBox = G.OVERLAY_MENU})
+r 29 980 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
+                else
+r 17 796 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 236
+                end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.020"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*G\.SAVED_GAME = get_compressed\(G\.SETTINGS\.profile\.\.'/'\.\.'save\.jkr'\)\n[\t ]*if G\.SAVED_GAME ~= nil then G\.SAVED_GAME = STR_UNPACK\(G\.SAVED_GAME\) end\n[\t ]*G:start_run\(\{savetext = G\.SAVED_GAME\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            local saved = G.FILES[_profile..'/save.jkr']
+            G.SAVED_GAME = saved
+            G:start_run({savetext = saved})
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.021"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*if not G\.DRAW_HASH\[1\] or\n)'''
+position = "at"
+payload = '''
+${pre}    local buff = G.DRAW_HASH_BUFF
+    if PORTRAIT and PORTRAIT.on() then buff = buff + G.TILE_H end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.022"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*cursor_trans\.x-G\.ROOM\.T\.x < -G\.DRAW_HASH_BUFF or cursor_trans\.x-G\.ROOM\.T\.x > G\.TILE_W \+ G\.DRAW_HASH_BUFF or\n[\t ]*cursor_trans\.y-G\.ROOM\.T\.y < -G\.DRAW_HASH_BUFF or cursor_trans\.y-G\.ROOM\.T\.y > G\.TILE_H \+ G\.DRAW_HASH_BUFF then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        cursor_trans.x-G.ROOM.T.x < -buff or cursor_trans.x-G.ROOM.T.x > G.TILE_W + buff or
+        cursor_trans.y-G.ROOM.T.y < -buff or cursor_trans.y-G.ROOM.T.y > G.TILE_H + buff then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.023"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*self\.cursor_hover\.time = G\.TIMERS\.TOTAL\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    self.cursor_hover.time = G.TIMERS.UPTIME
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.024"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*if self\.interrupt\.focus or \(\(self\.locked\) and \(not G\.SETTINGS\.paused or G\.screenwipe\)\) or self\.locks\.frame or self\.COYOTE_FOCUS then self\.cursor_hover\.target = G\.ROOM; return end \n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if self.interrupt.focus or ((self.locked) and (not G.SETTINGS.paused or G.screenwipe)) or self.locks.frame or self.COYOTE_FOCUS then self.cursor_hover.target = G.ROOM return end 
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.025"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*if v\.states\.hover\.can and \(not v\.states\.drag\.is or self\.HID\.touch\) then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            if v.states.hover.can and (not v.states.drag.is) then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.026"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*if not self\.cursor_hover\.target or \(self\.dragging\.target and not self\.HID\.touch\) then self\.cursor_hover\.target = G\.ROOM end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if not self.cursor_hover.target or self.dragging.target then self.cursor_hover.target = G.ROOM end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.027"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*self\.cursor_down\.time = G\.TIMERS\.TOTAL\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    self.cursor_down.time = G.TIMERS.UPTIME
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.028"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*local press_node =  \(self\.HID\.touch and self\.cursor_hover\.target\) or self\.hovering\.target or self\.focused\.target\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local press_node =  (self.cursor_hover.target) or self.hovering.target or self.focused.target
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.029"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*self\.cursor_up\.time = G\.TIMERS\.TOTAL\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    self.cursor_up.time = G.TIMERS.UPTIME
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.030"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*self\.cursor_up\.target = self\.hovering\.target or self\.focused\.target\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    self.cursor_up.target = self.hovering.target or self.focused.target or self.dragging.target
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.031"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*if node\.config and node\.config\.button then ret_val = true end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            if node.config and (node.config.button or node.tutorial_disabled) then ret_val = true end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.032"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*if not self\.HID\.controller or self\.interrupt\.focus or \(self\.locked\) and \(not G\.SETTINGS\.paused or G\.screenwipe\) then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if not (self.HID.controller) or self.interrupt.focus or (self.locked) and (not G.SETTINGS.paused or G.screenwipe) then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.033"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*local eligible = false\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                        local eligible, score = false, nil
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.034"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*elseif math\.abs\(G\.ARGS\.focus_vec\.y\) < v\.T\.h/2 then eligible = true end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                                elseif math.abs(G.ARGS.focus_vec.y) < v.T.h/2 and ((dir == 'R' and v.T.x + v.T.w > G.ARGS.focus_cursor_pos.x + 0.1) or (dir == 'L' and v.T.x < G.ARGS.focus_cursor_pos.x - 0.1)) then eligible = true end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.035"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*elseif math\.abs\(G\.ARGS\.focus_vec\.x\) < v\.T\.w/2 then eligible = true end\n[\t ]*end\n[\t ]*elseif math\.abs\(G\.ARGS\.focus_vec\.x\) > math\.abs\(G\.ARGS\.focus_vec\.y\) then\n[\t ]*if G\.ARGS\.focus_vec\.x > 0 and dir == 'R' then eligible = true\n[\t ]*elseif G\.ARGS\.focus_vec\.x < 0 and dir == 'L' then eligible = true end\n[\t ]*else\n[\t ]*if G\.ARGS\.focus_vec\.y > 0 and dir == 'D' then eligible = true\n[\t ]*elseif G\.ARGS\.focus_vec\.y < 0 and dir == 'U' then eligible = true end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                                elseif math.abs(G.ARGS.focus_vec.x) < v.T.w/2 and ((dir == 'D' and v.T.y + v.T.h > G.ARGS.focus_cursor_pos.y + 0.1) or (dir == 'U' and v.T.y < G.ARGS.focus_cursor_pos.y - 0.1)) then eligible = true end
+                            end
+                        else
+                            local vx, vy = G.ARGS.focus_vec.x, G.ARGS.focus_vec.y
+                            local horiz = dir == 'L' or dir == 'R'
+                            local main = (dir == 'R' and vx) or (dir == 'L' and -vx) or (dir == 'D' and vy) or -vy
+                            local off = horiz and math.abs(vy) or math.abs(vx)
+                            local ft = self.focused.target and self.focused.target.T
+                            if ft then
+                                local overlap = horiz and (math.min(ft.y + ft.h, v.T.y + v.T.h) - math.max(ft.y, v.T.y))
+                                    or (math.min(ft.x + ft.w, v.T.x + v.T.w) - math.max(ft.x, v.T.x))
+                                if overlap > 0 then off = 0 end
+                            end
+                            if main > 0.05 and off <= main then
+                                eligible = true
+                                score = main + 2.5*off
+                            end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.036"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*G\.ARGS\.focus_list\[#G\.ARGS\.focus_list\+1\] = \{node = v, dist = math\.abs\(G\.ARGS\.focus_vec\.x\) \+ math\.abs\(G\.ARGS\.focus_vec\.y\)\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                            G.ARGS.focus_list[#G.ARGS.focus_list+1] = {node = v, dist = score or (math.abs(G.ARGS.focus_vec.x) + math.abs(G.ARGS.focus_vec.y))}
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.037"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*if self\.focused\.target ~= self\.focused\.prev_target then G\.VIBRATION = G\.VIBRATION \+ 0\.7 end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if self.focused.target ~= self.focused.prev_target then
+            G.VIBRATION = 0.7 + G.VIBRATION
+        end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.038"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*--Implementing 'coyote time' type selection where a full button press isnt needed to select a card in hand\. As long as a button down has been registered\n[\t ]*--before a timer is up and the dpad is used to move to the next card it should register\n[\t ]*if input_type == 'press' and \(button == 'dpleft' or button == 'dpright'\) and\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if input_type == 'press' and (button == 'dpleft' or button == 'dpright') and focused and G.hand and focused.area == G.hand and
+        G.STATE == G.STATES.SELECTING_HAND and self.held_button_times['a'] and not (G.SETTINGS and G.SETTINGS.drag_select == false) and
+        (self.PAD_SLIDE ~= nil or focused == self.dragging.target or self.is_cursor_down) then
+        local area = focused.area
+        if self.PAD_SLIDE == nil then
+r 17 333 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 334 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 335 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 336 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+            end
+            self.dragging.prev_target = nil
+r 17 1056 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 39
+            self.PAD_SLIDE = not focused.highlighted
+            if self.PAD_SLIDE then area:add_to_highlighted(focused) else area:remove_from_highlighted(focused) end
+        end
+        local nxt = area.cards[focused.rank + (button == 'dpleft' and -1 or 1)]
+        if nxt then
+            if self.PAD_SLIDE and not nxt.highlighted then
+                area:add_to_highlighted(nxt)
+            elseif not self.PAD_SLIDE and nxt.highlighted then
+                area:remove_from_highlighted(nxt)
+            end
+            self:snap_to{node = nxt}
+        end
+        ret = true
+    elseif input_type == 'press' and (button == 'dpleft' or button == 'dpright') and
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.039"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*if ret == true then G\.VIBRATION = G\.VIBRATION \+1 end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if ret == true then
+        haptic_buzz(1)
+        G.VIBRATION = 1 + G.VIBRATION
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.controller.modded.001"
+target = "engine/controller.lua"
+pattern = '''^(?<pre>)[\t ]*if self\.hovering\.prev_target then\n[\t ]*self\.hovering\.prev_target:stop_hover\(\)\n[\t ]*end\n[\t ]*end\n[\t ]*elseif self\.hovering\.prev_target then\n[\t ]*self\.hovering\.prev_target:stop_hover\(\)\n[\t ]*end\n[\t ]*if self\.hovering\.prev_target and self\.hovering\.prev_target\.role and self\.hovering\.prev_target\.role\.major and self\.hovering\.prev_target\.role\.major\.params and self\.hovering\.prev_target\.role\.major\.params\.stake and self\.hovering\.target ~= self\.hovering\.prev_target then self\.hovering\.prev_target\.role\.major:stop_hover\(\) end\n[\t ]*if self\.hovering\.target and self\.hovering\.target\.role and self\.hovering\.target\.role\.major and self\.hovering\.target\.role\.major\.params and self\.hovering\.target\.role\.major\.params\.stake and self\.hovering\.target ~= self\.hovering\.prev_target then self\.hovering\.target\.role\.major:hover\(\) end\n[\t ]*if self\.hovering\.target and self\.hovering\.target == self\.dragging\.target and not self\.HID\.touch then\n[\t ]*self\.hovering\.target:stop_hover\(\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        elseif self.hovering.prev_target then
+r 17 413 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 3
+        end
+        if self.hovering.prev_target and self.hovering.prev_target.role and self.hovering.prev_target.role.major and self.hovering.prev_target.role.major.params and self.hovering.prev_target.role.major.params.stake and self.hovering.target ~= self.hovering.prev_target then self.hovering.prev_target.role.major:stop_hover() end
+        if self.hovering.target and self.hovering.target.role and self.hovering.target.role.major and self.hovering.target.role.major.params and self.hovering.target.role.major.params.stake and self.hovering.target ~= self.hovering.prev_target then self.hovering.target.role.major:hover() end
+e 17 423 %20%20%20%20%20%20%20%20 - =73,-23,=4
+r 17 424 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+        end
+    end
+e 17 291 %20%20%20%20 %20 =8,+%69,=1,-3,=8,-1,+%64,=1,+%77%6E,=5
+l 3
+        local down = self.cursor_down
+        down.distance = math.max(down.distance or 0, Vector_Dist(down.T, self.cursor_hover.T))
+        down.duration = G.TIMERS.UPTIME - down.time
+e 17 340 %20%20%20%20%20%20%20%20 - =15,-4,+%75%70,=12
+r 17 1069 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+        end
+    end
+e 17 321 %20%20%20%20 - =12,+%69%73%5F,=11,-8,=5
+r 17 340 %20%20%20%20%20%20%20%20 -
+r 17 1046 %20%20%20%20%20%20%20%20%20%20%20%20 -
+e 17 1046 %20%20%20%20%20%20%20%20%20%20%20%20 - =17,+%64%69%73,=2,-2,+%6E%63,=1,-1,=6
+e 17 1046 %20%20%20%20%20%20%20%20%20%20%20%20 - =17,+%64%75%72%61,=1,-5,+%69%6F%6E,=6
+l 3
+        end
+${post}'''
+optional = true
+end

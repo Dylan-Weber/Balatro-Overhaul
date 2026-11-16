@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 206
+l 169
 -- TODO: Properly handle this
 function boot_print_stage(str)
     print("[stage]", str)
@@ -52,22 +52,6 @@ NFS.setWorkingDirectory(love.filesystem.getSaveDirectory())
 JSON = json
 
 SMODS.MODS_DIR = lovely_mod_dir:gsub("\\", "/")
-local save_mods = (love.filesystem.getSaveDirectory():gsub("\\", "/"):gsub("/$", "")) .. "/mods"
-if SMODS.MODS_DIR == save_mods and NFS.smodsAddRedirect then
-    SMODS.MODS_DIR_REAL = SMODS.MODS_DIR
-    SMODS.MODS_DIR = SMODS.MODS_DIR:sub(1, -5) .. "Mods"
-    NFS.smodsAddRedirect(SMODS.MODS_DIR, "mods")
-    if not love.filesystem.getInfo("Mods", "directory") then pcall(love.filesystem.mount, "mods", "Mods", true) end
-    local has_ffi, ffi = pcall(require, "ffi")
-    if has_ffi and not ffi.smods_raw_load then
-        local virt, real = SMODS.MODS_DIR, SMODS.MODS_DIR_REAL
-        ffi.smods_raw_load = ffi.load
-        ffi.load = function(name, ...)
-            if type(name) == "string" and name:sub(1, #virt + 1) == virt .. "/" then name = real .. name:sub(#virt + 1) end
-            return ffi.smods_raw_load(name, ...)
-        end
-    end
-end
 
 
 require"SMODS.preflight.logging"
@@ -100,27 +84,6 @@ local function handleConflicts()
         end
     end
     if not has_lovely then return end -- SMODS won't load mods that fail to load
-
-    if MODLOADER and MODLOADER.refuse and MODLOADER.restart then
-        local entries = {}
-        for k, mod in pairs(SMODS.Mods) do
-            if not (mod.lovely_only or mod.meta or mod.disabled) and not mod.can_load and mod.lovely then
-                local li = mod.load_issues or {}
-                local parts = {}
-                if li.dependencies and #li.dependencies > 0 then parts[#parts+1] = "needs " .. table.concat(li.dependencies, ", ") end
-                if li.conflicts and #li.conflicts > 0 then parts[#parts+1] = "conflicts with " .. table.concat(li.conflicts, ", ") end
-                if li.prefix_conflicts and #li.prefix_conflicts > 0 then parts[#parts+1] = "shares its prefix with " .. table.concat(li.prefix_conflicts, ", ") end
-                if li.version_mismatch then parts[#parts+1] = "needs Steamodded " .. tostring(li.version_mismatch) end
-                if li.main_file_not_found then parts[#parts+1] = "is missing its main file" end
-                if #parts == 0 then parts[1] = "could not be loaded by Steamodded" end
-                entries[#entries+1] = { name = mod.blacklist_name, mod = mod.name or mod.id, needs = table.concat(parts, "; ") }
-            end
-        end
-        MODLOADER.refuse(entries)
-        SMODS.preflight_force_quit = true
-        MODLOADER.restart()
-        return true
-    end
 
     lovely.set_var("SMODS_TMP_DISABLED", "1") -- NOTE: Maybe store the disabled mods
     SMODS.preflight_force_quit = true
@@ -209,7 +172,7 @@ local width, height = love.window.getDesktopDimensions(flags.display)
 --     resizable = true,
 -- })
 
-r 19 36 - -
+r 12 36 - -
 l 13
 -- TODO: Properly hook this up
 -- if love.timer then love.timer.step() end

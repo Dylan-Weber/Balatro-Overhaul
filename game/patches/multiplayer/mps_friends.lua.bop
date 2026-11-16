@@ -600,7 +600,7 @@ function F.open(tab)
     clear_note()
     F.confirm = nil
     S.dm_open = false
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 107
     G.FUNCS.overlay_menu{definition = window_def(tab)}
     if tab_now() == "messages" then F.on_messages() end
@@ -709,7 +709,7 @@ end
 
 local function join_room(room)
     if type(room) ~= "string" or room == "" then return end
-r 13 1375 %20%20%20%20 -
+r 32 1375 %20%20%20%20 -
 l 30
     if bom_ui and bom_ui.show_connecting_screen then pcall(bom_ui.show_connecting_screen) end
     bom_room.join(room, {})
@@ -741,7 +741,7 @@ local function register_funcs()
         local r = ref(e)
         local fn = watch_fn()
         if not (fn and r.room) then return end
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 137
         pcall(fn, r.room, {friend = r.code})
     end

@@ -153,7 +153,7 @@ function RO.start(o, same)
   if not back then return false end
   local seed = same and o.seed or nil
   reset_streak()
-r 13 1825 %20%20 -
+r 32 1825 %20%20 -
 l 175
   local custom = o.mode == 'custom' or o.mode == 'random_custom'
   local RR = rawget(_G, 'RunRules')
@@ -330,7 +330,7 @@ if Game and Game.start_run and not RO._run_wrapped then
     local B = rawget(_G, 'BOT')
     local bot = B and B.ui and B.ui.solo and true or false
     if rawget(_G, 'SMODS') and type(G.P_BLINDS) == 'table' then
-r 11 1377 %20%20%20%20%20%20 -
+r 13 1377 %20%20%20%20%20%20 -
 l 55
         if type(v) == 'table' and v.blind_types == nil and (v.boss or v.big or v.small) then
           v.blind_types = {v.boss and 'boss' or nil, v.big and 'big' or nil, v.small and 'small' or nil}

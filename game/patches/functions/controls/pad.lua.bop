@@ -135,7 +135,7 @@ function P.apply_glyphs()
     for _, v in pairs(G.I and G.I.SPRITE or {}) do
         if atlas and v.atlas == atlas then
             v.sprite_pos.y = y
-r 23 107 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 107 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 342
         end
     end
@@ -479,7 +479,7 @@ function P.open_binds(from)
     P.from = from
     P.capture = nil
     P.ui.notice = nil
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 107
     G.FUNCS.overlay_menu{definition = P.binds_window()}
 end
@@ -588,7 +588,7 @@ function P.init()
         P.from = nil
         if C.back_to and C.back_to(from, e) then return end
         if G.FUNCS.settings then return G.FUNCS.settings(e) end
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 45
     end
     G.ESC_BACK_FUNCS = G.ESC_BACK_FUNCS or {}

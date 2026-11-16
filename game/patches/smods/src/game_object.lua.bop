@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 186
+l 185
 --- STEAMODDED CORE
 --- MODULE API
 
@@ -38,7 +38,6 @@ function loadAPIs()
         if o:check_duplicate_register() then return end
         -- also updates o.prefix_config
         SMODS.add_prefixes(self, o)
-        if o.set == 'Atlas' and o.obj_table[o.key] and o:check_duplicate_key() then return o.obj_table[o.key] end
         if o:check_duplicate_key() then return end
         o:register()
         return o
@@ -189,8 +188,8 @@ Set `prefix_config.key = false` on your object instead.]]):format(obj.key), obj.
     -- Also inject anything necessary for the class itself.
     function SMODS.GameObject:inject_class()
         local inject_time = 0
-r 11 650 %20%20%20%20%20%20%20%20 -
-l 478
+r 13 650 %20%20%20%20%20%20%20%20 -
+l 355
         self:send_to_subclasses('pre_inject_class')
         local end_time = love.timer.getTime()
         inject_time = end_time - start_time
@@ -210,7 +209,6 @@ l 478
 
             -- Add centers to pools
             o:inject(i)
-            if LOADING_SCREEN then LOADING_SCREEN.draw() end
 
             -- Setup Localize text
             o:process_loc_text()
@@ -264,7 +262,7 @@ l 478
         setmetatable(orig_o, self)
         if orig_o.mod then
             orig_o.dependencies = orig_o.dependencies or {}
-            if not silent and SMODS.current_mod then table.insert(orig_o.dependencies, SMODS.current_mod.id) end
+            if not silent then table.insert(orig_o.dependencies, SMODS.current_mod.id) end
         else
             if not silent then orig_o.mod = SMODS.current_mod end
             orig_o.rarity_original = orig_o.rarity
@@ -484,108 +482,6 @@ l 478
     ]]
 
     SMODS.Atlases = {}
-    local function atlas_rgba8(data)
-        local format = data:getFormat()
-        if format == 'rgba8' or love.graphics.getImageFormats()[format] then return data end
-        local out = love.image.newImageData(data:getWidth(), data:getHeight(), 'rgba8')
-        out:mapPixel(function(x, y) return data:getPixel(x, y) end)
-        data:release()
-        return out
-    end
-
-    local atlas_prefetch = nil
-
-    local function atlas_source(atlas)
-        local file_path = type(atlas.path) == 'table' and
-            ((G.SETTINGS.real_language and atlas.path[G.SETTINGS.real_language]) or atlas.path[G.SETTINGS.language] or atlas.path['default'] or atlas.path['en-us']) or atlas.path
-        if file_path == 'DEFAULT' then return end
-        if atlas.language and G.SETTINGS.language ~= atlas.language and G.SETTINGS.real_language ~= atlas.language then return end
-        local texture_scaling = G.SETTINGS.GRAPHICS.texture_scaling
-        if atlas.force_pixel then
-            texture_scaling = 1
-        end
-        if not atlas.language and (atlas.obj_table[('%s_%s'):format(atlas.key, G.SETTINGS.language)] or atlas.obj_table[('%s_%s'):format(atlas.key, G.SETTINGS.real_language)]) then return end
-        return file_path, texture_scaling, (atlas.path_mod or atlas.mod or SMODS).path
-    end
-
-    local function png_size(file_data)
-        local ok, head = pcall(file_data.getString, file_data)
-        head = ok and head and head:sub(1, 24)
-        if not head or #head < 24 or head:sub(2, 4) ~= 'PNG' then return end
-        local function u32(i)
-            local a, b, c, d = head:byte(i, i + 3)
-            return ((a * 256 + b) * 256 + c) * 256 + d
-        end
-        return u32(17), u32(21)
-    end
-
-    local function atlas_prefetch_start(atlases)
-        if atlas_prefetch then return end
-        local ok_ip, IP = pcall(require, "functions/image_prefetch")
-        local P = ok_ip and IP.new(8)
-        if not P then return end
-        P.too_big = {}
-        atlas_prefetch = P
-        local limit = love.graphics.getSystemLimits().texturesize or math.huge
-        local queued = {}
-        local function queue(path, file_data) queued[#queued + 1] = {path, file_data, file_data:getSize()} end
-        for _, atlas in ipairs(atlases) do
-            local file_path, texture_scaling, root = atlas_source(atlas)
-            if file_path then
-                local full_path = NFS.getNormalizedPath(root .. 'assets/' .. texture_scaling .. 'x/' .. file_path)
-                local file_data = NFS.newFileData(full_path)
-                if file_data then
-                    local w, h = png_size(file_data)
-                    local low_data
-                    if w and (w > limit or h > limit) and texture_scaling == 2 then
-                        local low_path = NFS.getNormalizedPath(root .. 'assets/1x/' .. file_path)
-                        low_data = NFS.newFileData(low_path)
-                        if low_data then
-                            P.too_big[full_path] = true
-                            file_data:release()
-                            queue(low_path, low_data)
-                        end
-                    end
-                    if not low_data then queue(full_path, file_data) end
-                else
-                    local other_path = NFS.getNormalizedPath(root .. 'assets/' .. (3 - texture_scaling) .. 'x/' .. file_path)
-                    local other_data = NFS.newFileData(other_path)
-                    if other_data then queue(other_path, other_data) end
-                end
-                if LOADING_SCREEN then LOADING_SCREEN.draw() end
-            end
-        end
-        table.sort(queued, function(a, b) return a[3] > b[3] end)
-        for _, q in ipairs(queued) do P:queue(q[1], q[2]) end
-        P:close_queue()
-    end
-
-    local function atlas_prefetch_stop()
-        local P = atlas_prefetch
-        if not P then return end
-        atlas_prefetch = nil
-        P:stop()
-    end
-
-    SMODS.atlas_prefetch_stop = atlas_prefetch_stop
-
-    local function atlas_decode(path, file_data)
-        local data = atlas_prefetch and atlas_prefetch:take(path)
-        return data or love.image.newImageData(file_data)
-    end
-
-    local function atlas_fit(data, dpiscale, limit)
-        local w, h = data:getDimensions()
-        if w <= limit and h <= limit then return data, dpiscale end
-        local k = math.max(w, h) / limit
-        local nw, nh = math.max(1, math.floor(w / k)), math.max(1, math.floor(h / k))
-        local out = love.image.newImageData(nw, nh, data:getFormat())
-        out:mapPixel(function(x, y)
-            return data:getPixel(math.min(w - 1, math.floor(x * w / nw)), math.min(h - 1, math.floor(y * h / nh)))
-        end)
-        return out, dpiscale * nw / w
-    end
-
     SMODS.Atlas = SMODS.GameObject:extend {
         obj_table = SMODS.Atlases,
         obj_buffer = {},
@@ -612,75 +508,53 @@ l 478
             SMODS.Atlas.super.register(self)
         end,
         inject = function(self)
-            local file_path, texture_scaling = atlas_source(self)
-            if not file_path then return end
+            local file_path = type(self.path) == 'table' and
+                ((G.SETTINGS.real_language and self.path[G.SETTINGS.real_language]) or self.path[G.SETTINGS.language] or self.path['default'] or self.path['en-us']) or self.path
+            if file_path == 'DEFAULT' then return end
+            -- language specific sprites override fully defined sprites only if that language is set
+            if self.language and G.SETTINGS.language ~= self.language and G.SETTINGS.real_language ~= self.language then return end
+            local texture_scaling = G.SETTINGS.GRAPHICS.texture_scaling
+            if self.force_pixel then
+                texture_scaling = 1
+            end
+            if not self.language and (self.obj_table[('%s_%s'):format(self.key, G.SETTINGS.language)] or self.obj_table[('%s_%s'):format(self.key, G.SETTINGS.real_language)]) then return end
             self.full_path = NFS.getNormalizedPath((self.path_mod or self.mod or SMODS).path ..
                 'assets/' .. texture_scaling .. 'x/' .. file_path)
-            local limit = love.graphics.getSystemLimits().texturesize or math.huge
-            local dpiscale = texture_scaling
             local file_data = NFS.newFileData(self.full_path)
             if file_data then
-                local main_path = self.full_path
-                if not (atlas_prefetch and atlas_prefetch.too_big[main_path]) then
-                    self.image_data = atlas_rgba8(assert(atlas_decode(main_path, file_data),
-                        ('Failed to initialize image data for Atlas %s'):format(self.key)))
-                end
-                local w, h = math.huge, math.huge
-                if self.image_data then w, h = self.image_data:getDimensions() end
-                if (w > limit or h > limit) and texture_scaling == 2 then
-                    local low_path = NFS.getNormalizedPath((self.path_mod or self.mod or SMODS).path ..
-                        'assets/1x/' .. file_path)
-                    local low_data = NFS.newFileData(low_path)
-                    if low_data then
-                        self.full_path = low_path
-                        self.image_data = atlas_rgba8(assert(atlas_decode(low_path, low_data),
-                            ('Failed to initialize image data for Atlas %s'):format(self.key)))
-                        dpiscale = 1
-                    end
-                end
-                if not self.image_data then
-                    self.image_data = atlas_rgba8(assert(love.image.newImageData(file_data),
-                        ('Failed to initialize image data for Atlas %s'):format(self.key)))
-                end
+                self.image_data = assert(love.image.newImageData(file_data),
+                    ('Failed to initialize image data for Atlas %s'):format(self.key))
             else
                 local other_scale = 3 - texture_scaling
                 self.full_path = NFS.getNormalizedPath((self.path_mod or self.mod or SMODS).path ..
                     'assets/' .. other_scale .. 'x/' .. file_path)
                 file_data = assert(NFS.newFileData(self.full_path),
                     ('Failed to collect file data for Atlas %s'):format(self.key))
-                local source_data = atlas_rgba8(assert(atlas_decode(self.full_path, file_data),
-                    ('Failed to initialize image data for Atlas %s'):format(self.key)))
+                local image = love.graphics.newImage(file_data)
                 local newScale = texture_scaling/other_scale
-                local w, h = source_data:getDimensions()
+                local w, h = image:getWidth(), image:getHeight()
                 local nw, nh = love.window.fromPixels(w * newScale, h * newScale)
-                if math.max(w, h) * math.max(1, newScale) > limit then
-                    self.image_data = source_data
-                    dpiscale = other_scale
-                else
-                    local image = love.graphics.newImage(source_data)
-                    local canvas = love.graphics.newCanvas(nw, nh)
-                    image:setFilter("nearest", "nearest")
-                    love.graphics.setCanvas(canvas)
-                    love.graphics.setColor(1,1,1,1)
-                    scalingShader:send("sourceImage", image)
-                    scalingShader:send("dim", {1/w, 1/h})
-                    love.graphics.setShader(scalingShader)
-                    local bm, abm = love.graphics.getBlendMode()
-                    love.graphics.setBlendMode("replace", "premultiplied")
-                    love.graphics.rectangle("fill", 0, 0, nw, nh)
-                    love.graphics.setBlendMode(bm, abm)
-r 3 4413 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 11 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 36
-                    local imageData2 = canvas:newImageData()
-                    image:release()
-                    canvas:release()
-                    self.image_data = imageData2
-                end
+                local canvas = love.graphics.newCanvas(nw, nh)
+                image:setFilter("nearest", "nearest")
+                love.graphics.setCanvas(canvas)
+                love.graphics.setColor(1,1,1,1)
+                scalingShader:send("sourceImage", image)
+                scalingShader:send("dim", {1/w, 1/h})
+                love.graphics.setShader(scalingShader)
+                local bm, abm = love.graphics.getBlendMode()
+                love.graphics.setBlendMode("replace", "premultiplied")
+                love.graphics.rectangle("fill", 0, 0, nw, nh)
+                love.graphics.setBlendMode(bm, abm)
+r 3 4413 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 24
+                local imageData2 = canvas:newImageData()
+                image:release()
+                canvas:release()
+                self.image_data = imageData2
             end
-            self.image_data, dpiscale = atlas_fit(self.image_data, dpiscale, limit)
             self.image = love.graphics.newImage(self.image_data,
-                { mipmaps = true, dpiscale = dpiscale })
+                { mipmaps = true, dpiscale = texture_scaling })
             if self.force_pixel then
                 self.image:setFilter("nearest", "nearest")
             end
@@ -694,21 +568,11 @@ l 36
             end
         end,
         process_loc_text = function() end,
-        inject_class = function(self)
-            local list = {}
-            for _, key in ipairs(self.obj_buffer) do
-                local o = self.obj_table[key]
-                if o then list[#list + 1] = o end
-            end
-            pcall(atlas_prefetch_start, list)
-            SMODS.GameObject.inject_class(self)
-            atlas_prefetch_stop()
-        end,
         pre_inject_class = function(self)
             G:set_render_settings() -- restore originals first in case a texture pack was disabled
         end,
         post_inject_class = function(self)
-r 22 101 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 16 101 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 6
                 v:reset()
             end
@@ -716,7 +580,7 @@ l 6
     }
 
     local game_set_render_settings = Game.set_render_settings
-r 9 998 %20%20%20%20 -
+r 7 998 %20%20%20%20 -
 l 87
         local ret = game_set_render_settings(self)
         for _, atlas in pairs(G.ASSET_ATLAS) do
@@ -805,10 +669,10 @@ l 87
             local mod = SMODS.current_mod
             if not mod then return end
             for _, filename in ipairs(NFS.getDirectoryItems(mod.path .. 'assets/sounds/')) do
-r 10 18 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 25 18 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 if extension == '.ogg' or extension == '.mp3' or extension == '.wav' then -- please use .ogg or .wav files
-r 10 22 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 25 22 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 43
                     self {
                         key = sound_code,
@@ -853,7 +717,7 @@ l 43
     }
 
     local play_sound_ref = play_sound
-r 11 695 %20%20%20%20 -
+r 13 695 %20%20%20%20 -
 l 105
         local replace_sound = SMODS.Sound.replace_sounds[sound_code]
         if replace_sound then
@@ -960,10 +824,10 @@ l 105
             if not self.injected then
                 -- Sticker sprites (stake_ prefix is removed for vanilla compatiblity)
                 if self.sticker_pos ~= nil then
-r 13 3065 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 3065 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                     G.shared_stickers[self.key:sub(7)] = SMODS.create_sprite(0, 0, G.CARD_W, G.CARD_H, SMODS.get_atlas(self.sticker_atlas) or SMODS.get_atlas("stickers"), self.sticker_pos, self.sprite_args)
-r 9 204 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 204 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 288
                     G.sticker_map[self.key] = self.key:sub(7)
                 else
@@ -1253,7 +1117,7 @@ l 288
     end
 
     local game_init_game_object_ref = Game.init_game_object
-r 9 1862 %20%20%20%20 -
+r 7 1862 %20%20%20%20 -
 l 81
         local t = game_init_game_object_ref(self)
         for _, v in pairs(SMODS.Rarities) do
@@ -1410,7 +1274,7 @@ l 72
             G.C.SECONDARY_SET[self.key] = self.secondary_colour
             G.C.UI[self.key] = self.text_colour or G.C.UI.TEXT_LIGHT
             G.FUNCS['your_collection_' .. string.lower(self.key) .. 's'] = function(e)
-r 13 1381 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 53
                 G.FUNCS.overlay_menu {
                     definition = self:create_UIBox_your_collection(),
@@ -1465,7 +1329,7 @@ l 53
     }
 
     local game_init_game_object_ref = Game.init_game_object
-r 9 1862 %20%20%20%20 -
+r 7 1862 %20%20%20%20 -
 l 92
         local t = game_init_game_object_ref(self)
         for _, v in pairs(SMODS.ConsumableTypes) do
@@ -1533,7 +1397,7 @@ l 92
 	        return { ability = copy_table(self.config), fake_card = self.key }
         end,
         generate_ui = function(self, info_queue, card, desc_nodes, specific_vars, full_UI_table)
-            if not card or (self.set == 'Edition' and not card.edition) then
+            if not card then
                 card = self:create_fake_card()
             end
             local target = {
@@ -1559,7 +1423,7 @@ l 92
                 end
             end
 
-r 12 2714 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2714 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 248
                 full_UI_table.name = self.set == 'Enhanced' and 'temp_value' or localize { type = 'name', set = res.name_set or target.set, key = res.name_key or target.key, nodes = full_UI_table.name, vars = res.name_vars or target.vars or {} }
             elseif desc_nodes ~= full_UI_table.main and not desc_nodes.name then
@@ -1809,7 +1673,7 @@ l 248
                 target.scale = res.scale
                 target.text_colour = res.text_colour
             end
-r 12 2714 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2714 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 25
                 full_UI_table.name = localize{type = 'name', set = 'Other', key = res.name_key or target.key, nodes = full_UI_table.name, vars = res.name_vars or target.vars or {}}
             elseif desc_nodes ~= full_UI_table.main and not desc_nodes.name then
@@ -1836,20 +1700,20 @@ l 25
             if G.buttons then G.buttons:remove(); G.buttons = nil end
             if G.shop then G.shop.alignment.offset.y = G.ROOM.T.y+11 end
 
-r 9 3061 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 469 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 2280 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3061 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 469 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2280 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 1 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 2 398 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                     func = function()
                         if self.particles and type(self.particles) == "function" then self:particles() end
-r 9 3364 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3364 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
                             definition = self:create_UIBox(),
                             config = {align="tmi", offset = {x=0,y=G.ROOM.T.y + 9}, major = G.hand, bond = 'Weak'}
                         }
-r 9 3368 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3368 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 2 139 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                         self:ease_background_colour()
@@ -1864,7 +1728,7 @@ l 3
                                     trigger = 'after',
                                     delay = 0.5,
                                     func = function()
-r 9 3380 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3380 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 11
                                         return true
                                     end}))
@@ -1877,43 +1741,43 @@ l 11
             end
         end,
         ease_background_colour = function(self)
-r 12 325 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 12 339 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 325 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 339 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
         end,
         create_UIBox = function(self)
             local _size = math.max(1, SMODS.OPENED_BOOSTER.ability.extra + (G.GAME.modifiers.booster_size_mod or 0))
-r 15 1631 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1632 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1631 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1632 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 4
                 math.max(1,math.min(_size,5))*G.CARD_W*1.1,
                 1.05*G.CARD_H,
                 {card_limit = _size, type = 'consumeable', highlight_limit = 1, negative_info = true})
 
-r 15 1637 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1638 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 6 297 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 695 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1641 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1637 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1638 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 695 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1641 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                             {n=G.UIT.O, config={object = G.pack_cards}},}}}}}},
                 {n=G.UIT.R, config={align = "cm"}, nodes={}},
-r 15 1648 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1649 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1650 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 70 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1652 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1653 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1648 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1649 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1650 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 70 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1652 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1653 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                                     {n=G.UIT.O, config={object = DynaText({string = localize(self.group_key or ('k_booster_group_'..self.key)), colours = {G.C.WHITE},shadow = true, rotate = true, bump = true, spacing =2, scale = 0.7, maxw = 4, pop_in = 0.5})}}}},
-r 15 1653 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1657 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1653 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1657 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                                     {n=G.UIT.O, config={object = DynaText({string = {{ref_table = G.GAME, ref_value = 'pack_choices'}}, colours = {G.C.WHITE},shadow = true, rotate = true, bump = true, spacing =2, scale = 0.5, pop_in = 0.7})}}}},}}
                         }),}},
-r 15 1663 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1664 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1665 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1663 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1664 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1665 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 26
                             {n=G.UIT.T, config={text = localize('b_skip'), scale = 0.5, colour = G.C.WHITE, shadow = true, focus_args = {button = 'y', orientation = 'bm'}, func = 'set_button_pip'}}}}}}}}}}}}
             return t
@@ -1941,7 +1805,7 @@ l 26
         ease_background_colour = function(self) ease_background_colour_blind(G.STATES.TAROT_PACK) end,
         create_UIBox = SMODS.Booster.create_UIBox,
         particles = function(self)
-r 9 3351 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3351 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 6
                 timer = 0.015,
                 scale = 0.2,
@@ -1949,13 +1813,13 @@ l 6
                 lifespan = 1,
                 speed = 1.1,
                 padding = -1,
-r 9 3358 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 9 3359 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3358 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3359 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 fill = true
             })
-r 9 3362 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 9 3363 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3362 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3363 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
         end,
         create_card = function(self, card, i)
@@ -1977,7 +1841,7 @@ l 15
         ease_background_colour = function(self) ease_background_colour_blind(G.STATES.PLANET_PACK) end,
         create_UIBox = SMODS.Booster.create_UIBox,
         particles = function(self)
-r 9 3539 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3539 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 6
                 timer = 0.07,
                 scale = 0.1,
@@ -1985,19 +1849,19 @@ l 6
                 lifespan = 15,
                 speed = 0.1,
                 padding = -4,
-r 9 3358 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 9 3547 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3358 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3547 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 fill = true
             })
-r 9 3550 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3550 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 4
                 timer = 2,
                 scale = 0.05,
                 lifespan = 1.5,
                 speed = 4,
-r 9 3358 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 9 3556 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3358 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3556 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 5
                 fill = true
             })
@@ -2038,7 +1902,7 @@ l 20
         ease_background_colour = function(self) ease_background_colour_blind(G.STATES.SPECTRAL_PACK) end,
         create_UIBox = SMODS.Booster.create_UIBox,
         particles = function(self)
-r 9 3351 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3351 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 6
                 timer = 0.015,
                 scale = 0.1,
@@ -2046,13 +1910,13 @@ l 6
                 lifespan = 3,
                 speed = 0.2,
                 padding = -1,
-r 9 3358 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 9 3410 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3358 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3410 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 fill = true
             })
-r 9 3362 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 9 3363 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3362 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3363 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 13
         end,
         create_card = function(self, card, i)
@@ -2067,7 +1931,7 @@ l 13
         ease_background_colour = function(self) ease_background_colour_blind(G.STATES.STANDARD_PACK) end,
         create_UIBox = SMODS.Booster.create_UIBox,
         particles = function(self)
-r 9 3351 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3351 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 6
                 timer = 0.015,
                 scale = 0.3,
@@ -2075,13 +1939,13 @@ l 6
                 lifespan = 3,
                 speed = 0.2,
                 padding = -1,
-r 9 3358 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 9 3461 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3358 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3461 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 fill = true
             })
-r 9 3362 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 9 3363 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3362 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3363 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 33
         end,
         create_card = function(self, card, i)
@@ -2116,10 +1980,10 @@ l 33
         process_loc_text = function() end,
         inject = function(self)
             if self.overlay_pos then
-r 13 3065 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 3065 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 self.overlay_sprite = SMODS.create_sprite(0, 0, G.CARD_W, G.CARD_H, self.atlas, self.overlay_pos, self.sprite_args)
-r 9 204 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 204 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 58
                 self.no_overlay = true
             end
@@ -2179,10 +2043,10 @@ SMODS.UndiscoveredCompat = {
         end,
         inject = function(self)
             G.P_SEALS[self.key] = self
-r 13 3065 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 3065 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
             G.shared_seals[self.key] = SMODS.create_sprite(0, 0, G.CARD_W, G.CARD_H, SMODS.get_atlas(self.atlas) or SMODS.get_atlas('centers'), self.pos, self.sprite_args)
-r 9 204 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 204 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 39
             self.badge_to_key[self.key:lower() .. '_seal'] = self.key
             SMODS.insert_pool(G.P_CENTER_POOLS[self.set], self)
@@ -2223,7 +2087,7 @@ l 39
                 target.scale = res.scale
                 target.text_colour = res.text_colour
             end
-r 12 2714 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2714 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 354
                 full_UI_table.name = localize { type = 'name', set = res.name_set or target.set, key = res.name_key or target.key, nodes = full_UI_table.name, vars = res.name_vars or target.vars or {} }
             elseif desc_nodes ~= full_UI_table.main and not desc_nodes.name then
@@ -3039,13 +2903,13 @@ l 171
     -- this previously used a local recursive function, which broke modded languages
     SMODS.init_collab_credits = true
     local ps_ref = Game.prep_stage
-r 9 1239 %20%20%20%20 -
+r 7 1239 %20%20%20%20 -
 l 4
         ps_ref(self, new_stage, new_state, new_game_obj)
         if not G.collab_credits then
             G.FUNCS.show_credits()
             SMODS.init_collab_credits = nil
-r 23 796 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 17 796 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 47
         end
     end
@@ -3094,7 +2958,7 @@ l 47
                     },
                 },
                 generate_ds_card_ui = function(card, deckskin, palette, info_queue, desc_nodes, specific_vars, full_UI_table)
-r 15 5002 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 5002 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 7
                         if v.artist and deckskin.key == v.art and (card.base.value == "Jack" or card.base.value == "Queen" or card.base.value == "King") then
                             localize{type = 'other', key = 'artist', nodes = desc_nodes, vars = {}}
@@ -3103,7 +2967,7 @@ l 7
                     end
                 end,
                 has_ds_card_ui = function(card, deckskin, palette)
-r 15 5002 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 5002 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 337
                         if v.artist and deckskin.key == v.art and (card.base.value == "Jack" or card.base.value == "Queen" or card.base.value == "King") then
                             return true
@@ -3442,7 +3306,7 @@ l 337
                     full_UI_table.box_ends = res.box_ends
                 end
             end
-r 12 2714 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2714 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 37
                 full_UI_table.name = localize { type = 'name', set = res.name_set or target.set, key = res.name_key or target.key, nodes = full_UI_table.name, vars = res.name_vars or res.vars or {} }
             elseif desc_nodes ~= full_UI_table.main and not desc_nodes.name then
@@ -3544,10 +3408,10 @@ l 44
             self.order = #self.obj_buffer
         end,
         inject = function(self)
-r 13 3065 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 3065 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
             self.sticker_sprite = SMODS.create_sprite(0, 0, G.CARD_W, G.CARD_H, self.atlas, self.pos, self.sprite_args)
-r 9 204 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 204 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 32
             G.shared_stickers[self.key] = self.sticker_sprite
         end,
@@ -3581,7 +3445,7 @@ l 32
             if val and self.config and next(self.config) then
                 card.ability[self.key] = {}
                 for k, v in pairs(self.config) do
-r 12 2162 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2162 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 124
                         card.ability[self.key][k] = copy_table(v)
                     else
@@ -3707,8 +3571,8 @@ l 124
         -- if true, card always scores
         -- Future work: use ranks() and suits() for better control
         register = function(self)
-r 17 21 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 195
+r 22 21 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 192
             assert(not (self.no_suit and self.any_suit), "Cannot have both \"no_suit\" and \"any_suit\" defined in a SMODS.Enhancement object.")
             if self.no_rank then self.overrides_base_rank = true end
             SMODS.Enhancement.super.register(self)
@@ -3805,7 +3669,7 @@ l 195
                 ))
             end
 
-            if SMODS.renderer_name() ~= "OpenGL ES" and (self.mod and not self.mod.gles_alerted) and not love.graphics.validateShader(true, file) then
+            if love.graphics.getRendererInfo() ~= "OpenGL ES" and (self.mod and not self.mod.gles_alerted) and not love.graphics.validateShader(true, file) then
                 sendWarnMessage(("%s: Some shaders in this mod (first one found: '%s') are not compatible with OpenGL ES. Steamodded will try to repair these shaders if OpenGL ES is being used, e.g. on mobile devices. To test OpenGL ES results on desktop, run Balatro with 'LOVE_GRAPHICS_USE_OPENGLES=1' set as an environment variable."):format(self.mod and self.mod.name, self.key), "Shader")
                 self.mod.gles_alerted = true
             end
@@ -3863,13 +3727,10 @@ l 195
                 ['mouse_screen_pos'] = G.video_control and {love.graphics.getWidth( )/2, love.graphics.getHeight( )/2} or {G.ARGS.eased_cursor_pos.sx, G.ARGS.eased_cursor_pos.sy},
                 ['screen_scale'] = G.TILESCALE*G.TILESIZE,
                 ['hovering'] = 1,
-                ['filter_type'] = G.SETTINGS.GRAPHICS.filter_type or 1,
-                ['filter_intensity'] = (G.SETTINGS.GRAPHICS.filter_intensity or 50) / 100,
-                ['rainbow_speed'] = (G.SETTINGS.GRAPHICS.rainbow_speed or 50) / 50,
             }
         end,
         order = 0, -- not necessary, but explicitly set in this example for clarity
-        should_apply = function(self) return (not G.recording_mode or G.video_control) and (G.SETTINGS.GRAPHICS.perf_shader_quality or 3) >= 2 end,
+        should_apply = function(self) return not G.recording_mode or G.video_control end,
     }
 
     -------------------------------------------------------------------------------------------------
@@ -3904,8 +3765,8 @@ l 195
         on_remove = nil, -- function (card) - modify card when edition is removed
         on_load = nil,   -- function (card) - modify card when it is loaded from the save file
         register = function(self)
-r 17 21 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 339
+r 22 21 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 349
             if self.config.card_limit then
                 self.card_limit_keys = self.card_limit_keys or {
                     joker = string.sub(self.key, 3) .. '_SMODS_INTERNAL',
@@ -4120,6 +3981,16 @@ l 339
     }
 
     SMODS.Keybind {
+        key_pressed = 'm',
+        event = 'held',
+        held_duration = 1.1,
+        action = function(self)
+            SMODS.save_all_config()
+		    SMODS.restart_game()
+        end
+    }
+
+    SMODS.Keybind {
         key_pressed = 'f5',
         held_keys = { "lalt" },
         event = 'pressed',
@@ -4245,7 +4116,7 @@ l 339
     SMODS.Scoring_Parameter({
         key = 'chips',
         default_value = 0,
-r 13 1975 %20%20%20%20%20%20%20%20 -
+r 32 1975 %20%20%20%20%20%20%20%20 -
 l 51
         calculation_keys = {'chips', 'h_chips', 'chip_mod', 'x_chips', 'xchips', 'Xchip_mod',},
         calc_effect = function(self, effect, scored_card, key, amount, from_edition)
@@ -4298,7 +4169,7 @@ l 51
         key = 'mult',
         default_value = 0,
         juice_on_update = true,
-r 13 1981 %20%20%20%20%20%20%20%20 -
+r 32 1981 %20%20%20%20%20%20%20%20 -
 l 87
         calculation_keys = {'mult', 'h_mult', 'mult_mod','x_mult', 'Xmult', 'xmult', 'x_mult_mod', 'Xmult_mod'},
         calc_effect = function(self, effect, scored_card, key, amount, from_edition)
@@ -4387,7 +4258,7 @@ l 87
         end,
         save = function(self)
             local backTable = {
-r 6 623 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 5 623 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 8
                 key = self.key or 'multiply'
             }
@@ -4397,7 +4268,7 @@ l 8
     }
 
     local init_game_object_ref = Game.init_game_object
-r 9 1862 %20%20%20%20 -
+r 7 1862 %20%20%20%20 -
 l 81
         local ret = init_game_object_ref(self)
         for _, parameter in pairs(SMODS.Scoring_Parameters) do

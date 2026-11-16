@@ -354,7 +354,7 @@ end
 function EFFECT.buy(data)
     local card = data and data.card
     if card and card.set_rental and not card.ability.eternal and not card.ability.rental then
-r 12 2145 %20%20%20%20%20%20%20%20 -
+r 31 2145 %20%20%20%20%20%20%20%20 -
 l 5
         card.ability.mp_trap_rental = (G.GAME.round or 0) + T.RENTAL_ROUNDS
     end

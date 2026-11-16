@@ -20,7 +20,7 @@ position = 'at'
 line_prepend = "$indent"
 payload = '''
 tab_definition_function = (SMODS.config.vanilla_run_select and #SMODS.RunSelect.Internals.pages == 2 and G.UIDEF.run_setup_option) or G.UIDEF.run_select_galdur,
-r 15 5312 - -
+r 30 5312 - -
 l 21
 
 '''
@@ -30,11 +30,11 @@ l 21
 [[patches]]
 [patches.pattern]
 target = 'game.lua'
-pattern = "local selected_back = saveTable and saveTable.BACK.name or (args.challenge and args.challenge.deck and args.challenge.deck.type) or (args.back and args.back.name) or (self.GAME.viewed_back and self.GAME.viewed_back.name) or self.GAME.selected_back and self.GAME.selected_back.name or 'Red Deck'"
+pattern = "local selected_back = saveTable and saveTable.BACK.name or (args.challenge and args.challenge.deck and args.challenge.deck.type) or (self.GAME.viewed_back and self.GAME.viewed_back.name) or self.GAME.selected_back and self.GAME.selected_back.name or 'Red Deck'"
 position = 'at'
 match_indent = true
 payload = '''
-local selected_back = saveTable and saveTable.BACK.name or (args.challenge and args.challenge.deck and args.challenge.deck.type) or (args.deck_choice and args.deck_choice.name) or (args.back and args.back.name) or (self.GAME.viewed_back and self.GAME.viewed_back.name) or self.GAME.selected_back and self.GAME.selected_back.name or 'Red Deck'
+local selected_back = saveTable and saveTable.BACK.name or (args.challenge and args.challenge.deck and args.challenge.deck.type) or (args.deck_choice and args.deck_choice.name) or (self.GAME.viewed_back and self.GAME.viewed_back.name) or self.GAME.selected_back and self.GAME.selected_back.name or 'Red Deck'
 '''
 # Allow run_select stake_choice to work
 [[patches]]
@@ -43,7 +43,7 @@ target = 'game.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 9 2041 - -
+r 7 2041 - -
 l 32
 '''
 payload = '''
@@ -55,7 +55,7 @@ self.GAME.stake = args.stake_choice or args.stake or self.GAME.stake or 1
 [[patches]]
 [patches.pattern]
 target = 'engine/controller.lua'
-pattern = '''if self.hovering.target and self.hovering.target == self.dragging.target then'''
+pattern = '''if self.hovering.target and self.hovering.target == self.dragging.target and not self.HID.touch then'''
 position = 'before'
 match_indent = true
 payload = '''

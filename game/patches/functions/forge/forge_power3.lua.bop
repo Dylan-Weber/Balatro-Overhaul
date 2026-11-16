@@ -2,8 +2,17 @@ BOP 1
 eol lf
 final 1
 base 0
-l 324
+l 333
 local P = {}
+
+local function plain_num(v)
+  local conv = rawget(_G, "progression_number")
+  if type(v) ~= "number" and type(conv) == "function" then
+    local ok, n = pcall(conv, v)
+    if ok and type(n) == "number" then return n end
+  end
+  return tonumber(v)
+end
 
 local function set(list)
   local out = {}
@@ -17,7 +26,7 @@ P.RULES = {"four_fingers", "shortcut", "pareidolia", "smeared", "splash", "showm
 P.FLAG_NAME = {four_fingers = "Four Fingers", shortcut = "Shortcut", pareidolia = "Pareidolia", smeared = "Smeared Joker", splash = "Splash", showman = "Showman", free_planets = "Astronomer"}
 P.NAME_FLAG = {["Chaos the Clown"] = "chaos"}
 for k, v in pairs(P.FLAG_NAME) do P.NAME_FLAG[v] = k end
-P.COPY = {"right", "left", "leftmost", "rightmost"}
+P.COPY = {"right", "left", "leftmost", "rightmost", "random"}
 P.SIDES = {"right", "left"}
 P.COPY_KINDS = {"negative", "normal"}
 P.COPY_TO = {"deck", "hand"}
@@ -57,7 +66,7 @@ local TEXT = {
       showman = "{C:attention}Joker{}, {C:tarot}Tarot{}, {C:planet}Planet{} and {C:spectral}Spectral{} cards may appear multiple times",
       free_planets = "all {C:planet}Planet{} cards and {C:planet}Celestial Packs{} in the shop are {C:attention}free{}",
     },
-    copy = {right = "copies the ability of the {C:attention}Joker{} to the right", left = "copies the ability of the {C:attention}Joker{} to the left", leftmost = "copies the ability of the leftmost {C:attention}Joker{}", rightmost = "copies the ability of the rightmost {C:attention}Joker{}"},
+    copy = {right = "copies the ability of the {C:attention}Joker{} to the right", left = "copies the ability of the {C:attention}Joker{} to the left", leftmost = "copies the ability of the leftmost {C:attention}Joker{}", rightmost = "copies the ability of the rightmost {C:attention}Joker{}", random = "copies the ability of a random {C:attention}Joker{}, changes every round"},
     save_run = "prevent {C:attention}Death{}",
     dagger = {right = "destroy the {C:attention}Joker{} to the right and add {C:attention}%s{} times its sell value to this {C:mult}Mult{}", left = "destroy the {C:attention}Joker{} to the left and add {C:attention}%s{} times its sell value to this {C:mult}Mult{}"},
     sell_all = "add {C:money}$%s{} of {C:attention}sell value{} to every {C:attention}Joker{} and {C:attention}consumable{} card",
@@ -82,7 +91,7 @@ local TEXT = {
       showman = "les cartes {C:attention}Joker{}, {C:tarot}Tarot{}, {C:planet}Planète{} et {C:spectral}Spectrale{} peuvent apparaître plusieurs fois",
       free_planets = "toutes les cartes {C:planet}Planète{} et les {C:planet}paquets Célestes{} du boutique sont {C:attention}gratuits{}",
     },
-    copy = {right = "copie la capacité du {C:attention}Joker{} à droite", left = "copie la capacité du {C:attention}Joker{} à gauche", leftmost = "copie la capacité du {C:attention}Joker{} le plus à gauche", rightmost = "copie la capacité du {C:attention}Joker{} le plus à droite"},
+    copy = {right = "copie la capacité du {C:attention}Joker{} à droite", left = "copie la capacité du {C:attention}Joker{} à gauche", leftmost = "copie la capacité du {C:attention}Joker{} le plus à gauche", rightmost = "copie la capacité du {C:attention}Joker{} le plus à droite", random = "copie la capacité d'un {C:attention}Joker{} au hasard, change à chaque manche"},
     save_run = "empêche la {C:attention}Mort{}",
     dagger = {right = "détruit le {C:attention}Joker{} à droite et ajoute {C:attention}%s{} fois sa valeur de revente à ce {C:mult}Multi{}", left = "détruit le {C:attention}Joker{} à gauche et ajoute {C:attention}%s{} fois sa valeur de revente à ce {C:mult}Multi{}"},
     sell_all = "ajoute {C:money}%s ${} de {C:attention}valeur de revente{} à chaque {C:attention}Joker{} et {C:attention}consommable{}",
@@ -107,7 +116,7 @@ local TEXT = {
       showman = "las cartas de {C:attention}joker{}, {C:tarot}tarot{}, {C:planet}planeta{} y {C:spectral}espectrales{} pueden aparecer varias veces",
       free_planets = "todas las cartas de {C:planet}planeta{} y los {C:planet}sobres celestiales{} de la tienda son {C:attention}gratis{}",
     },
-    copy = {right = "copia la habilidad del {C:attention}joker{} de la derecha", left = "copia la habilidad del {C:attention}joker{} de la izquierda", leftmost = "copia la habilidad del {C:attention}joker{} más a la izquierda", rightmost = "copia la habilidad del {C:attention}joker{} más a la derecha"},
+    copy = {right = "copia la habilidad del {C:attention}joker{} de la derecha", left = "copia la habilidad del {C:attention}joker{} de la izquierda", leftmost = "copia la habilidad del {C:attention}joker{} más a la izquierda", rightmost = "copia la habilidad del {C:attention}joker{} más a la derecha", random = "copia la habilidad de un {C:attention}joker{} al azar, cambia cada ronda"},
     save_run = "evita la {C:attention}muerte{}",
     dagger = {right = "destruye el {C:attention}joker{} de la derecha y suma {C:attention}%s{} veces su valor de venta a este {C:mult}multi{}", left = "destruye el {C:attention}joker{} de la izquierda y suma {C:attention}%s{} veces su valor de venta a este {C:mult}multi{}"},
     sell_all = "añade {C:money}$%s{} de {C:attention}valor de venta{} a cada {C:attention}joker{} y {C:attention}consumible{}",
@@ -124,7 +133,7 @@ P.LABEL_GIVE = {p_hand_size = "Hand size", p_hand_size_var = "Hand size for each
   copy_ability = "Copy another Joker", save_run = "Prevent losing the run", dagger = "Destroy a neighbour Joker", sell_all = "Sell value to every card", dup_joker = "Duplicate a random Joker", copy_consumable = "Copy a consumable"}
 P.LABEL_ONLY = {other_rarity = "Other Joker rarity", blind_percent = "Score reached (% of blind)"}
 P.LABEL_VALUE = {four_fingers = "Flushes and Straights with 4 cards", shortcut = "Straights with gaps", pareidolia = "Every card is a face card", smeared = "Suits merge by colour", splash = "Every played card scores",
-  showman = "Same card can show up again", free_planets = "Planets and Celestial packs free", right = "Joker to the right", left = "Joker to the left", leftmost = "Leftmost Joker", rightmost = "Rightmost Joker",
+  showman = "Same card can show up again", free_planets = "Planets and Celestial packs free", right = "Joker to the right", left = "Joker to the left", leftmost = "Leftmost Joker", rightmost = "Rightmost Joker", random = "Random Joker",
   negative = "Negative copy", normal = "Normal copy", deck = "Into the deck", hand = "Into your hand"}
 
 local LOC = {
@@ -134,7 +143,7 @@ local LOC = {
     ["Copy another Joker"] = "Copier un autre Joker", ["Prevent losing the run"] = "Empêcher la défaite", ["Destroy a neighbour Joker"] = "Détruire un Joker voisin", ["Sell value to every card"] = "Valeur de revente à tout", ["Duplicate a random Joker"] = "Dupliquer un Joker au hasard", ["Copy a consumable"] = "Copier un consommable",
     ["Other Joker rarity"] = "Rareté de l'autre Joker", ["Score reached (% of blind)"] = "Score atteint (% de la blinde)",
     ["Flushes and Straights with 4 cards"] = "Couleurs et Quintes à 4 cartes", ["Straights with gaps"] = "Quintes avec écarts", ["Every card is a face card"] = "Toutes les cartes sont des figures", ["Suits merge by colour"] = "Couleurs fusionnées", ["Every played card scores"] = "Toute carte jouée compte",
-    ["Same card can show up again"] = "Une carte peut réapparaître", ["Planets and Celestial packs free"] = "Planètes et paquets Célestes gratuits", ["Joker to the right"] = "Joker à droite", ["Joker to the left"] = "Joker à gauche", ["Leftmost Joker"] = "Joker le plus à gauche", ["Rightmost Joker"] = "Joker le plus à droite",
+    ["Same card can show up again"] = "Une carte peut réapparaître", ["Planets and Celestial packs free"] = "Planètes et paquets Célestes gratuits", ["Joker to the right"] = "Joker à droite", ["Joker to the left"] = "Joker à gauche", ["Leftmost Joker"] = "Joker le plus à gauche", ["Rightmost Joker"] = "Joker le plus à droite", ["Random Joker"] = "Joker au hasard",
     ["Negative copy"] = "Copie Négative", ["Normal copy"] = "Copie normale", ["Into the deck"] = "Dans le jeu", ["Into your hand"] = "Dans votre main",
     ["Discard random held cards"] = "Défausser des cartes en main", ["Discards {C:attention}%d{} random cards held in hand after every played hand"] = "Défausse {C:attention}%d{} cartes au hasard de la main après chaque main jouée",
     ["Most played hand costs all money"] = "Main la plus jouée : argent à 0", ["Playing your most played {C:attention}poker hand{} sets money to {C:money}$0{}"] = "Jouer votre {C:attention}main de poker{} la plus jouée met votre argent à {C:money}0 ${}",
@@ -170,7 +179,7 @@ local LOC = {
     ["Copy another Joker"] = "Copiar otro joker", ["Prevent losing the run"] = "Evitar perder la partida", ["Destroy a neighbour Joker"] = "Destruir un joker vecino", ["Sell value to every card"] = "Valor de venta a todo", ["Duplicate a random Joker"] = "Duplicar un joker al azar", ["Copy a consumable"] = "Copiar un consumible",
     ["Other Joker rarity"] = "Rareza del otro joker", ["Score reached (% of blind)"] = "Puntuación alcanzada (% de la ciega)",
     ["Flushes and Straights with 4 cards"] = "Colores y escaleras con 4 cartas", ["Straights with gaps"] = "Escaleras con huecos", ["Every card is a face card"] = "Todas son figuras", ["Suits merge by colour"] = "Palos unidos por color", ["Every played card scores"] = "Toda carta jugada cuenta",
-    ["Same card can show up again"] = "Una carta puede repetirse", ["Planets and Celestial packs free"] = "Planetas y sobres celestiales gratis", ["Joker to the right"] = "Joker de la derecha", ["Joker to the left"] = "Joker de la izquierda", ["Leftmost Joker"] = "Joker más a la izquierda", ["Rightmost Joker"] = "Joker más a la derecha",
+    ["Same card can show up again"] = "Una carta puede repetirse", ["Planets and Celestial packs free"] = "Planetas y sobres celestiales gratis", ["Joker to the right"] = "Joker de la derecha", ["Joker to the left"] = "Joker de la izquierda", ["Leftmost Joker"] = "Joker más a la izquierda", ["Rightmost Joker"] = "Joker más a la derecha", ["Random Joker"] = "Joker al azar",
     ["Negative copy"] = "Copia negativa", ["Normal copy"] = "Copia normal", ["Into the deck"] = "En la baraja", ["Into your hand"] = "En tu mano",
     ["Discard random held cards"] = "Descartar cartas de la mano", ["Discards {C:attention}%d{} random cards held in hand after every played hand"] = "Descarta {C:attention}%d{} cartas al azar de la mano tras cada mano jugada",
     ["Most played hand costs all money"] = "Mano más jugada: dinero a 0", ["Playing your most played {C:attention}poker hand{} sets money to {C:money}$0{}"] = "Jugar tu {C:attention}mano de póker{} más jugada deja tu dinero en {C:money}$0{}",
@@ -260,9 +269,9 @@ function P.rules(R)
 
   local PASS = set(P.PASSIVE)
   P.PASS = PASS
-  local OTHER_OK = set({"chips", "mult", "xmult", "money", "var_add", "var_set", "var_chips", "var_mult", "gain_chips", "gain_mult", "gain_xmult"})
+  local OTHER_OK = set({"chips", "mult", "xmult", "gain_xchips", "money", "var_add", "var_set", "var_chips", "var_mult", "gain_chips", "gain_mult", "gain_xmult"})
   local LOSE_OK = set({"save_run", "destroy_self", "money", "var_add", "var_set", "create", "tag", "reset_gains", "create_rarity", "make_card"})
-  local DEBUFF_OK = set({"money", "var_add", "var_set", "gain_chips", "gain_mult", "gain_xmult", "create", "tag", "make_card", "reset_gains"})
+  local DEBUFF_OK = set({"money", "var_add", "var_set", "gain_chips", "gain_mult", "gain_xmult", "gain_xchips", "create", "tag", "make_card", "reset_gains"})
   local base_give, base_only = R.allowed_give, R.allowed_only
   function R.allowed_give(when, give, host)
     host = host or "joker"
@@ -308,9 +317,9 @@ function P.rules(R)
   end
   R.CHECKS.blind_percent = function(o)
     local b = G.GAME and G.GAME.blind
-    local need = b and tonumber(b.chips) or 0
+    local need = b and plain_num(b.chips) or 0
     if need <= 0 then return false end
-    return R.compare(o.op, (tonumber(G.GAME.chips) or 0) / need * 100, o.n)
+    return R.compare(o.op, (plain_num(G.GAME.chips) or 0) / need * 100, o.n)
   end
 
   local D = R.DOS
@@ -540,7 +549,7 @@ end
 
 local function refresh_costs()
 r 3 617 %20%20 -
-l 67
+l 82
     for _, v in pairs(G.I and G.I.CARD or {}) do if v.set_cost then v:set_cost() end end
     return true
   end}))
@@ -584,13 +593,28 @@ function P.target(card, v)
   if v == "right" then t = list[at + 1]
   elseif v == "left" then t = list[at - 1]
   elseif v == "leftmost" then t = list[1]
+  elseif v == "random" then t = P.random_target(card, list)
   else t = list[#list] end
   if t == card then return nil end
   return t
 end
 
+function P.random_target(card, list)
+  local a = card.ability
+  local round = G.GAME and G.GAME.round or 0
+  if a.forge_copy_round == round and a.forge_copy_id then
+    for _, j in ipairs(list) do if j ~= card and j.sort_id == a.forge_copy_id then return j end end
+  end
+  local others = {}
+  for _, j in ipairs(list) do if j ~= card then others[#others + 1] = j end end
+  if #others == 0 then return nil end
+  local t = pseudorandom_element(others, pseudoseed("forge_copy"))
+  a.forge_copy_id, a.forge_copy_round = t.sort_id, round
+  return t
+end
+
 local SUM = {"chip_mod", "mult_mod", "chips", "mult", "h_mult", "dollars", "p_dollars", "repetitions", "h_chips"}
-local PROD = {"Xmult_mod", "x_mult", "xmult"}
+local PROD = {"Xmult_mod", "x_mult", "xmult", "Xchip_mod", "x_chips"}
 function P.merge(a, b)
   if not a then return b end
   if not b then return a end
@@ -1091,16 +1115,16 @@ function P.tag_apply(tag, ctx, p)
     local R = rules_mod()
     local ed = R.edition_arg(has.next_edition.v or "foil") or {foil = true}
     local lock = tag.ID
-r 4 133 %20%20%20%20 -
+r 9 133 %20%20%20%20 -
 l 4
     card.temp_edition = true
     tag:yep("+", G.C.DARK_EDITION, function()
       card.temp_edition = nil
       card:set_edition(ed, true)
-r 4 361 %20%20%20%20%20%20 -
+r 9 361 %20%20%20%20%20%20 -
 l 1
       card:set_cost()
-r 4 143 %20%20%20%20%20%20 -
+r 9 143 %20%20%20%20%20%20 -
 l 7
       return true
     end)
@@ -1109,17 +1133,17 @@ l 7
   end
   if t == "voucher_add" and has.shop_voucher then
     tag:yep("+", G.C.SECONDARY_SET.Voucher, function()
-r 4 305 %20%20%20%20%20%20 -
+r 9 305 %20%20%20%20%20%20 -
 l 2
       local key = get_next_voucher_key(true)
       G.ARGS.voucher_tag[key] = true
-r 4 308 %20%20%20%20%20%20 -
+r 9 308 %20%20%20%20%20%20 -
 l 2
       local card = Card(G.shop_vouchers.T.x + G.shop_vouchers.T.w / 2, G.shop_vouchers.T.y, G.CARD_W, G.CARD_H, G.P_CARDS.empty, G.P_CENTERS[key], {bypass_discovery_center = true, bypass_discovery_ui = true})
       create_shop_card_ui(card, "Voucher", G.shop_vouchers)
 r 3 1446 %20%20%20%20%20%20 -
-r 9 3131 %20%20%20%20%20%20 -
-r 4 314 %20%20%20%20%20%20 -
+r 7 3131 %20%20%20%20%20%20 -
+r 9 314 %20%20%20%20%20%20 -
 l 7
       return true
     end)
@@ -1128,11 +1152,11 @@ l 7
   end
   if t == "new_blind_choice" and has.reroll_boss then
     local lock = tag.ID
-r 4 133 %20%20%20%20 -
+r 9 133 %20%20%20%20 -
 l 1
     tag:yep("+", G.C.GREEN, function()
-r 4 288 %20%20%20%20%20%20 -
-r 4 289 %20%20%20%20%20%20 -
+r 9 288 %20%20%20%20%20%20 -
+r 9 289 %20%20%20%20%20%20 -
 r 3 617 %20%20%20%20%20%20 -
 l 10
         G.E_MANAGER:add_event(Event({func = function() G.CONTROLLER.locks[lock] = nil return true end}))
@@ -1145,10 +1169,10 @@ l 10
   end
   if t == "shop_start" and has.free_shop_reroll then
     if G.GAME.shop_d6ed then return nil, true end
-r 4 384 %20%20%20%20 -
+r 9 384 %20%20%20%20 -
 l 1
     tag:yep("+", G.C.GREEN, function()
-r 4 386 %20%20%20%20%20%20 -
+r 9 386 %20%20%20%20%20%20 -
 r 3 603 %20%20%20%20%20%20 -
 l 7
       return true
@@ -1158,7 +1182,7 @@ l 7
   end
   if t == "immediate" and has.double_money and not next(P.others(c, "double_money")) then
     local lock = tag.ID
-r 4 133 %20%20%20%20 -
+r 9 133 %20%20%20%20 -
 l 116
     local max = math.floor(tonumber(has.double_money.n) or 40)
     tag:yep("+", G.C.MONEY, function() G.CONTROLLER.locks[lock] = nil return true end)

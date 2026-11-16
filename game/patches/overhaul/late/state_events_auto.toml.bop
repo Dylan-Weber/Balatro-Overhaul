@@ -1,0 +1,1368 @@
+BOP 2
+eol lf
+final 1
+base 0
+l 172
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.001"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*function win_game\(\)\n[\t ]*if not G\.GAME\.seeded and not G\.GAME\.challenge then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}﻿function win_game()
+    pcall(function() haptic_buzz(4) end)
+    local is_normal_run = not G.GAME.seeded and not G.GAME.challenge
+    local is_daily = G.GAME.daily == true
+
+    if is_normal_run then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.002"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*set_deck_win\(\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    end
+
+    if is_normal_run or is_daily then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.003"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*inc_career_stat\('c_wins', 1\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if QuestManager and QuestManager.on_run_won then
+            pcall(function() QuestManager.on_run_won(G.GAME.stake, G.GAME.selected_back and G.GAME.selected_back.name) end)
+        end
+
+        if progression_on_run_win then
+            progression_on_run_win()
+        end
+    end
+
+    if is_normal_run then
+        pcall(function()
+            if ProfileRewardsManager then
+                ProfileRewardsManager.check_icon_unlocks()
+                ProfileRewardsManager.check_deck_unlocks()
+                if G.GAME.dollars and G.GAME.dollars == 0 then
+                    ProfileRewardsManager.unlock_deck("collab_DS")
+                end
+                if G.GAME.jokers and #G.GAME.jokers.cards == 0 then
+                    ProfileRewardsManager.unlock_deck("collab_AU")
+                end
+            end
+        end)
+
+        pcall(function()
+            if BoosterManager and BoosterManager.on_run_end then
+                BoosterManager.on_run_end()
+            end
+        end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.004"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*\n[\t ]*return true\n[\t ]*end\)\n[\t ]*\}\)\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local gate_stake = G.PROFILES[G.SETTINGS.profile].stake
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.005"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*G:save_progress\(\)\n[\t ]*G\.FILE_HANDLER\.force = true\n)'''
+position = "at"
+payload = '''
+${pre}    if Progress and not Progress.allowed() then G.PROFILES[G.SETTINGS.profile].stake = gate_stake end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.006"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*if G\.GAME\.chips - G\.GAME\.blind\.chips >= 0 then\n[\t ]*game_over = false\n[\t ]*end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}            local _is_mp = G.GAME.multiplayer
+            if not _is_mp then
+                pcall(function()
+                    if bom_match and bom_match.is_in_match and bom_match.is_in_match() then
+                        _is_mp = true
+                        G.GAME.multiplayer = true
+                    end
+                end)
+            end
+            local _mp_lives = G.GAME.mp_lives
+            if _is_mp and not _mp_lives then
+                pcall(function()
+                    if bom_match and bom_match.get_my_lives then
+                        _mp_lives = bom_match.get_my_lives()
+                        G.GAME.mp_lives = _mp_lives
+                    end
+                end)
+            end
+
+            if _is_mp and G.GAME.mp_in_boss_blind then
+                game_over = false
+            end
+            if game_over and _is_mp and _mp_lives and _mp_lives > 0 then
+                pcall(function()
+                    if bom_match and bom_match.mark_round_lost then
+                        bom_match.mark_round_lost()
+                    else
+                        G.GAME.mp_blind_loss_pending = true
+                    end
+                    G.GAME.mp_in_boss_blind = false
+                    if G.GAME.blind then
+                        G.GAME.blind.chips = -1
+                    end
+                    if bom_core and bom_core.send and not (bom_match and bom_match.is_match_over and bom_match.is_match_over()) then
+                        local score = G.GAME.chips or 0
+                        bom_core.send({
+                            type = "game_over",
+                            ante = G.GAME.round_resets and G.GAME.round_resets.ante or 0,
+                            blind = (bom_match and bom_match.get_state and bom_match.get_state().current_blind) or "S",
+                            score = score,
+                        })
+                    end
+                end)
+                game_over = false
+            end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.007"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*if (?:to_[a-z_]+\()?G\.GAME\.round_resets\.ante\)? == G\.GAME\.win_ante and G\.GAME\.blind:get_type\(\) == 'Boss' then\n[\t ]*game_won = true\n[\t ]*G\.GAME\.won = true\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            local win_ante = G.GAME.win_ante
+            if is_creative_stake and is_creative_stake() then
+                win_ante = get_creative_win_ante and get_creative_win_ante() or 10
+            elseif is_insanity_stake and is_insanity_stake() then
+                win_ante = get_insanity_win_ante and get_insanity_win_ante() or 10
+            end
+            if _is_mp then
+                pcall(function()
+                    if bom_match and bom_match.final_ante then win_ante = bom_match.final_ante() end
+                end)
+            end
+            if _is_mp or win_ante ~= G.GAME.win_ante or G.GAME.mp_blind_loss_pending or G.GAME.mp_round_lost then
+                if G.GAME.round_resets.ante == win_ante and G.GAME.blind:get_type() == 'Boss' and not G.GAME.mp_blind_loss_pending and not G.GAME.mp_round_lost then
+                    game_won = true
+                    G.GAME.won = true
+                end
+            else
+r 15 111 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 48
+                    game_won = true
+                    G.GAME.won = true
+                end
+            end
+
+            if game_won and _is_mp then
+                pcall(function()
+                    if bom_match and bom_match.server_decides_final and bom_match.server_decides_final() then
+                        game_won = false
+                        G.GAME.won = false
+                    end
+                end)
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.008"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if not G\.GAME\.won and not G\.GAME\.seeded and not G\.GAME\.challenge then \n)'''
+position = "at"
+payload = '''
+${pre}                pcall(function()
+                    if _is_mp then
+                        G.GAME.mp_in_boss_blind = false
+                        if bom_events and bom_events.on_game_event then
+                            bom_events.on_game_event("game_over")
+                        end
+                    end
+                end)
+
+                pcall(function()
+                    if BoosterManager and BoosterManager.clear_active then
+                        BoosterManager.clear_active()
+                    end
+                end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.009"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.GAME\.blind:get_type\(\) == 'Boss' and not G\.GAME\.seeded and not G\.GAME\.challenge  then\n[\t ]*G\.GAME\.current_boss_streak = G\.GAME\.current_boss_streak \+ 1\n[\t ]*check_and_set_high_score\('boss_streak', G\.GAME\.current_boss_streak\)\n[\t ]*end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                if G.GAME.blind:get_type() == 'Boss' and not G.GAME.mp_blind_loss_pending and ((not G.GAME.seeded and not G.GAME.challenge) or G.GAME.daily)  then
+                    if not G.GAME.daily then
+r 15 141 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 142 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 273
+                    end
+
+                    if QuestManager and QuestManager.on_boss_defeated then
+                        pcall(function() QuestManager.on_boss_defeated() end)
+                    end
+                    pcall(function() haptic_buzz(3) end)
+
+                    if progression_on_boss_defeated then
+                        progression_on_boss_defeated()
+                    end
+                end
+                pcall(function()
+                    if G.GAME.multiplayer and G.GAME.blind:get_type() == 'Boss' and not G.GAME.mp_blind_loss_pending and not G.GAME.mp_round_lost then
+                        G.GAME.mp_in_boss_blind = false
+                        if bom_events and bom_events.on_game_event then
+                            bom_events.on_game_event("boss_defeated")
+                        end
+                    end
+                end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.010"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*if not G\.GAME\.seeded and not G\.GAME\.challenge  then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    if (not G.GAME.seeded and not G.GAME.challenge) or G.GAME.daily  then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.011"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if game_won and not G\.GAME\.win_notified then\n)'''
+position = "at"
+payload = '''
+${pre}                pcall(function()
+                    if G.GAME.multiplayer and bom_events and bom_events.on_game_event then
+                        bom_events.on_game_event("round_won")
+                    end
+                end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.012"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.GAME\.win_notified = true\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    pcall(function()
+                        if G.GAME.multiplayer and bom_match and bom_match.end_match then
+                            bom_match.end_match("win", "run_completed")
+                        end
+                    end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.013"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*delay\(0\.4\); ease_ante\(1\); delay\(0\.4\); check_for_unlock\(\{type = 'ante_up', ante = (?:to_[a-z_]+\()?G\.GAME\.round_resets\.ante\)? \+ 1\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    delay(0.4); ease_ante(1); delay(0.4);
+                    if not G.GAME.mp_blind_loss_pending then
+                        check_for_unlock({type = 'ante_up', ante = G.GAME.round_resets.ante + 1})
+                        if progression_on_ante_cleared then
+                            progression_on_ante_cleared()
+                        end
+                    end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.014"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*G\.STATE = G\.STATES\.ROUND_EVAL\n)'''
+position = "at"
+payload = '''
+${pre}                        local mp_nemesis_spoof = false
+                        pcall(function()
+                            if G.GAME.round_resets.blind and G.GAME.round_resets.blind.key == "bl_mp_nemesis" then
+                                if G.GAME.blind_on_deck == "Small" and G.P_BLINDS and G.P_BLINDS["bl_small"] then
+                                    mp_nemesis_spoof = true
+                                    G.GAME.round_resets.blind = G.P_BLINDS["bl_small"]
+                                elseif G.GAME.blind_on_deck == "Big" and G.P_BLINDS and G.P_BLINDS["bl_big"] then
+                                    mp_nemesis_spoof = true
+                                    G.GAME.round_resets.blind = G.P_BLINDS["bl_big"]
+                                end
+                            end
+                        end)
+
+                        local defeat_haptic = G.GAME.round_resets.blind == G.P_BLINDS.bl_small and 1 or G.GAME.round_resets.blind == G.P_BLINDS.bl_big and 2 or 4
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.015"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*v\.ability\.played_this_ante = nil\n(?:[\t ]*v\.ability\.[A-Za-z_]+ = nil\n)*[\t ]*end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}                        end
+                        pcall(function() haptic_buzz(defeat_haptic) end)
+
+                        if mp_nemesis_spoof then
+                            pcall(function()
+                                if G.P_BLINDS and G.P_BLINDS["bl_mp_nemesis"] then
+                                    G.GAME.round_resets.blind = G.P_BLINDS["bl_mp_nemesis"]
+                                end
+                            end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.016"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.GAME\.round_bonus\.discards = 0\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}            local mp_nemesis_spoof_nr = false
+            pcall(function()
+                if G.GAME.round_resets.blind and G.GAME.round_resets.blind.key == "bl_mp_nemesis" then
+                    if G.GAME.blind_on_deck == "Small" and G.P_BLINDS and G.P_BLINDS["bl_small"] then
+                        mp_nemesis_spoof_nr = true
+                        G.GAME.round_resets.blind = G.P_BLINDS["bl_small"]
+                    elseif G.GAME.blind_on_deck == "Big" and G.P_BLINDS and G.P_BLINDS["bl_big"] then
+                        mp_nemesis_spoof_nr = true
+                        G.GAME.round_resets.blind = G.P_BLINDS["bl_big"]
+                    end
+                end
+            end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.017"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.GAME\.round_resets\.blind == G\.P_BLINDS\.bl_small then\n(?<post>[\t ]*G\.GAME\.round_resets\.blind_states\.Small = 'Current'\n)'''
+position = "at"
+payload = '''
+${pre}            local bl_name = G.GAME.round_resets.blind and G.GAME.round_resets.blind.name
+            if bl_name == 'Small Blind' then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.018"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*elseif G\.GAME\.round_resets\.blind == G\.P_BLINDS\.bl_big then\n(?<post>[\t ]*G\.GAME\.round_resets\.blind_states\.Big = 'Current'\n)'''
+position = "at"
+payload = '''
+${pre}            elseif bl_name == 'Big Blind' then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.019"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.GAME\.subhash = \((?:to_[a-z_]+\()?G\.GAME\.round_resets\.ante\)?\)\.\.\(blhash\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}            pcall(function()
+                if G.GAME.multiplayer then
+                    local ante = G.GAME.round_resets.ante or 1
+                    local is_pvp_local = false
+                    if bom_match and bom_match.is_blind_pvp then
+                        is_pvp_local = bom_match.is_blind_pvp(ante, blhash)
+                    end
+                    G.GAME.mp_in_boss_blind = is_pvp_local
+                    if bom_events and bom_events.on_game_event then
+                        bom_events.on_game_event("blind_entered", { ante = ante, blind_type = blhash })
+                    end
+                end
+            end)
+
+            if mp_nemesis_spoof_nr then
+                pcall(function()
+                    if G.P_BLINDS and G.P_BLINDS["bl_mp_nemesis"] then
+                        G.GAME.round_resets.blind = G.P_BLINDS["bl_mp_nemesis"]
+                    end
+                end)
+            end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.020"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.GAME\.blind:set_blind\(G\.GAME\.round_resets\.blind\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}            pcall(function()
+                if G.GAME.multiplayer and bom_daily and bom_daily.apply_modifier then
+                    bom_daily.apply_modifier()
+                end
+            end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.021"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*end\n)(?<post>[\t ]*delay\(0\.4\)\n)'''
+position = "at"
+payload = '''
+${pre}            pcall(function()
+                if G.GAME.modifiers and G.GAME.modifiers.random_joker_disable and #G.jokers.cards > 0 then
+                    for _, card in ipairs(G.jokers.cards) do
+                        if card.ability and card.ability.oblivion_debuffed then
+                            card.ability.oblivion_debuffed = nil
+                            card.debuff = false
+                        end
+                    end
+                    local random_idx = math.ceil(pseudorandom(pseudoseed('oblivion')) * #G.jokers.cards)
+                    local target = G.jokers.cards[random_idx]
+                    if target and not target.ability.eternal then
+                        target.debuff = true
+                        target.ability.oblivion_debuffed = true
+                        target:juice_up(0.3, 0.5)
+                    end
+                end
+            end)
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.022"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.STATE = G\.STATES\.GAME_OVER; G\.STATE_COMPLETE = false \n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        local mp_redirect = false
+        pcall(function()
+            local is_mp = (G.GAME and G.GAME.multiplayer) or (bom_match and bom_match.is_in_match and bom_match.is_in_match())
+            local lives = (G.GAME and G.GAME.mp_lives) or (bom_match and bom_match.get_my_lives and bom_match.get_my_lives()) or 0
+            if is_mp and lives > 0 then
+                mp_redirect = true
+                G.GAME.multiplayer = true
+                G.GAME.mp_lives = lives
+                if bom_match and bom_match.mark_round_lost then
+                    bom_match.mark_round_lost()
+                else
+                    G.GAME.mp_blind_loss_pending = true
+                end
+                if G.GAME.blind then G.GAME.blind.chips = -1 end
+                if bom_core and bom_core.send and not (bom_match and bom_match.is_match_over and bom_match.is_match_over()) then
+                    bom_core.send({
+                        type = "game_over",
+                        ante = G.GAME.round_resets and G.GAME.round_resets.ante or 0,
+                        blind = (bom_match and bom_match.get_state and bom_match.get_state().current_blind) or "S",
+                        score = G.GAME.chips or 0,
+                    })
+                end
+            end
+        end)
+        if not mp_redirect then
+r 15 358 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 373
+        else
+            G.STATE = G.STATES.NEW_ROUND; G.STATE_COMPLETE = false
+        end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.023"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.FUNCS\.discard_cards_from_highlighted = function\(e, hook\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    pcall(function() haptic_buzz(1) end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.024"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*--check the hand first\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    pcall(function() haptic_buzz(1) end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.025"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*delay\(0\.4\)\n[\t ]*\n[\t ]*for i=1, #G\.hand\.highlighted do\n)'''
+position = "at"
+payload = '''
+${pre}    if progression_on_hand_played then
+        progression_on_hand_played()
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.026"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*return text, loc_disp_text, poker_hands, scoring_hand, disp_text\n[\t ]*end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}function score_time(t)
+    if G.SETTINGS and G.SETTINGS.skip_score_animation then return 0 end
+    return (t or 0) * ((G.SETTINGS and G.SETTINGS.fast_score_resolve) or 1.0)
+end
+
+function score_delay(t)
+    if G.SETTINGS and G.SETTINGS.skip_score_animation then return end
+    delay(score_time(t))
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.027"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)(?<post>(?:    |\t)local text,disp_text,poker_hands,scoring_hand,non_loc_disp_text = G\.FUNCS\.get_poker_hand_info\(G\.play\.cards\)\n)'''
+position = "at"
+payload = '''
+${pre}    local skip_anim = G.SETTINGS and G.SETTINGS.skip_score_animation
+    local delay, highlight_card = score_delay, skip_anim and function() end or highlight_card
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.028"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*for i=1, #G\.play\.cards do\n[\t ]*if next\(find_joker\('Splash'\)\) then\n)'''
+position = "at"
+payload = '''
+${pre}    local has_splash = next(find_joker('Splash'))
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.029"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*for i=1, #G\.play\.cards do\n)[\t ]*if next\(find_joker\('Splash'\)\) then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if has_splash then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.030.001"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*delay = G\.GAME\.current_round\.current_hand\.handname ~= disp_text and )0\.4(?<post>)'''
+position = "at"
+payload = '''
+${pre}score_time(0.4)${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.031"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*check_for_unlock\(\{type = 'hand', handname = text, disp_text = non_loc_disp_text, scoring_hand = scoring_hand, full_hand = G\.play\.cards\}\)\n)'''
+position = "at"
+payload = '''
+${pre}        local joker_cards = G.jokers.cards
+        local play_cards = G.play.cards
+        local n_jokers = #joker_cards
+        local _eval_iterations = 0
+        local _MAX_EVAL_ITERATIONS = 10000
+        local _MAX_REPS_PER_CARD = 100
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.032"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*local eval = eval_card\(scoring_hand\[i\], \{repetition_only = true,cardarea = G\.play, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, repetition = true\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                local eval = eval_card(scoring_hand[i], {repetition_only = true,cardarea = G.play, full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, repetition = true})
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.033"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*--From jokers\n)[\t ]*for j=1, #G\.jokers\.cards do\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                for j=1, n_jokers do
+                    _eval_iterations = _eval_iterations + 1
+                    if _eval_iterations > _MAX_EVAL_ITERATIONS then break end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.034"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*local eval = eval_card\(G\.jokers\.cards\[j\], \{cardarea = G\.play, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_card = scoring_hand\[i\], repetition = true\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    local eval = eval_card(joker_cards[j], {cardarea = G.play, full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_card = scoring_hand[i], repetition = true})
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.035"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*for j=1,#reps do\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    _eval_iterations = _eval_iterations + 1
+                    if _eval_iterations > _MAX_EVAL_ITERATIONS then break end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.036"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*local effects = \{eval_card\(scoring_hand\[i\], \{cardarea = G\.play, full_hand = G\.play\.cards, scoring_hand = scoring_hand, poker_hand = text\}\)\}\n[\t ]*for k=1, #G\.jokers\.cards do\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    local effects = {eval_card(scoring_hand[i], {cardarea = G.play, full_hand = play_cards, scoring_hand = scoring_hand, poker_hand = text})}
+                    for k=1, n_jokers do
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.037"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*local eval = G\.jokers\.cards\[k\]:calculate_joker\(\{cardarea = G\.play, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_card = scoring_hand\[i\], individual = true\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                        local eval = joker_cards[k]:calculate_joker({cardarea = G.play, full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_card = scoring_hand[i], individual = true})
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.038"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*while j <= #reps do\n)(?<post>[\t ]*if reps\[j\] ~= 1 then\n)'''
+position = "at"
+payload = '''
+${pre}                    _eval_iterations = _eval_iterations + 1
+                    if _eval_iterations > _MAX_EVAL_ITERATIONS then break end
+                    if #reps > _MAX_REPS_PER_CARD then break end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.039"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*local effects = \{eval_card\(G\.hand\.cards\[i\], \{cardarea = G\.hand, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands\}\)\}\n[\t ]*\n[\t ]*for k=1, #G\.jokers\.cards do\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    local effects = {eval_card(G.hand.cards[i], {cardarea = G.hand, full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands})}
+
+                    for k=1, n_jokers do
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.040"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*local eval = G\.jokers\.cards\[k\]:calculate_joker\(\{cardarea = G\.hand, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_card = G\.hand\.cards\[i\], individual = true\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                        local eval = joker_cards[k]:calculate_joker({cardarea = G.hand, full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_card = G.hand.cards[i], individual = true})
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.041"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*local eval = eval_card\(G\.hand\.cards\[i\], \{repetition_only = true,cardarea = G\.hand, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, repetition = true, card_effects = effects\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                        local eval = eval_card(G.hand.cards[i], {repetition_only = true,cardarea = G.hand, full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, repetition = true, card_effects = effects})
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.042"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*--From Joker\n)[\t ]*for j=1, #G\.jokers\.cards do\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                        for j=1, n_jokers do
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.043"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*local eval = eval_card\(G\.jokers\.cards\[j\], \{cardarea = G\.hand, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_card = G\.hand\.cards\[i\], repetition = true, card_effects = effects\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                            local eval = eval_card(joker_cards[j], {cardarea = G.hand, full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_card = G.hand.cards[i], repetition = true, card_effects = effects})
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.044"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*if effects\[ii\]\.card then\n(?<post>[\t ]*mod_percent = true\n)'''
+position = "at"
+payload = '''
+${pre}                        if effects[ii].card and
+                           (not G.E_MANAGER or #G.E_MANAGER.queues.base < 100) then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.045"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*for i=1, #G\.jokers\.cards \+ #G\.consumeables\.cards do\n[\t ]*local _card = G\.jokers\.cards\[i\] or G\.consumeables\.cards\[i - #G\.jokers\.cards\]\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        local n_consumeables = #G.consumeables.cards
+        for i=1, n_jokers + n_consumeables do
+            local _card = joker_cards[i] or G.consumeables.cards[i - n_jokers]
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.046"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*local edition_effects = eval_card\(_card, \{cardarea = G\.jokers, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, edition = true\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            local edition_effects = eval_card(_card, {cardarea = G.jokers, full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, edition = true})
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.047"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*local effects = eval_card\(_card, \{cardarea = G\.jokers, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, joker_main = true\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            local effects = eval_card(_card, {cardarea = G.jokers, full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, joker_main = true})
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.048"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*if effects\.jokers\.Xmult_mod then mult = mod_mult\(mult\*effects\.jokers\.Xmult_mod\);extras\.mult = true  end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}                if effects.jokers.Xchip_mod then hand_chips = mod_chips(hand_chips * effects.jokers.Xchip_mod);extras.hand_chips = true end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.049"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*for _, v in ipairs\(G\.jokers\.cards\) do\n[\t ]*local effect = v:calculate_joker\{full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_joker = _card\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            for _, v in ipairs(joker_cards) do
+                local effect = v:calculate_joker{full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_joker = _card}
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.050"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*for j = 1, #G\.jokers\.cards do\n[\t ]*destroyed = G\.jokers\.cards\[j\]:calculate_joker\(\{destroying_card = scoring_hand\[i\], full_hand = G\.play\.cards\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            for j = 1, #joker_cards do
+                destroyed = joker_cards[j]:calculate_joker({destroying_card = scoring_hand[i], full_hand = play_cards})
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.051"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*for j=1, #G\.jokers\.cards do\n[\t ]*eval_card\(G\.jokers\.cards\[j\], \{cardarea = G\.jokers, remove_playing_cards = true, removed = cards_destroyed\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        for j=1, #joker_cards do
+            eval_card(joker_cards[j], {cardarea = G.jokers, remove_playing_cards = true, removed = cards_destroyed})
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.052"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*trigger = 'after',delay = 0\.4,\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        trigger = 'after',delay = score_time(0.4),
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.053"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*func = \(function\(\)  update_hand_text\(\{delay = 0, immediate = true\}, \{mult = 0, chips = 0, chip_total = math\.floor\(hand_chips\*mult\), level = '', handname = ''\}\);play_sound\('button', 0\.9, 0\.6\);return true end\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}      }))
+r 1 112 %20%20%20%20 -
+l 70
+        func = (function() pcall(function() haptic_buzz(hand_chips*mult >= (G.GAME.blind.chips or 0) and 3 or 2) end) return true end)
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.054"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*check_for_unlock\(\{type = 'chip_score', chips = math\.floor\(hand_chips\*mult\)\}\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}      if QuestManager and QuestManager.on_hand_scored then
+          pcall(function()
+              local score_data = {
+                  hand_name = G.GAME.last_hand_played,
+                  chips = math.floor(hand_chips * mult)
+              }
+              QuestManager.on_hand_scored(score_data)
+          end)
+      end
+      if Overhaul and Overhaul.stats and Overhaul.stats.on and rawget(_G, 'AchievementManager') then
+          pcall(Overhaul.stats.on, 'hand_scored', {hand = G.GAME.last_hand_played, score = math.floor(hand_chips * mult), no_count = true})
+      end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.055"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*delay =  0\.5,\n(?<post>[\t ]*func = \(function\(t\) return math\.floor\(t\) end\)\n[\t ]*\}\)\)\n[\t ]*G\.E_MANAGER:add_event\(Event\(\{\n[\t ]*trigger = 'ease',\n)'''
+position = "at"
+payload = '''
+${pre}    delay =  score_time(0.5),
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.056"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*delay =  0\.5,\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    delay =  score_time(0.5),
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.057"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*pitch = pitch \+ 0\.06\n)[\t ]*if not G\.GAME\.seeded and not G\.GAME\.challenge then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if (not G.GAME.seeded and not G.GAME.challenge) or G.GAME.daily then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.058"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*add_round_eval_row\(\{name = 'bottom', dollars = dollars\}\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}end
+
+G.FUNCS.skip_vanilla_tutorial = function(e)
+    if G.SETTINGS.tutorial_complete and not G.OVERLAY_TUTORIAL then return end
+r 32 6 %20%20%20%20 -
+r 32 2355 %20%20%20%20%20%20%20%20 -
+r 32 2357 %20%20%20%20%20%20%20%20 -
+r 32 2358 %20%20%20%20%20%20%20%20 -
+r 32 2359 %20%20%20%20%20%20%20%20 -
+r 32 2360 %20%20%20%20%20%20%20%20 -
+l 1
+    end
+r 32 2361 %20%20%20%20 -
+l 1
+    release_tutorial_buttons()
+r 15 1212 %20%20%20%20 -
+r 15 1213 %20%20%20%20 -
+l 55
+    set_profile_flag('tutorial_complete')
+    G:save_settings()
+    if G.save_progress then G:save_progress() end
+    if G.STAGE == G.STAGES.MAIN_MENU and G.MAIN_MENU_UI then
+        G.MAIN_MENU_UI:remove()
+        G.MAIN_MENU_UI = nil
+        set_main_menu_UI()
+    end
+    if G.OVERLAY_MENU and UIK and UIK.refresh then UIK.refresh() end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.059"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.SETTINGS\.tutorial_complete = true\n(?<post>[\t ]*end\n)'''
+position = "at"
+payload = '''
+${pre}            set_profile_flag('tutorial_complete')
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.060"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.SETTINGS\.paused = true\n(?<post>[\t ]*if _part == 'small_blind' then \n)'''
+position = "at"
+payload = '''
+${pre}    --G.SETTINGS.paused = true
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.061"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*hard_set = true,\n)[\t ]*attach = \{major =  G\.HUD, type = 'cm', offset = \{x = 0, y = -2\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            attach = {major =  G.HUD, type = 'cm', offset = {x = 0.7, y = -0.5}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.062"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.blind_select\.UIRoot\.children\[1\]\.children\[2\]\.config\.object:get_UIE_by_ID\('tag_desc'\),\n[\t ]*\},\n[\t ]*attach = \{major =  G\.HUD, type = 'cm', offset = \{x = 0, y = -2\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                G.blind_select.UIRoot.children[1].children[2].config.object:get_UIE_by_ID('tag_desc').parent,
+            },
+            disabled_buttons = { 'skip_blind' },
+e 15 1326 %20%20%20%20%20%20%20%20%20%20%20%20 - =54,+%2E%37,=7,-1,+%30%2E%35,=3
+l 208
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.063"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.blind_select\.UIRoot\.children\[1\]\.children\[3\]\.config\.object:get_UIE_by_ID\('blind_desc'\),\n[\t ]*\},\n)[\t ]*attach = \{major =  G\.HUD, type = 'cm', offset = \{x = 0, y = -2\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            attach = {major =  G.HUD, type = 'cm', offset = {x = 0.7, y = -0.5}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.064"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.blind_select\.UIRoot\.children\[1\]\.children\[3\]\.config\.object:get_UIE_by_ID\('blind_extras'\),\n[\t ]*G\.HUD:get_UIE_by_ID\('hud_ante'\)\n[\t ]*\},\n)[\t ]*attach = \{major =  G\.HUD, type = 'cm', offset = \{x = 0, y = -2\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            attach = {major =  G.HUD, type = 'cm', offset = {x = 0.7, y = -0.5}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.065"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*attach = \{major =  G\.HUD, type = 'cm', offset = \{x = 0, y = -2\}\},\n(?<post>[\t ]*step = step,\n[\t ]*no_button = true,\n)'''
+position = "at"
+payload = '''
+${pre}            attach = {major =  G.HUD, type = 'cm', offset = {x = 0.7, y = -0.5}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.066"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*attach = \{major = G\.hand, type = 'cl', offset = \{x = -1\.5, y = 0\}\},\n(?<post>[\t ]*snap_to = function\(\) return G\.hand\.cards\[1\] end,\n)'''
+position = "at"
+payload = '''
+${pre}            attach = {major = G.hand, type = 'cl', offset = {x = -1, y = -0.3}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.067"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*attach = \{major = G\.hand, type = 'cl', offset = \{x = -1\.5, y = 0\}\},\n(?<post>[\t ]*no_button = true,\n[\t ]*button_listen = 'play_cards_from_highlighted',\n)'''
+position = "at"
+payload = '''
+${pre}            attach = {major = G.hand, type = 'cl', offset = {x = -1, y = -0.3}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.068"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*attach = \{major = G\.hand, type = 'cl', offset = \{x = -1\.5, y = 0\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            attach = {major = G.hand, type = 'cl', offset = {x = -1, y = -0.3}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.069"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.jokers\n[\t ]*\},\n)[\t ]*attach = \{major =  G\.HUD, type = 'cm', offset = \{x = 0, y = -2\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            attach = {major =  G.HUD, type = 'cm', offset = {x = 0.7, y = -0.5}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.070"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*attach = \{major =  G\.HUD, type = 'cm', offset = \{x = 0, y = -2\}\},\n(?<post>[\t ]*step = step,\n)'''
+position = "at"
+payload = '''
+${pre}                attach = {major =  G.HUD, type = 'cm', offset = {x = 0.7, y = -0.5}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.071"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*attach = \{major =  G\.HUD, type = 'cm', offset = \{x = 0, y = -2\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                attach = {major =  G.HUD, type = 'cm', offset = {x = 0.7, y = -0.5}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.072"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*text_key = 's_2',\n)[\t ]*highlight = \{\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            highlight = function() return {
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.073"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*\},\n(?<post>[\t ]*snap_to = function\(\) return G\.shop_jokers\.cards\[2\] end,\n)'''
+position = "at"
+payload = '''
+${pre}            } end,
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.074"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*attach = \{major = G\.shop, type = 'tr', offset = \{x = -0\.5, y = 6\}\},\n(?<post>[\t ]*no_button = true,\n)'''
+position = "at"
+payload = '''
+${pre}            attach = {major = G.shop, type = 'tr', offset = {x = -0.5, y = 5}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.075"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*attach = \{major = G\.shop, type = 'tr', offset = \{x = -0\.5, y = 6\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            attach = {major = G.shop, type = 'tr', offset = {x = -0.5, y = 5}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.076"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*snap_to = function\(\) return G\.shop_vouchers\.cards\[1\] end,\n)[\t ]*attach = \{major = G\.shop, type = 'tr', offset = \{x = -4, y = 6\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            attach = {major = G.shop, type = 'tr', offset = {x = -4, y = 5}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.077"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*attach = \{major = G\.shop, type = 'tr', offset = \{x = -4, y = 6\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            attach = {major = G.shop, type = 'tr', offset = {x = -4, y = 5}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.modded.001"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*function win_game\(\)\n[\t ]*if \(not G\.GAME\.seeded and not G\.GAME\.challenge\) or SMODS\.config\.seeded_unlocks then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}﻿function win_game()
+    pcall(function() haptic_buzz(4) end)
+    local is_normal_run = not G.GAME.seeded and not G.GAME.challenge
+    local is_daily = G.GAME.daily == true
+
+    if is_normal_run then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.modded.002"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*if not G\.GAME\.won and (?:to_[a-z_]+\()?G\.GAME\.round_resets\.ante\)? >= G\.GAME\.win_ante and G\.GAME\.blind_on_deck == 'Boss' then\n[\t ]*game_won = true\n[\t ]*G\.GAME\.won = true\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            local win_ante = G.GAME.win_ante
+            if is_creative_stake and is_creative_stake() then
+                win_ante = get_creative_win_ante and get_creative_win_ante() or 10
+            elseif is_insanity_stake and is_insanity_stake() then
+                win_ante = get_insanity_win_ante and get_insanity_win_ante() or 10
+            end
+            if _is_mp then
+                pcall(function()
+                    if bom_match and bom_match.final_ante then win_ante = bom_match.final_ante() end
+                end)
+            end
+            if _is_mp or win_ante ~= G.GAME.win_ante or G.GAME.mp_blind_loss_pending or G.GAME.mp_round_lost then
+                if not G.GAME.won and G.GAME.round_resets.ante >= win_ante and G.GAME.blind_on_deck == 'Boss' and not G.GAME.mp_blind_loss_pending and not G.GAME.mp_round_lost then
+                    game_won = true
+                    G.GAME.won = true
+                end
+            else
+r 15 111 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 136
+                    game_won = true
+                    G.GAME.won = true
+                end
+            end
+
+            if game_won and _is_mp then
+                pcall(function()
+                    if bom_match and bom_match.server_decides_final and bom_match.server_decides_final() then
+                        game_won = false
+                        G.GAME.won = false
+                    end
+                end)
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.modded.003"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*delay\(0\.4\); SMODS\.ante_end = true; ease_ante\(1\); SMODS\.ante_end = nil; delay\(0\.4\); check_for_unlock\(\{type = 'ante_up', ante = (?:to_[a-z_]+\()?G\.GAME\.round_resets\.ante\)? \+ 1\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    delay(0.4); SMODS.ante_end = true; ease_ante(1); SMODS.ante_end = nil; delay(0.4);
+                    if not G.GAME.mp_blind_loss_pending then
+                        check_for_unlock({type = 'ante_up', ante = G.GAME.round_resets.ante + 1})
+                        if progression_on_ante_cleared then
+                            progression_on_ante_cleared()
+                        end
+                    end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.modded.004"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if G\.GAME\.round_resets\.blind_states\.Small == 'Current' then\n[\t ]*G\.GAME\.round_resets\.blind_states\.Small = 'Current'\n)'''
+position = "at"
+payload = '''
+${pre}            local bl_name = G.GAME.round_resets.blind and G.GAME.round_resets.blind.name
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.modded.005"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*-- TARGET: setting_blind effects\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}            pcall(function()
+                if G.GAME.modifiers and G.GAME.modifiers.random_joker_disable and #G.jokers.cards > 0 then
+                    for _, card in ipairs(G.jokers.cards) do
+                        if card.ability and card.ability.oblivion_debuffed then
+                            card.ability.oblivion_debuffed = nil
+                            card.debuff = false
+                        end
+                    end
+                    local random_idx = math.ceil(pseudorandom(pseudoseed('oblivion')) * #G.jokers.cards)
+                    local target = G.jokers.cards[random_idx]
+                    if target and not target.ability.eternal then
+                        target.debuff = true
+                        target.ability.oblivion_debuffed = true
+                        target:juice_up(0.3, 0.5)
+                    end
+                end
+            end)
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.modded.006"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*local final_scoring_hand = \{\}\n)[\t ]*local has_splash = next\(find_joker\('Splash'\)\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.modded.007"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*for name, parameter in pairs\(SMODS\.Scoring_Parameters\) do\n[\t ]*update_hand_text\(\{delay = 0\}, \{\[name\] = parameter\.default_value\}\)\n)'''
+position = "at"
+payload = '''
+${pre}    G.E_MANAGER:add_event(Event({
+        func = (function() pcall(function() haptic_buzz( SMODS.calculate_round_score()  >= (G.GAME.blind.chips or 0) and 3 or 2) end) return true end)
+      }))
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.modded.008"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>[\t ]*check_for_unlock\(\{type = 'chip_score', chips = math\.floor\( SMODS\.calculate_round_score\(\) \)\}\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}      if QuestManager and QuestManager.on_hand_scored then
+          pcall(function()
+              local score_data = {
+                  hand_name = G.GAME.last_hand_played,
+                  chips = math.floor( SMODS.calculate_round_score() )
+              }
+              QuestManager.on_hand_scored(score_data)
+          end)
+      end
+      if Overhaul and Overhaul.stats and Overhaul.stats.on and rawget(_G, 'AchievementManager') then
+          pcall(Overhaul.stats.on, 'hand_scored', {hand = G.GAME.last_hand_played, score = math.floor( SMODS.calculate_round_score() ), no_count = true})
+      end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.modded.009"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*delay\(0\.3\)\n(?<post>[\t ]*SMODS\.last_hand_score = SMODS\.calculate_round_score\(\)\n)'''
+position = "at"
+payload = '''
+${pre}    score_delay(0.3)
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.state_events.modded.010"
+target = "functions/state_events.lua"
+pattern = '''^(?<pre>)[\t ]*if \(not G\.GAME\.seeded and not G\.GAME\.challenge\) or SMODS\.config\.seeded_unlocks then\n(?<post>[\t ]*if G\.GAME\.interest_amount\*math\.min\(math\.floor\(G\.GAME\.dollars/5\), G\.GAME\.interest_cap/5\) == G\.GAME\.interest_amount\*G\.GAME\.interest_cap/5 then \n)'''
+position = "at"
+payload = '''
+${pre}        if (not G.GAME.seeded and not G.GAME.challenge) or G.GAME.daily then
+${post}'''
+optional = true
+end

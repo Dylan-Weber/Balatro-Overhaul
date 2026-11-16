@@ -1,0 +1,144 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 133
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_ui.001"
+target = '=[SMODS _ "src/ui.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*function SMODS\.reload_stencil_stack\(full\)\n)'''
+position = "at"
+payload = '''
+${pre}function SMODS.stencil_for(canvas)
+    local s = SMODS.stencil_canvas
+    if canvas and (not s or s:getPixelWidth() ~= canvas:getPixelWidth() or s:getPixelHeight() ~= canvas:getPixelHeight()) then
+        s = love.graphics.newCanvas(canvas:getWidth(), canvas:getHeight(), { format = "stencil8", readable = false, dpiscale = canvas:getDPIScale() })
+        SMODS.stencil_canvas = s
+    end
+    return s
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_ui.002"
+target = '=[SMODS _ "src/ui.lua"]'
+pattern = '''^(?<pre>)[\t ]*love\.graphics\.setCanvas\(\{ love\.graphics\.getCanvas\(\), depthstencil = SMODS\.stencil_canvas \}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local current = love.graphics.getCanvas()
+    love.graphics.setCanvas({ current, depthstencil = SMODS.stencil_for(current) })
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_ui.003"
+target = '=[SMODS _ "src/ui.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*function Game:main_menu\(change_context\)\n)'''
+position = "at"
+payload = '''
+${pre}local function no_version_ui() end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_ui.004"
+target = '=[SMODS _ "src/ui.lua"]'
+pattern = '''^(?<pre>)[\t ]*UIBox\(\{\n[\t ]*definition = \{\n[\t ]*n = G\.UIT\.ROOT,\n[\t ]*config = \{\n[\t ]*align = "cm",\n[\t ]*colour = G\.C\.UI\.TRANSPARENT_DARK\n[\t ]*\},\n[\t ]*nodes = \{\n[\t ]*\{\n[\t ]*n = G\.UIT\.T,\n[\t ]*config = \{\n[\t ]*scale = 0\.3,\n[\t ]*text = "Steamodded v" \.\. MODDED_VERSION,\n[\t ]*colour = G\.C\.UI\.TEXT_LIGHT\n[\t ]*\}\n[\t ]*\}\n[\t ]*\}\n[\t ]*\},\n[\t ]*config = \{\n[\t ]*align = "tri",\n[\t ]*bond = "Weak",\n[\t ]*offset = \{\n[\t ]*x = 0,\n[\t ]*y = 0\.3\n[\t ]*\},\n[\t ]*major = G\.ROOM_ATTACH\n[\t ]*\}\n[\t ]*\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    no_version_ui()
+    if not G.title_top or G.title_top.REMOVED then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_ui.005"
+target = '=[SMODS _ "src/ui.lua"]'
+pattern = '''^(?<pre>)[\t ]*NFS\.remove\(SMODS\.MODS_DIR\.\. "/" \.\. modInfo\.blacklist_name \.\.'/\.lovelyignore'\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                                                    require"SMODS.preflight.loader".enableFolder(modInfo.blacklist_name)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_ui.006"
+target = '=[SMODS _ "src/ui.lua"]'
+pattern = '''^(?<pre>)[\t ]*love\.system\.openURL\(SMODS\.MODS_DIR\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    love.system.openURL(SMODS.MODS_DIR_REAL or SMODS.MODS_DIR)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_ui.007"
+target = '=[SMODS _ "src/ui.lua"]'
+pattern = '''^(?<pre>)[\t ]*NFS\.remove\(SMODS\.MODS_DIR\.\. "/" \.\. new_mod\.blacklist_name \.\.'/\.lovelyignore'\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        require"SMODS.preflight.loader".enableFolder(new_mod.blacklist_name)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_ui.008"
+target = '=[SMODS _ "src/ui.lua"]'
+pattern = '''^(?<pre>)[\t ]*end\n[\t ]*\n[\t ]*function G\.FUNCS\.mods_button\(e\)\n[\t ]*G\.SETTINGS\.paused = true\n[\t ]*SMODS\.LAST_SELECTED_MOD_TAB = nil\n[\t ]*SMODS\.IN_MODS_TAB = true\n[\t ]*\n[\t ]*G\.FUNCS\.overlay_menu\(\{\n[\t ]*definition = create_UIBox_mods_button\(\)\n[\t ]*\}\)\n[\t ]*end\n[\t ]*\n[\t ]*local create_UIBox_main_menu_buttonsRef = create_UIBox_main_menu_buttons\n[\t ]*function create_UIBox_main_menu_buttons\(\)\n[\t ]*local modsButton = UIBox_button\(\{\n[\t ]*id = "mods_button",\n[\t ]*minh = 1\.55,\n[\t ]*minw = 1\.85,\n[\t ]*col = true,\n[\t ]*button = "mods_button",\n[\t ]*colour = SMODS\.mod_button_alert and \(G\.SETTINGS\.reduced_motion and G\.C\.RED or SMODS\.Gradients\.warning_bg\) or G\.C\.BOOSTER,\n[\t ]*text_colour = \(SMODS\.mod_button_alert and not G\.SETTINGS\.reduced_motion\) and SMODS\.Gradients\.warning_text or G\.C\.TEXT_LIGHT,\n[\t ]*label = \{localize\('b_mods_cap'\)\},\n[\t ]*scale = 0\.45 \* 1\.2\n[\t ]*\}\)\n[\t ]*local menu = create_UIBox_main_menu_buttonsRef\(\)\n[\t ]*table\.insert\(menu\.nodes\[1\]\.nodes\[1\]\.nodes, modsButton\)\n[\t ]*menu\.nodes\[1\]\.nodes\[1\]\.config = \{align = "cm", padding = 0\.15, r = 0\.1, emboss = 0\.1, colour = G\.C\.L_BLACK, mid = true\}\n[\t ]*if SMODS\.mod_button_alert then\n[\t ]*G\.E_MANAGER:add_event\(Event\(\{\n[\t ]*func = function\(\)\n[\t ]*if G\.MAIN_MENU_UI then -- Wait until the ui is rendered before spawning the alert\n[\t ]*UIBox\{definition = create_UIBox_card_alert\(\), config = \{align="tri", offset = \{x = 0\.05, y = -0\.05\}, major = G\.MAIN_MENU_UI:get_UIE_by_ID\('mods_button'\), can_collide = false\}\}\n[\t ]*return true\n[\t ]*end\n[\t ]*end,\n[\t ]*blocking = false,\n[\t ]*blockable = false\n[\t ]*\}\)\)\n[\t ]*end\n[\t ]*return menu\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_ui.009"
+target = '=[SMODS _ "src/ui.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*local deck_tables = \{\}\n)'''
+position = "at"
+payload = '''
+${pre}    if rawget(_G, 'PORTRAIT') and PORTRAIT.on() and PORTRAIT.collection_rows then rows = PORTRAIT.collection_rows(rows, args.w_mod, args.h_mod)
+    elseif COLL and COLL.wide_rows and UIK and UIK.wide_phone and UIK.wide_phone() then rows = COLL.wide_rows(rows, args.w_mod, args.h_mod) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_ui.010"
+target = '=[SMODS _ "src/ui.lua"]'
+pattern = '''^(?<pre>)[\t ]*create_option_cycle\(\{options = options, w = 4\.5, cycle_shoulders = true, opt_callback = 'SMODS_card_collection_page', current_option = 1, colour = G\.ACTIVE_MOD_UI and \(G\.ACTIVE_MOD_UI\.ui_config or \{\}\)\.collection_option_cycle_colour or G\.C\.RED, no_pips = true, focus_args = \{snap_to = true, nav = 'wide'\}\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            create_option_cycle({options = options, w = (rawget(_G, 'PORTRAIT') and PORTRAIT.on()) and 2.6 or 4.5, cycle_shoulders = not (rawget(_G, 'PORTRAIT') and PORTRAIT.on()), opt_callback = 'SMODS_card_collection_page', current_option = 1, colour = G.ACTIVE_MOD_UI and (G.ACTIVE_MOD_UI.ui_config or {}).collection_option_cycle_colour or G.C.RED, no_pips = true, focus_args = {snap_to = true, nav = 'wide'}})
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_ui.011"
+target = '=[SMODS _ "src/ui.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*-- #endregion\n[\t ]*\n[\t ]*--#region run stake display changes\n)'''
+position = "at"
+payload = '''
+${pre}local smods_hud_blind_badge = G.FUNCS.HUD_blind_badge
+G.FUNCS.SMODS_HUD_blind_badge = function(e)
+    if G.FUNCS.HUD_blind_badge == smods_hud_blind_badge then return smods_hud_blind_badge(e) end
+r 32 2072 %20%20%20%20 -
+l 3
+end
+${post}'''
+times = 1
+end

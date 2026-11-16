@@ -37,11 +37,11 @@ l 5
         func = function()
             if G.round_eval then
                 local dollarRow = {
-r 6 297 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                         {n=G.UIT.T, config={text = text or "Deck Bonus",colour = G.C.WHITE, scale = 0.4, shadow = true}},
                     }},
-r 6 297 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 87
                         {n=G.UIT.T, config={text = "$" .. tostring(dollars), colour = G.C.GOLD, scale = 0.5, shadow = true}},
                     }}
@@ -182,7 +182,7 @@ end
 function DeckCreatorUtils.tagKeys()
     if not G or not G.P_TAGS then return {} end
     local keys = {}
-r 15 3917 %20%20%20%20 -
+r 30 3917 %20%20%20%20 -
 l 9
         keys[#keys + 1] = { id = k, name = v.name or k }
     end
@@ -269,16 +269,16 @@ function DeckCreatorUtils.uuid()
 end
 
 function DeckCreatorUtils.tableToString(tbl, indent)
-r 11 323 %20%20%20%20 -
+r 13 323 %20%20%20%20 -
 l 3
     if type(tbl) ~= "table" then return tostring(tbl) end
     local toprint = "{\n"
     indent = indent + 2
-r 11 326 %20%20%20%20 -
-r 11 327 %20%20%20%20%20%20%20%20 -
+r 13 326 %20%20%20%20 -
+r 13 327 %20%20%20%20%20%20%20%20 -
 l 1
         if type(k) == "number" then
-r 11 329 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 329 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 22
         elseif type(k) == "string" then
             toprint = toprint .. k .. " = "
@@ -302,7 +302,7 @@ end
 function DeckCreatorUtils.tableLength(t)
     if t == nil then return 0 end
     local count = 0
-r 11 187 %20%20%20%20 -
+r 13 187 %20%20%20%20 -
 l 51
     return count
 end

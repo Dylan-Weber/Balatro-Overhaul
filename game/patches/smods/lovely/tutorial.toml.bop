@@ -12,7 +12,7 @@ dump_lua = true
 [patches.pattern]
 target = "functions/common_events.lua"
 pattern = '''
-r 12 2205 - -
+r 31 2205 - -
 l 27
 '''
 position = "after"
@@ -41,7 +41,7 @@ target = "game.lua"
 pattern = '''for k, v in ipairs(self.OVERLAY_TUTORIAL.highlights) do'''
 position = "after"
 payload = '''
-r 21 183 - -
+r 14 183 - -
 l 9
     self.OVERLAY_TUTORIAL.highlights[k] = v() or v
     if type(v) == "function" then -- prevent crashing if the object doesn't exist yet due to event jank

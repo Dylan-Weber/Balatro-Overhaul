@@ -738,7 +738,7 @@ end
 
 APPLY.endless = function()
     B.win_seen = true
-r 13 1825 %20%20%20%20 -
+r 32 1825 %20%20%20%20 -
 l 7
     return true
 end
@@ -747,7 +747,7 @@ APPLY.new_run = function(a)
     B.win_seen = nil
     local back = a.deck and G.P_CENTERS[a.deck] or (G.GAME.selected_back and G.GAME.selected_back.effect and G.GAME.selected_back.effect.center)
     local stake = tonumber(a.stake) or G.GAME.stake or 1
-r 13 1825 %20%20%20%20 -
+r 32 1825 %20%20%20%20 -
 l 42
     B.leaving_game = G.GAME
     G.FUNCS.start_run(nil, {stake = stake, seed = a.seed, back = back})

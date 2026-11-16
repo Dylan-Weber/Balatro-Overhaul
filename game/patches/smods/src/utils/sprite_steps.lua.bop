@@ -53,7 +53,7 @@ local function draw_thingy(step, image, quad, sprite)
 end
 
 local sds_hook = Sprite.draw_self
-r 30 126 - -
+r 26 126 - -
 l 31
 	-- Skip if no SpriteSteps are applicable
 	local do_the_thing = false
@@ -87,7 +87,7 @@ l 31
 			love.graphics.push()
 			love.graphics.setColor(1,1,1,1)
 r 3 4413 %09%09%09 -
-r 19 278 %09%09%09 -
+r 12 278 %09%09%09 -
 l 49
 			storagecanvas:renderTo(draw_storage, first, self, canvas)
 			canvas:renderTo(draw_thingy, step, storagecanvas, SMODS.SpriteStepQuad, self)
@@ -139,7 +139,7 @@ function AnimatedSprite:draw_self(overlay)
 			love.graphics.push()
 			love.graphics.setColor(1,1,1,1)
 r 3 4413 %09%09%09 -
-r 19 278 %09%09%09 -
+r 12 278 %09%09%09 -
 l 15
 			storagecanvas:renderTo(draw_storage, first, self, canvas)
 			canvas:renderTo(draw_thingy, step, storagecanvas, SMODS.SpriteStepQuad, self)

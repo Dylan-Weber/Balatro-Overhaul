@@ -511,7 +511,7 @@ function T.place_def(key)
 end
 
 function T.open_place(key)
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 43
   G.FUNCS.overlay_menu{definition = T.place_def(key)}
   if T.place_sprite then T.place_sprite:juice_up(0.2, 0.2) end
@@ -556,7 +556,7 @@ end
 
 function T.open()
   T.deal = not G.OVERLAY_MENU and moving()
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 77
   T.opening = nil
   local ok, err = pcall(function() G.FUNCS.overlay_menu{definition = T.map_def()} end)

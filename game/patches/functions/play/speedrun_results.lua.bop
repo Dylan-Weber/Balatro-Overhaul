@@ -207,7 +207,7 @@ function RS.open(c)
   RS.pending = nil
   if not c then return end
   RS.shown = c
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 41
   G.FUNCS.overlay_menu{definition = RS.def(c), config = {no_esc = true}}
   RS.submit()
@@ -250,7 +250,7 @@ end
 
 G.FUNCS.sr_res_continue = function()
   RS.shown = nil
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 14
 end
 
@@ -266,14 +266,14 @@ G.FUNCS.sr_res_watch = function()
   local SPR = rawget(_G, 'BO_SPREPLAY')
   if not (run and run.sprp and SPR and SPR.exists(run.sprp)) then return end
   RS.shown = nil
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 5
   if SR.watch then SR.watch(run) else SPR.watch(run.sprp) end
 end
 
 G.FUNCS.sr_res_menu = function()
   RS.shown = nil
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 25
   G.FUNCS.go_to_menu()
 end

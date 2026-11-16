@@ -14,7 +14,7 @@ position = "before"
 match_indent = true
 payload = '''
 for k, v in ipairs(SMODS.Sticker.obj_buffer) do
-	if self.ability[v] and SMODS.Stickers[v] and not SMODS.Stickers[v].hide_badge then
+	if self.ability[v] and not SMODS.Stickers[v].hide_badge then
         badges[#badges+1] = v
     end
 end'''
@@ -58,7 +58,7 @@ match_indent = true
 payload = '''
 for k, v in ipairs(SMODS.Sticker.obj_buffer) do
     local sticker = SMODS.Stickers[v]
-    if sticker and sticker.should_apply and type(sticker.should_apply) == 'function' and sticker:should_apply(card, center, area) then
+    if sticker.should_apply and type(sticker.should_apply) == 'function' and sticker:should_apply(card, center, area) then
         sticker:apply(card, true)
     end
 end'''

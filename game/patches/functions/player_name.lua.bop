@@ -93,15 +93,15 @@ function P.definition()
     no_back = not st.can_cancel,
     back_func = st.can_cancel and 'player_name_cancel' or nil,
     contents = {
-r 15 723 %20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20 -
 l 2
         {n=G.UIT.T, config={text = t("Choose your name"), scale = 0.6, colour = G.C.WHITE, shadow = true}},
       }},
-r 6 297 %20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20 -
 l 2
         {n=G.UIT.T, config={text = t("Your name for this profile and for multiplayer"), scale = 0.35, colour = G.C.UI.TEXT_LIGHT}},
       }},
-r 15 1558 %20%20%20%20%20%20 -
+r 30 1558 %20%20%20%20%20%20 -
 l 9
         create_text_input({
           w = 5, max_length = 16, prompt_text = localize('k_enter_name'),
@@ -112,7 +112,7 @@ l 9
       {n=G.UIT.R, config={align = "cm", minh = 0.45}, nodes={
         {n=G.UIT.T, config={ref_table = st, ref_value = 'error', scale = 0.35, colour = G.C.RED, shadow = true}},
       }},
-r 15 723 %20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20 -
 l 18
         UIBox_button({button = 'player_name_confirm', label = {t("Confirm")}, colour = G.C.GREEN, minw = 3, minh = 0.7, scale = 0.5}),
       }},
@@ -132,7 +132,7 @@ function P.prompt(opts)
     on_cancel = opts.on_cancel,
   }
   local st = P.state
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 28
   G.FUNCS.overlay_menu({definition = P.definition(), config = {no_esc = not st.can_cancel}})
   if G.F_MOBILE or (G.CONTROLLER.HID and G.CONTROLLER.HID.controller and not G.CONTROLLER.HID.keyboard) then return end
@@ -162,14 +162,14 @@ function P.confirm()
     P.remember(name)
     G:save_settings()
     G:save_progress()
-r 15 5391 %20%20%20%20 -
+r 30 5391 %20%20%20%20 -
 l 2
   end
   P.state = nil
-r 24 1015 %20%20 -
+r 29 1015 %20%20 -
 l 1
   G.E_MANAGER:add_event(Event({blockable = false, blocking = false, func = function()
-r 13 1825 %20%20%20%20 -
+r 32 1825 %20%20%20%20 -
 l 19
     if st.on_done then
       local ok, err = pcall(st.on_done, name)
@@ -190,8 +190,8 @@ end
 G.FUNCS.player_name_cancel = function(e)
   local st = P.state
   P.state = nil
-r 24 1015 %20%20 -
-r 13 1825 %20%20 -
+r 29 1015 %20%20 -
+r 32 1825 %20%20 -
 l 25
   if st and st.on_cancel then
     local ok, err = pcall(st.on_cancel)

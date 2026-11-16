@@ -33,9 +33,9 @@ function UI.card_node(c, o)
   local card = Card(area.T.x, area.T.y, w, h, nil, center)
   card.forge_preview = true
   if o.still then
-r 9 1460 %20%20%20%20 -
-r 6 220 %20%20%20%20 -
-l 239
+r 7 1460 %20%20%20%20 -
+r 5 220 %20%20%20%20 -
+l 244
   end
   area:emplace(card)
   return {n = G.UIT.R, config = {align = "cm", minw = w, minh = h, padding = 0}, nodes = {{n = G.UIT.O, config = {object = area}}}}
@@ -59,6 +59,11 @@ function UI.item_node(c, o)
   local k = Cat.kind(c.kind)
   local a = c.art or {}
   local spr
+  local B0 = rawget(_G, "ForgeBuilder")
+  if c.kind == "edition" and B0 and B0.edition_sprite then
+    spr = B0.edition_sprite(c, s)
+    return {n = G.UIT.R, config = {align = "cm", minw = w, minh = h, padding = 0}, nodes = {{n = G.UIT.O, config = {object = spr}}}}
+  end
   if a.file and love.filesystem.getInfo(a.file) then
     local ok, data = pcall(love.image.newImageData, a.file)
     if ok and data and data:getWidth() == 71 and data:getHeight() == 95 then
@@ -275,7 +280,7 @@ function UI.refresh_footer()
   local win = UIK._win
   if not (win and win.id == "forge" and G.OVERLAY_MENU) then return end
   local e = G.OVERLAY_MENU:get_UIE_by_ID("forge_footer")
-r 13 1300 %20%20 -
+r 32 1300 %20%20 -
 l 24
   if e.config.object then e.config.object:remove() end
   e.config.object = UIBox{definition = UI.footer_def(win._cur), config = {offset = {x = 0, y = 0}, parent = e, type = "cm"}}
@@ -301,7 +306,7 @@ end
 
 function UI.open(tab, from)
   if from then UI.state.from = from end
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 117
   local ok, err = pcall(function()
     G.FUNCS.overlay_menu{definition = UI.definition(tab)}
@@ -420,7 +425,7 @@ G.FUNCS.forge_back = function(e)
   local pad = G.CONTROLLER and G.CONTROLLER.HID and G.CONTROLLER.HID.controller
   local hook = G.CONTROLLER and G.CONTROLLER.text_input_hook
   if pad and hook and not hook.REMOVED and not (B and B.state and B.state.typing) then
-r 24 1015 %20%20%20%20 -
+r 29 1015 %20%20%20%20 -
 l 12
     return
   end
@@ -434,7 +439,7 @@ l 12
   elseif from == "tavern" and G.FUNCS.open_tavern_hub then
     G.FUNCS.open_tavern_hub()
   else
-r 13 1375 %20%20%20%20 -
+r 32 1375 %20%20%20%20 -
 l 56
   end
 end
@@ -492,7 +497,7 @@ function UI.users_of(id)
   for _, p in ipairs(REF_PREFIXES) do keys[p .. tostring(id)] = true end
   local function uses(t, depth)
     if type(t) ~= "table" or depth > 8 then return false end
-r 11 154 %20%20%20%20 -
+r 13 154 %20%20%20%20 -
 l 65
       if type(v) == "table" then
         if uses(v, depth + 1) then return true end

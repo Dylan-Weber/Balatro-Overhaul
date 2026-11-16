@@ -1,0 +1,29 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 5
+local Hooks = require("overhaul.hooks")
+
+Hooks.wrap(_G, "ease_ante", function(orig) return function(mod, ...)
+    local r = Hooks.pack(orig(mod, ...))
+    if type(mod) == "number" and mod > 0 and G.E_MANAGER then
+r 1 112 %20%20%20%20%20%20%20%20 -
+r 2 398 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 15
+            func = function()
+                if QuestManager and QuestManager.on_ante_reached then
+                    pcall(function() QuestManager.on_ante_reached(G.GAME.round_resets.ante) end)
+                end
+                return true
+            end
+        }))
+    end
+    return Hooks.unpack(r)
+end end, {id = "overhaul.quests.ante_reached"})
+
+Hooks.wrap(_G, "level_up_hand", function(orig) return function(card, hand, instant, amount, ...)
+    if SMODS and not instant and (tonumber(amount or 1) or 1) > 0 then pcall(haptic_buzz, 2) end
+    return orig(card, hand, instant, amount, ...)
+end end, {id = "overhaul.level_up_haptic"})
+end

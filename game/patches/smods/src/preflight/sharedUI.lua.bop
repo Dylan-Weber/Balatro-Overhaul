@@ -128,7 +128,7 @@ function Base:draw(dt)
         love.graphics.setColor(unpack(self.conf.fg))
     end
     if self.conf.debug or PREFLIGHT_DEV then self:debug(dt) end
-r 11 123 %20%20%20%20 -
+r 13 123 %20%20%20%20 -
 l 30
 end
 
@@ -160,11 +160,11 @@ end
 function Base:loop()
     love.event.pump()
 
-r 19 299 %20%20%20%20 -
+r 12 299 %20%20%20%20 -
 l 2
         if e == "quit" then
             return 1
-r 19 302 %20%20%20%20%20%20%20%20 -
+r 12 302 %20%20%20%20%20%20%20%20 -
 l 27
             return 1
         elseif e == "keypressed" and a == "t" then

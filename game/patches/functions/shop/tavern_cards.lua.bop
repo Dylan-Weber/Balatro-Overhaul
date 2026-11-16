@@ -172,13 +172,13 @@ local EDITION = {foil = {foil = true}, holo = {holo = true}, polychrome = {polyc
 function TC.make(it, w, h, opts)
   opts = opts or {}
   w, h = w or G.CARD_W, h or G.CARD_H
-r 15 3797 %20%20 -
+r 30 3797 %20%20 -
 l 4
   if it.type == "jimbo" then center = G.P_CENTERS[it.key] or G.P_CENTERS.j_joker end
   if it.type == "effect" then center = G.P_CENTERS.j_joker end
   local card = Card(0, 0, w, h, G.P_CARDS.empty, center, {bypass_discovery_center = true, bypass_discovery_ui = true, bypass_back = G.P_CENTERS.b_red.pos})
   card.tavern_item = it
-r 6 219 %20%20 -
+r 5 219 %20%20 -
 l 132
   card.update_alert = function() end
   local t = it.type

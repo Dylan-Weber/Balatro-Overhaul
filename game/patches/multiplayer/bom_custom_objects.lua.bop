@@ -605,7 +605,7 @@ r 1 112 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 trigger = 'after', delay = 0.3, blockable = false,
                 func = function()
-r 13 2209 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2209 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 71
                     card:remove()
                     return true
@@ -839,14 +839,14 @@ local function patch_card_behavior()
                 if (G.GAME.current_round.hands_left or 0) == 0 and not self.ability.mp_phantom then return nil end
             end
             local key = key_of(self)
-            local ret = original_calculate_joker(self, context)
+            local ret, trig = original_calculate_joker(self, context)
             if key and DEFS[key] and context then
 r 3 1094 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 49
                 local ok, r = pcall(mp_joker_calc, self, key, context)
                 if ok then ret = r or ret elseif mp_log then mp_log.warn('BOM_OBJECTS', 'joker calc failed: %s', tostring(r)) end
             end
-            if not self or not self.ability or not context then return ret end
+            if not self or not self.ability or not context then return ret, trig end
             if self.ability.mp_sticker_draining and context.cardarea == G.jokers and context.joker_main and not self.ability.mp_phantom then
                 ret = ret or {}
                 ret.Xmult_mod = (ret.Xmult_mod or 1) * 0.75
@@ -857,7 +857,7 @@ l 49
                     card_eval_status_text(self, 'extra', nil, nil, nil, { message = localize('k_cost_up'), colour = G.C.RED, delay = 0.45 })
                 end)
             end
-            return ret
+            return ret, trig
         end
     end)
 
@@ -919,7 +919,7 @@ l 25
                     end
                     specific_vars = v
                 end
-r 15 1170 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1170 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 63
                 for _, b in ipairs(build_custom_badges(card) or {}) do
                     local dup = false
@@ -984,19 +984,19 @@ l 63
     pcall(function()
         if G and G.FUNCS and G.FUNCS.can_sell_card then
             local original_can_sell_card = G.FUNCS.can_sell_card
-r 13 2122 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2122 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 if e and e.config and e.config.ref_table and e.config.ref_table.ability and e.config.ref_table.ability.mp_sticker_persistent then
-r 13 2157 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2157 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                     local can_afford = G and G.GAME and (G.GAME.dollars or 0) >= (card.ability.mp_sell_price or card.sell_cost or 0)
                     if card:can_sell_card() and can_afford then
-r 13 268 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 2125 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 268 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2125 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                     else
-r 13 57 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 58 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 57 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 58 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 115
                     end
                     return

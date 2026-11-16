@@ -20,6 +20,10 @@ end
 SMODS.update_mod_files = function(id)
     local mod = SMODS.Mods[id]
     if not mod then return false end
+    local use_git = os.execute('git -v') == 0
+    if false and use_git and os.execute(('cd %s & git pull'):format(mod.path)) == 0 then
+        return true
+    end
     local https = require"https"
     local url = mod.github or (SMODS.index[id] or {}).github
     local status, contents = https.request(url) -- TODO account for branches

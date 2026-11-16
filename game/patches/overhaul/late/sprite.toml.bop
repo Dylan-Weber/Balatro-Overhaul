@@ -1,0 +1,98 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 58
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.pattern]
+id = "sprite.perf_shader_quality"
+target = "engine/sprite.lua"
+pattern = "if G.SETTINGS.reduced_motion then _no_tilt = true end"
+position = "after"
+payload = '''
+    local _perf_shader = G.SETTINGS.GRAPHICS and G.SETTINGS.GRAPHICS.perf_shader_quality or 3
+    if _perf_shader <= 2 then
+        if _shader == 'voucher' or _shader == 'booster' or _shader == 'negative_shine' then return end
+        _no_tilt = true
+    end
+    if _perf_shader <= 1 then _shadow_height = nil end'''
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "sprite.vortex_dpi_and_low_quality"
+target = "engine/sprite.lua"
+pattern = "G.SHADERS['vortex']:send('vortex_amt', G.TIMERS.REAL - (G.vortex_time or 0))"
+position = "after"
+payload = '''
+        G.SHADERS.vortex:send('DPI', love.graphics.getDPIScale())
+    elseif _perf_shader <= 2 then
+        local _s = G.SHADERS[_shader or 'dissolve']
+        _s:send("dissolve", math.abs(_draw_major.dissolve or 0))
+        _s:send("texture_details", self:get_pos_pixel())
+        _s:send("image_details", self:get_image_dims())
+        _s:send("shadow", false)
+        _s:send('hovering', 0)
+        _s:send("time", 123.33412*((_draw_major.ID or 1)/1.14212)%3000)
+        _s:send("burn_colour_1", _draw_major.dissolve_colours and _draw_major.dissolve_colours[1] or G.C.CLEAR)
+        _s:send("burn_colour_2", _draw_major.dissolve_colours and _draw_major.dissolve_colours[2] or G.C.CLEAR)
+        if _send then
+            local S = rawget(_G, "SMODS")
+            local def = S and S.Shaders and S.Shaders[_shader]
+            _s:send((def and def.original_key) or _shader, _send)
+        end'''
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "sprite.touch_tilt"
+target = "engine/sprite.lua"
+pattern = "G.SHADERS[_shader or 'dissolve']:send('hovering',((_shadow_height  and not tilt_shadow) or _no_tilt) and 0 or (_draw_major.hover_tilt or 0)*(tilt_shadow or 1))"
+position = "at"
+payload = "        G.SHADERS[_shader or 'dissolve']:send('hovering',((_shadow_height  and not tilt_shadow) or _no_tilt) and 0 or (((_draw_major.touch_collide_tilt and _draw_major.states.collide.is) and _draw_major.hover_tilt or 0) or 0)*(tilt_shadow or 1))"
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "sprite.remove_animations"
+target = "engine/sprite.lua"
+pattern = '''
+r 26 204 - -
+l 1
+if v == self then
+r 16 98 - -
+l 15
+end
+end'''
+position = "at"
+payload = '''
+    local anims = G.ANIMATIONS
+    for i = #anims, 1, -1 do
+        if anims[i] == self then table.remove(anims, i) end
+    end'''
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "sprite.remove_sprites"
+target = "engine/sprite.lua"
+pattern = '''
+r 17 104 - -
+l 1
+if v == self then
+r 16 103 - -
+l 9
+end
+end'''
+position = "at"
+payload = '''
+    local sprites = G.I.SPRITE
+    for i = #sprites, 1, -1 do
+        if sprites[i] == self then table.remove(sprites, i) end
+    end'''
+times = 1
+end

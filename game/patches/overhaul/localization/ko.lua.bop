@@ -1,0 +1,30 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 6
+return {
+    descriptions={
+        Enhanced={
+            m_wild={
+                text={
+                    "아무 수트에",
+r 43 430 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 9
+                    "보스의 약화 효과에 {C:attention}면역",
+                },
+            },
+        },
+        Stake={
+            stake_blue={
+                text={
+                    "Shop items cost {C:money}+$1{}",
+                    "Rerolls go up by {C:money}$2{} each",
+r 43 2556 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 5
+                },
+            },
+        },
+    },
+}
+end

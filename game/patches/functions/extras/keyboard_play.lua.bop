@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 511
+l 541
 local X = Extras
 local KEY = "keyboard_play"
 local M = X.feature(KEY, {})
@@ -103,7 +103,8 @@ function M.key_name(sc)
     if not ok or type(k) ~= "string" or k == "" or k == "unknown" then k = sc end
     local names = {["return"] = "Enter", space = "Space", backspace = "Backspace", up = "Up", down = "Down", left = "kb_left", right = "kb_right",
         tab = "Tab", escape = "Esc", lshift = "Left Shift", rshift = "Right Shift", lctrl = "Left Ctrl", rctrl = "Right Ctrl", lalt = "Left Alt", ralt = "Right Alt",
-        pageup = "Page Up", pagedown = "Page Down", home = "Home", ["end"] = "End", insert = "Insert", delete = "Delete"}
+        pageup = "Page Up", pagedown = "Page Down", home = "Home", ["end"] = "End", insert = "Insert", delete = "Delete",
+        wheelup = "Wheel up", wheeldown = "Wheel down"}
     if names[k] then return L(names[k]) end
     if sc:match("^%d$") then return sc end
     if #k == 1 then return k:upper() end
@@ -467,6 +468,26 @@ function M.pad_release(sc)
     return true
 end
 
+M.WHEEL_GAP = 0.2
+
+function M.wheel(y)
+    if type(y) ~= "number" or y == 0 then return false end
+    local sc = y > 0 and "wheelup" or "wheeldown"
+    if M.capture then return M.capture_key(sc, false) end
+    if G.OVERLAY_MENU then return false end
+    local a = M.action_for(sc)
+    if not a or not M.can_act(G.CONTROLLER) then return false end
+    local now = love.timer.getTime()
+    if M.wheel_at and now - M.wheel_at < M.WHEEL_GAP then return true end
+    M.wheel_at = now
+    if a.pad then
+        local used = M.pad_press(sc)
+        M.pad_release(sc)
+        return used
+    end
+    return M.handle(sc, G.CONTROLLER)
+end
+
 function M.on_toggle(v)
     if not v then
         for sc in pairs(M.held) do M.pad_release(sc) end
@@ -500,6 +521,15 @@ function M.init()
             M.key_event = nil
         end
     end
+    local lwm = love.wheelmoved
+    love.wheelmoved = function(x, y, ...)
+        if X.on(KEY) then
+            local ok, used = pcall(M.wheel, y)
+            if ok and used then return end
+            if not ok then print("[KeyboardPlay] " .. tostring(used)) end
+        end
+        if lwm then return lwm(x, y, ...) end
+    end
     local orig = Controller.key_press_update
     Controller.key_press_update = function(self, key, dt)
         if X.on(KEY) then pcall(M.handle, key, self) end
@@ -514,12 +544,12 @@ function M.init()
     end
     local pip = G.FUNCS.set_button_pip
     if type(pip) == "function" then
-r 13 408 %20%20%20%20%20%20%20%20 -
+r 32 408 %20%20%20%20%20%20%20%20 -
 l 2
             if G.CONTROLLER and G.CONTROLLER.HID.keyboard then
                 if e.children.button_pip then
-r 13 420 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 421 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 420 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 421 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 143
                 end
                 return
@@ -633,7 +663,7 @@ local function group_body(group)
     local cols = {{}, {}}
     for i, a in ipairs(list) do table.insert(cols[i <= per and 1 or 2], bind_row(a, inner, lw)) end
     local note_h = 0.5
-    local line = M.ui.notice or L("Pick an action, then press its new key. Esc cancels.")
+    local line = M.ui.notice or L("Pick an action, then press its new key or turn the mouse wheel. Esc cancels.")
     return {n = G.UIT.R, config = {align = "tm", minw = UIK.W, padding = 0}, nodes = {
         {n = G.UIT.C, config = {align = "tm", padding = 0}, nodes = {
             UIK.columns(cols, {h = UIK.H - UIK.TOP - note_h, cards = true}),
@@ -664,8 +694,8 @@ G.FUNCS.open_keyboard_binds = function()
     if not M.enabled() then return end
     M.capture = nil
     M.ui.notice = nil
-r 13 1381 %20%20%20%20 -
-l 66
+r 32 1381 %20%20%20%20 -
+l 68
     G.FUNCS.overlay_menu{definition = M.page()}
 end
 
@@ -711,7 +741,8 @@ register_new{
         ["Left Shift"] = "Maj gauche", ["Right Shift"] = "Maj droite", ["Left Ctrl"] = "Ctrl gauche", ["Right Ctrl"] = "Ctrl droit", ["Left Alt"] = "Alt", ["Right Alt"] = "Alt Gr",
         ["Cards"] = "Cartes", ["Shop"] = "Boutique", ["KEYBOARD KEYS"] = "TOUCHES DU CLAVIER", ["Keyboard"] = "Clavier", ["Keyboard keys"] = "Touches du clavier",
         ["See and change every key"] = "Voir et changer chaque touche", ["Press a key"] = "Appuyez sur une touche", ["Unbound"] = "Aucune",
-        ["Pick an action, then press its new key. Esc cancels."] = "Choisissez une action, puis appuyez sur sa nouvelle touche. Échap annule.",
+        ["Pick an action, then press its new key or turn the mouse wheel. Esc cancels."] = "Choisissez une action, puis appuyez sur sa nouvelle touche ou tournez la molette. Échap annule.",
+        ["Wheel up"] = "Molette haut", ["Wheel down"] = "Molette bas",
         ["%s moved from %s"] = "%s retirée de %s", ["Reset to defaults"] = "Touches par défaut", ["Every key is back to its default"] = "Toutes les touches sont revenues par défaut",
         ["Page Up"] = "Page préc.", ["Page Down"] = "Page suiv.", ["Home"] = "Début", ["End"] = "Fin", ["Insert"] = "Inser", ["Delete"] = "Suppr"},
     es = {["Keyboard play"] = "Jugar con teclado", ["Play a whole run with the keyboard"] = "Toda una partida con el teclado",
@@ -725,7 +756,8 @@ register_new{
         ["Left Shift"] = "Mayús izq.", ["Right Shift"] = "Mayús der.", ["Left Ctrl"] = "Ctrl izq.", ["Right Ctrl"] = "Ctrl der.", ["Left Alt"] = "Alt", ["Right Alt"] = "Alt Gr",
         ["Cards"] = "Cartas", ["Shop"] = "Tienda", ["KEYBOARD KEYS"] = "TECLAS DEL TECLADO", ["Keyboard"] = "Teclado", ["Keyboard keys"] = "Teclas del teclado",
         ["See and change every key"] = "Ver y cambiar cada tecla", ["Press a key"] = "Pulsa una tecla", ["Unbound"] = "Sin tecla",
-        ["Pick an action, then press its new key. Esc cancels."] = "Elige una acción y pulsa su nueva tecla. Esc cancela.",
+        ["Pick an action, then press its new key or turn the mouse wheel. Esc cancels."] = "Elige una acción y pulsa su nueva tecla o gira la rueda del ratón. Esc cancela.",
+        ["Wheel up"] = "Rueda arriba", ["Wheel down"] = "Rueda abajo",
         ["%s moved from %s"] = "%s quitada de %s", ["Reset to defaults"] = "Teclas por defecto", ["Every key is back to its default"] = "Todas las teclas vuelven a su valor por defecto",
         ["Page Up"] = "Re Pág", ["Page Down"] = "Av Pág", ["Home"] = "Inicio", ["End"] = "Fin", ["Insert"] = "Insert", ["Delete"] = "Supr"},
     ["en-us"] = {["kb_left"] = "Left", ["kb_right"] = "Right"},

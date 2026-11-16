@@ -101,7 +101,7 @@ function Game:press(x, y)
     end
 end
 
-r 9 2449 - -
+r 7 2449 - -
 l 122
     local c = self.cards
     local step = dt / FLIP

@@ -463,7 +463,7 @@ function R.apply(values)
   table.sort(late, function(a, b) return (a.order or 0) < (b.order or 0) end)
   if #late > 0 then
 r 3 617 %20%20%20%20 -
-l 107
+l 115
       for _, d in ipairs(late) do
         local ok, err = pcall(d.late, v[d.key])
         if not ok then print("[RUN RULES] late " .. d.key .. ": " .. tostring(err)) end
@@ -529,6 +529,14 @@ function R.ensure_plain_blind()
 end
 
 function R.wrap_new_boss()
+  if SMODS and type(SMODS.get_new_blind) == 'function' and SMODS.get_new_blind ~= R.new_blind then
+    local sbase = SMODS.get_new_blind
+    R.new_blind = function(blind_type, ...)
+      if (not blind_type or blind_type == 'boss') and R.active('no_bosses') then return R.new_boss() end
+      return sbase(blind_type, ...)
+    end
+    SMODS.get_new_blind = R.new_blind
+  end
   if get_new_boss == R.new_boss then return end
   local base = get_new_boss
   R.new_boss = function(...)
@@ -571,14 +579,14 @@ function R.extra_shop_vouchers()
   for _ = 2, n do
     local key = get_next_voucher_key()
     local center = key and G.P_CENTERS[key]
-r 13 614 %20%20%20%20 -
+r 32 614 %20%20%20%20 -
 l 3
     for _, c in ipairs(G.shop_vouchers.cards) do if c.config.center.key == key then center = nil end end
     if center then
       local card = Card(G.shop_vouchers.T.x + G.shop_vouchers.T.w / 2, G.shop_vouchers.T.y, G.CARD_W, G.CARD_H, G.P_CARDS.empty, center, {bypass_discovery_center = true, bypass_discovery_ui = true})
-r 9 3129 %20%20%20%20%20%20 -
+r 7 3129 %20%20%20%20%20%20 -
 r 3 1446 %20%20%20%20%20%20 -
-r 9 3131 %20%20%20%20%20%20 -
+r 7 3131 %20%20%20%20%20%20 -
 l 16
     end
   end
@@ -606,7 +614,7 @@ l 5
 end
 
 local _rr_reroll = calculate_reroll_cost
-r 12 2263 - -
+r 31 2263 - -
 l 11
   _rr_reroll(skip_increment)
   local step = R.active('reroll_step')

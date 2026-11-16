@@ -40,13 +40,12 @@ function G.UIDEF.run_select_galdur(type)
         G.E_MANAGER.queues.run_select = {}
     end
     G.PROFILES[G.SETTINGS.profile].last_choices = G.PROFILES[G.SETTINGS.profile].last_choices or {}
-r 15 5962 %20%20%20%20 -
-l 4
-        local raw_save = get_compressed(G.SETTINGS.profile..'/save.jkr')
-        G.SAVED_GAME = raw_save
-        if raw_save ~= nil then G.SAVED_GAME = STR_UNPACK(raw_save) end
+r 30 5962 %20%20%20%20 -
+r 17 864 %20%20%20%20%20%20%20%20 -
+r 17 865 %20%20%20%20%20%20%20%20 -
+l 1
     end
-r 15 5967 %20%20%20%20 -
+r 30 5967 %20%20%20%20 -
 l 212
   
     for _, key in ipairs(SMODS.RunSelectPage.obj_buffer) do
@@ -260,8 +259,8 @@ G.FUNCS.set_button_pip_prev = function(e)
     if SMODS.RunSelect.Internals.current_page > 1 then
         G.FUNCS.set_button_pip(e)
     elseif e.children.button_pip then
-r 13 420 %20%20%20%20%20%20%20%20 -
-r 13 421 %20%20%20%20%20%20%20%20 -
+r 32 420 %20%20%20%20%20%20%20%20 -
+r 32 421 %20%20%20%20%20%20%20%20 -
 l 7
     end
 end
@@ -270,7 +269,7 @@ G.FUNCS.run_select_can_change_page = function(e)
     local page_def = SMODS.RunSelect.Pages[SMODS.RunSelect.Internals.pages[SMODS.RunSelect.Internals.current_page]]
     if page_def.can_continue then
         if not page_def:can_continue() then
-r 13 58 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 58 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 41
             e.config.colour = SMODS.RunSelect.Colours.waiting
             return
@@ -313,20 +312,20 @@ G.FUNCS.run_select_paste_seed = function(e)
   G.CONTROLLER.text_input_hook = e.UIBox:get_UIE_by_ID('run_select_seeded_input').children[1].children[1]
   G.CONTROLLER.text_input_id = 'run_select_seeded_input'
   for i = 1, string.len(SMODS.RunSelect.Setup.choices.seed or '') do
-r 13 935 %20%20%20%20 -
+r 32 935 %20%20%20%20 -
 l 2
   end
   for i = 1, string.len(SMODS.RunSelect.Setup.choices.seed or '') do
-r 13 938 %20%20%20%20%20%20 -
+r 32 938 %20%20%20%20%20%20 -
 l 1
   end
-r 13 940 %20%20 -
-r 13 941 %20%20 -
-r 13 942 %20%20%20%20 -
-r 13 943 %20%20%20%20 -
+r 32 940 %20%20 -
+r 32 941 %20%20 -
+r 32 942 %20%20%20%20 -
+r 32 943 %20%20%20%20 -
 l 1
   end
-r 13 945 %20%20 -
+r 32 945 %20%20 -
 l 31
 end
 
@@ -359,10 +358,10 @@ function SMODS.RunSelect.Functions.start_run(_quick_start, _skip_wipe)
     end
 
     G.PROFILES[G.SETTINGS.profile].last_choices = copy_table(run_args)
-r 13 1827 %20%20%20%20 -
-r 15 5975 %20%20%20%20%20%20 -
-r 13 1829 %20%20%20%20%20%20%20%20 %20
-r 23 900 %20%20%20%20%20%20%20%20%20%20 -
+r 32 1827 %20%20%20%20 -
+r 30 5975 %20%20%20%20%20%20 -
+r 32 1829 %20%20%20%20%20%20%20%20 %20
+r 17 900 %20%20%20%20%20%20%20%20%20%20 -
 l 17
         end
       end
@@ -381,23 +380,8 @@ l 17
 end
 
 local start_run = Game.start_run
-r 9 2018 - -
-l 150
-    if G.PROFILES and G.SETTINGS and G.PROFILES[G.SETTINGS.profile] then
-        G.PROFILES[G.SETTINGS.profile].last_choices = G.PROFILES[G.SETTINGS.profile].last_choices or {}
-        local choices = SMODS.RunSelect.Setup.choices
-        for _, key in ipairs(SMODS.RunSelectPage.obj_buffer) do
-            local page = SMODS.RunSelect.Pages[key]
-            if choices[key] == nil and page and page.set_default then
-                local ok, value = pcall(page.set_default, page, G.PROFILES[G.SETTINGS.profile].last_choices[key])
-                if ok and type(value) == 'table' then
-                    choices[key] = value
-                elseif SMODS.RunSelect.Functions.get_selection_limit(page) > 1 then
-                    choices[key] = {}
-                end
-            end
-        end
-    end
+r 7 2018 - -
+l 135
     start_run(self, args)
     if not G.SETTINGS.tutorial_complete then return end
     if args.savetext then return end
@@ -533,7 +517,7 @@ local cycler = function(args)
     args.page_size = args.page_size -- REQUIRED
     args.page_label = args.page_label -- REQUIRED
     args.label_colour = args.label_colour or G.C.WHITE
-r 15 6388 %20%20%20%20 -
+r 30 6388 %20%20%20%20 -
 l 93
     args.button_w = args.button_w or 3
     args.w = args.w or 8
@@ -628,7 +612,7 @@ function SMODS.RunSelect.Functions.update_preview_texts(page_def)
     local preview_texts = SMODS.split_string(page_def.selected_text and page_def:selected_text(SMODS.RunSelect.Setup.choices[page_def.key]) or localize('run_select_nothing'))
     for i, text in ipairs(preview_texts) do
         SMODS.RunSelect.Internals.preview_texts['preview_text_'..i] = text
-r 13 1360 %20%20%20%20%20%20%20%20 -
+r 32 1360 %20%20%20%20%20%20%20%20 -
 l 91
         local dyna_text_container = G.OVERLAY_MENU:get_UIE_by_ID('preview_text_'..i)
         if not dyna_text_container then return end
@@ -757,7 +741,7 @@ function SMODS.RunSelect.Functions.build_stake_tower_ui()
     return
     {n=G.UIT.C, config = {align = "tm", padding = 0.1}, nodes ={
         {n = G.UIT.C, config = {minh = 5.95, minw = 1.5, maxw = 1.5, colour = G.C.BLACK, r=0.1, align = "bm", padding = 0.05, emboss=0.05}, nodes = {
-r 6 297 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 36
                 {n = G.UIT.O, config = {object = SMODS.RunSelect.Internals.stake_tower}}
             }},
@@ -840,7 +824,7 @@ end
 
 -- Function Hooks
 local exit_overlay = G.FUNCS.exit_overlay_menu
-r 13 1359 - -
+r 32 1359 - -
 l 5
   exit_overlay()
   SMODS.RunSelect.Functions.clean_up()
@@ -856,13 +840,13 @@ l 7
 end
 
 function SMODS.RunSelect.Functions.grab_tooltips(set, key)
-r 12 2412 %20%20%20%20 -
+r 31 2412 %20%20%20%20 -
 l 4
     local loc_target = G.localization.descriptions[set][key]
     local add_info_queue = function (part)
         if part.control and part.control.T then
             local already_added = false
-r 12 2740 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2740 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 15
                 if v == G.P_CENTERS[part.control.T] or v == G.P_TAGS[part.control.T] then
                     already_added = true
@@ -879,7 +863,7 @@ l 15
         end
     end
     for _, lines in ipairs(loc_target.text_parsed) do
-r 11 1711 %20%20%20%20%20%20%20%20 -
+r 13 1711 %20%20%20%20%20%20%20%20 -
 l 26
             add_info_queue(part)
             for _, multibox_part in ipairs(part) do
@@ -907,8 +891,8 @@ function SMODS.RunSelect.Functions.create_info_nodes(info_queue, c, row)
     local function create_info_tooltip(tooltip_data)
         local desc = generate_card_ui(tooltip_data, {main = {},info = {},type = {},name = 'done',badges = {}, from_detailed_tooltip = true}, nil, tooltip_data.set, nil)
         return {n=row and G.UIT.C or G.UIT.R, config={align = 'cm'}, nodes={
-r 15 1114 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 1175 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1114 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1175 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 28
             }}
         }}
@@ -1058,12 +1042,12 @@ l 23
 end
 
 local card_area_align_ref = CardArea.align_cards
-r 6 410 - -
+r 5 410 - -
 l 2
     if self.config.run_select_stake_tower then -- align chips vertically in chip tower
         local deck_height = 4.7/math.max(24,#self.cards)
-r 6 215 %20%20%20%20%20%20%20%20 -
-r 6 417 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 5 215 %20%20%20%20%20%20%20%20 -
+r 5 417 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 6
                 card.T.x = self.T.x + 0.5*(self.T.w - card.T.w)
                 card.T.y = self.T.y + deck_height - (#self.cards - k + (k <= SMODS.RunSelect.Internals.hover_index and 4 or 0))*deck_height
@@ -1071,9 +1055,9 @@ l 6
             card.rank = 0
         end
     elseif self.config.run_select_deck_preview then -- deck preview grows vertically
-r 6 215 %20%20%20%20%20%20%20%20 -
-r 6 417 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 16
+r 5 215 %20%20%20%20%20%20%20%20 -
+r 5 417 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 8
                 card.T.x = self.T.x + 0.5*(self.T.w - card.T.w)
                 card.T.y = self.T.y + 0.5*(self.T.h - card.T.h) + (self.shadow_parrallax.y*(self.config.deck_height or 0.25)/52*(#self.cards/2 - k))
             end
@@ -1081,13 +1065,5 @@ l 16
     else
         card_area_align_ref(self)
     end
-end
-
-local back_generate_UI = Back.generate_UI
-function Back:generate_UI(...)
-    if G.PROFILES and G.SETTINGS and G.PROFILES[G.SETTINGS.profile] then
-        G.PROFILES[G.SETTINGS.profile].last_choices = G.PROFILES[G.SETTINGS.profile].last_choices or {}
-    end
-    return back_generate_UI(self, ...)
 end
 end

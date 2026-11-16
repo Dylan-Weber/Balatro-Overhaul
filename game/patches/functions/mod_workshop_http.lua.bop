@@ -8,7 +8,7 @@ require("love.filesystem")
 require "love.timer"
 require "love.image"
 require "love.data"
-r 26 1 - -
+r 19 1 - -
 l 463
 
 local CHANNEL = ...

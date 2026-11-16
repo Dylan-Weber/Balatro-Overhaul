@@ -79,6 +79,11 @@ Q.row("Scoring", function()
     return UIK.toggle{id = 'set_score_preview', label = mod_loc("Score Preview"), info = lock and mod_loc("Locked by the host") or mod_loc("Shows the score before you play"),
         ref_table = G.SETTINGS, ref_value = 'score_preview_enabled', disabled = lock, callback = Q.save}
 end)
+Q.row("Scoring", function()
+    if G.SETTINGS.tally_joker == nil then G.SETTINGS.tally_joker = true end
+    return UIK.toggle{id = 'set_tally_joker', label = mod_loc("Tally Joker"), info = mod_loc("A line under each Joker with its numbers"),
+        ref_table = G.SETTINGS, ref_value = 'tally_joker', callback = function() Q.save() if TALLY then TALLY.refresh_all() end end}
+end)
 Q.row("Shop", function()
     if not (Extras and Extras.set) then return nil end
     return Q.toggle('set_safe_sell', "Safe sell", "Valuable jokers need two presses to sell", 'safe_sell',

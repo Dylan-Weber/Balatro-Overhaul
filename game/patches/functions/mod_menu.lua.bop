@@ -9,7 +9,7 @@ G.MOD_SETTINGS = G.MOD_SETTINGS or {
     enabled = false,
     starting_money = 4,
     joker_slots = 5,
-r 11 1877 %20%20%20%20 -
+r 13 1877 %20%20%20%20 -
 l 88
     hand_size = 8,
     hands_per_round = 4,
@@ -99,7 +99,7 @@ local function _mod_menu_multiplayer_violation(reason)
   pcall(function() remove_floating_mod_button() end)
   pcall(function()
     if G and G.OVERLAY_MENU and G.FUNCS and G.FUNCS.exit_overlay_menu then
-r 13 1375 %20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20 -
 l 31
     end
   end)
@@ -162,7 +162,7 @@ l 27
 
         pcall(function()
           if G and G.OVERLAY_MENU and G.FUNCS and G.FUNCS.exit_overlay_menu then
-r 13 1375 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 42
           end
         end)
@@ -206,7 +206,7 @@ function create_UIBox_mod_menu_fullscreen()
     no_pip = true,
     back_func = 'mod_menu_back',
     contents = {
-r 15 71 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 399
         {n=G.UIT.T, config={text = mod_loc("CHEATS"), scale = 0.45, colour = G.C.GOLD}}
       }},
@@ -607,7 +607,7 @@ end
 
 G.FUNCS.mod_menu_back = function(e)
   G.MOD_MENU_STATE.active_tab = 1
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 8
 end
 
@@ -617,7 +617,7 @@ G.FUNCS.open_mod_menu_fullscreen = function(e)
     cheats_off_notice()
     return
   end
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 15
     definition = create_UIBox_mod_menu_fullscreen()
   }
@@ -634,7 +634,7 @@ G.FUNCS.open_mod_menu_inrun = function(e)
     cheats_off_notice()
     return
   end
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 51
     definition = create_UIBox_mod_menu_fullscreen()
   }
@@ -807,7 +807,7 @@ G.FUNCS.mod_add_random_joker = function(e)
     if #G.jokers.cards < G.jokers.config.card_limit then
       local card = create_card('Joker', G.jokers, nil, nil, nil, nil, nil)
       if G.MOD_SETTINGS.runtime.all_eternal_active then
-r 12 2135 %20%20%20%20%20%20%20%20 -
+r 31 2135 %20%20%20%20%20%20%20%20 -
 l 2
       end
       card:add_to_deck()
@@ -827,7 +827,7 @@ G.FUNCS.mod_add_legendary = function(e)
       local random_legendary = pseudorandom_element(legendary_jokers, pseudoseed('mod_legendary'))
       local card = create_card('Joker', G.jokers, nil, nil, nil, nil, random_legendary)
       if G.MOD_SETTINGS.runtime.all_eternal_active then
-r 12 2135 %20%20%20%20%20%20%20%20 -
+r 31 2135 %20%20%20%20%20%20%20%20 -
 l 2
       end
       card:add_to_deck()
@@ -846,7 +846,7 @@ G.FUNCS.mod_add_negative_joker = function(e)
 r 3 2418 %20%20%20%20 -
 l 1
     if G.MOD_SETTINGS.runtime.all_eternal_active then
-r 12 2135 %20%20%20%20%20%20 -
+r 31 2135 %20%20%20%20%20%20 -
 l 2
     end
     card:add_to_deck()
@@ -1012,7 +1012,7 @@ G.FUNCS.mod_browse_jokers = function(e)
   local items_per_page = cards_per_row * num_rows
   local pages = math.max(1, math.ceil(#joker_pool / items_per_page))
 
-r 15 489 %20%20 -
+r 30 489 %20%20 -
 l 6
   G.mod_browse_collection = {}
   for j = 1, num_rows do
@@ -1020,8 +1020,8 @@ l 6
       G.ROOM.T.x + 0.2*G.ROOM.T.w/2, G.ROOM.T.h,
       (cards_per_row + 0.25)*G.CARD_W, 0.95*G.CARD_H,
       {card_limit = cards_per_row, type = 'title', highlight_limit = 0, collection = true})
-r 15 3255 %20%20%20%20 -
-r 15 3546 %20%20%20%20%20%20 -
+r 30 3255 %20%20%20%20 -
+r 30 3546 %20%20%20%20%20%20 -
 l 20
         {n=G.UIT.O, config={object = G.mod_browse_collection[j]}}
       }})
@@ -1043,7 +1043,7 @@ l 20
       if center then
         local card = Card(G.mod_browse_collection[j].T.x + G.mod_browse_collection[j].T.w/2,
           G.mod_browse_collection[j].T.y, G.CARD_W, G.CARD_H, nil, center)
-r 15 3603 %20%20%20%20%20%20%20%20 -
+r 30 3603 %20%20%20%20%20%20%20%20 -
 l 6
         _mod_setup_card_select(card, G.MOD_MENU_STATE.selected_jokers, center.key)
         G.mod_browse_collection[j]:emplace(card)
@@ -1051,15 +1051,15 @@ l 6
     end
   end
 
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 1
     definition = create_UIBox_generic_options({back_func = 'mod_browse_back_jokers', contents = {
-r 15 71 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 2
         {n=G.UIT.T, config={text = mod_loc("Tap jokers to select/deselect"), scale = 0.3, colour = G.C.UI.TEXT_LIGHT}},
       }},
-r 15 3611 %20%20%20%20%20%20 -
-r 6 297 %20%20%20%20%20%20 -
+r 30 3611 %20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20 -
 l 9
         create_option_cycle({options = page_options, w = 4.5, cycle_shoulders = true,
           opt_callback = 'mod_browse_joker_page', current_option = 1,
@@ -1070,7 +1070,7 @@ l 9
 end
 
 G.FUNCS.mod_browse_back_jokers = function(e)
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 7
   G.E_MANAGER:add_event(Event({trigger='after', delay=0.15, func=function()
     pcall(function() G.FUNCS.open_mod_menu_inrun() end)
@@ -1079,7 +1079,7 @@ l 7
 end
 
 G.FUNCS.mod_browse_joker_page = function(args)
-r 13 603 %20%20 -
+r 32 603 %20%20 -
 l 21
   if not G.mod_browse_collection or not G._mod_browse_joker_pool then return end
   local pool = G._mod_browse_joker_pool
@@ -1102,7 +1102,7 @@ l 21
       if center then
         local card = Card(G.mod_browse_collection[j].T.x + G.mod_browse_collection[j].T.w/2,
           G.mod_browse_collection[j].T.y, G.CARD_W, G.CARD_H, nil, center)
-r 15 3603 %20%20%20%20%20%20%20%20 -
+r 30 3603 %20%20%20%20%20%20%20%20 -
 l 24
         _mod_setup_card_select(card, G.MOD_MENU_STATE.selected_jokers, center.key)
         G.mod_browse_collection[j]:emplace(card)
@@ -1153,7 +1153,7 @@ local function _mod_browse_consumable_type(pool_name, back_func_name)
   local items_per_page = cards_per_row * num_rows
   local pages = math.max(1, math.ceil(#pool / items_per_page))
 
-r 15 489 %20%20 -
+r 30 489 %20%20 -
 l 6
   G.mod_browse_collection = {}
   for j = 1, num_rows do
@@ -1161,8 +1161,8 @@ l 6
       G.ROOM.T.x + 0.2*G.ROOM.T.w/2, G.ROOM.T.h,
       (cards_per_row + 0.25)*G.CARD_W, 0.95*G.CARD_H,
       {card_limit = cards_per_row, type = 'title', highlight_limit = 0, collection = true})
-r 15 3255 %20%20%20%20 -
-r 15 3546 %20%20%20%20%20%20 -
+r 30 3255 %20%20%20%20 -
+r 30 3546 %20%20%20%20%20%20 -
 l 20
         {n=G.UIT.O, config={object = G.mod_browse_collection[j]}}
       }})
@@ -1184,7 +1184,7 @@ l 20
       if center then
         local card = Card(G.mod_browse_collection[j].T.x + G.mod_browse_collection[j].T.w/2,
           G.mod_browse_collection[j].T.y, G.CARD_W, G.CARD_H, nil, center)
-r 15 3603 %20%20%20%20%20%20%20%20 -
+r 30 3603 %20%20%20%20%20%20%20%20 -
 l 6
         _mod_setup_card_select(card, G.MOD_MENU_STATE.selected_consumables, center.key)
         G.mod_browse_collection[j]:emplace(card)
@@ -1192,15 +1192,15 @@ l 6
     end
   end
 
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 1
     definition = create_UIBox_generic_options({back_func = back_func_name, contents = {
-r 15 71 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 2
         {n=G.UIT.T, config={text = mod_loc("Tap cards to select/deselect"), scale = 0.3, colour = G.C.UI.TEXT_LIGHT}},
       }},
-r 15 3611 %20%20%20%20%20%20 -
-r 6 297 %20%20%20%20%20%20 -
+r 30 3611 %20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20 -
 l 24
         create_option_cycle({options = page_options, w = 4.5, cycle_shoulders = true,
           opt_callback = 'mod_browse_consumable_page', current_option = 1,
@@ -1226,7 +1226,7 @@ G.FUNCS.mod_browse_spectrals = function(e)
 end
 
 G.FUNCS.mod_browse_back_consumables = function(e)
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 7
   G.E_MANAGER:add_event(Event({trigger='after', delay=0.15, func=function()
     pcall(function() G.FUNCS.open_mod_menu_inrun() end)
@@ -1235,7 +1235,7 @@ l 7
 end
 
 G.FUNCS.mod_browse_consumable_page = function(args)
-r 13 603 %20%20 -
+r 32 603 %20%20 -
 l 21
   if not G.mod_browse_collection or not G._mod_browse_cons_pool then return end
   local pool = G._mod_browse_cons_pool
@@ -1258,7 +1258,7 @@ l 21
       if center then
         local card = Card(G.mod_browse_collection[j].T.x + G.mod_browse_collection[j].T.w/2,
           G.mod_browse_collection[j].T.y, G.CARD_W, G.CARD_H, nil, center)
-r 15 3603 %20%20%20%20%20%20%20%20 -
+r 30 3603 %20%20%20%20%20%20%20%20 -
 l 23
         _mod_setup_card_select(card, G.MOD_MENU_STATE.selected_consumables, center.key)
         G.mod_browse_collection[j]:emplace(card)
@@ -1297,7 +1297,7 @@ G.FUNCS.mod_browse_cards = function(e)
   G.MOD_MENU_STATE.active_tab = 4
   G.MOD_MENU_STATE.selected_cards = {}
   if DRAG_SELECT then DRAG_SELECT.set_browse_mode(true) end
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 23
     definition = create_UIBox_generic_options({back_func = 'mod_browse_back_cards', contents = {
       {n=G.UIT.R, config={align = "cm", padding = 0.02, minw = _mm_port() and 9.2 or 12, minh = 3.5}, nodes={
@@ -1322,7 +1322,7 @@ function _mod_card_suit_tab(suit)
   local items_per_page = cards_per_row * num_rows
   local pages = math.max(1, math.ceil(#ranks / items_per_page))
 
-r 15 489 %20%20 -
+r 30 489 %20%20 -
 l 7
   local coll_key = '_mod_suit_' .. suit
   G[coll_key] = {}
@@ -1331,8 +1331,8 @@ l 7
       G.ROOM.T.x + 0.2*G.ROOM.T.w/2, G.ROOM.T.h,
       (cards_per_row + 0.25)*G.CARD_W, 1.03*G.CARD_H,
       {card_limit = cards_per_row, type = 'title', highlight_limit = 0, collection = true})
-r 15 3255 %20%20%20%20 -
-r 15 3546 %20%20%20%20%20%20 -
+r 30 3255 %20%20%20%20 -
+r 30 3546 %20%20%20%20%20%20 -
 l 25
         {n=G.UIT.O, config={object = G[coll_key][j]}}
       }})
@@ -1359,7 +1359,7 @@ l 25
         if front then
           local card = Card(G[coll_key][j].T.x + G[coll_key][j].T.w/2,
             G[coll_key][j].T.y, G.CARD_W, G.CARD_H, front, G.P_CENTERS.c_base)
-r 15 3603 %20%20%20%20%20%20%20%20%20%20 -
+r 30 3603 %20%20%20%20%20%20%20%20%20%20 -
 l 8
           _mod_setup_playing_card_select(card, suit, rank)
           G[coll_key][j]:emplace(card)
@@ -1369,12 +1369,12 @@ l 8
   end
 
   return {n=G.UIT.ROOT, config={align = "cm", padding = 0.05, colour = G.C.CLEAR, minw = _mm_port() and 9 or 11, minh = 2.5}, nodes={
-r 15 71 %20%20%20%20 -
+r 30 71 %20%20%20%20 -
 l 2
       {n=G.UIT.T, config={text = mod_loc("Tap cards to select/deselect"), scale = 0.28, colour = G.C.UI.TEXT_LIGHT}},
     }},
-r 15 3611 %20%20%20%20 -
-r 6 297 %20%20%20%20 -
+r 30 3611 %20%20%20%20 -
+r 5 297 %20%20%20%20 -
 l 8
       create_option_cycle({options = page_options, w = 4.5, cycle_shoulders = true,
         opt_callback = 'mod_browse_card_suit_page', current_option = 1,
@@ -1384,7 +1384,7 @@ l 8
 end
 
 G.FUNCS.mod_browse_card_suit_page = function(args)
-r 13 603 %20%20 -
+r 32 603 %20%20 -
 l 28
   local suit = G._mod_card_suit
   local ranks = G._mod_card_ranks
@@ -1414,7 +1414,7 @@ l 28
         if front then
           local card = Card(G[coll_key][j].T.x + G[coll_key][j].T.w/2,
             G[coll_key][j].T.y, G.CARD_W, G.CARD_H, front, G.P_CENTERS.c_base)
-r 15 3603 %20%20%20%20%20%20%20%20%20%20 -
+r 30 3603 %20%20%20%20%20%20%20%20%20%20 -
 l 29
           _mod_setup_playing_card_select(card, suit, rank)
           G[coll_key][j]:emplace(card)
@@ -1445,7 +1445,7 @@ G.FUNCS.mod_browse_back_cards = function(e)
       end
     end
   end)
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 11
   G.E_MANAGER:add_event(Event({trigger='after', delay=0.15, func=function()
     pcall(function() G.FUNCS.open_mod_menu_inrun() end)
@@ -1458,7 +1458,7 @@ G.FUNCS.mod_browse_enhancements = function(e)
   local enhancements = {'c_base', 'm_bonus', 'm_mult', 'm_wild', 'm_glass', 'm_steel', 'm_stone', 'm_gold', 'm_lucky'}
   local enh_names = {"None", "Bonus", "Mult", "Wild", "Glass", "Steel", "Stone", "Gold", "Lucky"}
 
-r 15 489 %20%20 -
+r 30 489 %20%20 -
 l 8
   G.mod_browse_collection = {}
   local row_limits = _mm_port() and {3, 3, 3} or {4, 5}
@@ -1468,8 +1468,8 @@ l 8
       G.ROOM.T.x + 0.2*G.ROOM.T.w/2, G.ROOM.T.h,
       (limit + 0.25)*G.CARD_W, 1.03*G.CARD_H,
       {card_limit = limit, type = 'title', highlight_limit = 0})
-r 15 3255 %20%20%20%20 -
-r 15 3546 %20%20%20%20%20%20 -
+r 30 3255 %20%20%20%20 -
+r 30 3546 %20%20%20%20%20%20 -
 l 19
         {n=G.UIT.O, config={object = G.mod_browse_collection[j]}}
       }})
@@ -1490,7 +1490,7 @@ l 19
           G.MOD_MENU_STATE.selected_enhancement = _enh
           pcall(function() play_sound('highlight1') end)
           card:juice_up(0.3, 0.3)
-r 13 1375 %20%20%20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20%20%20 -
 l 13
           G.E_MANAGER:add_event(Event({trigger='after', delay=0.15, func=function()
             pcall(function() G.FUNCS.open_mod_menu_inrun() end)
@@ -1505,10 +1505,10 @@ l 13
     offset = offset + row_limits[j]
   end
 
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 1
     definition = create_UIBox_generic_options({back_func = 'mod_browse_back_cards', contents = {
-r 15 71 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 16
         {n=G.UIT.T, config={text = mod_loc("Tap an enhancement to select it"), scale = 0.3, colour = G.C.UI.TEXT_LIGHT}},
       }},
@@ -1526,7 +1526,7 @@ G.FUNCS.mod_browse_seals = function(e)
   G.mod_browse_collection[1] = CardArea(
     G.ROOM.T.x + 0.2*G.ROOM.T.w/2, G.ROOM.T.h,
     5.25*G.CARD_W, 1.03*G.CARD_H,
-r 15 3026 %20%20%20%20 -
+r 30 3026 %20%20%20%20 -
 l 14
 
   for i = 1, 5 do
@@ -1542,7 +1542,7 @@ l 14
       G.MOD_MENU_STATE.selected_seal = _seal
       pcall(function() play_sound('highlight1') end)
       card:juice_up(0.3, 0.3)
-r 13 1375 %20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20 -
 l 10
       G.E_MANAGER:add_event(Event({trigger='after', delay=0.15, func=function()
         pcall(function() G.FUNCS.open_mod_menu_inrun() end)
@@ -1554,15 +1554,15 @@ l 10
     G.mod_browse_collection[1]:emplace(card)
   end
 
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 1
     definition = create_UIBox_generic_options({back_func = 'mod_browse_back_cards', contents = {
-r 15 71 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 2
         {n=G.UIT.T, config={text = mod_loc("Tap a seal to select it"), scale = 0.3, colour = G.C.UI.TEXT_LIGHT}},
       }},
-r 15 3893 %20%20%20%20%20%20 -
-r 15 2387 %20%20%20%20%20%20%20%20 -
+r 30 3893 %20%20%20%20%20%20 -
+r 30 2387 %20%20%20%20%20%20%20%20 -
 l 16
           {n=G.UIT.O, config={object = G.mod_browse_collection[1]}}
         }}
@@ -1580,7 +1580,7 @@ G.FUNCS.mod_browse_editions = function(e)
   G.mod_browse_collection[1] = CardArea(
     G.ROOM.T.x + 0.2*G.ROOM.T.w/2, G.ROOM.T.h,
     5.25*G.CARD_W, 1.03*G.CARD_H,
-r 15 3544 %20%20%20%20 -
+r 30 3544 %20%20%20%20 -
 l 16
 
   for i = 1, 5 do
@@ -1598,7 +1598,7 @@ l 16
       G.MOD_MENU_STATE.selected_edition = _edk
       pcall(function() play_sound('highlight1') end)
       card:juice_up(0.3, 0.3)
-r 13 1375 %20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20 -
 l 10
       G.E_MANAGER:add_event(Event({trigger='after', delay=0.15, func=function()
         pcall(function() G.FUNCS.open_mod_menu_inrun() end)
@@ -1610,15 +1610,15 @@ l 10
     G.mod_browse_collection[1]:emplace(card)
   end
 
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 1
     definition = create_UIBox_generic_options({back_func = 'mod_browse_back_cards', contents = {
-r 15 71 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 2
         {n=G.UIT.T, config={text = mod_loc("Tap an edition to select it"), scale = 0.3, colour = G.C.UI.TEXT_LIGHT}},
       }},
-r 15 3893 %20%20%20%20%20%20 -
-r 15 2387 %20%20%20%20%20%20%20%20 -
+r 30 3893 %20%20%20%20%20%20 -
+r 30 2387 %20%20%20%20%20%20%20%20 -
 l 32
           {n=G.UIT.O, config={object = G.mod_browse_collection[1]}}
         }}
@@ -1652,7 +1652,7 @@ G.FUNCS.mod_card_preview = function(e)
     {card_limit = math.min(show_count, 5), type = 'title', highlight_limit = 0})
 
   local deck_tables = {
-r 15 2387 %20%20%20%20 -
+r 30 2387 %20%20%20%20 -
 l 9
       {n=G.UIT.O, config={object = G.mod_browse_collection[1]}}
     }}
@@ -1663,8 +1663,8 @@ l 9
       G.ROOM.T.x + 0.2*G.ROOM.T.w/2, G.ROOM.T.h,
       (math.min(show_count - 5, 5) + 0.25)*G.CARD_W, 1.03*G.CARD_H,
       {card_limit = math.min(show_count - 5, 5), type = 'title', highlight_limit = 0})
-r 15 3255 %20%20%20%20 -
-r 15 2387 %20%20%20%20%20%20 -
+r 30 3255 %20%20%20%20 -
+r 30 2387 %20%20%20%20%20%20 -
 l 24
         {n=G.UIT.O, config={object = G.mod_browse_collection[2]}}
       }})
@@ -1690,15 +1690,15 @@ l 24
 
   local total_text = #preview_cards .. " card(s) will be added"
 
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 1
     definition = create_UIBox_generic_options({back_func = 'mod_browse_back_cards', contents = {
-r 15 71 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 2
         {n=G.UIT.T, config={text = mod_loc("Card Preview"), scale = 0.4, colour = G.C.GOLD}},
       }},
-r 15 3611 %20%20%20%20%20%20 -
-r 15 71 %20%20%20%20%20%20 -
+r 30 3611 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 26
         {n=G.UIT.T, config={text = mod_loc(total_text), scale = 0.3, colour = G.C.UI.TEXT_LIGHT}},
       }},
@@ -1773,7 +1773,7 @@ l 13
   local items_per_page = cards_per_row * num_rows
   local pages = math.max(1, math.ceil(#deck_cards / items_per_page))
 
-r 15 489 %20%20 -
+r 30 489 %20%20 -
 l 6
   G.mod_browse_collection = {}
   for j = 1, num_rows do
@@ -1781,7 +1781,7 @@ l 6
       G.ROOM.T.x + 0.2*G.ROOM.T.w/2, G.ROOM.T.h,
       (cards_per_row + 0.25)*G.CARD_W*1.05, 1.03*G.CARD_H*1.05,
       {card_limit = cards_per_row, type = 'title', highlight_limit = 0})
-r 15 3255 %20%20%20%20 -
+r 30 3255 %20%20%20%20 -
 l 31
       {n=G.UIT.R, config={align = "cm", padding = 0.05, no_fill = true}, nodes={
         {n=G.UIT.O, config={object = G.mod_browse_collection[j]}}
@@ -1814,21 +1814,21 @@ l 31
     end
   end
 
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 1
     definition = create_UIBox_generic_options({back_func = 'mod_browse_back_cards', contents = {
-r 15 71 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 2
         {n=G.UIT.T, config={text = mod_loc("Tap cards to select, then remove"), scale = 0.3, colour = G.C.UI.TEXT_LIGHT}},
       }},
-r 15 3611 %20%20%20%20%20%20 -
-r 6 297 %20%20%20%20%20%20 -
+r 30 3611 %20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20 -
 l 4
         create_option_cycle({options = page_options, w = 4.5, cycle_shoulders = true,
           opt_callback = 'mod_remove_card_page', current_option = 1,
           colour = G.C.RED, no_pips = true, focus_args = {snap_to = true, nav = 'wide'}})
       }},
-r 15 71 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 7
         UIBox_button({label = {mod_loc("REMOVE SELECTED CARDS")}, button = 'mod_do_remove_selected_cards', colour = G.C.RED, minw = 5, minh = 0.7, scale = 0.4}),
       }},
@@ -1837,7 +1837,7 @@ l 7
 end
 
 G.FUNCS.mod_remove_card_page = function(args)
-r 13 603 %20%20 -
+r 32 603 %20%20 -
 l 71
   if not G.mod_browse_collection or not G._mod_remove_deck_cards then return end
   local deck_cards = G._mod_remove_deck_cards
@@ -1910,7 +1910,7 @@ G.FUNCS.mod_do_remove_selected_cards = function(e)
 
   if removed > 0 then
     play_sound('tarot2')
-r 13 1375 %20%20%20%20 -
+r 32 1375 %20%20%20%20 -
 l 26
     G.E_MANAGER:add_event(Event({trigger='after', delay=0.15, func=function()
       pcall(function() G.FUNCS.open_mod_menu_inrun() end)
@@ -1938,7 +1938,7 @@ G.FUNCS.mod_browse_vouchers = function(e)
   local items_per_page = cards_per_row * num_rows
   local pages = math.max(1, math.ceil(#pool / items_per_page))
 
-r 15 489 %20%20 -
+r 30 489 %20%20 -
 l 6
   G.mod_browse_collection = {}
   for j = 1, num_rows do
@@ -1946,8 +1946,8 @@ l 6
       G.ROOM.T.x + 0.2*G.ROOM.T.w/2, G.ROOM.T.h,
       (cards_per_row + 0.25)*G.CARD_W, 1*G.CARD_H,
       {card_limit = cards_per_row, type = 'voucher', highlight_limit = 0, collection = true})
-r 15 3255 %20%20%20%20 -
-r 15 3546 %20%20%20%20%20%20 -
+r 30 3255 %20%20%20%20 -
+r 30 3546 %20%20%20%20%20%20 -
 l 20
         {n=G.UIT.O, config={object = G.mod_browse_collection[j]}}
       }})
@@ -1969,7 +1969,7 @@ l 20
       if center then
         local card = Card(G.mod_browse_collection[j].T.x + G.mod_browse_collection[j].T.w/2,
           G.mod_browse_collection[j].T.y, G.CARD_W, G.CARD_H, nil, center)
-r 15 3603 %20%20%20%20%20%20%20%20 -
+r 30 3603 %20%20%20%20%20%20%20%20 -
 l 6
         _mod_setup_card_select(card, G.MOD_MENU_STATE.selected_vouchers, center.key)
         G.mod_browse_collection[j]:emplace(card)
@@ -1977,15 +1977,15 @@ l 6
     end
   end
 
-r 13 1382 %20%20 -
+r 32 1382 %20%20 -
 l 1
     definition = create_UIBox_generic_options({back_func = 'mod_browse_back_vouchers', contents = {
-r 15 71 %20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20 -
 l 2
         {n=G.UIT.T, config={text = mod_loc("Tap vouchers to select/deselect"), scale = 0.3, colour = G.C.UI.TEXT_LIGHT}},
       }},
-r 15 3611 %20%20%20%20%20%20 -
-r 6 297 %20%20%20%20%20%20 -
+r 30 3611 %20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20 -
 l 9
         create_option_cycle({options = page_options, w = 4.5, cycle_shoulders = true,
           opt_callback = 'mod_browse_voucher_page', current_option = 1,
@@ -1996,7 +1996,7 @@ l 9
 end
 
 G.FUNCS.mod_browse_back_vouchers = function(e)
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 7
   G.E_MANAGER:add_event(Event({trigger='after', delay=0.15, func=function()
     pcall(function() G.FUNCS.open_mod_menu_inrun() end)
@@ -2005,7 +2005,7 @@ l 7
 end
 
 G.FUNCS.mod_browse_voucher_page = function(args)
-r 13 603 %20%20 -
+r 32 603 %20%20 -
 l 21
   if not G.mod_browse_collection or not G._mod_browse_voucher_pool then return end
   local pool = G._mod_browse_voucher_pool
@@ -2028,7 +2028,7 @@ l 21
       if center then
         local card = Card(G.mod_browse_collection[j].T.x + G.mod_browse_collection[j].T.w/2,
           G.mod_browse_collection[j].T.y, G.CARD_W, G.CARD_H, nil, center)
-r 15 3603 %20%20%20%20%20%20%20%20 -
+r 30 3603 %20%20%20%20%20%20%20%20 -
 l 32
         _mod_setup_card_select(card, G.MOD_MENU_STATE.selected_vouchers, center.key)
         G.mod_browse_collection[j]:emplace(card)
@@ -2186,8 +2186,8 @@ function mod_menu_update()
 
   if G.MOD_SETTINGS.in_run.god_mode then
     if not G.GAME.modded_run and mark_run_as_modded then mark_run_as_modded("God mode") end
-r 13 1900 %20%20%20%20 -
-l 137
+r 32 1900 %20%20%20%20 -
+l 139
       if G.GAME.chips < G.GAME.blind.chips then
         if G.GAME.current_round and G.GAME.current_round.hands_left <= 0 then
           G.GAME.chips = G.GAME.blind.chips
@@ -2267,6 +2267,7 @@ local function _cheats_btn_pin(box, x, y)
   box:set_alignment({type = 'tli', offset = {x = x, y = y}})
   box:align_to_major()
   box:recalculate()
+  box:hard_set_VT()
   box.cheats_pinned = true
   box.portrait_land = nil
   return x, y
@@ -2289,6 +2290,7 @@ local function _cheats_btn_place(box)
     box:set_alignment({type = 'tr', offset = {x = -0.5, y = 4.5}})
     box:align_to_major()
     box:recalculate()
+    box:hard_set_VT()
     if _mm_port() and PORTRAIT and PORTRAIT.place_mods_button then pcall(PORTRAIT.place_mods_button) end
   end
 end
@@ -2325,7 +2327,7 @@ function create_floating_mod_button()
 
   G.MOD_FLOATING_BUTTON = UIBox{
     definition = {n=G.UIT.ROOT, config={align = "cm", colour = {0.9, 0.7, 0.1, opacity}, r = 0.15, padding = 0.12, minw = thumb and 1.9 or 1.4, minh = thumb and 1.15 or 0.9}, nodes={
-r 6 297 %20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20 -
 l 174
         {n=G.UIT.T, config={text = mod_loc("CHEATS"), scale = thumb and 0.6 or 0.5, colour = G.C.WHITE, shadow = true}}
       }}

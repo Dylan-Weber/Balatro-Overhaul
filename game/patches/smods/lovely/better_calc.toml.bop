@@ -30,16 +30,16 @@ $delimiter'''
 [patches.pattern]
 target = "functions/common_events.lua"
 pattern = '''
-r 12 580 - -
-r 12 581 %20%20%20%20 -
+r 31 580 - -
+r 31 581 %20%20%20%20 -
 l 5
     local ret = {}
 '''
 position = 'at'
 match_indent = true
 payload = '''
-r 12 580 - -
-r 12 581 %20%20%20%20 -
+r 31 580 - -
+r 31 581 %20%20%20%20 -
 l 19
     if not card:can_calculate(context.ignore_debuff, context.remove_playing_cards or context.joker_type_destroyed) and not context.debuffed_calculation then
         if card.ability.rental then
@@ -61,40 +61,40 @@ l 19
 target = "functions/common_events.lua"
 pattern = '''
 r 3 3066 - -
-r 12 593 %20%20%20%20 -
+r 31 593 %20%20%20%20 -
 l 4
     if chips > 0 then
         ret.chips = chips
     end
 
-r 12 598 %20%20%20%20 -
+r 31 598 %20%20%20%20 -
 l 4
     if mult > 0 then
         ret.mult = mult
     end
 
-r 12 603 %20%20%20%20 -
+r 31 603 %20%20%20%20 -
 l 4
     if x_mult > 0 then
         ret.x_mult = x_mult
     end
 
-r 12 608 %20%20%20%20 -
-r 12 609 %20%20%20%20 -
-r 12 610 %20%20%20%20%20%20%20%20 -
+r 31 608 %20%20%20%20 -
+r 31 609 %20%20%20%20 -
+r 31 610 %20%20%20%20%20%20%20%20 -
 l 2
     end
 
-r 12 613 %20%20%20%20 -
+r 31 613 %20%20%20%20 -
 l 4
     if jokers then
         ret.jokers = jokers
     end
 
-r 12 618 %20%20%20%20 -
+r 31 618 %20%20%20%20 -
 l 1
     if edition then
-r 12 620 %20%20%20%20%20%20%20%20 -
+r 31 620 %20%20%20%20%20%20%20%20 -
 l 8
     end
 end
@@ -104,25 +104,25 @@ position = "at"
 payload = """
 if context.cardarea == G.play and context.main_scoring then
     ret.playing_card = {}
-r 12 593 %20%20%20%20 -
+r 31 593 %20%20%20%20 -
 l 4
     if chips ~= 0 then
         ret.playing_card.chips = chips
     end
 
-r 12 598 %20%20%20%20 -
+r 31 598 %20%20%20%20 -
 l 4
     if mult ~= 0 then
         ret.playing_card.mult = mult
     end
 
-r 12 603 %20%20%20%20 -
+r 31 603 %20%20%20%20 -
 l 4
     if x_mult > 0 then
         ret.playing_card.x_mult = x_mult
     end
 
-r 12 608 %20%20%20%20 -
+r 31 608 %20%20%20%20 -
 l 40
     if p_dollars ~= 0 then
         ret.playing_card.p_dollars = p_dollars
@@ -165,20 +165,20 @@ end
 target = "functions/common_events.lua"
 pattern = '''
 r 3 2878 - -
-r 12 625 %20%20%20%20 -
+r 31 625 %20%20%20%20 -
 l 4
     if h_mult > 0 then
         ret.h_mult = h_mult
     end
 
-r 12 630 %20%20%20%20 -
+r 31 630 %20%20%20%20 -
 l 1
     if h_x_mult > 0 then
-r 12 632 %20%20%20%20%20%20%20%20 -
+r 31 632 %20%20%20%20%20%20%20%20 -
 l 2
     end
 
-r 12 613 %20%20%20%20 -
+r 31 613 %20%20%20%20 -
 l 9
     if jokers then
         ret.jokers = jokers
@@ -189,13 +189,13 @@ position = "at"
 payload = """
 if context.cardarea == G.hand and context.main_scoring then
     ret.playing_card = {}
-r 12 625 %20%20%20%20 -
+r 31 625 %20%20%20%20 -
 l 4
     if h_mult ~= 0 then
         ret.playing_card.h_mult = h_mult
     end
 
-r 12 630 %20%20%20%20 -
+r 31 630 %20%20%20%20 -
 l 38
     if h_x_mult > 0 then
         ret.playing_card.x_mult = h_x_mult
@@ -235,7 +235,7 @@ l 38
 [patches.pattern]
 target = "functions/common_events.lua"
 pattern = '''
-r 12 585 - -
+r 31 585 - -
 l 17
 if seals then
     ret.seals = seals
@@ -254,12 +254,12 @@ if context.extra_enhancement then return ret end
 if card.edition then
     local edition = card:calculate_edition(context)
     if edition then
-r 12 620 %20%20%20%20%20%20%20%20 -
+r 31 620 %20%20%20%20%20%20%20%20 -
 l 3
     end
 end
 if card.seal then
-r 12 585 %20%20%20%20 -
+r 31 585 %20%20%20%20 -
 l 39
     if seals then
         ret.seals = seals
@@ -300,12 +300,12 @@ if context.extra_enhancement then return ret end
 if card.edition then
     local edition = card:calculate_edition(context)
     if edition then
-r 12 620 %20%20%20%20%20%20%20%20 -
+r 31 620 %20%20%20%20%20%20%20%20 -
 l 3
     end
 end
 if card.seal then
-r 12 585 %20%20%20%20 -
+r 31 585 %20%20%20%20 -
 l 18
     if seals then
         ret.seals = seals
@@ -325,16 +325,16 @@ end
 [patches.pattern]
 target = "functions/common_events.lua"
 pattern = '''
-r 12 641 - -
+r 31 641 - -
 l 1
     local jokers = nil
-r 12 643 %20%20%20%20 -
-r 12 644 %20%20%20%20%20%20%20%20 -
+r 31 643 %20%20%20%20 -
+r 31 644 %20%20%20%20%20%20%20%20 -
 r 3 3396 %20%20%20%20 -
-r 12 646 %20%20%20%20%20%20%20%20 -
+r 31 646 %20%20%20%20%20%20%20%20 -
 l 1
     else
-r 12 648 %20%20%20%20%20%20%20%20 -
+r 31 648 %20%20%20%20%20%20%20%20 -
 l 54
     end
     if jokers then
@@ -390,7 +390,7 @@ match_indent = true
 position = 'before'
 pattern = '''elseif card.area == G.hand or card.area == G.deck then'''
 payload = '''elseif card == G.deck then
-r 12 795 %20%20%20%20 -
+r 31 795 %20%20%20%20 -
 l 17
     card_aligned = 'tm'
 elseif card.area == G.discard or card.area == G.vouchers then
@@ -409,7 +409,7 @@ target = 'functions/state_events.lua'
 position = 'before'
 match_indent = true
 pattern = '''
-r 16 873 - -
+r 15 873 - -
 l 12
 --Joker Effects
 --+++++++++++++++++++++++++++++++++++++++++++++++++++++++++--'''
@@ -423,32 +423,31 @@ payload = '''
 [patches.pattern]
 target = "functions/state_events.lua"
 pattern = '''
-r 16 879 - -
-l 1
-local edition_effects = eval_card(_card, {cardarea = G.jokers, full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, edition = true})
-r 16 881 - -
-r 16 882 %20%20%20%20 -
-r 16 883 %20%20%20%20 -
-r 16 884 %20%20%20%20%20%20%20%20 -
-r 16 707 %20%20%20%20%20%20%20%20 -
-r 16 886 %20%20%20%20%20%20%20%20 -
-r 16 887 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 888 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 889 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 879 - -
+r 15 880 - -
+r 15 881 - -
+r 15 882 %20%20%20%20 -
+r 15 883 %20%20%20%20 -
+r 15 884 %20%20%20%20%20%20%20%20 -
+r 15 707 %20%20%20%20%20%20%20%20 -
+r 15 886 %20%20%20%20%20%20%20%20 -
+r 15 887 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 888 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 889 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
             edition = true})
     end
-r 16 892 %20%20%20%20 -
-r 16 893 %20%20%20%20%20%20%20%20 -
-r 16 715 %20%20%20%20%20%20%20%20 -
-r 16 886 %20%20%20%20%20%20%20%20 -
-r 16 896 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 897 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 774 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 892 %20%20%20%20 -
+r 15 893 %20%20%20%20%20%20%20%20 -
+r 15 715 %20%20%20%20%20%20%20%20 -
+r 15 886 %20%20%20%20%20%20%20%20 -
+r 15 896 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 897 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 774 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
             edition = true})
     end
-r 16 901 %20%20%20%20 -
+r 15 901 %20%20%20%20 -
 l 16
 end'''
 match_indent = true
@@ -466,19 +465,19 @@ if eval.edition then effects[#effects+1] = eval end
 [patches.pattern]
 target = "functions/state_events.lua"
 pattern = '''
-r 16 881 %20%20%20%20 -
-r 16 933 %20%20%20%20%20%20%20%20 -
-r 16 934 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 715 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 886 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 937 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 938 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 889 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 881 %20%20%20%20 -
+r 15 933 %20%20%20%20%20%20%20%20 -
+r 15 934 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 715 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 886 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 937 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 938 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 889 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 edition = true})
         end
-r 16 901 %20%20%20%20%20%20%20%20 -
-l 30
+r 15 901 %20%20%20%20%20%20%20%20 -
+l 29
     end
 end'''
 match_indent = false
@@ -499,9 +498,8 @@ payload = '''
 target = 'functions/state_events.lua'
 match_indent = true
 position = 'at'
-pattern = '''local n_consumeables = #G.consumeables.cards*
-for i=1, n_jokers + n_consumeables do
-    local _card = joker_cards[i] or G.consumeables.cards[i - n_jokers]'''
+pattern = '''for i=1, #G.jokers.cards + #G.consumeables.cards do
+    local _card = G.jokers.cards[i] or G.consumeables.cards[i - #G.jokers.cards]'''
 payload = '''for _, area in ipairs(SMODS.get_card_areas('jokers')) do for _, _card in ipairs(area.cards) do'''
 
 ## I am NOT converting this to regex (yet)
@@ -509,21 +507,19 @@ payload = '''for _, area in ipairs(SMODS.get_card_areas('jokers')) do for _, _ca
 [patches.pattern]
 target = "functions/state_events.lua"
 pattern = '''
-r 16 201 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 3
-            local effects = eval_card(_card, {cardarea = G.jokers, full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, joker_main = true})
+r 15 201 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 905 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
 
             --Any Joker effects
-r 16 631 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 736 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 910 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 911 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 912 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 1
-                if effects.jokers.Xchip_mod then hand_chips = mod_chips(hand_chips * effects.jokers.Xchip_mod);extras.hand_chips = true end
-r 16 746 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 914 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 901 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 631 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 736 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 910 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 911 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 912 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 746 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 914 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 901 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 26
             end'''
 match_indent = true
@@ -551,18 +547,18 @@ end'''
 [patches.pattern]
 target = "functions/state_events.lua"
 pattern = '''
-r 16 918 - -
-l 3
-for _, v in ipairs(joker_cards) do
-    local effect = v:calculate_joker{full_hand = play_cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_joker = _card}
+r 15 918 - -
+r 2 211 - -
+r 15 920 %20%20%20%20 -
+l 1
     if effect then
-r 16 736 %20%20%20%20%20%20%20%20 -
-r 16 923 %20%20%20%20%20%20%20%20 -
-r 16 924 %20%20%20%20%20%20%20%20 -
-r 16 925 %20%20%20%20%20%20%20%20 -
-r 16 926 %20%20%20%20%20%20%20%20 -
-r 16 927 %20%20%20%20%20%20%20%20 -
-r 16 901 %20%20%20%20%20%20%20%20 -
+r 15 736 %20%20%20%20%20%20%20%20 -
+r 15 923 %20%20%20%20%20%20%20%20 -
+r 15 924 %20%20%20%20%20%20%20%20 -
+r 15 925 %20%20%20%20%20%20%20%20 -
+r 15 926 %20%20%20%20%20%20%20%20 -
+r 15 927 %20%20%20%20%20%20%20%20 -
+r 15 901 %20%20%20%20%20%20%20%20 -
 l 63
     end
 end'''
@@ -627,14 +623,14 @@ end
 [patches.pattern]
 target = "functions/state_events.lua"
 pattern = '''
-r 16 394 - -
+r 15 394 - -
 l 1
     local eval = nil
-r 16 404 %20%20%20%20 -
+r 15 404 %20%20%20%20 -
 l 1
     if eval then
-r 16 406 %20%20%20%20%20%20%20%20 -
-r 16 407 %20%20%20%20%20%20%20%20 -
+r 15 406 %20%20%20%20%20%20%20%20 -
+r 15 407 %20%20%20%20%20%20%20%20 -
 l 21
     end
 end'''
@@ -658,14 +654,14 @@ end'''
 target = "functions/state_events.lua"
 pattern = '''
 r 3 2375 - -
-r 16 201 %20%20%20%20 -
-r 16 630 %20%20%20%20 -
-r 16 631 %20%20%20%20 -
-r 16 632 %20%20%20%20%20%20%20%20 -
-r 16 633 %20%20%20%20%20%20%20%20 -
-r 16 634 %20%20%20%20%20%20%20%20 -
-r 16 635 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 67
+r 15 201 %20%20%20%20 -
+r 15 630 %20%20%20%20 -
+r 15 631 %20%20%20%20 -
+r 15 632 %20%20%20%20%20%20%20%20 -
+r 15 633 %20%20%20%20%20%20%20%20 -
+r 15 634 %20%20%20%20%20%20%20%20 -
+r 15 635 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 65
         end
     end
 end'''
@@ -731,13 +727,13 @@ SMODS.calculate_context({full_hand = G.play.cards, scoring_hand = scoring_hand, 
 [patches.pattern]
 target = "functions/state_events.lua"
 pattern = '''
-for j = 1, #joker_cards do
-    destroyed = joker_cards[j]:calculate_joker({destroying_card = scoring_hand[i], full_hand = play_cards})
-r 16 958 %20%20%20%20 -
+r 15 394 - -
+r 15 957 %20%20%20%20 -
+r 15 958 %20%20%20%20 -
 l 2
 end
 
-r 16 961 - -
+r 15 961 - -
 l 6
     destroyed = true
 end'''
@@ -745,7 +741,7 @@ match_indent = true
 position = "at"
 payload = '''
 -- context.destroying_card calculations
-r 16 394 - -
+r 15 394 - -
 l 29
     local eval, post = eval_card(G.jokers.cards[j], {destroying_card = scoring_hand[i], full_hand = G.play.cards})
     SMODS.trigger_effects({eval, post}, scoring_hand[i])
@@ -772,11 +768,11 @@ if self_destroy then destroyed = true end
 [[patches]]
 [patches.regex]
 target = "functions/state_events.lua"
-pattern = '''(?<indent>[\t ]*)local cards_destroyed = \{\}\n(.*\n)*?\s+for j=1, #joker_cards do\n\s+eval_card\(joker_cards\[j\], \{cardarea = G\.jokers, remove_playing_cards = true, removed = cards_destroyed\}\)\n\s+end'''
+pattern = '''(?<indent>[\t ]*)local cards_destroyed = \{\}\n(.*\n)*?\s+for j=1, #G\.jokers\.cards do\n\s+eval_card\(G\.jokers\.cards\[j\], \{cardarea = G\.jokers, remove_playing_cards = true, removed = cards_destroyed\}\)\n\s+end'''
 line_prepend = '$indent'
 position = "at"
 payload = '''
-r 16 950 - -
+r 15 950 - -
 l 13
 for _,v in ipairs(SMODS.get_card_areas('playing_cards', 'destroying_cards')) do
     SMODS.calculate_destroying_cards({ full_hand = G.play.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, cardarea = v }, cards_destroyed, v == G.play and scoring_hand or nil)
@@ -791,23 +787,23 @@ SMODS.destroy_cards(cards_destroyed)
 [patches.pattern]
 target = "functions/state_events.lua"
 pattern = '''        local glass_shattered = {}
-r 16 979 %20%20%20%20%20%20%20%20 -
-r 16 980 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 979 %20%20%20%20%20%20%20%20 -
+r 15 980 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
         end
 
-r 16 983 %20%20%20%20%20%20%20%20 -
+r 15 983 %20%20%20%20%20%20%20%20 -
 l 1
         
-r 16 985 %20%20%20%20%20%20%20%20 -
+r 15 985 %20%20%20%20%20%20%20%20 -
 r 1 112 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 func = function()
-r 16 988 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 %20
-r 16 989 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 988 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 %20
+r 15 989 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                     else
-r 16 991 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 991 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 22
                     end
                   return true
@@ -831,9 +827,9 @@ payload = '''SMODS.calculate_context({ remove_playing_cards = true, removed = de
 [patches.pattern]
 target = "functions/state_events.lua"
 pattern = '''
-r 16 424 - -
-r 16 200 %20%20%20%20 -
-r 16 426 %20%20%20%20%20%20%20%20 -
+r 15 424 - -
+r 15 200 %20%20%20%20 -
+r 15 426 %20%20%20%20%20%20%20%20 -
 l 7
     end
 end
@@ -842,7 +838,7 @@ position = "at"
 match_indent = true
 payload = '''
 -- context.remove_playing_cards from discard
-r 16 424 - -
+r 15 424 - -
 l 11
     SMODS.calculate_context({remove_playing_cards = true, removed = destroyed_cards})
 end
@@ -858,14 +854,14 @@ pattern = '''
 r 3 2375 - -
 l 1
 
-r 16 201 %20%20%20%20 -
-r 16 1020 %20%20%20%20 -
+r 15 201 %20%20%20%20 -
+r 15 1020 %20%20%20%20 -
 l 2
 
     --Any Joker effects
-r 16 631 %20%20%20%20 -
-r 16 632 %20%20%20%20%20%20%20%20 -
-r 16 901 %20%20%20%20%20%20%20%20 -
+r 15 631 %20%20%20%20 -
+r 15 632 %20%20%20%20%20%20%20%20 -
+r 15 901 %20%20%20%20%20%20%20%20 -
 l 15
     end
 end'''
@@ -883,11 +879,11 @@ SMODS.calculate_context({full_hand = G.play.cards, scoring_hand = scoring_hand, 
 target = "functions/state_events.lua"
 pattern = '''
 r 3 2375 - -
-r 16 1069 %20%20%20%20 -
-r 16 1070 %20%20%20%20 -
-r 16 631 %20%20%20%20 -
-r 16 632 %20%20%20%20%20%20%20%20 -
-r 16 633 %20%20%20%20%20%20%20%20 -
+r 15 1069 %20%20%20%20 -
+r 15 1070 %20%20%20%20 -
+r 15 631 %20%20%20%20 -
+r 15 632 %20%20%20%20%20%20%20%20 -
+r 15 633 %20%20%20%20%20%20%20%20 -
 l 10
     end
 end'''
@@ -916,13 +912,13 @@ end
 target = 'functions/state_events.lua'
 pattern = '''
 r 2 590 - -
-r 16 1176 %20%20%20%20 -
+r 15 1176 %20%20%20%20 -
 l 1
     if ret then
-r 16 1178 %20%20%20%20%20%20%20%20 -
+r 15 1178 %20%20%20%20%20%20%20%20 -
 l 1
         pitch = pitch + 0.06
-r 16 1180 %20%20%20%20%20%20%20%20 -
+r 15 1180 %20%20%20%20%20%20%20%20 -
 l 19
     end
 end
@@ -943,7 +939,7 @@ for _, area in ipairs(SMODS.get_card_areas('jokers')) do
                 add_round_eval_row({dollars = ret, bonus = true, name='joker'..i, pitch = pitch, card = _card, loc_opts = ret_opts})
                 pitch = pitch + 0.06
             end
-r 16 1180 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 1180 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 28
         end
     end
@@ -973,7 +969,7 @@ for _, target in ipairs(SMODS.get_card_areas('individual', 'calc_dollar_bonus'))
                 add_round_eval_row({dollars = ret, bonus = true, name='custom_individual'..i, pitch = pitch, text_colour = ret_opts.text_colour or G.C.FILTER, text = name or 'ERROR', text_scale = ret_opts.scale or 0.6})
                 pitch = pitch + 0.06
             end
-r 16 1180 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 1180 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 10
         end
     end
@@ -985,7 +981,7 @@ end
 [patches.pattern]
 target = 'functions/state_events.lua'
 pattern = '''
-r 16 1163 - -
+r 15 1163 - -
 l 14
 '''
 position = 'before'
@@ -1001,7 +997,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 12 1000 - -
+r 31 1000 - -
 l 13
 '''
 payload = '''
@@ -1016,7 +1012,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 12 1001 - -
+r 31 1001 - -
 l 17
 '''
 payload = '''
@@ -1038,17 +1034,17 @@ pattern = '''
 r 2 590 - -
 l 1
     local eval = nil
-r 16 101 %20%20%20%20 -
+r 15 101 %20%20%20%20 -
 l 4
     if eval then
         if eval.saved then
             game_over = false
         end
-r 16 106 %20%20%20%20%20%20%20%20 -
+r 15 106 %20%20%20%20%20%20%20%20 -
 l 1
     end
-r 16 108 %20%20%20%20 -
-r 16 109 %20%20%20%20 -
+r 15 108 %20%20%20%20 -
+r 15 109 %20%20%20%20 -
 l 33
 end
 '''
@@ -1083,7 +1079,7 @@ target = "functions/button_callbacks.lua"
 pattern = "G.GAME.round_resets.blind = e.config.ref_table"
 position = "before"
 payload = '''
-r 13 2754 - -
+r 32 2754 - -
 l 9
 G.GAME.round_resets.blind_tag = _tag and _tag.config and _tag.config.ref_table or nil
 '''
@@ -1095,7 +1091,7 @@ match_indent = true
 target = 'functions/state_events.lua'
 pattern = '''
 r 2 590 - -
-r 16 336 %20%20%20%20 -
+r 15 336 %20%20%20%20 -
 l 15
 end
 '''
@@ -1112,8 +1108,8 @@ SMODS.calculate_context({setting_blind = true, blind = G.GAME.round_resets.blind
 [patches.pattern]
 target = 'functions/state_events.lua'
 pattern = '''
-r 16 394 - -
-r 16 395 %20%20%20%20 -
+r 15 394 - -
+r 15 395 %20%20%20%20 -
 l 15
 end
 '''
@@ -1189,10 +1185,10 @@ SMODS.calculate_context({buying_card = true, card = self})
 [patches.pattern]
 target = 'game.lua'
 pattern = '''
-r 9 3226 - -
-r 9 3227 %20%20%20%20 -
+r 7 3226 - -
+r 7 3227 %20%20%20%20 -
 r 2 590 %20%20%20%20 -
-r 9 3229 %20%20%20%20%20%20%20%20 -
+r 7 3229 %20%20%20%20%20%20%20%20 -
 l 15
     end
 end
@@ -1209,12 +1205,12 @@ target = 'cardarea.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 6 606 - -
+r 5 606 - -
 l 3
 return true
 '''
 payload = '''
-r 6 606 - -
+r 5 606 - -
 l 8
 return card
 '''
@@ -1224,12 +1220,12 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 12 410 - -
+r 31 410 - -
 l 3
 '''
 payload = '''
 card = to:draw_card_from(from, stay_flipped, discarded_only)
-r 12 401 - -
+r 31 401 - -
 l 21
 '''
 [[patches]]
@@ -1252,12 +1248,12 @@ target = 'functions/state_events.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 16 370 - -
-r 16 371 %20%20%20%20 -
-r 16 372 %20%20%20%20%20%20%20%20 -
+r 15 370 - -
+r 15 371 %20%20%20%20 -
+r 15 372 %20%20%20%20%20%20%20%20 -
 l 1
     else
-r 16 372 %20%20%20%20%20%20%20%20 -
+r 15 372 %20%20%20%20%20%20%20%20 -
 l 13
     end
 end
@@ -1272,12 +1268,12 @@ target = 'functions/state_events.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 16 370 - -
-r 16 371 %20%20%20%20 -
-r 16 372 %20%20%20%20%20%20%20%20 -
+r 15 370 - -
+r 15 371 %20%20%20%20 -
+r 15 372 %20%20%20%20%20%20%20%20 -
 l 1
     else
-r 16 372 %20%20%20%20%20%20%20%20 -
+r 15 372 %20%20%20%20%20%20%20%20 -
 l 4
     end
 end
@@ -1313,7 +1309,7 @@ target = 'functions/state_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 16 372 - -
+r 15 372 - -
 l 4
 '''
 payload = '''
@@ -1351,7 +1347,7 @@ G.GAME.current_round.any_hand_drawn = nil
 target = 'functions/button_callbacks.lua'
 pattern = '''
 r 2 590 %20%20%20%20%20%20 -
-r 13 2220 %20%20%20%20%20%20%20%20 -
+r 32 2220 %20%20%20%20%20%20%20%20 -
 l 14
       end
 '''
@@ -1367,7 +1363,7 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 13 2417 - -
+r 32 2417 - -
 l 10
 '''
 payload = '''
@@ -1380,8 +1376,8 @@ c1.from_area = c1.area
 target = 'functions/button_callbacks.lua'
 pattern = '''
 r 2 590 %20%20%20%20 -
-r 13 2322 %20%20%20%20%20%20 -
-r 13 2323 %20%20%20%20%20%20%20%20 -
+r 32 2322 %20%20%20%20%20%20 -
+r 32 2323 %20%20%20%20%20%20%20%20 -
 l 15
       end
     end
@@ -1398,7 +1394,7 @@ SMODS.calculate_context({selling_card = true, card = card})
 [patches.pattern]
 target = 'functions/button_callbacks.lua'
 pattern = '''
-r 13 2437 - -
+r 32 2437 - -
 l 4
 '''
 position = 'at'
@@ -1418,7 +1414,7 @@ l 11
 target = 'functions/button_callbacks.lua'
 pattern = '''
 r 2 590 %20%20%20%20%20%20%20%20%20%20 -
-r 13 2452 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2452 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 12
           end
 '''
@@ -1432,7 +1428,7 @@ SMODS.calculate_context({buying_card = true, card = c1})
 [patches.pattern]
 target = 'game.lua'
 pattern = '''
-r 13 2303 - -
+r 32 2303 - -
 l 11
 '''
 position = 'before'
@@ -1446,7 +1442,7 @@ if not nosave_shop then SMODS.calculate_context({starting_shop = true}) end
 target = 'functions/button_callbacks.lua'
 pattern = '''
 r 2 590 %20%20%20%20%20%20 -
-r 13 2486 %20%20%20%20%20%20%20%20 -
+r 32 2486 %20%20%20%20%20%20%20%20 -
 l 13
       end
 '''
@@ -1462,7 +1458,7 @@ SMODS.calculate_context({ending_shop = true})
 target = 'functions/button_callbacks.lua'
 pattern = '''
 r 2 590 %20%20%20%20 -
-r 13 2560 %20%20%20%20%20%20 -
+r 32 2560 %20%20%20%20%20%20 -
 l 12
     end
 '''
@@ -1477,7 +1473,7 @@ SMODS.calculate_context({skipping_booster = true, booster = booster_obj})
 target = 'functions/button_callbacks.lua'
 pattern = '''
 r 2 590 %20%20%20%20%20%20%20%20%20%20 -
-r 13 2769 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2769 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 13
           end
 '''
@@ -1493,7 +1489,7 @@ SMODS.calculate_context({skip_blind = true, skipped_blind = G.GAME.round_resets.
 target = 'functions/button_callbacks.lua'
 pattern = '''
 r 2 590 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 2901 %20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2901 %20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 14
             end
 '''
@@ -1509,7 +1505,7 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 13 2859 - -
+r 32 2859 - -
 l 11
 '''
 payload = '''
@@ -1539,7 +1535,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 12 819 - -
+r 31 819 - -
 l 12
 '''
 payload = '''
@@ -1553,7 +1549,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 12 824 - -
+r 31 824 - -
 l 12
 '''
 payload = '''
@@ -1567,7 +1563,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 12 832 - -
+r 31 832 - -
 l 11
 '''
 payload = '''
@@ -1580,7 +1576,7 @@ target = 'functions/state_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''local percent = 0.3
-r 16 608 - -
+r 15 608 - -
 l 31
 '''
 payload = '''percent = 0.3
@@ -1613,7 +1609,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 12 858 - -
+r 31 858 - -
 l 43
 '''
 payload = '''
@@ -1710,7 +1706,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 12 828 - -
+r 31 828 - -
 l 17
 '''
 payload = '''
@@ -1729,7 +1725,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 12 865 - -
+r 31 865 - -
 l 12
 '''
 payload = '''
@@ -1743,40 +1739,38 @@ target = 'functions/state_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 16 580 - -
-l 2
-local pures = {}
-local has_splash = next(find_joker('Splash'))*
-r 16 582 - -
+r 15 580 - -
 l 1
-    if has_splash then
-r 16 584 %20%20%20%20%20%20%20%20 -
+local pures = {}
+r 15 582 - -
+r 15 583 %20%20%20%20 -
+r 15 584 %20%20%20%20%20%20%20%20 -
 l 1
     else
-r 16 586 %20%20%20%20%20%20%20%20 -
+r 15 586 %20%20%20%20%20%20%20%20 -
 l 1
             local inside = false
-r 16 588 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 16 589 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 588 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 589 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
                     inside = true
                 end
             end
-r 16 593 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 593 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 4
         end
     end
 end
 for i=1, #pures do
-r 16 598 %20%20%20%20 -
+r 15 598 %20%20%20%20 -
 l 1
 end
-r 16 600 - -
+r 15 600 - -
 l 3
 '''
 payload = '''
 local final_scoring_hand = {}
-r 16 582 - -
+r 15 582 - -
 l 25
     local splashed = SMODS.always_scores(G.play.cards[i]) or next(find_joker('Splash'))
     local unsplashed = SMODS.never_scores(G.play.cards[i])
@@ -1803,12 +1797,12 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 15 1266 - -
-r 13 2618 %20%20%20%20 -
+r 30 1266 - -
+r 32 2618 %20%20%20%20 -
 l 2
 end
 
-r 13 2590 - -
+r 32 2590 - -
 l 16
           func = function()
             save_run()
@@ -1877,7 +1871,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 12 1927 - -
+r 31 1927 - -
 l 10
 '''
 payload = '''
@@ -1889,7 +1883,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 12 1938 - -
+r 31 1938 - -
 l 13
 '''
 payload = '''
@@ -1953,7 +1947,7 @@ l 3
     end}))
 SMODS.calculate_effect({message = localize('k_plus_stone'), colour = G.C.SECONDARY_SET.Enhanced}, context_blueprint_card or self)
 r 3 2598 - -
-r 13 2228 - -
+r 32 2228 - -
 l 35
 '''
 # DNA
@@ -1990,7 +1984,7 @@ target = 'functions/common_events.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 12 973 - -
+r 31 973 - -
 l 12
 '''
 payload = '''
@@ -2019,7 +2013,7 @@ dissolve_time_fac = dissolve_time_fac or (type(self.destroyed) == 'table' and se
 target = 'functions/state_events.lua'
 match_indent = false
 position = 'after'
-pattern = '''delay = G.GAME.current_round.current_hand.handname ~= disp_text and score_time(0.4) or 0}, {handname=disp_text, level=G.GAME.hands[text].level, mult = G.GAME.hands[text].mult, chips = G.GAME.hands[text].chips})'''
+pattern = '''delay = G.GAME.current_round.current_hand.handname ~= disp_text and 0.4 or 0}, {handname=disp_text, level=G.GAME.hands[text].level, mult = G.GAME.hands[text].mult, chips = G.GAME.hands[text].chips})'''
 payload = '''    
 for name, parameter in pairs(SMODS.Scoring_Parameters) do
     if name ~= 'chips' and name ~= 'mult' then update_hand_text({immediate = true}, {[name] = parameter.current}) end
@@ -2040,7 +2034,7 @@ target = 'functions/state_events.lua'
 match_indent = false
 position = 'after'
 pattern = '''
-r 16 1064 %20%20 -
+r 15 1064 %20%20 -
 l 11
 }))
 delay(0.3)'''
@@ -2268,7 +2262,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 15 1270 - -
+r 30 1270 - -
 l 13
 '''
 payload = '''
@@ -2283,7 +2277,7 @@ target = 'tag.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 4 486 - -
+r 9 486 - -
 l 12
 '''
 payload = '''
@@ -2298,7 +2292,7 @@ match_indent = true
 position = 'at'
 pattern = '''
 r 3 2396 - -
-l 25
+l 11
 '''
 payload = '''
 if self.ability.name == 'Campfire' and not context.blueprint and self ~= context.card then
@@ -2310,11 +2304,12 @@ if self.ability.name == 'Campfire' and not context.blueprint and self ~= context
 target = 'functions/state_events.lua'
 match_indent = true
 pattern = '''
-delay(0.4); ease_ante(1); delay(0.4);
+r 15 248 - -
+l 13
 '''
 position = 'at'
 payload = '''
-delay(0.4); SMODS.ante_end = true; ease_ante(1); SMODS.ante_end = nil; delay(0.4);
+delay(0.4); SMODS.ante_end = true; ease_ante(1); SMODS.ante_end = nil; delay(0.4); check_for_unlock({type = 'ante_up', ante = G.GAME.round_resets.ante + 1})
 '''
 
 # Sixth Sense only triggers once with multiple copies
@@ -2395,12 +2390,12 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 13 2938 - -
+r 32 2938 - -
 l 3
 '''
 payload = '''
 SMODS.money_from_cashout = true
-r 13 2938 - -
+r 32 2938 - -
 l 8
 SMODS.money_from_cashout = nil
 '''
@@ -2410,7 +2405,7 @@ SMODS.money_from_cashout = nil
 [patches.pattern]
 target = "functions/state_events.lua"
 pattern = '''
-r 16 1202 %20%20%20%20 -
+r 15 1202 %20%20%20%20 -
 l 19
 end
 '''
@@ -2431,7 +2426,7 @@ target = 'game.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 9 2326 - -
+r 7 2326 - -
 l 24
 '''
 payload = '''

@@ -98,7 +98,7 @@ local function text_data(text, size, colour, outline)
     love.graphics.push("all")
     love.graphics.setCanvas(canvas)
     love.graphics.clear(0, 0, 0, 0)
-r 19 278 %20%20%20%20 -
+r 12 278 %20%20%20%20 -
 l 323
     love.graphics.setFont(font)
     if outline > 0 then

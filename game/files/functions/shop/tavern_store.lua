@@ -62,6 +62,8 @@ local function discovered_jokers()
         local d = G.localization.descriptions.Joker[c.key]
         if d and d.name then nm = d.name end
       end)
+      if type(nm) == "table" then nm = table.concat(nm, " ") end
+      if type(nm) ~= "string" then nm = nil end
       out[#out + 1] = {key = c.key, name = nm or c.key, rarity = math.min(4, math.max(1, tonumber(c.rarity) or 1)), pos = c.pos, atlas = c.atlas}
     end
   end

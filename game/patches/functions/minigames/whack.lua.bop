@@ -140,7 +140,7 @@ function Game:pad_hit()
     self:whack(self.sel)
 end
 
-r 9 2449 - -
+r 7 2449 - -
 l 94
     if self.dead_t then
         self.dead_t = self.dead_t - dt

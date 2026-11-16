@@ -518,7 +518,7 @@ function DeckCreatorGUI.play(d)
     local center = G.P_CENTERS[d.slug]
     if not center then return end
     G.GAME.viewed_back = Back(center)
-r 13 1375 %20%20%20%20 -
+r 32 1375 %20%20%20%20 -
 l 181
     G.FUNCS.start_run(nil, {stake = 1})
 end

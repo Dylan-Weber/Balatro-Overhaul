@@ -1,0 +1,30 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 5
+return {
+    descriptions={
+        Enhanced={
+            m_wild={
+                text={
+r 35 429 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 10
+                    "verwendet werden",
+                    "{C:attention}Immun{} gegen Boss-Schwächungen",
+                },
+            },
+        },
+        Stake={
+            stake_blue={
+                text={
+                    "Shop items cost {C:money}+$1{}",
+                    "Rerolls go up by {C:money}$2{} each",
+r 35 2556 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 5
+                },
+            },
+        },
+    },
+}
+end

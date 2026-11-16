@@ -240,7 +240,7 @@ local function board_class()
         Moveable.init(self, 0, 0, w, h)
 r 2 14 %20%20%20%20%20%20%20%20 -
 r 3 21 %20%20%20%20%20%20%20%20 -
-r 6 8 %20%20%20%20%20%20%20%20 -
+r 5 8 %20%20%20%20%20%20%20%20 -
 r 3 19 %20%20%20%20%20%20%20%20 -
 l 3
         self.created_on_pause = true
@@ -617,7 +617,7 @@ function H.open(key, mode)
     H.win.alignment.offset.y = 0
     H.win:align_to_major()
     H.closing = nil
-r 17 360 %20%20%20%20 -
+r 22 360 %20%20%20%20 -
 l 140
     K.sound("whoosh1", 1.1, 0.5)
 end
@@ -759,7 +759,7 @@ function H.install()
     H.installed = true
     local press, release = Controller.key_press, Controller.key_release
     H.ate = {}
-r 23 934 %20%20%20%20 -
+r 17 934 %20%20%20%20 -
 l 11
         if H.win and not H.closing then H.key(key) return end
         if not H.win and MG.pick and MG.pick.key then
@@ -772,7 +772,7 @@ l 11
         end
         return press(self, key)
     end
-r 23 939 %20%20%20%20 -
+r 17 939 %20%20%20%20 -
 l 48
         if H.win and not H.closing then return end
         if H.ate[key] then H.ate[key] = nil return end

@@ -80,7 +80,7 @@ function unlock_all_content(profile)
   end
   for _, t in ipairs(tables) do
     if type(t) == "table" then
-r 11 154 %20%20%20%20%20%20 -
+r 13 154 %20%20%20%20%20%20 -
 l 250
         if type(v) == "table" and not v.wip then open(v) end
       end
@@ -332,7 +332,7 @@ function unlock_all_debug()
       end
     end)
     pcall(function()
-r 12 1682 %20%20%20%20%20%20 -
+r 31 1682 %20%20%20%20%20%20 -
 l 127
       if G.ACHIEVEMENTS then
         for ach_id, _ in pairs(G.ACHIEVEMENTS) do
@@ -461,7 +461,7 @@ l 127
 
     print("[DEBUG] Step 17: Refreshing tallies...")
     pcall(function()
-r 13 240 %20%20%20%20%20%20 -
+r 32 240 %20%20%20%20%20%20 -
 l 81
       G.PROGRESS = nil
       if set_discover_tallies then set_discover_tallies() end
@@ -544,25 +544,25 @@ function create_UIBox_debug_pin()
     return create_UIBox_generic_options({
       back_func = 'exit_overlay_menu',
       contents = {
-r 15 723 %20%20%20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20%20%20 -
 l 2
           {n=G.UIT.T, config={text = mod_loc("DEBUG MODE"), scale = 0.55, colour = G.C.RED, shadow = true}}
         }},
-r 15 71 %20%20%20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20%20%20 -
 l 2
           {n=G.UIT.T, config={text = mod_loc("Enter 6-digit PIN to unlock"), scale = 0.3, colour = G.C.WHITE}}
         }},
-r 15 723 %20%20%20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20%20%20 -
 l 4
           {n = G.UIT.C, config = {align = "cm", padding = 0.15, r = 0.1, colour = G.C.BLACK, minw = 3, minh = 0.8}, nodes = {
             {n = G.UIT.O, config = {id = 'debug_pin_display', object = DynaText({string = {{ref_table = DebugUI, ref_value = "pin_display"}}, colours = {G.C.WHITE}, scale = 0.6, silent = true})}}
           }}
         }},
-r 15 723 %20%20%20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20%20%20 -
 l 2
           create_debug_numpad()
         }},
-r 15 71 %20%20%20%20%20%20%20%20 -
+r 30 71 %20%20%20%20%20%20%20%20 -
 l 10
           {n=G.UIT.T, config={text = mod_loc("(Hint: Check DEV_CHANGELOG.txt)"), scale = 0.22, colour = G.C.L_BLACK}}
         }},
@@ -574,7 +574,7 @@ l 10
     return result
   else
     return {n=G.UIT.ROOT, config={align = "cm", colour = G.C.BLACK}, nodes={
-r 6 297 %20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20 -
 l 136
         {n=G.UIT.T, config={text = mod_loc("Debug UI Error"), scale = 0.5, colour = G.C.RED}}
       }}
@@ -712,7 +712,7 @@ function create_UIBox_debug_menu()
     return result
   else
     return {n=G.UIT.ROOT, config={align = "cm", colour = G.C.BLACK}, nodes={
-r 6 297 %20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20 -
 l 39
         {n=G.UIT.T, config={text = mod_loc("Debug Menu Error"), scale = 0.5, colour = G.C.RED}}
       }}
@@ -760,7 +760,7 @@ l 5
         func = function()
           pcall(function()
             if G.FUNCS and G.FUNCS.overlay_menu then
-r 13 1382 %20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1382 %20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 15
                 definition = create_UIBox_debug_menu()
               }
@@ -800,7 +800,7 @@ end
 
 G.FUNCS.open_debug_menu = function(e)
   local success, err = pcall(function()
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 10
     pcall(function() DebugManager.init() end)
 
@@ -812,7 +812,7 @@ l 10
     end
 
     if menu_def then
-r 13 1382 %20%20%20%20%20%20 -
+r 32 1382 %20%20%20%20%20%20 -
 l 14
         definition = menu_def
       }
@@ -828,7 +828,7 @@ G.FUNCS.open_debug_menu_overlay = function(e)
   pcall(function()
     local menu_def = create_UIBox_debug_menu()
     if menu_def then
-r 13 1382 %20%20%20%20%20%20 -
+r 32 1382 %20%20%20%20%20%20 -
 l 133
         definition = menu_def
       }
@@ -963,7 +963,7 @@ G.FUNCS.debug_reset = function(e)
   DEBUG_CONFIG.enabled = false
   DebugUI.pin_input = ""
   play_sound('cancel', 1.0, 0.5)
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 18
 end
 
@@ -983,7 +983,7 @@ local function debug_save_and_refresh()
   pcall(function() G:save_progress() end)
   pcall(function() G:save_settings() end)
   pcall(function()
-r 13 240 %20%20%20%20 -
+r 32 240 %20%20%20%20 -
 l 40
     if set_discover_tallies then set_discover_tallies() end
   end)
@@ -1025,7 +1025,7 @@ G.FUNCS.debug_unlock_jokers = function(e)
     if G.P_LOCKED then
       for i = #G.P_LOCKED, 1, -1 do
         if G.P_LOCKED[i] and G.P_LOCKED[i].set == 'Joker' then
-r 12 1621 %20%20%20%20%20%20%20%20%20%20 -
+r 31 1621 %20%20%20%20%20%20%20%20%20%20 -
 l 30
         end
       end
@@ -1057,7 +1057,7 @@ G.FUNCS.debug_unlock_tarots = function(e)
     if G.P_LOCKED then
       for i = #G.P_LOCKED, 1, -1 do
         if G.P_LOCKED[i] and G.P_LOCKED[i].set == 'Tarot' then
-r 12 1621 %20%20%20%20%20%20%20%20%20%20 -
+r 31 1621 %20%20%20%20%20%20%20%20%20%20 -
 l 30
         end
       end
@@ -1089,7 +1089,7 @@ G.FUNCS.debug_unlock_planets = function(e)
     if G.P_LOCKED then
       for i = #G.P_LOCKED, 1, -1 do
         if G.P_LOCKED[i] and G.P_LOCKED[i].set == 'Planet' then
-r 12 1621 %20%20%20%20%20%20%20%20%20%20 -
+r 31 1621 %20%20%20%20%20%20%20%20%20%20 -
 l 30
         end
       end
@@ -1121,7 +1121,7 @@ G.FUNCS.debug_unlock_spectrals = function(e)
     if G.P_LOCKED then
       for i = #G.P_LOCKED, 1, -1 do
         if G.P_LOCKED[i] and G.P_LOCKED[i].set == 'Spectral' then
-r 12 1621 %20%20%20%20%20%20%20%20%20%20 -
+r 31 1621 %20%20%20%20%20%20%20%20%20%20 -
 l 30
         end
       end
@@ -1153,7 +1153,7 @@ G.FUNCS.debug_unlock_vouchers = function(e)
     if G.P_LOCKED then
       for i = #G.P_LOCKED, 1, -1 do
         if G.P_LOCKED[i] and G.P_LOCKED[i].set == 'Voucher' then
-r 12 1621 %20%20%20%20%20%20%20%20%20%20 -
+r 31 1621 %20%20%20%20%20%20%20%20%20%20 -
 l 34
         end
       end
@@ -1189,7 +1189,7 @@ G.FUNCS.debug_unlock_decks = function(e)
     if G.P_LOCKED then
       for i = #G.P_LOCKED, 1, -1 do
         if G.P_LOCKED[i] and G.P_LOCKED[i].set == 'Back' then
-r 12 1621 %20%20%20%20%20%20%20%20%20%20 -
+r 31 1621 %20%20%20%20%20%20%20%20%20%20 -
 l 184
         end
       end
@@ -1375,7 +1375,7 @@ G.FUNCS.debug_unlock_achievements = function(e)
         ach.earned = true
       end
     end
-r 12 1682 %20%20%20%20 -
+r 31 1682 %20%20%20%20 -
 l 123
     if G.ACHIEVEMENTS then
       for ach_id, _ in pairs(G.ACHIEVEMENTS) do
@@ -1500,7 +1500,7 @@ end
 
 local function refresh_debug_menu()
   pcall(function()
-r 23 214 %20%20%20%20 -
+r 17 214 %20%20%20%20 -
 l 72
       local of = G.OVERLAY_MENU; G.OVERLAY_MENU = nil; of:remove()
     end

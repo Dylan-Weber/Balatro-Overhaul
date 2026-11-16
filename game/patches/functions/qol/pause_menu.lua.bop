@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 31
+l 36
 local Q = QOL
 local M = Q.feature("pause_menu", {})
 
@@ -23,6 +23,11 @@ function M.swap(args, button)
     if args.button == 'go_to_menu' and Q.in_run() and Q.on("qol_confirm_leave") then
         args.button = 'qol_leave_run'
     end
+    local FB = rawget(_G, "ForgeBuilder")
+    if (args.button == 'go_to_menu' or args.button == 'qol_leave_run') and FB and FB.can_try_back and FB.can_try_back() then
+        local b = {label = {mod_loc("Back to the Forge")}, button = 'forge_try_back', colour = G.C.PURPLE, minw = args.minw, minh = args.minh, scale = args.scale, id = 'forge_try_back_button'}
+        return {n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = {{n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {button(args), {n = G.UIT.R, config = {minh = 0.2}, nodes = {}}, button(b)}}}}
+    end
 end
 
 local function button_of(node)
@@ -34,7 +39,7 @@ function M.pair(node, button, depth)
     depth = depth or 0
     if type(node) ~= 'table' or type(node.nodes) ~= 'table' or depth > 8 then return false end
     local stats, coll
-r 24 255 %20%20%20%20 -
+r 29 255 %20%20%20%20 -
 l 45
         local b = button_of(v)
         if b == 'high_scores' then stats = k elseif b == 'your_collection' then coll = k end
@@ -81,22 +86,22 @@ function M.restart(same)
     if o and RO.start(o, same) then return end
     local g = G.GAME
     if not g.won and not g.seeded and not g.challenge then
-r 23 900 %20%20%20%20%20%20%20%20 -
+r 17 900 %20%20%20%20%20%20%20%20 -
 l 2
     end
     G:save_settings()
-r 23 904 %20%20%20%20 -
-r 23 905 %20%20%20%20 -
+r 17 904 %20%20%20%20 -
+r 17 905 %20%20%20%20 -
 l 2
     G.run_setup_seed = g.seeded
     G.challenge_tab = g.challenge and g.challenge_tab or nil
-r 23 908 %20%20%20%20 -
+r 17 908 %20%20%20%20 -
 l 4
     if same then G.forced_seed = g.pseudorandom.seed end
     G.forced_stake = g.stake
     G.FUNCS.start_setup_run()
     G.forced_stake = nil
-r 23 913 %20%20%20%20 -
+r 17 913 %20%20%20%20 -
 l 94
     G.forced_seed = nil
 end

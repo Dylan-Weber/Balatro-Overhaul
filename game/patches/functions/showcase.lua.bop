@@ -30,19 +30,19 @@ local function overhaul_mascot()
 end
 
 local function close_tutorial_overlay()
-r 13 6 %20%20%20%20 -
-r 13 2355 %20%20%20%20%20%20%20%20 -
+r 32 6 %20%20%20%20 -
+r 32 2355 %20%20%20%20%20%20%20%20 -
 l 1
         pcall(function()
-r 13 2357 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 2358 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 2359 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2357 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2358 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2359 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
         end)
-r 13 2360 %20%20%20%20%20%20%20%20 -
+r 32 2360 %20%20%20%20%20%20%20%20 -
 l 1
     end
-r 13 2361 %20%20%20%20 -
+r 32 2361 %20%20%20%20 -
 l 28
     release_tutorial_buttons()
 end
@@ -72,7 +72,7 @@ G.FUNCS.start_overhaul_showcase = function(e)
     G.SETTINGS.showcase_seen = false
     G.SETTINGS.overhaul_tips_off = nil
 
-r 23 214 %20%20%20%20 -
+r 17 214 %20%20%20%20 -
 l 48
         local _close = G.FUNCS.overlay_menu_back_button or G.FUNCS.exit_overlay_menu
         if _close then pcall(_close) end
@@ -122,10 +122,10 @@ G.FUNCS.skip_tutorial = function(e)
 end
 
 G.FUNCS.showcase_next = function(e)
-r 13 6 %20%20%20%20 -
-r 13 7 %20%20%20%20%20%20%20%20 -
-r 13 8 %20%20%20%20%20%20%20%20 -
-r 13 9 %20%20%20%20%20%20%20%20 -
+r 32 6 %20%20%20%20 -
+r 32 7 %20%20%20%20%20%20%20%20 -
+r 32 8 %20%20%20%20%20%20%20%20 -
+r 32 9 %20%20%20%20%20%20%20%20 -
 l 139
         G.OVERLAY_TUTORIAL.step = G.OVERLAY_TUTORIAL.step + 1
     end
@@ -309,18 +309,18 @@ local sub_showcase_in_menu = false
 
 local function end_sub_showcase()
     sub_showcase_in_menu = false
-r 13 6 %20%20%20%20 -
+r 32 6 %20%20%20%20 -
 l 1
         pcall(function()
-r 13 2357 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 2358 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 2359 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2357 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2358 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2359 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
         end)
-r 13 2360 %20%20%20%20%20%20%20%20 -
+r 32 2360 %20%20%20%20%20%20%20%20 -
 l 1
     end
-r 13 2361 %20%20%20%20 -
+r 32 2361 %20%20%20%20 -
 l 24
     release_tutorial_buttons()
 end
@@ -346,7 +346,7 @@ local function run_sub_showcase(id, steps)
     mark_sub_showcase_seen(id)
     sub_showcase_in_menu = G.OVERLAY_MENU ~= nil
 
-r 13 2361 %20%20%20%20 -
+r 32 2361 %20%20%20%20 -
 l 14
     release_tutorial_buttons()
 
@@ -369,12 +369,12 @@ l 5
         func = function()
             if G.OVERLAY_TUTORIAL and G.OVERLAY_TUTORIAL.step >= step_num then
                 pcall(function()
-r 13 2357 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 2358 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 13 2359 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2357 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2358 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2359 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 end)
-r 13 2360 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 2360 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 123
                 release_tutorial_buttons()
                 sub_showcase_in_menu = false
@@ -499,7 +499,7 @@ end
 
 
 local _original_skip_tutorial = G.FUNCS.skip_tutorial_section
-r 13 2354 - -
+r 32 2354 - -
 l 64
     if G.OVERLAY_TUTORIAL and G.OVERLAY_TUTORIAL.overhaul then
         G.FUNCS.skip_showcase(e)
@@ -565,7 +565,7 @@ G.FUNCS.select_first_language = function(e)
     end
 
 
-r 23 214 %20%20%20%20 -
+r 17 214 %20%20%20%20 -
 l 6
         pcall(function() G.OVERLAY_MENU:remove() end)
         G.OVERLAY_MENU = nil
@@ -598,7 +598,7 @@ l 23
         if G.set_language then G:set_language() end
     end)
 
-r 13 229 %20%20%20%20 -
+r 32 229 %20%20%20%20 -
 r 1 112 %20%20%20%20 -
 l 14
         trigger = 'after',

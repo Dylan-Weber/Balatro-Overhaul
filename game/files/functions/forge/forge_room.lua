@@ -5,7 +5,7 @@ local Rules = require("functions/forge/forge_rules")
 
 local R = {}
 
-R.V = 8
+R.V = Mods.V
 R.KEY = "forge_room"
 R.KEY_ON = "forge_room_on"
 R.ID = "mproom"

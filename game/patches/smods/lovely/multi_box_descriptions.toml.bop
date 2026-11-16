@@ -15,7 +15,7 @@ target = 'functions/misc_functions.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 11 1754 - -
+r 13 1754 - -
 l 30
 '''
 payload = '''
@@ -47,7 +47,7 @@ target = 'functions/misc_functions.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 11 1709 - -
+r 13 1709 - -
 l 6
 '''
 payload = '''
@@ -55,17 +55,17 @@ if type(loc_target.text) == 'table' and type(loc_target.text[1]) == 'table' then
     for i, box in ipairs(loc_target.text_parsed) do
         if #multi_line ~= 0 then multi_line[#multi_line+1] = '' end
             for _, lines in ipairs(box) do
-r 11 1710 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 11 1711 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 11 1712 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 11 1713 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1710 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1711 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1712 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1713 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                     assembled_string = assembled_string..(type(subpart) == 'string' and subpart or format_ui_value(args.vars[tonumber(subpart[1])]) or 'ERROR')
                 end
-r 11 1716 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1716 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
             end
-r 11 1718 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1718 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 13
         end
     end
@@ -80,13 +80,13 @@ target = 'functions/misc_functions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 11 1560 - -
-r 11 1561 %20%20%20%20 -
+r 13 1560 - -
+r 13 1561 %20%20%20%20 -
 l 3
 end
 '''
 payload = '''
-r 11 1560 - -
+r 13 1560 - -
 l 6
     if type(line) == 'table' then
         center.text_parsed[#center.text_parsed+1] = {}
@@ -94,7 +94,7 @@ l 6
              center.text_parsed[#center.text_parsed][#center.text_parsed[#center.text_parsed]+1] = loc_parse_string(new_line)
         end
     else
-r 11 1561 %20%20%20%20%20%20%20%20 -
+r 13 1561 %20%20%20%20%20%20%20%20 -
 l 34
     end
 end
@@ -130,8 +130,8 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 1121 - -
-r 15 1122 %20%20%20%20 -
+r 30 1121 - -
+r 30 1122 %20%20%20%20 -
 l 26
 '''
 payload = '''
@@ -159,7 +159,7 @@ for i = 0, cols-1 do
 end
 info_boxes = {{n=G.UIT.R, config = {align="cm", padding = 0.05, card_pos = card.T.x }, nodes = info_cols}}
 local ret_val = {n=G.UIT.ROOT, config = {align = 'cm', colour = G.C.CLEAR}, nodes={
-r 15 1122 %20%20%20%20 -
+r 30 1122 %20%20%20%20 -
 l 9
 '''
 
@@ -170,7 +170,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 15 1127 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 1127 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 37
             }}
         }}
@@ -209,15 +209,15 @@ return {n=G.UIT.R, config={align = "cm", colour = empty and G.C.CLEAR or G.C.UI.
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
 pattern = '''
-r 15 3356 - -
-r 15 3357 %20%20%20%20 -
+r 30 3356 - -
+r 30 3357 %20%20%20%20 -
 l 5
 '''
 position = 'at'
 match_indent = true
 payload = '''
 {n=G.UIT.R, config={align = "cm", r = 0.1, padding = 0.1, minw = 2.5, minh = 1.3, emboss = 0.05}, nodes={
-r 15 3357 %20%20%20%20 -
+r 30 3357 %20%20%20%20 -
 l 6
 '''
 

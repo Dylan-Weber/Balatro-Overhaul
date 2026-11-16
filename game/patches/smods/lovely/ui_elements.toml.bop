@@ -13,9 +13,9 @@ priority = -10
 [[patches]]
 [patches.pattern]
 target = 'functions/UI_definitions.lua'
-pattern = '''tab_buttons[#tab_buttons+1] = UIBox_button({id = 'tab_but_'..(v.label or ''), ref_table = v, button = 'change_tab', label = {v.label}, minh = 0.8*args.scale, minw = (tab_port and 2.2 or 2.5)*args.scale, col = true, choice = true, scale = args.text_scale, chosen = v.chosen, func = v.func, focus_args = {type = 'none'}})'''
+pattern = '''tab_buttons[#tab_buttons+1] = UIBox_button({id = 'tab_but_'..(v.label or ''), ref_table = v, button = 'change_tab', label = {v.label}, minh = 0.8*args.scale, minw = 2.5*args.scale, col = true, choice = true, scale = args.text_scale, chosen = v.chosen, func = v.func, focus_args = {type = 'none'}})'''
 position = 'at'
-payload = '''tab_buttons[#tab_buttons+1] = UIBox_button({id = 'tab_but_'..(v.label or ''), ref_table = v, button = 'change_tab', label = {v.label}, minh = 0.8*args.scale, minw = (tab_port and 2.2 or 2.5)*args.scale, col = true, choice = true, scale = args.text_scale, chosen = v.chosen, func = v.func, colour = args.colour, focus_args = {type = 'none'}})'''
+payload = '''tab_buttons[#tab_buttons+1] = UIBox_button({id = 'tab_but_'..(v.label or ''), ref_table = v, button = 'change_tab', label = {v.label}, minh = 0.8*args.scale, minw = 2.5*args.scale, col = true, choice = true, scale = args.text_scale, chosen = v.chosen, func = v.func, colour = args.colour, focus_args = {type = 'none'}})'''
 match_indent = true
 
 # UIElement:draw_self()
@@ -33,7 +33,7 @@ match_indent = true
 [patches.pattern]
 target = 'game.lua'
 pattern = '''
-r 9 2859 - -
+r 7 2859 - -
 l 6
 '''
 position = 'before'
@@ -41,7 +41,7 @@ payload = '''
 for k, v in pairs(self.I.DROPDOWN) do
     if v.parent == G.ROOM_ATTACH then
         love.graphics.push()
-r 9 2761 %20%20%20%20%20%20%20%20 -
+r 7 2761 %20%20%20%20%20%20%20%20 -
 l 12
         v:draw()
         love.graphics.pop()
@@ -55,7 +55,7 @@ match_indent = true
 [patches.pattern]
 target = 'game.lua'
 pattern = '''
-r 9 2886 - -
+r 7 2886 - -
 l 6
 '''
 position = 'before'
@@ -63,7 +63,7 @@ payload = '''
 for k, v in pairs(self.I.DROPDOWN) do
     if v.parent == G.OVERLAY_MENU then
         love.graphics.push()
-r 9 2761 %20%20%20%20%20%20%20%20 -
+r 7 2761 %20%20%20%20%20%20%20%20 -
 l 202
         v:draw()
         love.graphics.pop()
@@ -267,13 +267,13 @@ match_indent = true
 target = 'engine/ui.lua'
 pattern = """
 love.graphics.draw(
-r 24 703 %20%20%20%20 -
-r 24 704 %20%20%20%20 -
-r 24 705 %20%20%20%20 -
+r 29 703 %20%20%20%20 -
+r 29 704 %20%20%20%20 -
+r 29 705 %20%20%20%20 -
 l 1
     0,
-r 24 707 %20%20%20%20 -
-r 24 708 %20%20%20%20 -
+r 29 707 %20%20%20%20 -
+r 29 708 %20%20%20%20 -
 l 7
 )"""
 position = "at"
@@ -282,13 +282,13 @@ local text_shaders = SMODS.resolve_ui_shaders(self, self.states.visible and self
 for _, v in ipairs(text_shaders) do
     if v then self:set_text_shader(v.shader, v.send, true) end
     love.graphics.draw(
-r 24 703 %20%20%20%20%20%20%20%20 -
-r 24 704 %20%20%20%20%20%20%20%20 -
-r 24 705 %20%20%20%20%20%20%20%20 -
+r 29 703 %20%20%20%20%20%20%20%20 -
+r 29 704 %20%20%20%20%20%20%20%20 -
+r 29 705 %20%20%20%20%20%20%20%20 -
 l 1
         0,
-r 24 707 %20%20%20%20%20%20%20%20 -
-r 24 708 %20%20%20%20%20%20%20%20 -
+r 29 707 %20%20%20%20%20%20%20%20 -
+r 29 708 %20%20%20%20%20%20%20%20 -
 l 14
     )
     if v then self:set_text_shader() end
@@ -304,13 +304,13 @@ match_indent = true
 target = 'engine/ui.lua'
 pattern = """
 love.graphics.draw(
-r 24 703 %20%20%20%20 -
-r 24 723 %20%20%20%20 -
-r 24 724 %20%20%20%20 -
+r 29 703 %20%20%20%20 -
+r 29 723 %20%20%20%20 -
+r 29 724 %20%20%20%20 -
 l 1
     0,
-r 24 707 %20%20%20%20 -
-r 24 708 %20%20%20%20 -
+r 29 707 %20%20%20%20 -
+r 29 708 %20%20%20%20 -
 l 10
 )"""
 position = "at"
@@ -322,13 +322,13 @@ for _, v in ipairs(text_shaders) do
         self:draw_text_outline(button_active)
     end
     love.graphics.draw(
-r 24 703 %20%20%20%20%20%20%20%20 -
-r 24 723 %20%20%20%20%20%20%20%20 -
-r 24 724 %20%20%20%20%20%20%20%20 -
+r 29 703 %20%20%20%20%20%20%20%20 -
+r 29 723 %20%20%20%20%20%20%20%20 -
+r 29 724 %20%20%20%20%20%20%20%20 -
 l 1
         0,
-r 24 707 %20%20%20%20%20%20%20%20 -
-r 24 708 %20%20%20%20%20%20%20%20 -
+r 29 707 %20%20%20%20%20%20%20%20 -
+r 29 708 %20%20%20%20%20%20%20%20 -
 l 16
     )
     if v then self:set_text_shader() end
@@ -346,7 +346,7 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 13 504 - -
+r 32 504 - -
 l 13
 '''
 payload = '''
@@ -361,7 +361,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 1883 - -
+r 30 1883 - -
 l 12
 '''
 payload = '''
@@ -375,19 +375,19 @@ target = 'engine/controller.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 23 1348 - -
+r 17 1348 - -
 l 3
 '''
 payload = '''
 if focused.config.focus_args.type == "scrollbar" then
-r 23 1350 %20%20%20%20 -
+r 17 1350 %20%20%20%20 -
 l 1
     local was_moved = nil
-r 23 1351 %20%20%20%20 -
+r 17 1351 %20%20%20%20 -
 l 2
         was_moved = G.FUNCS.controller_scroll(focused, G.real_dt*self.held_button_times[button] * 500, button)
     end
-r 23 1354 %20%20%20%20 -
+r 17 1354 %20%20%20%20 -
 l 12
         was_moved = G.FUNCS.controller_scroll(focused, 3, button)
     end
@@ -401,7 +401,7 @@ target = 'engine/controller.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 23 724 - -
+r 17 724 - -
 l 28
 '''
 payload = '''
@@ -431,7 +431,7 @@ target = 'engine/ui.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 24 118 - -
+r 29 118 - -
 l 6
 '''
 payload = '''

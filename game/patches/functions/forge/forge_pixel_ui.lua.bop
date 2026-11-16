@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 125
+l 126
 local math = require("functions.pure_math")
 local P = require("functions/forge/forge_pixel")
 local Store = require("functions/forge/forge_store")
@@ -11,9 +11,9 @@ local FJ = require("functions/forge/forge_joker")
 local PX = {}
 ForgePixelUI = PX
 
-PX.SIMPLE = {"pencil", "eraser", "fill", "picker", "line", "box", "pan", "@flip", "@clear", "@import"}
+PX.SIMPLE = {"pencil", "eraser", "fill", "picker", "line", "box", "pan", "@flip", "@clear", "@import", "replace"}
 PX.GROUPS = {
-  {key = "draw", tools = {"pencil", "eraser", "fill", "picker", "dither", "gradient", "shade", "light"}},
+  {key = "draw", tools = {"pencil", "eraser", "fill", "picker", "dither", "gradient", "shade", "light", "replace"}},
   {key = "shape", tools = {"line", "box", "block", "oval", "disc", "pan"}},
   {key = "select", tools = {"select", "lasso", "wand", "move", "@copy", "@cut", "@paste", "@deselect"}},
   {key = "edit", tools = {"@flip", "@flip_v", "@rotate", "@outline", "@clear", "@import", "@layer", "@soul"}},
@@ -35,6 +35,7 @@ PX.KINDS = {
   {key = "back", label = "Deck back", pool = "Back", atlas = "centers"},
   {key = "enhancement", label = "Enhancement", pool = "Enhanced", atlas = "centers"},
   {key = "seal", label = "Seal", atlas = "centers", empty_blank = true},
+  {key = "edition", label = "Edition", atlas = "Joker", empty_blank = true},
   {key = "skin", label = "Card skin", atlas = "cards_1"},
   {key = "blind", label = "Blind chip", w = 34, h = 34, atlas = "blind_chips", game = 1.4},
   {key = "tag", label = "Tag", w = 34, h = 34, atlas = "tags", game = 0.8},
@@ -72,7 +73,7 @@ local function adv() return PX.mode() == "advanced" end
 local LABELS = {
   pencil = "Pencil", eraser = "Eraser", fill = "Fill", picker = "Pick colour", line = "Line", box = "Box", pan = "Pan", move = "Move",
   dither = "Dither", gradient = "Gradient", shade = "Shade", light = "Light", block = "Block", oval = "Oval", disc = "Disc",
-  select = "Select", lasso = "Lasso", wand = "Wand",
+  select = "Select", lasso = "Lasso", wand = "Wand", replace = "Replace colour",
   ["@flip"] = "Flip", ["@flip_v"] = "Upside down", ["@rotate"] = "Rotate", ["@outline"] = "Outline", ["@clear"] = "Clear", ["@import"] = "Import",
   ["@copy"] = "Copy", ["@cut"] = "Cut", ["@paste"] = "Paste", ["@deselect"] = "Deselect", ["@layer"] = "+ Layer", ["@soul"] = "+ Soul",
 }
@@ -128,7 +129,7 @@ function PX.sprite_data(atlas_name, pos, w, h)
     img:setFilter("nearest", "nearest")
     local canvas = love.graphics.newCanvas(w, h, {dpiscale = 1})
     love.graphics.push("all")
-r 19 278 %20%20%20%20 -
+r 12 278 %20%20%20%20 -
 l 6
     love.graphics.setCanvas(canvas)
     love.graphics.clear(0, 0, 0, 0)
@@ -136,7 +137,7 @@ l 6
     love.graphics.setColor(1, 1, 1, 1)
     local quad = love.graphics.newQuad(pos.x * atlas.px, pos.y * atlas.py, atlas.px, atlas.py, img:getDimensions())
     love.graphics.draw(img, quad, 0, 0, 0, w / atlas.px, h / atlas.py)
-r 11 112 %20%20%20%20 -
+r 13 112 %20%20%20%20 -
 l 357
     love.graphics.pop()
     img:setFilter(fmin, fmag)
@@ -336,7 +337,7 @@ function PX.update_preview_atlas()
   if not d then return end
   local art, soul = P.flatten(d, "art"), P.flatten(d, "soul")
   PX.has_soul = P.has_pixels(soul)
-  if PX.state.kind == "seal" and d.w == P.W and d.h == P.H then
+  if (PX.state.kind == "seal" or PX.state.kind == "edition") and d.w == P.W and d.h == P.H then
     PX._blank_px = PX._blank_px or PX.blank_card().px
     art = stack_px(PX._blank_px, art)
   end
@@ -666,7 +667,7 @@ l 36
   end
   if PX.state.grid and ps * self.map.k >= 5 then
     love.graphics.setColor(0, 0, 0, 0.22)
-r 9 1006 %20%20%20%20 -
+r 7 1006 %20%20%20%20 -
 l 6
     love.graphics.setLineWidth(1 / self.map.k)
     for x = 0, d.w do love.graphics.line(ox + x * ps, oy, ox + x * ps, oy + d.h * ps) end
@@ -674,7 +675,7 @@ l 6
   end
   local edges = sel_edges(d)
   if edges then
-r 9 1006 %20%20%20%20 -
+r 7 1006 %20%20%20%20 -
 l 16
     love.graphics.setLineWidth(2 / self.map.k)
     local phase = math.floor((love.timer.getTime() * 4) % 2)
@@ -692,7 +693,7 @@ l 16
     local b = (BRUSHES[PX.state.tool] and PX.state.brush) or 1
     local lo = -math.floor((b - 1) / 2)
     local blink = math.floor(love.timer.getTime() * 3) % 2 == 0
-r 9 1006 %20%20%20%20 -
+r 7 1006 %20%20%20%20 -
 l 11
     love.graphics.setLineWidth(2 / self.map.k)
     love.graphics.setColor(blink and 1 or 0, blink and 1 or 0, blink and 1 or 0, 1)
@@ -706,7 +707,7 @@ l 11
   self:handle_pinch()
   self:poll()
 r 2 461 %20%20 -
-l 137
+l 140
 end
 
 function Canvas:apply(px, py, first)
@@ -721,6 +722,9 @@ function Canvas:apply(px, py, first)
     st.lx, st.ly = px, py
   elseif st.tool == "fill" then
     if first then P.fill(d, px, py, s.colour, adv() and s.tol or 0, adv() and s.every) end
+  elseif st.tool == "replace" then
+    local c = P.get(d, px, py)
+    if first and c ~= nil then s.replace_from = c; s.replace_done = nil; PX.colour_changed = true end
   elseif st.tool == "picker" then
     local c = P.get(d, px, py)
     if c and c ~= P.CLEAR then s.colour = c; PX.colour_changed = true end
@@ -845,7 +849,7 @@ end
 
 function Canvas:move(dt)
 r 2 655 %20%20 -
-l 328
+l 381
   if PX.pad.on then
     local H = G.CONTROLLER and G.CONTROLLER.HID
     if H and (H.mouse or H.touch) and not H.controller then
@@ -914,6 +918,7 @@ end
 function Canvas:click() end
 
 function PX.after_change()
+  PX.state.just_saved = nil
   local d = PX.doc
   local stale = d and (P.can_undo(d) ~= PX.built_undo or P.can_redo(d) ~= PX.built_redo)
   if PX.rebuild_preview or PX.colour_changed or stale or (adv() and PX.state.pal == "art") then
@@ -969,8 +974,14 @@ function PX.preview_node()
     fsp.atlas = G.ASSET_ATLAS.forge_px_preview
     fsp:set_sprite_pos({x = 1, y = 0})
   end
-  local ed = adv() and PX.EDITIONS[PX.state.edition] or "base"
-  if ed ~= "base" then card:set_edition({[ed] = true}, true, true) end
+  local tg = PX.state.target
+  if tg and tg.look ~= nil then
+    if tg.edition == "negative" then card:set_edition({negative = true}, true, true) end
+    require("functions/forge/forge_shine").preview(card, tg.look)
+  else
+    local ed = adv() and PX.EDITIONS[PX.state.edition] or "base"
+    if ed ~= "base" then card:set_edition({[ed] = true}, true, true) end
+  end
   area:emplace(card)
   PX.preview_card = card
   return {n = G.UIT.R, config = {align = "cm", minw = w * 1.1, minh = h, padding = 0}, nodes = {{n = G.UIT.O, config = {object = area}}}}
@@ -1012,17 +1023,17 @@ local GROUP_LABELS = {draw = "Draw", shape = "Shapes", select = "Select", edit =
 local function all_tool_labels()
   local out = {mod_loc("Undo"), mod_loc("Redo")}
   if not adv() then
-    for _, t in ipairs(PX.SIMPLE) do out[#out + 1] = tool_label(t) end
+    for _, t in ipairs(PX.SIMPLE) do if t ~= "replace" then out[#out + 1] = tool_label(t) end end
     return out
   end
-  for _, g in ipairs(PX.GROUPS) do for _, t in ipairs(g.tools) do out[#out + 1] = tool_label(t) end end
+  for _, g in ipairs(PX.GROUPS) do for _, t in ipairs(g.tools) do if t ~= "replace" then out[#out + 1] = tool_label(t) end end end
   return out
 end
 
 local function left_column(w, avail)
   local bw = (w - 0.1) / 2 - 0.08
   local n_tools = math.ceil(#PX.group_tools() / 2)
-  local units = 2 + n_tools + (adv() and 1.6 or 0)
+  local units = 3 + n_tools + (adv() and 1.6 or 0)
   local h = math.max(bh(), math.min(touch() and 0.82 or 0.7, ((avail or UIK.H) - 0.55) / units - 0.08))
   local sc = fit_scale(all_tool_labels(), bw, base_sc())
   local rows = {}
@@ -1047,7 +1058,12 @@ local function left_column(w, avail)
   end
   local list = PX.group_tools()
   for i = 1, #list, 2 do
-    rows[#rows + 1] = pair(tool_button(list[i], bw, h, sc), list[i + 1] and tool_button(list[i + 1], bw, h, sc) or sp(bw), w)
+    if not list[i + 1] and list[i] == "replace" then
+      local ww = w - 0.1
+      rows[#rows + 1] = line_of({tool_button(list[i], ww, h, math.min(sc, fit_scale({tool_label(list[i])}, ww, base_sc())))}, w)
+    else
+      rows[#rows + 1] = pair(tool_button(list[i], bw, h, sc), list[i + 1] and tool_button(list[i + 1], bw, h, sc) or sp(bw), w)
+    end
   end
   local d = PX.doc
   PX.built_undo, PX.built_redo = d and P.can_undo(d) or false, d and P.can_redo(d) or false
@@ -1055,6 +1071,10 @@ local function left_column(w, avail)
   rows[#rows + 1] = pair(
     btn{label = mod_loc("Undo"), button = "forge_px_undo", colour = UIK.C.accent, w = bw, h = h, scale = sc, disabled = not (d and P.can_undo(d)), id = "forge_px_undo"},
     btn{label = mod_loc("Redo"), button = "forge_px_redo", colour = UIK.C.accent, w = bw, h = h, scale = sc, disabled = not (d and P.can_redo(d)), id = "forge_px_redo"}, w)
+  rows[#rows + 1] = {n = G.UIT.R, config = {minh = 0.08}, nodes = {}}
+  local slabel = PX.state.just_saved and mod_loc("Saved") or mod_loc("Save")
+  rows[#rows + 1] = line_of({btn{label = slabel, button = "forge_px_save", colour = PX.state.just_saved and UIK.C.ok or UIK.C.danger, w = w - 0.1, h = h,
+    scale = math.min(sc, fit_scale({mod_loc("Save"), mod_loc("Saved")}, w - 0.1, base_sc())), disabled = not d, id = "forge_px_save"}}, w)
   return {n = G.UIT.C, config = {align = "tm", minw = w, padding = 0}, nodes = rows}
 end
 
@@ -1151,8 +1171,45 @@ end
 
 local TOL_TOOLS = {fill = true, wand = true, gradient = true}
 
+local function replace_rows(w, h)
+  local s = PX.state
+  local rows = {}
+  local cw = touch() and 0.8 or 0.7
+  rows[#rows + 1] = line_of({UIK.text(mod_loc("Replace a colour"), {scale = base_sc(), colour = UIK.C.title})}, w)
+  local from = s.replace_from
+  rows[#rows + 1] = line_of({
+    {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {
+      {n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = {from and chip(from, cw, cw) or {n = G.UIT.C, config = {align = "cm", minw = cw, minh = cw, r = 0.08, colour = G.C.BLACK, outline = 1, outline_colour = UIK.C.muted}, nodes = {UIK.text("?", {scale = 0.4, colour = UIK.C.muted})}}}},
+      {n = G.UIT.R, config = {align = "cm", padding = 0.03}, nodes = {UIK.text(mod_loc("This"), {scale = 0.3, colour = G.C.UI.TEXT_LIGHT, shadow = false})}},
+    }},
+    sp(0.12),
+    {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {
+      {n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = {UIK.text(">", {scale = 0.45, colour = UIK.C.title})}},
+      {n = G.UIT.R, config = {align = "cm", padding = 0.03}, nodes = {UIK.text(" ", {scale = 0.3, shadow = false})}},
+    }},
+    sp(0.12),
+    {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {
+      {n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = {chip(s.colour, cw, cw)}},
+      {n = G.UIT.R, config = {align = "cm", padding = 0.03}, nodes = {UIK.text(mod_loc("Becomes"), {scale = 0.3, colour = G.C.UI.TEXT_LIGHT, shadow = false})}},
+    }},
+  }, w)
+  local tips = {mod_loc("1. Click a colour on the art."), mod_loc("2. Pick the new one in the palette.")}
+  local tsc = fit_scale(tips, w, 0.3)
+  for _, t in ipairs(tips) do rows[#rows + 1] = line_of({UIK.text(t, {scale = tsc, colour = UIK.C.muted, shadow = false})}, w) end
+  local label = mod_loc("Replace all")
+  rows[#rows + 1] = line_of({btn{label = label, button = "forge_px_replace", colour = UIK.C.danger, w = w - 0.1, h = h, scale = fit_scale({label}, w - 0.1, base_sc()),
+    disabled = from == nil or from == s.colour, id = "forge_px_replace"}}, w)
+  if s.replace_done then
+    local msg = string.format(mod_loc("%d pixels changed"), s.replace_done)
+    rows[#rows + 1] = line_of({UIK.text(msg, {scale = fit_scale({msg}, w, 0.3), colour = UIK.C.muted, shadow = false})}, w)
+  end
+  return rows
+end
+PX.replace_rows = replace_rows
+
 local function options_rows(w, h)
   local s = PX.state
+  if s.tool == "replace" then return replace_rows(w, h) end
   local rows = {brush_row(w, h)}
   if not TOL_TOOLS[s.tool] then return rows end
   rows[#rows + 1] = stepper(string.format(mod_loc("Tolerance %d"), s.tol), "forge_px_tol", w, h, s.tol <= 0, s.tol >= 100, "forge_px_tol")
@@ -1174,8 +1231,8 @@ local function eye(i, visible, size)
   local nodes = {}
   if visible then
     local check = Sprite(0, 0, size * 0.8, size * 0.8, G.ASSET_ATLAS["icons"], {x = 1, y = 0})
-r 15 1916 %20%20%20%20 -
-l 874
+r 30 1916 %20%20%20%20 -
+l 904
     nodes[1] = {n = G.UIT.O, config = {object = check}}
   end
   return {n = G.UIT.C, config = {align = "cm", minw = size, minh = size, r = 0.1, colour = visible and G.C.RED or G.C.BLACK, outline = 1.2, outline_colour = G.C.WHITE, line_emboss = 0.5,
@@ -1245,8 +1302,12 @@ local function panel(w)
     local cw = touch() and 0.9 or 0.8
     local aw = w - cw - 0.15
     rows[#rows + 1] = line_of({chip(PX.state.colour, cw, h), sp(0.15), btn{label = mod_loc("Any colour"), button = "forge_px_mix", colour = UIK.C.accent, w = aw, h = h, scale = fit_scale({mod_loc("Any colour")}, aw, base_sc()), id = "forge_px_mix"}}, w)
-    rows[#rows + 1] = brush_row(w, h)
-    for _, r in ipairs(view_rows(w, h)) do rows[#rows + 1] = r end
+    if PX.state.tool == "replace" then
+      for _, r in ipairs(replace_rows(w, h)) do rows[#rows + 1] = r end
+    else
+      rows[#rows + 1] = brush_row(w, h)
+      for _, r in ipairs(view_rows(w, h)) do rows[#rows + 1] = r end
+    end
   end
   return {n = G.UIT.C, config = {align = "tm", minw = w, padding = 0}, nodes = rows}
 end
@@ -1416,6 +1477,32 @@ G.FUNCS.forge_px_panel = function(e)
   local p = e and e.config and e.config.ref_table and e.config.ref_table.panel
   if not p then return end
   PX.state.panel = p
+  UIK.refresh()
+end
+
+G.FUNCS.forge_px_save = function(e)
+  if not PX.doc then return end
+  PX.sync_image()
+  PX.save()
+  PX.state.just_saved = true
+  play_sound("generic1", 1.1, 0.5)
+  UIK.refresh()
+end
+
+G.FUNCS.forge_px_replace = function(e)
+  local s, d = PX.state, PX.doc
+  if not (d and s.replace_from ~= nil) or s.replace_from == s.colour then return end
+  P.begin(d)
+  local n = P.replace_colour(d, s.replace_from, s.colour)
+  if n > 0 and P.finish(d) then
+    s.replace_from = s.colour
+    PX.sync_image()
+    PX.save()
+    PX.later(PX.after_change)
+  else
+    P.cancel(d)
+  end
+  s.replace_done = n
   UIK.refresh()
 end
 
@@ -2050,7 +2137,7 @@ function PX.pad_press(button)
     end
     return true
   end
-r 23 722 %20%20 -
+r 17 722 %20%20 -
 l 23
     if cv.stroke then cv:stop_drag() end
     local lx, ly = PX.pad_local()
@@ -2075,7 +2162,7 @@ end
 
 function PX.pad_release(button)
   if not (PX.pad.on and PX.active()) then return false end
-r 23 722 %20%20 -
+r 17 722 %20%20 -
 l 115
     if PX.canvas.stroke then PX.canvas:stop_drag() end
     return true
@@ -2095,7 +2182,7 @@ local function kp_on()
   return ok and on
 end
 
-PX.KEYS = {b = "pencil", g = "fill", i = "picker", l = "line", u = "box", o = "oval", m = "select", w = "wand", v = "move", h = "pan", d = "dither"}
+PX.KEYS = {c = "replace", b = "pencil", g = "fill", i = "picker", l = "line", u = "box", o = "oval", m = "select", w = "wand", v = "move", h = "pan", d = "dither"}
 
 function PX.key(key)
   if not PX.active() or not PX.doc then return false end
@@ -2192,7 +2279,7 @@ function PX.init()
     local ok, used = pcall(PX.pad_press, button)
     if not ok then print("[FORGE] pixel pad: " .. tostring(used)) end
     if ok and used then
-r 23 692 %20%20%20%20%20%20 -
+r 17 692 %20%20%20%20%20%20 -
 l 8
       return
     end
@@ -2202,7 +2289,7 @@ l 8
   Controller.button_release_update = function(self, button, ...)
     local ok, used = pcall(PX.pad_release, button)
     if ok and used then
-r 23 762 %20%20%20%20%20%20 -
+r 17 762 %20%20%20%20%20%20 -
 l 66
       return
     end
@@ -2220,7 +2307,7 @@ local function register_strings()
   if not mod_loc_register then return end
   mod_loc_register{
     fr = {
-      ["Pencil"] = "Crayon", ["Eraser"] = "Gomme", ["Fill"] = "Remplir", ["Pick colour"] = "Pipette", ["Line"] = "Ligne", ["Box"] = "Cadre", ["Pan"] = "Main", ["Move"] = "Déplacer",
+      ["Pencil"] = "Crayon", ["Eraser"] = "Gomme", ["Fill"] = "Remplir", ["Pick colour"] = "Pipette", ["Replace colour"] = "Remplacer une couleur", ["Replace a colour"] = "Remplacer une couleur", ["This"] = "Celle-ci", ["Becomes"] = "Devient", ["1. Click a colour on the art."] = "1. Cliquez une couleur sur le dessin.", ["2. Pick the new one in the palette."] = "2. Choisissez la nouvelle dans la palette.", ["Replace all"] = "Tout remplacer", ["Save"] = "Enregistrer", ["Saved"] = "Enregistré", ["%d pixels changed"] = "%d pixels changés", ["Line"] = "Ligne", ["Box"] = "Cadre", ["Pan"] = "Main", ["Move"] = "Déplacer",
       ["Dither"] = "Trame", ["Gradient"] = "Dégradé", ["Shade"] = "Ombre", ["Light"] = "Lumière", ["Block"] = "Pavé", ["Oval"] = "Ovale", ["Disc"] = "Disque",
       ["Select"] = "Sélection", ["Lasso"] = "Lasso", ["Wand"] = "Baguette", ["Flip"] = "Retourner", ["Upside down"] = "À l'envers", ["Rotate"] = "Pivoter", ["Outline"] = "Contour",
       ["Clear"] = "Effacer", ["Import"] = "Importer", ["Copy"] = "Copier", ["Cut"] = "Couper", ["Paste"] = "Coller", ["Deselect"] = "Lâcher", ["+ Layer"] = "+ Calque", ["+ Soul"] = "+ L'âme",
@@ -2242,7 +2329,7 @@ local function register_strings()
       ["Put a picture in this folder:"] = "Mettez une image dans ce dossier :", ["No pictures yet"] = "Aucune image pour l'instant", ["File picker > Balatro Overhaul > forge > import"] = "Sélecteur de fichiers > Balatro Overhaul > forge > import", ["Balatro colours"] = "Couleurs Balatro", ["OPEN THE FOLDER"] = "OUVRIR LE DOSSIER",
     },
     es = {
-      ["Pencil"] = "Lápiz", ["Eraser"] = "Goma", ["Fill"] = "Rellenar", ["Pick colour"] = "Cuentagotas", ["Line"] = "Línea", ["Box"] = "Marco", ["Pan"] = "Mano", ["Move"] = "Mover",
+      ["Pencil"] = "Lápiz", ["Eraser"] = "Goma", ["Fill"] = "Rellenar", ["Pick colour"] = "Cuentagotas", ["Replace colour"] = "Cambiar un color", ["Replace a colour"] = "Cambiar un color", ["This"] = "Este", ["Becomes"] = "Pasa a", ["1. Click a colour on the art."] = "1. Haz clic en un color del dibujo.", ["2. Pick the new one in the palette."] = "2. Elige el nuevo en la paleta.", ["Replace all"] = "Cambiar todo", ["Save"] = "Guardar", ["Saved"] = "Guardado", ["%d pixels changed"] = "%d píxeles cambiados", ["Line"] = "Línea", ["Box"] = "Marco", ["Pan"] = "Mano", ["Move"] = "Mover",
       ["Dither"] = "Trama", ["Gradient"] = "Degradado", ["Shade"] = "Sombra", ["Light"] = "Luz", ["Block"] = "Bloque", ["Oval"] = "Óvalo", ["Disc"] = "Disco",
       ["Select"] = "Selección", ["Lasso"] = "Lazo", ["Wand"] = "Varita", ["Flip"] = "Voltear", ["Upside down"] = "Al revés", ["Rotate"] = "Girar", ["Outline"] = "Contorno",
       ["Clear"] = "Limpiar", ["Import"] = "Importar", ["Copy"] = "Copiar", ["Cut"] = "Cortar", ["Paste"] = "Pegar", ["Deselect"] = "Soltar", ["+ Layer"] = "+ Capa", ["+ Soul"] = "+ Alma",

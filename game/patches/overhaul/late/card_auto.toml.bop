@@ -1,0 +1,735 @@
+BOP 2
+eol lf
+final 1
+base 0
+l 16
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.card.001"
+target = "card.lua"
+pattern = '''^(?<pre>[\t ]*parent = self\}\n[\t ]*\}\n[\t ]*end\n[\t ]*end\n[\t ]*end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if self.seal and self.area and self.area.config and self.area.config.collection then
+        pcall(function()
+            for _, v in ipairs(G.P_CENTER_POOLS['Seal'] or {}) do
+                if v.key == self.seal then
+                    if v.alerted and self.children.alert then
+r 3 83 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 3 84 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
+                    elseif not v.alerted and not self.children.alert and v.discovered then
+r 3 86 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 3 87 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 129
+                            config = {align="tri", offset = {x = -0.1, y = 0.1}, parent = self}
+                        }
+                    end
+                    break
+                end
+            end
+        end)
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.002"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*self\.children\.center = Sprite\(self\.T\.x, self\.T\.y, self\.T\.w, self\.T\.h, G\.ASSET_ATLAS\[_center\.set\], self\.config\.center\.pos\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    self.children.center = Sprite(self.T.x, self.T.y, self.T.w, self.T.h, G.ASSET_ATLAS[_center.atlas or _center.set] or G.ASSET_ATLAS[_center.set], self.config.center.pos)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.003"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*self\.children\.back = Sprite\(self\.T\.x, self\.T\.y, self\.T\.w, self\.T\.h, G\.ASSET_ATLAS\["centers"\], self\.params\.bypass_back or \(self\.playing_card and G\.GAME\[self\.back\]\.pos or G\.P_CENTERS\['b_red'\]\.pos\)\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            local _back_atlas = G.ASSET_ATLAS["centers"]
+            local _back_pos = self.params.bypass_back or (self.playing_card and G.GAME[self.back].pos or G.P_CENTERS['b_red'].pos)
+            if self.playing_card and G.GAME and G.GAME[self.back] and G.GAME[self.back].effect then
+                local _bc = G.GAME[self.back].effect.center
+                if _bc and _bc.atlas and _bc.atlas ~= "centers" and G.ASSET_ATLAS[_bc.atlas] then
+                    _back_atlas = G.ASSET_ATLAS[_bc.atlas]
+                end
+            end
+            self.children.back = Sprite(self.T.x, self.T.y, self.T.w, self.T.h, _back_atlas, _back_pos)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.004"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*local old_hand = self\.ability\.to_do_poker_hand\n)'''
+position = "at"
+payload = '''
+${pre}        table.sort(_poker_hands)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.005"
+target = "card.lua"
+pattern = '''^(?<pre>[\t ]*if G\.consumeables and self\.area == G\.consumeables then \n[\t ]*check_for_unlock\(\{type = 'modify_jokers'\}\)\n[\t ]*end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if not initial and self.playing_card and center and center.set == "Enhanced" then
+        if QuestManager and QuestManager.on_card_enhanced then
+            pcall(function()
+                QuestManager.on_card_enhanced()
+            end)
+        end
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.006"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*self\.extra_cost = 0 \+ G\.GAME\.inflation\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if not G.GAME then self.cost = self.base_cost or 1; self.sell_cost = 1; self.sell_cost_label = 1; self.extra_cost = 0; return end
+    self.extra_cost = 0 + (G.GAME.inflation or 0)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.007"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if self\.area and self\.ability\.couponed and \(self\.area == G\.shop_jokers or self\.area == G\.shop_booster\) then self\.cost = 0 end\n)'''
+position = "at"
+payload = '''
+${pre}    if G.GAME.modifiers and G.GAME.modifiers.ante_shop_tax and self.cost > 0 and not self.ability.rental then
+        self.cost = self.cost + 1
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.008"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*end\n[\t ]*\n[\t ]*self:set_cost\(\)\n)'''
+position = "at"
+payload = '''
+${pre}    end
+
+    if self.edition and QuestManager and QuestManager.on_edition_obtained then
+        pcall(function()
+            QuestManager.on_edition_obtained(self.edition.type)
+        end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.009"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*local r_mults = \{\}\n)'''
+position = "at"
+payload = '''
+${pre}            local text_scale = (G.F_MOBILE and 1.45) or 1
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.010"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.T, config=\{text = '  \+',colour = G\.C\.MULT, scale = 0\.32\}\},\n[\t ]*\{n=G\.UIT\.O, config=\{object = DynaText\(\{string = r_mults, colours = \{G\.C\.RED\},pop_in_rate = 9999999, silent = true, random_element = true, pop_delay = 0\.5, scale = 0\.32, min_cycle_time = 0\}\)\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                {n=G.UIT.T, config={text = '   +',colour = G.C.MULT, scale = 0.32*text_scale}},
+e 3 774 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 - =167,+%2A%74%65%78%74%5F%73%63%61%6C%65,=25
+l 139
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.011"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*colours = \{G\.C\.UI\.TEXT_DARK\},pop_in_rate = 9999999, silent = true, random_element = true, pop_delay = 0\.2011, scale = 0\.32, min_cycle_time = 0\}\)\}\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                colours = {G.C.UI.TEXT_DARK},pop_in_rate = 9999999, silent = true, random_element = true, pop_delay = 0.2011, scale = 0.32*text_scale, min_cycle_time = 0})}},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.012"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if not skip_check and \(\(G\.play and #G\.play\.cards > 0\) or\n)'''
+position = "at"
+payload = '''
+${pre}    if not self.ability.consumeable then return false end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.013"
+target = "card.lua"
+pattern = '''^(?<pre>[\t ]*G\.GAME\.pack_choices = self\.config\.center\.config\.choose or 1\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if G.GAME.modifiers and G.GAME.modifiers.booster_minus_choice and G.GAME.pack_choices > 1 then
+            local game = G.GAME
+            game.pack_choices = game.pack_choices - 1
+        end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.card.014"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*local pack_cards = \{\}\n)'''
+position = "at"
+payload = '''
+${pre}            pcall(function() haptic_buzz(3) end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.015"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if G\.pack_cards (?:and not G\.pack_cards\.REMOVED )?then \n)'''
+position = "at"
+payload = '''
+${pre}                if G.pack_cards and (G.pack_cards.REMOVED or not G.pack_cards.cards) then
+                    for _, v in ipairs(pack_cards) do v:remove() end
+                    return true
+                end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.016"
+target = "card.lua"
+pattern = '''^(?<pre>[\t ]*if center_table\.name == 'Reroll Surplus' or center_table\.name == 'Reroll Glut' then\n[\t ]*G\.E_MANAGER:add_event\(Event\(\{func = function\(\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}            if not (self and self.ability) then return true end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.017"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*play_sound\('explosion_release1'\)\n)'''
+position = "at"
+payload = '''
+${pre}            haptic_buzz(3)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.018"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self\.ability\.to_do_poker_hand = pseudorandom_element\(_poker_hands, pseudoseed\('to_do'\)\)\n)'''
+position = "at"
+payload = '''
+${pre}                    table.sort(_poker_hands)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.019"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*G\.GAME\.chips/G\.GAME\.blind\.chips >= 0\.25 then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                G.GAME.chips/G.GAME.blind.chips >= 0.25 and
+                not G.GAME.multiplayer then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.020"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*if v\.config\.center ~= G\.P_CENTERS\.c_base and not v\.debuff and not v\.vampired then \n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                            local plain = not v.config.center or v.config.center.name == "Default Base"
+                            if not plain and not v.debuff and not v.vampired then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.021"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*if self\.ability\.name == 'Stuntman' then\n[\t ]*return \{\n[\t ]*message = localize\{type='variable',key='a_chips',vars=\{self\.ability\.extra\.chip_mod\}\},\n[\t ]*chip_mod = self\.ability\.extra\.chip_mod,\n[\t ]*\}\n[\t ]*end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.022"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*end\n[\t ]*if self\.ability\.name == 'Supernova' then\n)'''
+position = "at"
+payload = '''
+${pre}                        end
+r 3 627 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
+                            return {
+r 3 3715 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 3 3716 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 73
+                            }
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.023"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if self\.flipping == 'f2b' then\n)'''
+position = "at"
+payload = '''
+${pre}    if not self.ability then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.024"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*if v\.config\.center ~= G\.P_CENTERS\.c_base then self\.ability\.driver_tally = self\.ability\.driver_tally\+1 end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                if v.config.center and (v.config.center.name ~= "Default Base") then self.ability.driver_tally = self.ability.driver_tally+1 end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.card.025"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*if v\.config\.center == G\.P_CENTERS\.m_steel then self\.ability\.steel_tally = self\.ability\.steel_tally\+1 end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                if v.config.center and (v.config.center.name == "Steel Card") then self.ability.steel_tally = self.ability.steel_tally+1 end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.card.026"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*if v\.config\.center == G\.P_CENTERS\.m_stone then self\.ability\.stone_tally = self\.ability\.stone_tally\+1 end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                if v.config.center and (v.config.center.name == "Stone Card") then self.ability.stone_tally = self.ability.stone_tally+1 end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.card.027"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*\(self\.T\.y < G\.CARD_H\*0\.8\) and 'bm' or\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                                (self.T.y < G.CARD_H*1.4) and 'bm' or
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.028"
+target = "card.lua"
+pattern = '''^(?<pre>[\t ]*G:save_progress\(\)\n[\t ]*end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if self.seal and self.area and self.area.config and self.area.config.collection then
+            pcall(function()
+                local seal_key = self.seal
+                for _, v in ipairs(G.P_CENTER_POOLS['Seal'] or {}) do
+                    if v.key == seal_key and v.discovered and not v.alerted then
+                        v.alerted = true
+                        if self.children.alert then
+r 3 83 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 3 84 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 20
+                        end
+                        G:save_progress()
+                    end
+                end
+            end)
+        end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.029"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*function Card:juice_up\(scale, rot_amount\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}function Card:simple_touch()
+    return false
+end
+
+e 3 4333 - - =40,+%2C%20%64%69%73%61%62%6C%65%5F%72%75%6D%62%6C%65,=1
+l 90
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.030"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*local rot_amt = rot_amount and 0\.4\*\(math\.random\(\)>0\.5 and 1 or -1\)\*rot_amount or \(math\.random\(\)>0\.5 and 1 or -1\)\*0\.16\n)'''
+position = "at"
+payload = '''
+${pre}    if disable_rumble then G.HAPTIC_LEVEL = 0 else haptic_buzz(1) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.031"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*elseif \(self\.sticker_run and G\.shared_stickers\[self\.sticker_run\]\) and G\.SETTINGS\.run_stake_stickers then\n)'''
+position = "at"
+payload = '''
+${pre}                    if self.sticker == 'Chaos' then G.shared_stickers[self.sticker]:draw_shader('foil', nil, self.ARGS.send_to_shader, nil, self.children.center) end
+                    if self.sticker == 'Apocalypse' then G.shared_stickers[self.sticker]:draw_shader('holo', nil, self.ARGS.send_to_shader, nil, self.children.center) end
+                    if self.sticker == 'Oblivion' then G.shared_stickers[self.sticker]:draw_shader('negative', nil, self.ARGS.send_to_shader, nil, self.children.center) end
+                    if self.sticker == 'Transcendent' then G.shared_stickers[self.sticker]:draw_shader('polychrome', nil, self.ARGS.send_to_shader, nil, self.children.center) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.032"
+target = "card.lua"
+pattern = '''^(?<pre>[\t ]*G\.shared_stickers\[self\.sticker_run\]:draw_shader\('voucher', nil, self\.ARGS\.send_to_shader, nil, self\.children\.center\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    if self.sticker_run == 'Chaos' then G.shared_stickers[self.sticker_run]:draw_shader('foil', nil, self.ARGS.send_to_shader, nil, self.children.center) end
+                    if self.sticker_run == 'Apocalypse' then G.shared_stickers[self.sticker_run]:draw_shader('holo', nil, self.ARGS.send_to_shader, nil, self.children.center) end
+                    if self.sticker_run == 'Oblivion' then G.shared_stickers[self.sticker_run]:draw_shader('negative', nil, self.ARGS.send_to_shader, nil, self.children.center) end
+                    if self.sticker_run == 'Transcendent' then G.shared_stickers[self.sticker_run]:draw_shader('polychrome', nil, self.ARGS.send_to_shader, nil, self.children.center) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.033"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*elseif self\.sprite_facing == 'back' then\n)'''
+position = "at"
+payload = '''
+${pre}            if bom_ranked then bom_ranked.draw_frame(self) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.034"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*if self\.sticker and G\.shared_stickers\[self\.sticker\] then\n)'''
+position = "at"
+payload = '''
+${pre}            if bom_ranked then bom_ranked.draw_back(self) end
+            if TavernApply then TavernApply.draw_back(self) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.035"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*end\n[\t ]*end\n[\t ]*\n[\t ]*for k, v in pairs\(self\.children\) do\n)'''
+position = "at"
+payload = '''
+${pre}                if self.sticker == 'Chaos' then G.shared_stickers[self.sticker]:draw_shader('foil', nil, self.ARGS.send_to_shader, true, self.children.center) end
+                if self.sticker == 'Apocalypse' then G.shared_stickers[self.sticker]:draw_shader('holo', nil, self.ARGS.send_to_shader, true, self.children.center) end
+                if self.sticker == 'Oblivion' then G.shared_stickers[self.sticker]:draw_shader('negative', nil, self.ARGS.send_to_shader, true, self.children.center) end
+                if self.sticker == 'Transcendent' then G.shared_stickers[self.sticker]:draw_shader('polychrome', nil, self.ARGS.send_to_shader, true, self.children.center) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.036"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*function Card:save\(\)\n)'''
+position = "at"
+payload = '''
+${pre}function Card:single_tap()
+    local own = rawget(self, 'click')
+    if own then return own(self) end
+    if self.highlighted and self.area and self.area ~= G.hand and self.area.highlighted and not self.area:can_highlight(self) then
+r 3 4616 %20%20%20%20%20%20%20%20 -
+r 3 4617 %20%20%20%20%20%20%20%20 -
+l 4
+        haptic_buzz(1)
+        return
+    end
+    if self.area and self.area:can_highlight(self) and (self.area == G.hand or (G.CONTROLLER.HID.touch and G.SETTINGS.touch_pc_select)) then
+r 3 4612 %20%20%20%20%20%20%20%20 -
+r 3 4613 %20%20%20%20%20%20%20%20 -
+r 3 4614 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
+        else
+r 3 4616 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 3 4617 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+        end
+    end
+r 3 4620 %20%20%20%20 -
+l 6
+        G.FUNCS.deck_info()
+    end
+    haptic_buzz(1)
+end
+
+Card.can_long_press = function(self)
+r 3 1593 %20%20%20%20 -
+l 3
+    return area ~= nil and (area == G.hand or (area == G.deck and area.cards[1] == self))
+end
+
+e 3 4306 - - =14,+%63%61%6E%5F,=5,+%5F%6F%6E%5F%64%72%61%67,=2
+l 4
+    return false
+end
+
+local function swipe_use(card)
+r 9 216 %20%20%20%20 -
+l 6
+end
+
+local function swipe_affordable(card)
+    return card.cost <= 0 or card.cost <= G.GAME.dollars - G.GAME.bankrupt_at
+end
+
+e 3 1681 - - =14,-1,+%73%77%69,=2,-1,+%5F%75%70,=2
+l 1
+    haptic_buzz(2)
+r 3 1593 %20%20%20%20 -
+l 25
+    if not area then return end
+    if area == G.hand and area:can_highlight(self) then
+        if G.STATE == G.STATES.HAND_PLAYED then return end
+        if self.highlighted ~= true then area:add_to_highlighted(self) end
+    end
+    if area == G.pack_cards and not self.ability.consumeable and can_select_pack_card(self) then
+        swipe_use(self)
+        return
+    end
+    if area == G.shop_jokers or area == G.shop_booster or area == G.shop_vouchers then
+        local set = self.ability.set
+        if (set == 'Booster' or set == 'Voucher') and swipe_affordable(self) then
+            swipe_use(self)
+            return
+        end
+        if area == G.shop_jokers and G.FUNCS.card_can_buy(self) then
+            G.FUNCS.buy_from_shop({config = {ref_table = self, id = 'buy'}})
+            return
+        end
+    end
+    if self.ability.consumeable and (area == G.consumeables or area == G.pack_cards) and self:can_use_consumeable() then
+        swipe_use(self)
+    end
+end
+
+e 3 1681 - - =14,-1,+%73%77%69,=2,+%5F%64%6F%77,=3
+l 1
+    haptic_buzz(3)
+r 3 4611 %20%20%20%20 -
+r 3 4612 %20%20%20%20%20%20%20%20 -
+e 3 4613 %20%20%20%20%20%20%20%20 - =20,-1,+%3D,=11
+r 3 4616 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 3 4617 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 159
+        end
+    end
+    if G.FUNCS.card_can_buy_and_use(self) then
+        G.FUNCS.buy_from_shop({config = {ref_table = self, id = 'buy_and_use'}})
+        return
+    end
+    if self.area and (self.area == G.jokers or self.area == G.consumeables) and self:can_sell_card() then
+        G.FUNCS.sell_card({config = {ref_table = self}})
+    end
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.037"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*cardTable = \{\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local cardTable = {
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.038"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*highlighted = self\.highligted,\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        highlighted = self.highlighted,
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.039"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*self\.pinned = cardTable\.pinned\n)'''
+position = "at"
+payload = '''
+${pre}    if self.ability and self.ability.name == 'Matador' and self.ability.extra == 2 then self.ability.extra = 8 end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.040"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*for k, v in pairs\(G\.I\.CARD\) do\n[\t ]*if v == self then\n[\t ]*table\.remove\(G\.I\.CARD, k\)\n[\t ]*end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local cards = G.I.CARD
+    for i = #cards, 1, -1 do
+        if cards[i] == self then table.remove(cards, i) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.card.modded.001"
+target = "card.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\}\n[\t ]*new_ability = SMODS\.merge_defaults\(new_ability, SMODS\.get_default_ability_vars\(center, self, true\)\)\n)'''
+position = "at"
+payload = '''
+${pre}        perma_x_chips = self.ability and self.ability.perma_x_chips or 0,
+        perma_mult = self.ability and self.ability.perma_mult or 0,
+        perma_x_mult = self.ability and self.ability.perma_x_mult or 0,
+        perma_h_chips = self.ability and self.ability.perma_h_chips or 0,
+        perma_h_x_chips = self.ability and self.ability.perma_h_x_chips or 0,
+        perma_h_mult = self.ability and self.ability.perma_h_mult or 0,
+        perma_h_x_mult = self.ability and self.ability.perma_h_x_mult or 0,
+        perma_p_dollars = self.ability and self.ability.perma_p_dollars or 0,
+        perma_h_dollars = self.ability and self.ability.perma_h_dollars or 0,
+        perma_repetitions = self.ability and self.ability.perma_repetitions or 0,
+        card_limit = self.ability and self.ability.card_limit or 0,
+        extra_slots_used = self.ability and self.ability.extra_slots_used or 0,
+        perma_score = self.ability and self.ability.perma_score or 0,
+        perma_h_score = self.ability and self.ability.perma_h_score or 0,
+        perma_x_score = self.ability and self.ability.perma_x_score or 0,
+        perma_h_x_score = self.ability and self.ability.perma_h_x_score or 0,
+        perma_blind_size = self.ability and self.ability.perma_blind_size or 0,
+        perma_h_blind_size = self.ability and self.ability.perma_h_blind_size or 0,
+        perma_x_blind_size = self.ability and self.ability.perma_x_blind_size or 0,
+        perma_h_x_blind_size = self.ability and self.ability.perma_h_x_blind_size or 0,
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.card.modded.002"
+target = "card.lua"
+pattern = '''^(?<pre>[\t ]*\n)[\t ]*if G\.GAME\.modifiers and G\.GAME\.modifiers\.ante_shop_tax and self\.cost > 0 and not self\.ability\.rental then\n[\t ]*self\.cost = self\.cost \+ 1\n[\t ]*end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.card.modded.003"
+target = "card.lua"
+pattern = '''^(?<pre>[\t ]*self\.sell_cost = math\.max\(1, math\.floor\(self\.cost/2\)\) \+ \(self\.ability\.extra_value or 0\)\n)(?<post>[\t ]*end\n)'''
+position = "at"
+payload = '''
+${pre}    if G.GAME.modifiers and G.GAME.modifiers.ante_shop_tax and self.cost > 0 and not self.ability.rental then
+        self.cost = self.cost + 1
+    end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.card.modded.004"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*if self\.ability\[v\] and not SMODS\.Stickers\[v\]\.hide_badge then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    	if self.ability[v] and SMODS.Stickers[v] and not SMODS.Stickers[v].hide_badge then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.card.modded.005"
+target = "card.lua"
+pattern = '''^(?<pre>[\t ]*G\.GAME\.pack_choices = math\.min\(\(self\.ability\.choose or self\.config\.center\.config\.choose or 1\) \+ \(G\.GAME\.modifiers\.booster_choice_mod or 0\), self\.ability\.extra and math\.max\(1, self\.ability\.extra \+ \(G\.GAME\.modifiers\.booster_size_mod or 0\)\) or self\.config\.center\.extra and math\.max\(1, self\.config\.center\.extra \+ \(G\.GAME\.modifiers\.booster_size_mod or 0\)\) or 1\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if G.GAME.modifiers and G.GAME.modifiers.booster_minus_choice and G.GAME.pack_choices > 1 then
+            local game = G.GAME
+            game.pack_choices = game.pack_choices - 1
+        end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.card.modded.006"
+target = "card.lua"
+pattern = '''^(?<pre>[\t ]*G\.P_SEALS\[self\.seal\]\.alerted = true\n[\t ]*G:save_progress\(\)\n[\t ]*end\n[\t ]*if self\.seal and self\.area and self\.area\.config and self\.area\.config\.collection then\n[\t ]*pcall\(function\(\)\n[\t ]*local seal_key = self\.seal\n[\t ]*for _, v in ipairs\(G\.P_CENTER_POOLS\['Seal'\] or \{\}\) do\n[\t ]*if v\.key == seal_key and v\.discovered and not v\.alerted then\n[\t ]*v\.alerted = true\n[\t ]*if self\.children\.alert then\n[\t ]*self\.children\.alert:remove\(\)\n[\t ]*self\.children\.alert = nil\n[\t ]*end\n[\t ]*G:save_progress\(\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}        elseif self.children.alert and self.seal and not G.P_SEALS[self.seal].alerted then
+            G.P_SEALS[self.seal].alerted = true
+            G:save_progress()
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.card.modded.007"
+target = "card.lua"
+pattern = '''^(?<pre>)[\t ]*if self\.ability and not initial and not delay_sprites then\n[\t ]*self\.front_hidden = self:should_hide_front\(\)\n[\t ]*end\n(?<post>[\t ]*if not G\.OVERLAY_MENU then\n)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+optional = true
+end

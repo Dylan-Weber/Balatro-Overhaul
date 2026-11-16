@@ -22,16 +22,36 @@ function boot_print_stage(stage)
     end
 end
 
-LOADING_SCREEN = LOADING_SCREEN or require("functions/loading_screen")
-r 11 105 - -
-r 11 107 %20%20%20%20 -
-r 11 108 %20%20%20%20%20%20%20%20 -
-l 3
+local catimg = NFS.getInfo(SMODS.path.."assets/cat.png") and love.graphics.newImage(love.filesystem.newFileData(NFS.read(SMODS.path.."assets/cat.png")))
+r 13 105 - -
+r 13 106 %20%20%20%20 -
+r 13 107 %20%20%20%20 -
+r 13 108 %20%20%20%20%20%20%20%20 -
+l 4
+        love.graphics.dis
     }
-    LOADING_SCREEN.draw(_next)
+    local realw, realh = love.graphics.getDimensions()
 
-r 11 125 %20%20%20%20 -
-r 11 126 %20%20%20%20 -
+r 13 112 %20%20%20%20 -
+l 1
+    love.graphics.push()
+r 3 4413 %20%20%20%20 -
+l 4
+    love.graphics.clear(0, 0, 0, 1)
+    love.graphics.setColor(0.6, 0.8, 0.9, 1)
+    if progress > 0 then love.graphics.rectangle('fill', realw / 2 - 150, realh / 2 - 15, progress * 300, 30, 5) end
+    love.graphics.setColor(1, 1, 1, 1)
+r 22 119 %20%20%20%20 -
+l 4
+    love.graphics.rectangle('line', realw / 2 - 150, realh / 2 - 15, 300, 30, 5)
+    if catimg then love.graphics.draw(catimg, realw/2 - 264, realh/2 - 27, 0, 1, 1); love.graphics.rectangle('line', realw/2 - 264, realh/2 - 27, 96, 96, 5) end
+    love.graphics.print("LOADING: " .. _next, realw / 2 - 150, realh / 2 + 40)
+    love.graphics.pop()
+r 13 123 %20%20%20%20 -
+l 1
+
+r 13 125 %20%20%20%20 -
+r 13 126 %20%20%20%20 -
 l 3
 end
 sendInfoMessage("Steamodded v" .. SMODS.version, "SMODS")

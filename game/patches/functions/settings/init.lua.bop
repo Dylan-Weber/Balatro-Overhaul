@@ -658,7 +658,7 @@ function S.window(tab)
 end
 
 function S.open(instant)
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 100
   G.FUNCS.overlay_menu{definition = S.window(), config = {offset = {x = 0, y = instant and 0 or 10}}}
 end

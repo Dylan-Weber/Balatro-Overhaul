@@ -13,11 +13,11 @@ priority = -10
 [patches.pattern]
 target = "functions/state_events.lua"
 pattern = '''Jimbo = Card_Character({x = 0, y = 5})
-r 13 1700 - -
-r 13 1701 - -
-r 13 1702 - -
-r 13 1703 - -
-r 16 53 - -
+r 32 1700 - -
+r 32 1701 - -
+r 32 1702 - -
+r 32 1703 - -
+r 15 53 - -
 l 8
 Jimbo:say_stuff(5)
 '''
@@ -27,10 +27,10 @@ local quip, extra = SMODS.quip("win")
 extra.x = 0
 extra.y = 5
 Jimbo = Card_Character(extra)
-r 13 1700 - -
-r 13 1701 - -
-r 13 1702 - -
-r 13 1703 - -
+r 32 1700 - -
+r 32 1701 - -
+r 32 1702 - -
+r 32 1703 - -
 l 10
 Jimbo:add_speech_bubble(quip, nil, {quip = true}, extra)
 Jimbo:say_stuff((extra and extra.times) or 5, false, quip)
@@ -42,11 +42,11 @@ match_indent = true
 [patches.pattern]
 target = "game.lua"
 pattern = '''Jimbo = Card_Character({x = 0, y = 5})
-r 13 1700 - -
-r 13 1701 - -
-r 13 1702 - -
-r 13 1703 - -
-r 9 3616 - -
+r 32 1700 - -
+r 32 1701 - -
+r 32 1702 - -
+r 32 1703 - -
+r 7 3616 - -
 l 8
 Jimbo:say_stuff(5)
 '''
@@ -56,10 +56,10 @@ local quip, extra = SMODS.quip("loss")
 extra.x = 0
 extra.y = 5
 Jimbo = Card_Character(extra)
-r 13 1700 - -
-r 13 1701 - -
-r 13 1702 - -
-r 13 1703 - -
+r 32 1700 - -
+r 32 1701 - -
+r 32 1702 - -
+r 32 1703 - -
 l 30
 Jimbo:add_speech_bubble(quip, nil, {quip = true}, extra)
 Jimbo:say_stuff((extra and extra.times) or 5, false, quip)
@@ -91,11 +91,11 @@ target = 'card_character.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 5 12 - -
+r 4 12 - -
 l 12
 '''
 payload = '''
-self.children.card = Card(self.T.x, self.T.y, G.CARD_W, G.CARD_H, G.P_CARDS.empty, args.center and (type(args.center) == 'table' and args.center or G.P_CENTERS[args.center]) or G.P_CENTERS.j_joker, {bypass_discovery_center = true})
+self.children.card = Card(self.T.x, self.T.y, G.CARD_W, G.CARD_H, G.P_CARDS.empty, args.center and G.P_CENTERS[args.center] or G.P_CENTERS.j_joker, {bypass_discovery_center = true})
 '''
 
 # Pass args into add_speech_bubble
@@ -105,7 +105,7 @@ target = 'card_character.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 5 75 - -
+r 4 75 - -
 l 14
 '''
 payload = '''
@@ -121,7 +121,7 @@ function Card_Character:add_speech_bubble(text_key, align, loc_vars, quip_args)
 [patches.pattern]
 target = 'card_character.lua'
 pattern = '''
-r 5 100 - -
+r 4 100 - -
 l 12
 '''
 position = 'at'
@@ -135,7 +135,7 @@ match_indent = true
 [patches.pattern]
 target = 'card_character.lua'
 pattern = '''
-r 5 108 - -
+r 4 108 - -
 l 11
 '''
 position = 'at'
@@ -148,7 +148,7 @@ match_indent = true
 [patches.pattern]
 target = 'card_character.lua'
 pattern = '''
-r 5 126 - -
+r 4 126 - -
 l 13
 '''
 position = 'at'
@@ -163,7 +163,7 @@ match_indent = true
 [patches.pattern]
 target = 'card_character.lua'
 pattern = '''
-r 5 119 - -
+r 4 119 - -
 l 42
 '''
 position = 'at'
@@ -207,7 +207,7 @@ match_indent = true
 [patches.pattern]
 target = 'card_character.lua'
 pattern = '''
-r 5 120 - -
+r 4 120 - -
 l 7
 '''
 position = 'at'

@@ -546,7 +546,7 @@ function bom_events.back_to_lobby_after_results(d)
             end
             bom_events.apply_lobby_seat(d)
             pcall(function()
-r 13 1825 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 32 1825 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 176
             end)
             bom_rejoin.exit_to_menu({ keep_match = true, silent = true, after = function()

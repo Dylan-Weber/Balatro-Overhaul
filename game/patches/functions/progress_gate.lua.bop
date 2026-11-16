@@ -374,7 +374,7 @@ end
 if G and G.FUNCS and type(G.FUNCS.start_run) == "function" and not P._funcs_wrapped then
   P._funcs_wrapped = true
   local orig = G.FUNCS.start_run
-r 13 2958 %20%20 -
+r 32 2958 %20%20 -
 l 47
     if P.sandbox and not (args and args.savetext) then
       local restart = (e and e.config and e.config.id == 'restart_button') or args == nil

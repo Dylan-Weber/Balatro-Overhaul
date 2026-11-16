@@ -1,0 +1,1133 @@
+BOP 2
+eol lf
+final 1
+base 0
+l 202
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.001"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*function set_screen_positions\(\)\n)'''
+position = "at"
+payload = '''
+${pre}local platform = require("engine.platform")
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.002"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.hand\.T\.x = G\.TILE_W - G\.hand\.T\.w - 2\.85\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        G.hand.T.x = G.TILE_W - G.hand.T.w - 3.55
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.003"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.consumeables\.T\.x = G\.jokers\.T\.x \+ G\.jokers\.T\.w \+ 0\.2\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        G.consumeables.T.x = G.jokers.T.x + G.jokers.T.w + 0.8
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.004"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*chip_UI:juice_up\(\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                if chip_UI then chip_UI:juice_up() end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.005"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>[\t ]*inc_career_stat\('c_dollars_earned', mod\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}          if QuestManager and QuestManager.on_money_earned then
+            pcall(function() QuestManager.on_money_earned(mod) end)
+          end
+          pcall(function() haptic_buzz(1) end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.006"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if v\.boss\.showdown then \n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                if v.boss and v.boss.showdown then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.007"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.VIBRATION = G\.VIBRATION \+ 0\.6\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}                    haptic_buzz(1)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.008"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.GAME\.hands\[hand\]\.chips = math\.max\(G\.GAME\.hands\[hand\]\.s_chips \+ G\.GAME\.hands\[hand\]\.l_chips\*\(G\.GAME\.hands\[hand\]\.level - 1\), 0\)\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if not instant and amount > 0 then pcall(function() haptic_buzz(2) end) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.009"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*G\.E_MANAGER:add_event\(Event\(\{--This is the Hand name text for the poker hand\n)'''
+position = "at"
+payload = '''
+${pre}    if not config.immediate and not config.sound and
+       G.SETTINGS and G.SETTINGS.skip_score_animation then
+        if G.GAME and G.GAME.current_round and G.GAME.current_round.current_hand then
+            if vals.chips ~= nil then G.GAME.current_round.current_hand.chips = vals.chips end
+            if vals.mult  ~= nil then G.GAME.current_round.current_hand.mult  = vals.mult  end
+        end
+        return
+    end
+    if not config.immediate and not config.sound and
+       G.SETTINGS and G.SETTINGS.perf_heavy_scoring and
+       G.E_MANAGER and #G.E_MANAGER.queues.base > 200 then
+        return
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.010"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>[\t ]*local alert_joker, alert_voucher, alert_tarot, alert_planet, alert_spectral, alert_blind, alert_edition, alert_tag, alert_seal, alert_booster = false,false,false,false,false,false,false,false,false,false\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}        local function mp_only(k) return type(k) == 'string' and k:find('^%a+_mp_') ~= nil end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.011"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if v\.discovered and not v\.alerted then\n(?<post>[\t ]*if v\.set == 'Voucher' then alert_voucher = true end\n)'''
+position = "at"
+payload = '''
+${pre}            if v.discovered and not v.alerted and not mp_only(k) then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.012"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if v\.discovered and not v\.alerted then\n(?<post>[\t ]*alert_blind = true\n)'''
+position = "at"
+payload = '''
+${pre}            if v.discovered and not v.alerted and k ~= 'bl_mp_nemesis' and not mp_only(k) then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.013"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.OVERLAY_MENU and G\.OVERLAY_MENU:get_UIE_by_ID\(v\.id\) then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            if type(G.OVERLAY_MENU) == 'table' and G.OVERLAY_MENU:get_UIE_by_ID(v.id) then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.014"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*if G\.MAIN_MENU_UI then \n)'''
+position = "at"
+payload = '''
+${pre}        local mp_menu = rawget(_G, 'mpm_menu')
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.015"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if alert_any then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            if alert_any and not (mp_menu and mp_menu.active) then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.016"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*function set_main_menu_UI\(\)\n)'''
+position = "at"
+payload = '''
+${pre}function merge_all_profile_unlocks()
+    if not G or not G.FILES then return end
+    local current = G.SETTINGS and G.SETTINGS.profile or 1
+    for p = 1, 3 do
+        if p ~= current then
+            local meta = G.FILES[p..'/meta.jkr']
+            if meta and type(meta) == 'table' then
+                local mu = meta.unlocked or {}
+                local md = meta.discovered or {}
+                local ma = meta.alerted or {}
+                if G.P_CENTERS then
+r 3 229 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 6
+                        if mu[k] and not v.unlocked then v.unlocked = true end
+                        if md[k] and not v.discovered then v.discovered = true end
+                        if ma[k] and v.discovered then v.alerted = true end
+                    end
+                end
+                if G.P_BLINDS then
+r 2 703 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 5
+                        if md[k] and not v.discovered then v.discovered = true end
+                        if ma[k] and v.discovered then v.alerted = true end
+                    end
+                end
+                if G.P_TAGS then
+r 30 3917 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 5
+                        if md[k] and not v.discovered then v.discovered = true end
+                        if ma[k] and v.discovered then v.alerted = true end
+                    end
+                end
+                if G.P_SEALS then
+r 31 683 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 214
+                        if md[k] and not v.discovered then v.discovered = true end
+                        if ma[k] and v.discovered then v.alerted = true end
+                    end
+                end
+                if G.P_STAKES then
+                    for k, v in pairs(G.P_STAKES) do
+                        if mu[k] and not v.unlocked then v.unlocked = true; v.discovered = true end
+                        if md[k] and not v.discovered then v.discovered = true end
+                    end
+                end
+                if G.PROFILES and G.PROFILES[p] and G.PROFILES[p].deck_usage
+                   and G.PROFILES[current] then
+                    G.PROFILES[current].deck_usage = G.PROFILES[current].deck_usage or {}
+                    for dk, dv in pairs(G.PROFILES[p].deck_usage) do
+                        if not G.PROFILES[current].deck_usage[dk] then
+                            G.PROFILES[current].deck_usage[dk] = dv
+                        elseif dv.wins then
+                            G.PROFILES[current].deck_usage[dk].wins = G.PROFILES[current].deck_usage[dk].wins or {}
+                            for stake, val in pairs(dv.wins) do
+                                if val and not G.PROFILES[current].deck_usage[dk].wins[stake] then
+                                    G.PROFILES[current].deck_usage[dk].wins[stake] = val
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    pcall(function() G:save_progress() end)
+end
+
+function copy_progression_from_main(target_profile)
+    if not G or not G.PROFILES then return end
+    if target_profile == 1 then return end
+    local source = G.PROFILES[1]
+    local target = G.PROFILES[target_profile]
+    if not source or not target then return end
+    if target.progression and target.progression.xp and target.progression.xp > 0 then return end
+    if source.progression then
+        target.progression = copy_table(source.progression)
+    end
+    if source.quests then
+        target.quests = copy_table(source.quests)
+    end
+end
+
+function save_icon_frame_pos(ox, oy)
+    pcall(function()
+        local profile_num = (G.SETTINGS and G.SETTINGS.profile) or 1
+        love.filesystem.write(
+            "icon_frame_pos_" .. profile_num .. ".jkr",
+            "return {x=" .. ox .. ",y=" .. oy .. "}"
+        )
+    end)
+end
+
+function load_icon_frame_pos()
+    local result = nil
+    pcall(function()
+        local profile_num = (G.SETTINGS and G.SETTINGS.profile) or 1
+        local path = "icon_frame_pos_" .. profile_num .. ".jkr"
+        if love.filesystem.getInfo and love.filesystem.getInfo(path) then
+            local data = love.filesystem.read(path)
+            if data then
+                local fn = loadstring(data)
+                if fn then
+                    local ok, val = pcall(fn)
+                    if ok and type(val) == 'table' and
+                       type(val.x) == 'number' and type(val.y) == 'number' then
+                        result = val
+                    end
+                end
+            end
+        end
+    end)
+    return result
+end
+
+function setup_profile_icon_frame()
+    pcall(function()
+        if G.PROFILE_ICON_FRAME then
+            G.PROFILE_ICON_FRAME:remove()
+            G.PROFILE_ICON_FRAME = nil
+        end
+        if not G.UIDEF or not G.UIDEF.profile_icon_frame or not G.ROOM_ATTACH then return end
+
+        G.PROFILE_ICON_FRAME = UIBox{
+            definition = G.UIDEF.profile_icon_frame(),
+            config = {align="tli", offset = {x=0, y=0}, major = G.ROOM_ATTACH, bond = 'Weak'}
+        }
+        G.PROFILE_ICON_FRAME:align_to_major()
+
+        local rx, ry = G.ROOM_ATTACH.T.x, G.ROOM_ATTACH.T.y
+        local rw, rh = G.ROOM_ATTACH.T.w, G.ROOM_ATTACH.T.h
+        local fw = G.PROFILE_ICON_FRAME.T.w
+        local fh = G.PROFILE_ICON_FRAME.T.h
+        local pos_x, pos_y = rx, ry
+
+        local saved = load_icon_frame_pos()
+        if saved then
+            pos_x = rx + saved.x
+            pos_y = ry + saved.y
+        else
+            local clear_y = CORNER_LABELS and CORNER_LABELS.mode_clear_y and CORNER_LABELS.mode_clear_y(pos_x)
+            if clear_y then pos_y = math.max(pos_y, clear_y) end
+        end
+
+        G.PROFILE_ICON_FRAME.T.x = pos_x
+        G.PROFILE_ICON_FRAME.T.y = pos_y
+        G.PROFILE_ICON_FRAME.VT.x = pos_x
+        G.PROFILE_ICON_FRAME.VT.y = pos_y
+
+        G.PROFILE_ICON_FRAME.role.role_type = 'Major'
+        G.PROFILE_ICON_FRAME.role.major = nil
+
+        G.PROFILE_ICON_FRAME.states.drag.can = true
+        G.PROFILE_ICON_FRAME.states.collide.can = true
+
+        local _frame_box = G.PROFILE_ICON_FRAME
+        local function _enable_drag_recursive(elem)
+            if not elem then return end
+            if elem.states then
+                elem.states.collide.can = true
+                elem.states.drag.can = true
+            end
+            elem.can_drag = function() return _frame_box end
+            if elem.children then
+                for _, child in pairs(elem.children) do
+                    if child then _enable_drag_recursive(child) end
+                end
+            end
+            if elem.config and elem.config.object then
+                local obj = elem.config.object
+                if obj.states then
+                    obj.states.collide.can = true
+                    obj.states.drag.can = true
+                end
+                obj.can_drag = function() return _frame_box end
+            end
+        end
+        _enable_drag_recursive(G.PROFILE_ICON_FRAME.UIRoot)
+
+        G.PROFILE_ICON_FRAME.drag = function(self, offset)
+            Moveable.drag(self, offset)
+        end
+
+        G.PROFILE_ICON_FRAME.stop_drag = function(self)
+            Node.stop_drag(self)
+            local _rx = G.ROOM_ATTACH and G.ROOM_ATTACH.T.x or 0
+            local _ry = G.ROOM_ATTACH and G.ROOM_ATTACH.T.y or 0
+            save_icon_frame_pos(self.T.x - _rx, self.T.y - _ry)
+        end
+    end)
+end
+
+function main_menu_bar_offset()
+    local below = 0.8
+    if G.ROOM and G.TILESIZE and G.TILESCALE and love.graphics then
+        below = love.graphics.getHeight()/(G.TILESIZE*G.TILESCALE) - (G.ROOM.T.y + G.ROOM.T.h)
+    end
+    if not _G._IS_DESKTOP then return math.min(0.4, below - 0.1) end
+    return math.max(0.65, below - 0.05)
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.017"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.MAIN_MENU_UI\.alignment\.offset\.y = 0\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    G.MAIN_MENU_UI.alignment.offset.y = main_menu_bar_offset()
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.018"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.E_MANAGER:add_event\(Event\(\{\n[\t ]*blockable = false,\n[\t ]*blocking = false,\n[\t ]*func = \(function\(\)\n[\t ]*if \(not G\.F_DISP_USERNAME\) or \(type\(G\.F_DISP_USERNAME\) == 'string'\) then\n[\t ]*G\.PROFILE_BUTTON = UIBox\{\n[\t ]*definition =  create_UIBox_profile_button\(\), \n[\t ]*config = \{align="bli", offset = \{x=-10,y=0\}, major = G\.ROOM_ATTACH, bond = 'Weak'\}\}\n[\t ]*G\.PROFILE_BUTTON\.alignment\.offset\.x = 0\n[\t ]*G\.PROFILE_BUTTON:align_to_major\(\)\n[\t ]*return true\n[\t ]*end\n[\t ]*end\)\n[\t ]*\}\)\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    setup_profile_icon_frame()
+    pcall(function() if CrashReports and CrashReports.send_pending then CrashReports.send_pending() end end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.019"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.CONTROLLER:snap_to\{node = G\.MAIN_MENU_UI:get_UIE_by_ID\('main_menu_play'\)\}\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    pcall(function()
+        if G.FUNCS.check_first_launch then
+            G.FUNCS.check_first_launch()
+        end
+    end)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.020"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*percent = percent or \(0\.9 \+ 0\.2\*math\.random\(\)\)\n)'''
+position = "at"
+payload = '''
+${pre}    if (G.SETTINGS and G.SETTINGS.skip_score_animation) or
+       (G.SETTINGS and G.SETTINGS.perf_heavy_scoring and G.E_MANAGER and #G.E_MANAGER.queues.base > 150) then
+r 31 922 %20%20%20%20%20%20%20%20 -
+r 31 923 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 314
+        end
+        return
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.021"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if not extra\.edition and \(extra\.mult_mod or extra\.Xmult_mod\)  then\n)'''
+position = "at"
+payload = '''
+${pre}        if not text or text == '' then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.022"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>[\t ]*delay = delay\*1\.25\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if G.SETTINGS and G.SETTINGS.skip_score_animation then
+        delay = 0
+    else
+        delay = delay * ((G.SETTINGS and G.SETTINGS.fast_score_resolve) or 1.0)
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.023"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.ROOM\.jiggle = G\.ROOM\.jiggle \+ 0\.7\n(?<post>[\t ]*end\n[\t ]*else\n)'''
+position = "at"
+payload = '''
+${pre}                G.ROOM.jiggle = math.min(G.ROOM.jiggle + 0.7, 5)
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.024"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.ROOM\.jiggle = G\.ROOM\.jiggle \+ 0\.7\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                        G.ROOM.jiggle = math.min(G.ROOM.jiggle + 0.7, 5)
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.025"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*blind_sprite:define_draw_steps\(\{\n[\t ]*\{shader = 'dissolve', shadow_height = 0\.05\},\n[\t ]*\{shader = 'dissolve'\}\n[\t ]*\}\)\n[\t ]*table\.insert\(left_text, \{n=G\.UIT\.O, config=\{w=1\.2,h=1\.2 , object = blind_sprite, hover = true, can_collide = false\}\}\)\n)'''
+position = "at"
+payload = '''
+${pre}                    blind_sprite.atlas = G.ANIMATION_ATLAS[G.GAME.blind.config and G.GAME.blind.config.blind and G.GAME.blind.config.blind.atlas or 'blind_chips'] or blind_sprite.atlas
+                    blind_sprite:set_sprite_pos(copy_table(G.GAME.blind.pos))
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.026"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*end\n[\t ]*local full_row = \{n=G\.UIT\.R, config=\{align = "cm", minw = 5\}, nodes=\{\n)'''
+position = "at"
+payload = '''
+${pre}                elseif config.name == 'mp_compensation' then
+                    table.insert(left_text, {n=G.UIT.O, config={object = DynaText({string = {" "..(mod_loc and mod_loc("Comeback Money") or "Comeback Money")}, colours = {G.C.UI.TEXT_LIGHT}, shadow = true, pop_in = 0, scale = 0.4*scale, silent = true})}})
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.027"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*G\.VIBRATION = G\.VIBRATION \+ 0\.4\n)'''
+position = "at"
+payload = '''
+${pre}                        haptic_buzz(1)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.028"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.VIBRATION = G\.VIBRATION \+ 1\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}                haptic_buzz(2)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.029"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if mod > 0 then\n[\t ]*for i = 1, G\.GAME\.shop\.joker_max - #G\.shop_jokers\.cards do\n)'''
+position = "at"
+payload = '''
+${pre}        if PORTRAIT.on() then
+            PORTRAIT.cap_shop(G.shop_jokers)
+            G.shop:recalculate()
+        end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.030"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*G\.ARGS\.eased_cursor_pos = G\.ARGS\.eased_cursor_pos or \{x=G\.CURSOR\.T\.x,y=G\.CURSOR\.T\.y, sx = G\.CONTROLLER\.cursor_position\.x, sy = G\.CONTROLLER\.cursor_position\.y\}\n)'''
+position = "at"
+payload = '''
+${pre}    if _G._IS_DESKTOP == false then shake_amt = 0 end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.031"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>[\t ]*if shake_amt < 0\.05 then shake_amt = 0 end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if ForgePixelUI and ForgePixelUI.active and ForgePixelUI.active() then shake_amt = 0 end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.032"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.ROOM\.T\.x = G\.ROOM_ORIG\.x \+ \(shake_amt\)\*\(0\.015\*math\.sin\(0\.913\*G\.TIMERS\.REAL\)  \+ 0\.01\*\(G\.ROOM\.jiggle\*shake_amt\)\*math\.sin\(19\.913\*G\.TIMERS\.REAL\) \+ \(G\.ARGS\.eased_cursor_pos\.x - 0\.5\*\(G\.ROOM\.T\.w \+ G\.ROOM_ORIG\.x\)\)\*0\.01\)\n[\t ]*G\.ROOM\.T\.y = G\.ROOM_ORIG\.y \+ \(shake_amt\)\*\(0\.015\*math\.sin\(0\.952\*G\.TIMERS\.REAL\)  \+ 0\.01\*\(G\.ROOM\.jiggle\*shake_amt\)\*math\.sin\(21\.913\*G\.TIMERS\.REAL\) \+ \(G\.ARGS\.eased_cursor_pos\.y - 0\.5\*\(G\.ROOM\.T\.h \+ G\.ROOM_ORIG\.y\)\)\*0\.01\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    G.ROOM.T.x = G.ROOM_ORIG.x + (shake_amt)*(0.015*math.sin(0.913*G.TIMERS.REAL)  + 0.01*(G.ROOM.jiggle*shake_amt)*math.sin(19.913*G.TIMERS.REAL) + (G.ARGS.eased_cursor_pos.x - 0.5*G.ROOM.T.w)*0.01)
+    G.ROOM.T.y = G.ROOM_ORIG.y + (shake_amt)*(0.015*math.sin(0.952*G.TIMERS.REAL)  + 0.01*(G.ROOM.jiggle*shake_amt)*math.sin(21.913*G.TIMERS.REAL) + (G.ARGS.eased_cursor_pos.y - 0.5*G.ROOM.T.h)*0.01)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.033"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.CONTROLLER\.GAMEPAD\.object and G\.F_RUMBLE then G\.CONTROLLER\.GAMEPAD\.object:setVibration\(G\.CURR_VIBRATION\*0\.4\*G\.F_RUMBLE, G\.CURR_VIBRATION\*0\.4\*G\.F_RUMBLE\) end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local pad = G.CONTROLLER.GAMEPAD and G.CONTROLLER.GAMEPAD.object
+    local rumble_on = G.F_RUMBLE and G.SETTINGS.rumble
+    if rumble_on and pad then
+        local strength = G.CURR_VIBRATION*0.4*G.F_RUMBLE
+        pad:setVibration(strength, strength)
+    elseif love.system.getOS() == 'Android' and G.SETTINGS.haptic_feedback and (G.SETTINGS.haptic_intensity or 50) > 0 and (G.HAPTIC_LEVEL or 0) > 0 then
+        local _intensity = (G.SETTINGS.haptic_intensity or 50) / 100
+        local _durations = {0.015, 0.03, 0.06, 0.1}
+        local _dur = (_durations[G.HAPTIC_LEVEL] or 0.03) * (0.3 + _intensity * 1.4)
+        pcall(function() love.system.vibrate(_dur) end)
+        G.HAPTIC_LEVEL = 0
+    end
+    G.VIBRATION = 0
+end
+
+function haptic_buzz(level)
+    if not G or not G.SETTINGS then return end
+    if not G.SETTINGS.haptic_feedback then return end
+    G.HAPTIC_LEVEL = math.max(G.HAPTIC_LEVEL or 0, level or 1)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.034.001"
+target = "functions/common_events.lua"
+pattern = '''(?<pre>juice_up\(0\.1, 0\.1)(?<post>)'''
+position = "at"
+payload = '''
+${pre}, true${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.035"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.GAME\.seeded then return end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if G.GAME.seeded and not G.GAME.daily then return end
+    if G.GAME.modded_run then return end
+    if not Progress.allowed() then return end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.036"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.GAME\.seeded or G\.GAME\.challenge then return end\n(?<post>[\t ]*if card\.unlocked or card\.wip then return end\n)'''
+position = "at"
+payload = '''
+${pre}        if G.GAME.seeded or G.GAME.challenge or G.GAME.modded_run then return end
+        if not Progress.allowed() then return end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.037"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*--\|-------------------------------------------------------\n[\t ]*\n)'''
+position = "at"
+payload = '''
+${pre}                platform:unlockAchievement(achievement_name)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.038"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*function notify_alert\(_achievement, _type\)\n)'''
+position = "at"
+payload = '''
+${pre}function notify_alert_scale(node, k, depth)
+    depth = depth or 0
+    if type(node) ~= "table" or depth > 12 then return node end
+    local c = node.config
+    if c then
+        if c.scale then c.scale = c.scale * k end
+        if c.maxw then c.maxw = c.maxw * k end
+        if c.padding then c.padding = c.padding * math.min(k, 1.3) end
+        local o = c.object
+        if o and o.T and o.T.w then o.T.w, o.T.h = o.T.w * k, o.T.h * k end
+    end
+    for _, v in ipairs(node.nodes or {}) do notify_alert_scale(v, k, depth + 1) end
+    return node
+end
+
+local function notify_alert_min_scale(node, depth)
+    depth = depth or 0
+    if type(node) ~= "table" or depth > 12 then return nil end
+    local m = node.n == G.UIT.T and node.config and node.config.scale or nil
+    for _, v in ipairs(node.nodes or {}) do
+        local c = notify_alert_min_scale(v, depth + 1)
+        if c and (not m or c < m) then m = c end
+    end
+    return m
+end
+
+function notify_alert_def(_achievement, _type, from_left)
+    local def = create_UIBox_notify_alert(_achievement, _type, from_left)
+    local room = nil
+    if PORTRAIT and PORTRAIT.on and PORTRAIT.on() and PORTRAIT.popup_k then
+        local fit = 0.45 * love.graphics.getWidth() / (G.TILESIZE * G.TILESCALE) / 4.2
+        local k = math.min(PORTRAIT.popup_k(), fit)
+        notify_alert_scale(def, k)
+        def.nodes[1].config.minw = nil
+        room = fit / k
+    end
+    if PHONE_TEXT and PHONE_TEXT.on() and PHONE_TEXT.unit() then
+        local ms = notify_alert_min_scale(def)
+        if ms then
+            local k = PHONE_TEXT.k(ms, PHONE_TEXT.unit() * (G.MENU_ZOOM or 1), nil, 1.4)
+            if room then k = math.min(k, math.max(1, room)) end
+            if k > 1.001 then
+                notify_alert_scale(def, k)
+                if def.nodes[1].config.minw then def.nodes[1].config.minw = def.nodes[1].config.minw * k end
+            end
+        end
+    end
+    return def
+end
+
+function notify_alert_rest_x(n, inner)
+    local edge = love.graphics.getWidth() / (G.TILESIZE * G.TILESCALE) - G.ROOM.T.x - G.ROOM_ATTACH.T.x - G.ROOM_ATTACH.T.w
+    return math.min(G.ROOM.T.x - inner.T.w - 0.8, edge - 0.1 - n.T.w)
+end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.039"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>[\t ]*_type = _type or 'achievement'\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if _type ~= 'achievement' then
+        local prof = G.PROFILES and G.SETTINGS and G.PROFILES[G.SETTINGS.profile]
+        if prof and _achievement then
+            prof.unlock_alerts_seen = prof.unlock_alerts_seen or {}
+            if prof.unlock_alerts_seen[_achievement] then return end
+            prof.unlock_alerts_seen[_achievement] = true
+        end
+    end
+    left_not = nil
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.040"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*definition = create_UIBox_notify_alert\(_achievement, _type\),\n[\t ]*config = \{align='cr', offset = \{x=20,y=0\},major = G\.ROOM_ATTACH, bond = 'Weak'\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            definition = notify_alert_def(_achievement, _type, left_not),
+e 31 1785 %20%20%20%20%20%20%20%20%20%20%20%20 - =16,+%6C%65%66%74%5F%6E%6F%74%20%61%6E%64%20%27%63%6C%27%20%6F%72%20,=18,+%6C%65%66%74%5F%6E%6F%74%20%61%6E%64%20%2D%32%30%20%6F%72%20,=45
+l 28
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.041"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.achievement_notification\.alignment\.offset\.x = G\.ROOM\.T\.x - G\.achievement_notification\.UIRoot\.children\[1\]\.children\[1\]\.T\.w - 0\.8\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            local n = G.achievement_notification
+            local inner = n and n.alignment and n.UIRoot and n.UIRoot.children and n.UIRoot.children[1] and n.UIRoot.children[1].children and n.UIRoot.children[1].children[1]
+            if inner and inner.T and not left_not and PORTRAIT and PORTRAIT.on and PORTRAIT.on() then
+                n.alignment.offset.x = notify_alert_rest_x(n, inner)
+            elseif inner and inner.T then
+                n.alignment.offset.x = left_not and (-G.ROOM.T.x + inner.T.w + 0.8) or (G.ROOM.T.x - inner.T.w - 0.8)
+            end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.042"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.achievement_notification\.alignment\.offset\.x = 20\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if G.achievement_notification and G.achievement_notification.alignment then
+e 31 1820 %20%20%20%20%20%20%20%20%20%20%20%20 - =48,+%6C%65%66%74%5F%6E%6F%74%20%61%6E%64%20%2D,=2,+%20%6F%72%20%32%30
+l 192
+        end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.043"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*love\.filesystem\.remove\(G\.SETTINGS\.profile\.\.'/'\.\.'unlock_notify\.jkr'\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        love.mod_filesystem.remove(G.SETTINGS.profile..'/'..'unlock_notify.jkr')
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.044"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if G\.GAME\.seeded or G\.GAME\.challenge then return end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if G.GAME.seeded or G.GAME.challenge or G.GAME.modded_run then return end
+    if not Progress.allowed() then return end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.045.001"
+target = "functions/common_events.lua"
+pattern = '''(?<pre>_legendary and 4\) or \()(?<post>)'''
+position = "at"
+payload = '''
+${pre}not _rarity and RunRules and RunRules.rarity_of and RunRules.rarity_of(rarity)) or (${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.046"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if \(not v\.requires or \(G\.P_CENTERS\[v\.requires\] and G\.P_CENTERS\[v\.requires\]\.discovered\)\) and \n)'''
+position = "at"
+payload = '''
+${pre}                if G.GAME.mp_open_pool and (not v.min_ante or v.min_ante <= G.GAME.round_resets.ante) then add = true end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.047"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*\(v\.unlocked ~= false or v\.rarity == 4\) then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                (v.unlocked ~= false or v.rarity == 4 or G.GAME.mp_open_pool) then
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.048"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*G\.OVERLAY_TUTORIAL = G\.OVERLAY_TUTORIAL or UIBox\{\n)'''
+position = "at"
+payload = '''
+${pre}    local skip_s = args.mascot_scale or 1
+    local skip_box = {
+        ref_table = args, align = "tm", padding = 0.1*skip_s, r = 0.15, minw = 1.6*skip_s, minh = 1.2*skip_s,
+        colour = G.C.JOKER_GREY, hover = true, shadow = true,
+        button = "skip_tutorial_section", func = 'set_button_pip',
+        focus_args = {button = 'b', orientation = 'bmi', offset = {x = 0, y = -0.1}},
+    }
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.049"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.R, config=\{align = "tr", minh = G\.ROOM\.T\.h, minw = G\.ROOM\.T\.w\}, nodes=\{\n[\t ]*UIBox_button\{label = \{localize\('b_skip'\)\.\." >"\}, button = "skip_tutorial_section", minw = 1\.3, scale = 0\.45, colour = G\.C\.JOKER_GREY\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            {n=G.UIT.R, config={align = args.skip_align or "br", minh = G.ROOM.T.h, minw = G.ROOM.T.w}, nodes={
+
+                {n=G.UIT.R, config=skip_box, nodes={
+                    {n=G.UIT.T, config={text = localize('b_skip').." >", scale = 0.5*skip_s, colour = G.C.TEXT_DARK}}
+                }}
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.050"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*offset = \{x=0,y=3\.2\},\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            offset = {x=args.skip_align == 'tr' and -0.9 or -0.5,y=args.skip_align == 'tr' and 0.6 or -1},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.051"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>[\t ]*G\.OVERLAY_TUTORIAL\.step_complete = false\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local hud = G.HUD
+    if not (hud and hud.get_UIE_by_ID) then G.HUD = {get_UIE_by_ID = function() end} end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.052"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*local align = args\.align or "tm"\n)'''
+position = "at"
+payload = '''
+${pre}    G.HUD = hud
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.053"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*local attach = args\.attach or \{major = row_dollars_chips, type = 'tm', offset = \{x=0, y=-0\.5\}\}\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local attach = args.attach or {major = row_dollars_chips or G.ROOM_ATTACH, type = 'tm', offset = {x=0, y=-0.5}}
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.054"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*G\.CONTROLLER\.interrupt\.focus = true\n)'''
+position = "at"
+payload = '''
+${pre}                local touch_key = args.text_key..'_touch'
+                if (G.F_MOBILE or (TouchInput and TouchInput.active())) and G.localization.misc.tutorial[touch_key] then args.text_key = touch_key end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.055"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*G\.OVERLAY_TUTORIAL\.Jimbo = G\.OVERLAY_TUTORIAL\.Jimbo or Card_Character\(pos\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}                G.OVERLAY_TUTORIAL.Jimbo = G.OVERLAY_TUTORIAL.Jimbo or Card_Character(args.center and {x = pos.x, y = pos.y, center = args.center, scale = args.mascot_scale} or pos)
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.056"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if args\.button_listen then G\.OVERLAY_TUTORIAL\.button_listen = args\.button_listen end\n)'''
+position = "at"
+payload = '''
+${pre}                local locked_buttons = args.disabled_buttons
+                G.DISABLED_BUTTONS = locked_buttons
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.057"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if not skip_increment then G\.GAME\.current_round\.reroll_cost_increase = G\.GAME\.current_round\.reroll_cost_increase \+ 1 end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    if not skip_increment then G.GAME.current_round.reroll_cost_increase = G.GAME.current_round.reroll_cost_increase + (G.GAME.modifiers and G.GAME.modifiers.reroll_step or 1) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.058"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*end\n[\t ]*end\n[\t ]*for k, v in pairs\(G\.GAME\.banned_keys\) do\n)'''
+position = "at"
+payload = '''
+${pre}        end
+    end
+    local force_showdown = G.GAME.modifiers and G.GAME.modifiers.boss_always_finisher
+r 2 703 %20%20%20%20 -
+l 1
+        if v.boss and (v.in_pool == false or (type(v.in_pool) == 'function' and not v:in_pool())) then
+r 31 2375 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 141
+        elseif v.boss and force_showdown then
+            eligible_bosses[k] = v.boss.showdown and true or nil
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.modded.001"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if v\.discovered and not v\.alerted and \(not SMODS\.hide_from_collection\(v\)\) then\n(?<post>[\t ]*if v\.set == 'Voucher' then alert_voucher = true end\n)'''
+position = "at"
+payload = '''
+${pre}            if v.discovered and not v.alerted and not mp_only(k) then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.modded.002"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if v\.discovered and not v\.alerted and \(not SMODS\.hide_from_collection\(v\)\) then\n(?<post>[\t ]*alert_blind = true\n)'''
+position = "at"
+payload = '''
+${pre}            if v.discovered and not v.alerted and k ~= 'bl_mp_nemesis' and not mp_only(k) then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.modded.003"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*table\.insert\(G\.ARGS\.set_alerts_alertables, \{id = 'mods_button', alert_uibox_name = 'mods_button_alert', should_alert = SMODS\.mod_button_alert\}\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.modded.004"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if num_dollars > 60 or num_dollars < -60 then\n)'''
+position = "at"
+payload = '''
+${pre}        if type(num_dollars) ~= 'number' and to_number then num_dollars = to_number(num_dollars) end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.modded.005"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>[\t ]*if false then return end\n)(?<post>[\t ]*if args\.type == 'win_challenge' then \n)'''
+position = "at"
+payload = '''
+${pre}    if G.GAME.modded_run then return end
+    if not Progress.allowed() then return end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.modded.006"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if not SMODS\.config\.seeded_unlocks and \(G\.GAME\.seeded or G\.GAME\.challenge\) then return end\n(?<post>[\t ]*if card\.unlocked or card\.wip then return end\n)'''
+position = "at"
+payload = '''
+${pre}        if G.GAME.modded_run then return end
+if not SMODS.config.seeded_unlocks and (G.GAME.seeded or G.GAME.challenge) then return end
+        if not Progress.allowed() then return end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.modded.007"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if not SMODS\.config\.seeded_unlocks and \(G\.GAME\.seeded or G\.GAME\.challenge\) then return end\n(?<post>[\t ]*card = card or \{\}\n)'''
+position = "at"
+payload = '''
+${pre}    if G.GAME.modded_run then return end
+if not SMODS.config.seeded_unlocks and (G.GAME.seeded or G.GAME.challenge) then return end
+    if not Progress.allowed() then return end
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.modded.008"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*_rarity = \(_legendary and 4\) or \(not _rarity and RunRules and RunRules\.rarity_of and RunRules\.rarity_of\(rarity\)\) or \(type\(_rarity\) == "number" and \(\(_rarity > 0\.95 and 3\) or \(_rarity > 0\.7 and 2\) or 1\)\) or _rarity\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}_rarity = (_legendary and 4) or (type(_rarity) == "number" and ((_rarity > 0.95 and 3) or (_rarity > 0.7 and 2) or 1)) or _rarity
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.modded.009"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*local rarity = _rarity or SMODS\.poll_rarity\("Joker", 'rarity'\.\.(?:to_[a-z_]+\()?G\.GAME\.round_resets\.ante\)?\.\.\(_append or ''\)\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}local rr_rarity = not _rarity and RunRules and RunRules.rarity_of and RunRules.active and (RunRules.active('rarity_common') ~= nil or RunRules.active('rarity_uncommon') ~= nil or RunRules.active('rarity_rare') ~= nil) and RunRules.rarity_of(pseudorandom('rarity'..G.GAME.round_resets.ante..(_append or '')))
+local rarity = _rarity or rr_rarity or SMODS.poll_rarity("Joker", 'rarity'..G.GAME.round_resets.ante..(_append or ''))
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.modded.010"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if sticker\.should_apply and type\(sticker\.should_apply\) == 'function' and sticker:should_apply\(card, center, area\) then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if sticker and sticker.should_apply and type(sticker.should_apply) == 'function' and sticker:should_apply(card, center, area) then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.modded.011"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if card\.area == G\.cdds_cards and card\.generate_ds_card_ui and type\(card\.generate_ds_card_ui\) == 'function' and card\.deckskin and card\.palette then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        if card and card.area == G.cdds_cards and card.generate_ds_card_ui and type(card.generate_ds_card_ui) == 'function' and card.deckskin and card.palette then
+${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.common_events.modded.012"
+target = "functions/common_events.lua"
+pattern = '''^(?<pre>)[\t ]*if card_type == 'Default' or card_type == 'Enhanced' and not _c\.replace_base_card and card and card\.base then\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}   if (card_type == 'Default' or card_type == 'Enhanced') and not _c.replace_base_card and card and card.base then
+${post}'''
+optional = true
+end

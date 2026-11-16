@@ -105,7 +105,7 @@ function PE.open(from)
   PE.state = {cols = {}, dark = {}, rgb = {}, hex = {}, hsv = {}, sel = "blue", start = 1, from = from}
   for _, k in ipairs(KEYS) do PE.state.cols[k], PE.state.dark[k] = {0, 0, 0, 1}, {0, 0, 0, 1} end
   load_all(poly_to_src(poly))
-r 13 1381 %20%20 -
+r 32 1381 %20%20 -
 l 182
   G.FUNCS.overlay_menu{definition = PE.def()}
 end
@@ -289,7 +289,7 @@ local function back_to_tailor()
   if G.FUNCS.tavern_custom then
     return G.FUNCS.tavern_custom({config = {ref_table = {tab = "palette", from = from}}})
   end
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 72
 end
 

@@ -63,10 +63,10 @@ pattern = """  local new_chips_text = number_format(G.GAME.chips)"""
 position = "after"
 payload = """if G.SCORE_DISPLAY_QUEUE and G.SCORE_DISPLAY_QUEUE[1] then 
     new_chips_text = number_format(G.SCORE_DISPLAY_QUEUE[1])
-r 13 1893 %20%20%20%20 -
+r 32 1893 %20%20%20%20 -
 l 1
         e.config.scale = math.min(0.8, scale_number(G.SCORE_DISPLAY_QUEUE[1], 1.1))
-r 13 1895 %20%20%20%20%20%20%20%20 -
+r 32 1895 %20%20%20%20%20%20%20%20 -
 l 5
     end
     return

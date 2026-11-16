@@ -1,0 +1,97 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 59
+return function(R)
+  R.XCHIPS_SLOT = 25
+  R.XCHIPS_IDS = {xchips = true, gain_xchips = true, var_xchips = true}
+
+  R.NUM.xchips = {def = 1.5, lo = 1.1, hi = R.BIG, step = 0.1, big = 1}
+  R.NUM.gain_xchips = {def = 0.1, lo = 0.05, hi = R.BIG, step = 0.05, big = 0.5}
+  R.NUM.var_xchips = {def = 0.1, lo = 0.01, hi = R.BIG, step = 0.01, big = 1}
+
+  for _, id in ipairs({"xchips", "gain_xchips", "var_xchips"}) do
+    local seen = false
+    for _, v in ipairs(R.GIVE) do if v == id then seen = true end end
+    if not seen then R.GIVE[#R.GIVE + 1] = id end
+    R.HOST_GIVE[id] = {joker = true, card = true, run = true}
+  end
+  R.VAR_GIVE.var_xchips = true
+  R.GIVE_WHEN.xchips = {card_scored = true, hand_played = true}
+  R.GIVE_WHEN.var_xchips = {card_scored = true, hand_played = true}
+  R.SIMPLE_GIVE.xchips = true
+
+  R.SCORE_GIVE.var_xchips = "xchips"
+  R.AMOUNT.var_xchips = function(g, card) return 1 + g.n * R.var_val(card, g.var) end
+
+  R.DEFAULT_GIVE.xchips = function() return {id = "xchips", n = 1.5} end
+  R.DEFAULT_GIVE.gain_xchips = function() return {id = "gain_xchips", n = 0.1} end
+
+  R.DOS.gain_xchips = function(g, card, src, context)
+    if context.blueprint then return end
+    local x = R.state(card)
+    x.xchips = math.floor(((tonumber(x.xchips) or 1) + g.n) * 100 + 0.5) / 100
+    R.status(src, localize("k_upgrade_ex"), G.C.CHIPS)
+  end
+
+  local reset = R.DOS.reset_gains
+  if reset then
+    R.DOS.reset_gains = function(g, card, src, context, ...)
+      if not context.blueprint then
+        local x = R.state(card)
+        if (tonumber(x.xchips) or 1) ~= 1 and x.chips == 0 and x.mult == 0 and x.xmult == 1 then
+          x.xchips = 1
+          R.status(src, localize("k_reset"), G.C.RED)
+          return
+        end
+        x.xchips = 1
+      end
+      return reset(g, card, src, context, ...)
+    end
+  end
+
+  function R.xchips_ret(ret, n, src)
+    if not n or n == 1 then return end
+    if rawget(_G, "SMODS") then
+      ret.x_chips = (ret.x_chips or 1) * n
+      return
+    end
+    local extra = ret.extra or {}
+    local before = extra.func
+    extra.func = function()
+      if before then before() end
+      hand_chips = mod_chips(hand_chips * n)
+r 15 707 %20%20%20%20%20%20 -
+l 30
+    end
+    extra.message = localize{type = "variable", key = "a_xmult", vars = {n}}
+    extra.colour = G.C.CHIPS
+    ret.extra = extra
+  end
+
+  local L = {
+    en = {xchips = "{X:chips,C:white} X%s {} Chips", gain_xchips = "this joker gains {X:chips,C:white} X%s {} Chips", var_xchips = "{X:chips,C:white} X%s {} Chips for each {C:attention}%s{}", now = "{X:chips,C:white} X#%d# {C:inactive} Chips"},
+    fr = {xchips = "{X:chips,C:white} X%s {} jetons", gain_xchips = "ce joker gagne {X:chips,C:white} X%s {} jetons", var_xchips = "{X:chips,C:white} X%s {} jetons par {C:attention}%s{}", now = "{X:chips,C:white} X#%d# {C:inactive} jetons"},
+    es = {xchips = "{X:chips,C:white} X%s {} fichas", gain_xchips = "este joker gana {X:chips,C:white} X%s {} fichas", var_xchips = "{X:chips,C:white} X%s {} fichas por cada {C:attention}%s{}", now = "{X:chips,C:white} X#%d# {C:inactive} fichas"},
+  }
+  local function lt(lang) return L[lang] or L.en end
+  function R.xchips_now(lang) return string.format(lt(lang).now, R.XCHIPS_SLOT) end
+
+  local function T() return package.loaded["functions/forge/forge_text"] end
+  local TG = R.TEXT_GIVE
+  TG.xchips = function(g, s, lang) return string.format(lt(lang).xchips, T().fmt_n(g.n)) end
+  TG.gain_xchips = function(g, s, lang) return string.format(lt(lang).gain_xchips, T().fmt_n(g.n)) end
+  TG.var_xchips = function(g, s, lang, vars) return string.format(lt(lang).var_xchips, T().fmt_n(g.n), T().var_name(vars, g.var)) end
+
+  local LG = R.LABEL_GIVE
+  LG.xchips, LG.gain_xchips, LG.var_xchips = "XChips", "Gains XChips", "XChips for each point"
+
+  if mod_loc_register then
+    mod_loc_register{
+      fr = {["XChips"] = "XJetons", ["Gains XChips"] = "Gagne des XJetons", ["XChips for each point"] = "XJetons par point", ["XChips for each %s"] = "XJetons par %s"},
+      es = {["XChips"] = "XFichas", ["Gains XChips"] = "Gana XFichas", ["XChips for each point"] = "XFichas por punto", ["XChips for each %s"] = "XFichas por %s"},
+    }
+  end
+end
+end

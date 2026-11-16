@@ -158,12 +158,12 @@ end
 function M.rebuild()
     if not (on_menu() and G.MAIN_MENU_UI and G.ROOM_ATTACH) then return end
     if G.collection_alert then G.collection_alert:remove(); G.collection_alert = nil end
-r 15 2219 %20%20%20%20 -
+r 30 2219 %20%20%20%20 -
 l 3
     G.MAIN_MENU_UI:remove()
     G.MAIN_MENU_UI = UIBox{definition = create_UIBox_main_menu_buttons(), config = {align = "bmi", offset = {x = 0, y = 10}, major = G.ROOM_ATTACH, bond = "Weak"}}
     G.MAIN_MENU_UI.alignment.offset.y = main_menu_bar_offset()
-r 12 759 %20%20%20%20 -
+r 31 759 %20%20%20%20 -
 l 52
     G.MAIN_MENU_UI:hard_set_VT()
     if G.SETTINGS.paused then
@@ -217,7 +217,7 @@ function M.exit()
         if type(hook) == "function" then hook(false) end
     end)
     M.active = false
-r 13 1825 %20%20%20%20 -
+r 32 1825 %20%20%20%20 -
 l 95
     M.rebuild_soon()
     play_sound("cardSlide2", 1, 0.5)
@@ -314,7 +314,7 @@ function M.play_body()
 end
 
 function M.open_play()
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 184
     G.FUNCS.overlay_menu{definition = UIK.window{zoom = false, id = "mpm_play", compact = true, w = PLAY_W, keep_w = true, title = L("PLAY"),
         tabs = {{key = "play", label = L("Play"), build = M.play_body}}, back_func = "exit_overlay_menu"}}
@@ -500,7 +500,7 @@ function M.open_daily(kind)
     if daily_start_fn() and M.daily[kind] then
         footer = {UIK.button{label = L("PLAY"), button = "mpm_daily_start", ref_table = {kind = kind}, colour = G.C.GREEN, id = "mpm_daily_start"}}
     end
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 60
     G.FUNCS.overlay_menu{definition = UIK.window{zoom = false, id = "mpm_daily", compact = true, w = DAILY_W,
         title = kind == "weekly" and L("WEEKLY") or L("DAILY"),
@@ -562,7 +562,7 @@ function M.register()
         if bom_browse and bom_browse.show_create then bom_browse.show_create() end
     end
     G.FUNCS.mpm_join = function()
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 71
         G.FUNCS.overlay_menu{definition = create_UIBox_join_room_input({title = L("JOIN WITH CODE"), back = "mpm_open_play"})}
     end

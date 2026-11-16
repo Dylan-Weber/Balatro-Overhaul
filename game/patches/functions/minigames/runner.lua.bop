@@ -172,7 +172,7 @@ function Game:hit(o)
     K.sound("chips2", 0.7, 0.5)
 end
 
-r 9 2449 - -
+r 7 2449 - -
 l 202
     dt = min(dt, 1 / 30)
     self.t = self.t + dt

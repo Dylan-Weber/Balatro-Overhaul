@@ -824,6 +824,7 @@ function RP.push(e)
         local r = REC.rolls
         REC.rolls = nil
         RP.push({ k = "rn", r = r })
+        if not (REC.on and REC.batch) then return end
     end
     e.t = math.floor((clock() - REC.t0) * 1000)
     REC.batch.push(e)

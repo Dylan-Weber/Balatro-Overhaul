@@ -1,0 +1,59 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_run_select.001"
+target = '=[SMODS _ "src/utils/run_select.lua"]'
+pattern = '''^(?<pre>)[\t ]*G\.SAVED_GAME = get_compressed\(G\.SETTINGS\.profile\.\.'/'\.\.'save\.jkr'\)\n[\t ]*if G\.SAVED_GAME ~= nil then G\.SAVED_GAME = STR_UNPACK\(G\.SAVED_GAME\) end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}        local raw_save = get_compressed(G.SETTINGS.profile..'/save.jkr')
+        G.SAVED_GAME = raw_save
+        if raw_save ~= nil then G.SAVED_GAME = STR_UNPACK(raw_save) end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_run_select.002"
+target = '=[SMODS _ "src/utils/run_select.lua"]'
+pattern = '''^(?<pre>)(?<post>[\t ]*start_run\(self, args\)\n)'''
+position = "at"
+payload = '''
+${pre}    if G.PROFILES and G.SETTINGS and G.PROFILES[G.SETTINGS.profile] then
+        G.PROFILES[G.SETTINGS.profile].last_choices = G.PROFILES[G.SETTINGS.profile].last_choices or {}
+        local choices = SMODS.RunSelect.Setup.choices
+        for _, key in ipairs(SMODS.RunSelectPage.obj_buffer) do
+            local page = SMODS.RunSelect.Pages[key]
+            if choices[key] == nil and page and page.set_default then
+                local ok, value = pcall(page.set_default, page, G.PROFILES[G.SETTINGS.profile].last_choices[key])
+                if ok and type(value) == 'table' then
+                    choices[key] = value
+                elseif SMODS.RunSelect.Functions.get_selection_limit(page) > 1 then
+                    choices[key] = {}
+                end
+            end
+        end
+    end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_run_select.003"
+target = '=[SMODS _ "src/utils/run_select.lua"]'
+pattern = '''^(?<pre>[\t ]*card_area_align_ref\(self\)\n[\t ]*end\n[\t ]*end\n)(?<post>)'''
+position = "at"
+payload = '''
+${pre}
+local back_generate_UI = Back.generate_UI
+function Back:generate_UI(...)
+    if G.PROFILES and G.SETTINGS and G.PROFILES[G.SETTINGS.profile] then
+        G.PROFILES[G.SETTINGS.profile].last_choices = G.PROFILES[G.SETTINGS.profile].last_choices or {}
+    end
+    return back_generate_UI(self, ...)
+end
+${post}'''
+times = 1

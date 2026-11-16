@@ -1,0 +1,409 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 220
+local E = {}
+
+E.V = 9
+E.MAKE = {id = "edition_joker", label = "Make a Joker with an edition", v = "shader", line = "Makes {C:attention}%d{} random Jokers with {C:dark_edition}%s{}", line1 = "Makes a random {C:dark_edition}%s{} Joker", new = true, need = 9}
+E.DRAW = {id = "draw_cards", label = "Draw cards", line = "Draw {C:attention}%d{} cards", line1 = "Draw {C:attention}1{} card", new = true, need = 9}
+
+local CARDS = {
+  en = {any = "cards with an edition", any1 = "card with an edition", ed = "{C:dark_edition}%s{} cards", ed1 = "{C:dark_edition}%s{} card"},
+  fr = {any = "cartes avec une édition", any1 = "carte avec une édition", ed = "cartes {C:dark_edition}%s{}", ed1 = "carte {C:dark_edition}%s{}"},
+  es = {any = "cartas con edición", any1 = "carta con edición", ed = "cartas {C:dark_edition}%s{}", ed1 = "carta {C:dark_edition}%s{}"},
+}
+local JOKERS = {
+  en = {any = "Jokers with an edition", any1 = "Joker with an edition", ed = "{C:dark_edition}%s{} Jokers", ed1 = "{C:dark_edition}%s{} Joker",
+    have = "you have %s {C:attention}%d{} %s", count = "%s you have",
+    make = "create {C:attention}%d{} random {C:dark_edition}%s{} Jokers", make1 = "create a random {C:dark_edition}%s{} Joker",
+    draw = "draw {C:attention}%d{} cards", draw1 = "draw {C:attention}1{} card"},
+  fr = {any = "Jokers avec une édition", any1 = "Joker avec une édition", ed = "Jokers {C:dark_edition}%s{}", ed1 = "Joker {C:dark_edition}%s{}",
+    have = "vous avez %s {C:attention}%d{} %s", count = "%s possédé",
+    make = "crée {C:attention}%d{} Jokers {C:dark_edition}%s{} au hasard", make1 = "crée un Joker {C:dark_edition}%s{} au hasard",
+    draw = "pioche {C:attention}%d{} cartes", draw1 = "pioche {C:attention}1{} carte"},
+  es = {any = "comodines con edición", any1 = "comodín con edición", ed = "comodines {C:dark_edition}%s{}", ed1 = "comodín {C:dark_edition}%s{}",
+    have = "tienes %s {C:attention}%d{} %s", count = "%s que tienes",
+    make = "crea {C:attention}%d{} comodines {C:dark_edition}%s{} al azar", make1 = "crea un comodín {C:dark_edition}%s{} al azar",
+    draw = "roba {C:attention}%d{} cartas", draw1 = "roba {C:attention}1{} carta"},
+}
+
+local LOC = {
+  fr = {
+    ["Jokers with an edition"] = "Jokers avec une édition", ["Any edition"] = "Toute édition", ["WHICH EDITION?"] = "QUELLE ÉDITION ?",
+    ["Make a Joker with an edition"] = "Crée un Joker avec une édition", ["Draw cards"] = "Piocher des cartes",
+    ["Makes {C:attention}%d{} random Jokers with {C:dark_edition}%s{}"] = "Crée {C:attention}%d{} Jokers {C:dark_edition}%s{} au hasard",
+    ["Makes a random {C:dark_edition}%s{} Joker"] = "Crée un Joker {C:dark_edition}%s{} au hasard",
+    ["Draw {C:attention}%d{} cards"] = "Piochez {C:attention}%d{} cartes", ["Draw {C:attention}1{} card"] = "Piochez {C:attention}1{} carte",
+    ["Edition on every card"] = "Édition sur chaque carte", ["As usual"] = "Comme d'habitude",
+  },
+  es = {
+    ["Jokers with an edition"] = "Comodines con edición", ["Any edition"] = "Cualquier edición", ["WHICH EDITION?"] = "¿QUÉ EDICIÓN?",
+    ["Make a Joker with an edition"] = "Crea un comodín con edición", ["Draw cards"] = "Robar cartas",
+    ["Makes {C:attention}%d{} random Jokers with {C:dark_edition}%s{}"] = "Crea {C:attention}%d{} comodines {C:dark_edition}%s{} al azar",
+    ["Makes a random {C:dark_edition}%s{} Joker"] = "Crea un comodín {C:dark_edition}%s{} al azar",
+    ["Draw {C:attention}%d{} cards"] = "Roba {C:attention}%d{} cartas", ["Draw {C:attention}1{} card"] = "Roba {C:attention}1{} carta",
+    ["Edition on every card"] = "Edición en cada carta", ["As usual"] = "Como siempre",
+  },
+}
+
+local function text() return package.loaded["functions/forge/forge_text"] or require("functions/forge/forge_text") end
+local function lang_t(t, lang) return t[lang] or t.en end
+local function ml(s) return mod_loc and mod_loc(s) or s end
+
+function E.rules(R)
+  R.V9_IDS = R.V9_IDS or {}
+  for _, id in ipairs({"jokers_with", "jokers_match", "make_ed_joker", "draw", "edition_joker", "draw_cards"}) do R.V9_IDS[id] = true end
+
+  function R.ed_match(v)
+    if type(v) ~= "string" or v:sub(1, 2) ~= "e_" then return nil end
+    return v:sub(3)
+  end
+
+  function R.ed_values()
+    local out = {"foil", "holo", "polychrome", "negative"}
+    for _, v in ipairs(R.own_values and R.own_values("edition") or {}) do out[#out + 1] = v end
+    return out
+  end
+
+  function R.ed_matches()
+    local out = {"e_any"}
+    for _, v in ipairs(R.ed_values()) do out[#out + 1] = "e_" .. v end
+    return out
+  end
+
+  function R.ed_ok(v)
+    local ed = R.ed_match(v)
+    if not ed then return false end
+    if ed == "any" or ed == "foil" or ed == "holo" or ed == "polychrome" or ed == "negative" then return true end
+    return R.own_id("edition", ed) ~= nil
+  end
+
+  function R.ed_name(ed)
+    if ed == "any" then return ml("Any edition") end
+    return text().edition_name(ed)
+  end
+
+  function R.ed_phrase(v, lang, plural, jokers)
+    local l = lang_t(jokers and JOKERS or CARDS, lang)
+    local ed = R.ed_match(v) or "any"
+    if ed == "any" then return plural and l.any or l.any1 end
+    return string.format(plural and l.ed or l.ed1, R.ed_name(ed))
+  end
+
+  local base_match = R.card_match
+  R.card_match = function(c, v)
+    local ed = R.ed_match(v)
+    if ed then
+      if ed == "any" then return c ~= nil and type(c.edition) == "table" and next(c.edition) ~= nil end
+      return R.has_edition(c, ed)
+    end
+    return base_match(c, v)
+  end
+
+  local base_matches = R.matches
+  R.matches = function()
+    local out = base_matches()
+    for _, v in ipairs(R.ed_matches()) do out[#out + 1] = v end
+    return out
+  end
+
+  function R.filter_values(id)
+    if id == "jokers_with" then return R.ed_matches() end
+    return R.matches()
+  end
+
+  function R.count_matches(per)
+    if per == "jokers_match" then return R.ed_matches() end
+    return R.matches()
+  end
+
+  local base_mlabel = R.match_label
+  R.match_label = function(v, lang, plural)
+    if R.ed_match(v) then return R.ed_phrase(v, lang, true) end
+    return base_mlabel(v, lang, plural)
+  end
+
+  local base_one = R.one_label
+  R.one_label = function(v, lang)
+    if R.ed_match(v) then return R.ed_phrase(v, lang, false) end
+    return base_one(v, lang)
+  end
+
+  local base_count = R.count_label
+  R.count_label = function(g, lang)
+    if g.per == "jokers_match" then
+      return string.format(lang_t(JOKERS, lang).count, R.ed_phrase(g.m or "e_any", lang, false, true))
+    end
+    return base_count(g, lang)
+  end
+
+  function R.count_m_label(per, m, lang)
+    if per == "jokers_match" then return R.ed_phrase(m or "e_any", lang, false, true) end
+    return R.one_label(m or "any", lang)
+  end
+
+  local function jokers_with(v)
+    local n = 0
+    for _, j in ipairs(G.jokers and G.jokers.cards or {}) do
+      if R.card_match(j, v) then n = n + 1 end
+    end
+    return n
+  end
+  E.jokers_with = jokers_with
+
+  R.ONLY[#R.ONLY + 1] = "jokers_with"
+  R.FILTER_ONLY.jokers_with = true
+  R.NUM.jokers_with = {def = 1, lo = 0, hi = 100, step = 1, big = 5}
+  R.DEFAULT_ONLY.jokers_with = function() return {id = "jokers_with", v = "e_any", op = "at_least", n = 1} end
+  R.CLEAN_ONLY.jokers_with = function(c)
+    if not R.ed_ok(c.v) then c.v = "e_any" end
+    c.op = c.op or "at_least"
+  end
+  R.CHECKS.jokers_with = function(o) return R.compare(o.op, jokers_with(o.v), o.n) end
+  R.TEXT_ONLY.jokers_with = function(o, s, lang)
+    local op = (s and (s[o.op or "at_least"] or s.at_least)) or ""
+    return string.format(lang_t(JOKERS, lang).have, op, tonumber(o.n) or 0, R.ed_phrase(o.v, lang, true, true))
+  end
+  R.LABEL_ONLY.jokers_with = "Jokers with an edition"
+
+  if R.COUNTS and R.COUNT and not R.member(R.COUNTS, "jokers_match") then
+    R.COUNTS[#R.COUNTS + 1] = "jokers_match"
+    R.COUNT_MATCH.jokers_match = true
+    R.COUNT.jokers_match = function(g) return jokers_with(g.m or "e_any") end
+    if R.LABEL_COUNT then R.LABEL_COUNT.jokers_match = "Jokers with an edition" end
+  end
+
+  R.GIVE[#R.GIVE + 1] = "make_ed_joker"
+  R.GIVE[#R.GIVE + 1] = "draw"
+  R.NUM.make_ed_joker = {def = 1, lo = 1, hi = 10, step = 1, big = 5}
+  R.NUM.draw = {def = 2, lo = 1, hi = 52, step = 1, big = 5}
+  R.HOST_GIVE.make_ed_joker = {joker = true}
+  R.HOST_GIVE.draw = {joker = true}
+  R.DEFAULT_GIVE.make_ed_joker = function() return {id = "make_ed_joker", v = "foil", n = 1} end
+  R.DEFAULT_GIVE.draw = function() return {id = "draw", n = 2} end
+  R.CLEAN_GIVE.make_ed_joker = function(e)
+    if not R.member(R.ed_values(), e.v) then e.v = "foil" end
+  end
+  R.CLEAN_GIVE.draw = function(e) e.v = nil end
+  R.DOS.make_ed_joker = function(g, card, src) R.make_edition_joker(g.v, g.n, src) end
+  R.DOS.draw = function(g, card, src, context) R.draw_cards(g.n, context) end
+  R.TEXT_GIVE.make_ed_joker = function(g, s, lang)
+    local l = lang_t(JOKERS, lang)
+    local n = math.floor(tonumber(g.n) or 1)
+    if n <= 1 then return string.format(l.make1, R.ed_name(g.v)) end
+    return string.format(l.make, n, R.ed_name(g.v))
+  end
+  R.TEXT_GIVE.draw = function(g, s, lang)
+    local l = lang_t(JOKERS, lang)
+    local n = math.floor(tonumber(g.n) or 2)
+    if n == 1 then return l.draw1 end
+    return string.format(l.draw, n)
+  end
+  R.LABEL_GIVE.make_ed_joker = "Make a Joker with an edition"
+  R.LABEL_GIVE.draw = "Draw cards"
+
+  local function frees_slot(ed)
+    if ed.negative then return true end
+    if not ed.forge then return false end
+    local S = package.loaded["functions/forge/forge_store"]
+    local it = S and S.get_item and S.get_item(ed.forge)
+    local f = it and it.fields or {}
+    return f.shader == "negative" or f.slot == true
+  end
+
+  function R.make_edition_joker(v, n, src)
+    if R.dry or not (G.jokers and G.GAME) then return 0 end
+    local probe = R.edition_arg(v)
+    if not probe then return 0 end
+    local free = frees_slot(probe)
+    local made = 0
+    for _ = 1, math.max(1, math.min(math.floor(tonumber(n) or 1), 50)) do
+      if not free and #G.jokers.cards + (G.GAME.joker_buffer or 0) >= G.jokers.config.card_limit then break end
+      G.GAME.joker_buffer = (G.GAME.joker_buffer or 0) + 1
+      made = made + 1
+r 3 617 %20%20%20%20%20%20 -
+l 6
+        local c = create_card("Joker", G.jokers, nil, nil, nil, nil, nil, "forge_edj")
+        local ed = R.edition_arg(v)
+        if ed then c:set_edition(ed, true, true) end
+        c:add_to_deck()
+        G.jokers:emplace(c)
+        c:start_materialize()
+r 3 2539 %20%20%20%20%20%20%20%20 -
+l 50
+        return true
+      end}))
+    end
+    if made > 0 and src and R.status then R.status(src, localize("k_plus_joker"), G.C.BLUE) end
+    return made
+  end
+
+  local function mid_hand(context)
+    if type(context) ~= "table" then return false end
+    return context.discard or context.pre_discard or context.before or context.after or context.joker_main or context.individual or context.repetition
+      or (G.play ~= nil and context.cardarea == G.play) or context.setting_blind or context.end_of_round or false
+  end
+
+  function R.draw_cards(n, context)
+    if R.dry or not G.GAME then return end
+    n = math.max(0, math.min(math.floor(tonumber(n) or 0), 52))
+    if n <= 0 then return end
+    local function now()
+      local k = math.min(n, G.deck and #G.deck.cards or 0)
+      if k > 0 and G.hand then E.draw(k) end
+    end
+    local function later() G.GAME.forge_draw = (G.GAME.forge_draw or 0) + n end
+    if mid_hand(context) then return later() end
+    if G.STATE == G.STATES.SELECTING_HAND then return now() end
+    if G.STATE == G.STATES.PLAY_TAROT then
+      G.E_MANAGER:add_event(Event({blocking = false, func = function()
+        if G.STATE == G.STATES.SELECTING_HAND then now() return true end
+        if G.STATE ~= G.STATES.PLAY_TAROT then later() return true end
+        return false
+      end}))
+      return
+    end
+    later()
+  end
+
+  function E.draw(k, base)
+    local S = rawget(_G, "SMODS")
+    if type(S) == "table" and type(S.draw_cards) == "function" then return S.draw_cards(k) end
+    return (base or G.FUNCS.draw_from_deck_to_hand)(k)
+  end
+
+  function E.install_draw()
+    if E.draw_hooked or not (G and G.FUNCS and G.FUNCS.draw_from_deck_to_hand) then return end
+    E.draw_hooked = true
+    local orig = G.FUNCS.draw_from_deck_to_hand
+    G.FUNCS.draw_from_deck_to_hand = function(e, ...)
+      local res = {orig(e, ...)}
+      local extra = G.GAME and tonumber(G.GAME.forge_draw) or 0
+      if extra > 0 and e == nil and G.deck and G.hand then
+        G.GAME.forge_draw = 0
+r 3 617 %20%20%20%20%20%20%20%20 -
+l 121
+          local k = math.min(extra, #G.deck.cards)
+          if k > 0 then E.draw(k, orig) end
+          return true
+        end}))
+      end
+      return unpack(res, 1, table.maxn(res))
+    end
+    if type(end_round) == "function" then
+      local orig_end = end_round
+      end_round = function(...)
+        if G.GAME then G.GAME.forge_draw = 0 end
+        return orig_end(...)
+      end
+    end
+  end
+
+  local base_need = R.need_v
+  R.need_v = function(rules, vars)
+    local need = base_need(rules, vars)
+    local top = 0
+    local function look(id, v, m)
+      if R.V9_IDS[id] or R.ed_match(v) or R.ed_match(m) then top = E.V end
+    end
+    for _, r in ipairs(type(rules) == "table" and rules or {}) do
+      if type(r) == "table" then
+        for _, o in ipairs(type(r.only) == "table" and r.only or {}) do
+          if type(o) == "table" then look(o.id, o.v) end
+        end
+        for _, l in ipairs({r.give, r.alt}) do
+          for _, g in ipairs(type(l) == "table" and l or {}) do
+            if type(g) == "table" then
+              look(g.id, nil, g.m)
+              if g.per and R.V9_IDS[g.per] then top = E.V end
+            end
+          end
+        end
+      end
+    end
+    return math.max(need, top)
+  end
+
+  if mod_loc_register then mod_loc_register(LOC) end
+end
+
+function E.cat(Cat)
+  local R = require("functions/forge/forge_rules")
+  local function n(lo, hi, def, step, fmt) return {lo = lo, hi = hi, def = def, step = step or 1, fmt = fmt} end
+  local function copy(e, extra)
+    local c = {}
+    for k, v in pairs(e) do c[k] = v end
+    for k, v in pairs(extra or {}) do c[k] = v end
+    return c
+  end
+  local make = copy(E.MAKE, {num = n(1, 10, 1)})
+  local draw = copy(E.DRAW, {num = n(1, 52, 2)})
+  local function add(list, e)
+    for _, x in ipairs(list) do if x.id == e.id then return end end
+    list[#list + 1] = copy(e)
+  end
+  for _, k in ipairs({"use", "spectral", "tag"}) do add(Cat.EFFECTS[k], make) end
+  for _, k in ipairs({"use", "spectral"}) do add(Cat.EFFECTS[k], draw) end
+  local run_make = copy(make, {run = true, num = n(1, 1e3, 1)})
+  local run_draw = copy(draw, {run = true, num = n(1, 52, 2)})
+  add(Cat.RUN, run_make)
+  add(Cat.RUN, run_draw)
+  for _, k in ipairs({"voucher", "deck", "stake", "boss"}) do
+    add(Cat.EFFECTS[k], run_make)
+    add(Cat.EFFECTS[k], run_draw)
+  end
+
+  local pack = Cat.kind("booster")
+  local have = false
+  for _, f in ipairs(pack.adv_fields or {}) do if f.id == "edition" then have = true end end
+  if not have then
+    pack.adv_fields[#pack.adv_fields + 1] = {id = "edition", label = "Edition on every card", type = "choice", options = Cat.SHADERS, def = "none", none = true, own = "edition", new = true}
+  end
+
+  local base_need = Cat.need_v
+  Cat.need_v = function(c)
+    local need = base_need(c)
+    if type(c) ~= "table" then return need end
+    local f = type(c.fields) == "table" and c.fields or {}
+    if c.kind == "edition" and f.shader == "none" then need = math.max(need, E.V) end
+    if c.kind == "booster" and f.edition ~= nil and f.edition ~= "none" then need = math.max(need, E.V) end
+    for _, e in ipairs(type(c.effects) == "table" and c.effects or {}) do
+      if type(e) == "table" then
+        if R.V9_IDS[e.id] then need = math.max(need, E.V) end
+        for _, o in ipairs(type(e.only) == "table" and e.only or {}) do
+          if type(o) == "table" and (R.V9_IDS[o.id] or R.ed_match(o.v)) then need = math.max(need, E.V) end
+        end
+      end
+    end
+    return need
+  end
+end
+
+function E.pack_edition(c)
+  local f = c and c.fields or {}
+  local v = c and c.mode == "advanced" and f.edition or nil
+  if v == nil or v == "none" then return nil end
+  local R = require("functions/forge/forge_rules")
+  if not R.member(R.ed_values(), v) then return nil end
+  return v
+end
+
+function E.install_pack(M)
+  if E.pack_hooked or not (CardArea and CardArea.emplace) then return end
+  E.pack_hooked = true
+  local orig = CardArea.emplace
+  CardArea.emplace = function(self, card, ...)
+    local v = G and G.GAME and G.GAME.forge_pack_edition
+    if v and self == G.pack_cards and card and card.set_edition then
+      local R = require("functions/forge/forge_rules")
+      local ed = R.edition_arg(v)
+      if ed then pcall(card.set_edition, card, ed, true, true) end
+    end
+    return orig(self, card, ...)
+  end
+end
+
+return E
+end

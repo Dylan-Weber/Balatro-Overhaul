@@ -1,9 +1,19 @@
 local root = arg[1] or "assets/localization"
+local overlay = arg[2]
 local langs = {"fr", "es_ES", "es_419"}
+local function merge(dst, src)
+  for k, v in pairs(src) do
+    local leaf = type(v) ~= "table" or v[1] ~= nil or next(v) == nil
+    if leaf or type(dst[k]) ~= "table" or dst[k][1] ~= nil or next(dst[k]) == nil then dst[k] = v else merge(dst[k], v) end
+  end
+end
 local function load(p)
   local f = loadfile(p)
   if not f then return nil end
-  return f()
+  local t = f()
+  local o = overlay and loadfile(overlay .. "/" .. p:match("[^/]+$"))
+  if type(t) == "table" and o then merge(t, o()) end
+  return t
 end
 local function walk(en, other, path, out)
   for k, v in pairs(en) do

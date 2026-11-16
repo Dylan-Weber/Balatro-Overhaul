@@ -77,8 +77,8 @@ local function icon_node(entry)
   local sprite = Sprite(0, 0, 0.8, 0.8, atlas, {x = 0, y = 0})
   sprite.states.drag.can = false
   sprite:define_draw_steps({
-r 15 662 %20%20%20%20 -
-r 4 505 %20%20%20%20 -
+r 30 662 %20%20%20%20 -
+r 9 505 %20%20%20%20 -
 l 17
   })
   return {n=G.UIT.C, config={align = "cm", minw = 0.8, minh = 0.8}, nodes={
@@ -305,7 +305,7 @@ local function mod_row(entry, status, wmap)
   if port() then
     return {n=G.UIT.R, config={align = "cm", padding = 0.05}, nodes={
       {n=G.UIT.C, config={align = "cm", r = 0.1, colour = G.C.BLACK, emboss = 0.05, padding = 0.1, minw = ROW_W}, nodes={
-r 15 392 %20%20%20%20%20%20%20%20 -
+r 30 392 %20%20%20%20%20%20%20%20 -
 l 35
           icon_node(entry),
           {n=G.UIT.C, config={align = "cm", minw = 0.15}, nodes={}},
@@ -411,7 +411,7 @@ local function switch_row(want, running, ticked, installed)
   if port() then
     return {n=G.UIT.R, config={align = "cm", padding = 0.05}, nodes={
       {n=G.UIT.C, config={id = 'mods_menu_switch', align = "cm", r = 0.1, colour = G.C.BLACK, emboss = 0.05, padding = 0.1, minw = ROW_W}, nodes={
-r 15 392 %20%20%20%20%20%20%20%20 -
+r 30 392 %20%20%20%20%20%20%20%20 -
 l 99
           icon,
           gap(),
@@ -512,7 +512,7 @@ local function installed_tab()
     (restart and port()) and {n=G.UIT.R, config={align = "cm", padding = 0.05}, nodes={
       UIBox_button({id = 'mods_menu_restart', button = 'mods_menu_restart', label = {mod_loc("Restart now")}, colour = G.C.GREEN, minw = 3, minh = 0.7, scale = 0.5, col = true}),
     }} or nil,
-r 15 71 %20%20%20%20 -
+r 30 71 %20%20%20%20 -
 l 7
       (restart and not port()) and UIBox_button({id = 'mods_menu_restart', button = 'mods_menu_restart', label = {mod_loc("Restart now")}, colour = G.C.GREEN, minw = 3, minh = 0.7, scale = 0.5, col = true}) or nil,
       (restart and not port()) and {n=G.UIT.C, config={align = "cm", minw = GAP_W}, nodes={}} or nil,
@@ -521,7 +521,7 @@ l 7
       uses_picker() and UIBox_button({button = 'mods_menu_export', label = {mod_loc("Save mods as a zip")}, colour = G.C.GREEN, minw = 4.6, minh = 0.7, scale = 0.45, col = true}) or nil,
     }},
     uses_picker() and {n=G.UIT.R, config={align = "cm", padding = 0.08}, nodes={
-r 15 629 %20%20%20%20%20%20 -
+r 30 629 %20%20%20%20%20%20 -
 l 334
         {n=G.UIT.C, config={minw = 0.26 * (port() and 0.27 or 0.32), padding = 0}, nodes={}},
         {n=G.UIT.T, config={text = mod_loc("Your game folder is in the file picker under Balatro Overhaul"), scale = port() and 0.34 or 0.37, colour = G.C.UI.TEXT_LIGHT, maxw = ROW_W}},
@@ -939,7 +939,7 @@ G.FUNCS.mods_menu_zip_pick = function(e)
       {n=G.UIT.R, config={align = "cm", padding = 0.1}, nodes={{n=G.UIT.T, config={text = mod_loc("REPLACE THIS MOD?"), scale = 0.55, colour = G.C.GOLD, shadow = true}}}},
       {n=G.UIT.R, config={align = "cm", padding = 0.05}, nodes={{n=G.UIT.C, config={align = "cm", r = 0.1, colour = G.C.BLACK, emboss = 0.05, padding = 0.15, minw = 7.2}, nodes=rows}}},
       {n=G.UIT.R, config={align = "cm", padding = 0.05}, nodes={{n=G.UIT.T, config={text = mod_loc("The installed copy is deleted and replaced by the zip."), scale = 0.34, colour = G.C.UI.TEXT_LIGHT, maxw = 7.2}}}},
-r 15 723 %20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20 -
 l 83
         UIBox_button({button = 'mods_menu_zip_keep', label = {mod_loc("Keep mine")}, colour = G.C.GREEN, minw = 3, minh = 0.75, scale = 0.45, col = true, focus_args = {snap_to = true}}),
         {n=G.UIT.C, config={align = "cm", minw = 0.3}, nodes={}},
@@ -1024,7 +1024,7 @@ local function switch_saved(modded, after)
   pcall(function()
     G:save_settings()
     G:save_progress()
-r 15 5391 %20%20%20%20 -
+r 30 5391 %20%20%20%20 -
 l 2
   end)
   local deadline = love.timer.getTime() + 1
@@ -1070,11 +1070,11 @@ G.FUNCS.mods_menu_remove = function(e)
   G.FUNCS.overlay_menu({key = 'mods_menu', definition = create_UIBox_generic_options({
     back_func = 'mods_menu_back',
     contents = {
-r 15 723 %20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20 -
 l 2
         {n=G.UIT.T, config={text = mod_loc("Remove") .. " " .. tostring(ref.name) .. "?", scale = 0.5, colour = G.C.WHITE, shadow = true}},
       }},
-r 15 723 %20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20 -
 l 53
         UIBox_button({button = 'mods_menu_remove_confirm', label = {mod_loc("Remove")}, colour = G.C.RED, minw = 3, minh = 0.7, scale = 0.5}),
       }},
@@ -1129,11 +1129,11 @@ G.FUNCS.mods_menu_config = function(e)
     back_func = 'mods_menu_config_back',
     colour = ui.colour, bg_colour = ui.bg_colour, back_colour = ui.back_colour, outline_colour = ui.outline_colour,
     contents = {
-r 15 723 %20%20%20%20%20%20 -
+r 30 723 %20%20%20%20%20%20 -
 l 2
         {n=G.UIT.T, config={text = mod.display_name or mod.name or mod.id, scale = 0.6, colour = G.C.GOLD, shadow = true}},
       }},
-r 6 297 %20%20%20%20%20%20 -
+r 5 297 %20%20%20%20%20%20 -
 l 35
         {n=G.UIT.O, config={object = UIBox{definition = def, config = {offset = {x = 0, y = 0}}}}},
       }},
@@ -1170,7 +1170,7 @@ function Game:main_menu(change_context, ...)
 end
 
 local splash_screen = Game.splash_screen
-r 9 1373 - -
+r 7 1373 - -
 l 28
   local L = loader()
   if type(G.GAME) == "table" and G.GAME.pseudorandom == nil then G.GAME.pseudorandom = {} end
@@ -1200,7 +1200,7 @@ local function collection_failed(where, err)
   collection_live.open = false
   collection_live.grace = 120
   pcall(function()
-r 13 1825 %20%20%20%20 -
+r 32 1825 %20%20%20%20 -
 l 10
     attention_text({text = mod_loc("That collection page failed to open"), scale = 0.7, hold = 2.5, backdrop_colour = G.C.RED, align = 'cm', major = G.ROOM_ATTACH, offset = {x = 0, y = 0}})
   end)

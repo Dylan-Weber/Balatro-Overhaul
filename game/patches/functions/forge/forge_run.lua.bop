@@ -15,7 +15,7 @@ ForgeRun = Run
 Run.RATE = {Joker = "joker_rate", Tarot = "tarot_rate", Planet = "planet_rate", Spectral = "spectral_rate", Playing = "playing_card_rate"}
 Run.RARE = {[1] = "rarity_common", [2] = "rarity_uncommon", [3] = "rarity_rare"}
 Run.BASE = {pack_slots = 2, voucher_slots = 1, rarity_common = 70, rarity_uncommon = 25, rarity_rare = 5}
-Run.SCORE = {chips = true, mult = true, xmult = true}
+Run.SCORE = {chips = true, mult = true, xmult = true, xchips = true}
 
 local function log_once(key, msg) FJ.log_once("run_" .. key, msg) end
 
@@ -242,6 +242,8 @@ l 372
       local j = pseudorandom_element(pool, pseudoseed("forge_run_edition"))
       j:set_edition(ed)
     end
+  elseif id == "edition_joker" then R.make_edition_joker(e.v or "foil", math.max(1, whole), nil)
+  elseif id == "draw_cards" then R.draw_cards(math.max(1, whole), e.forge_context)
   elseif id == "sell_value" then
     for _, j in ipairs(G.jokers and G.jokers.cards or {}) do
       j.ability.extra_value = (j.ability.extra_value or 0) + n
@@ -307,6 +309,7 @@ function Run.score(chips, mult)
     for _ = 1, s.times do
       if e.id == "chips" then chips = chips + n
       elseif e.id == "mult" then mult = mult + n
+      elseif e.id == "xchips" then chips = chips * n
       else mult = mult * n end
     end
     changed = true
@@ -334,7 +337,7 @@ function Run.card_bonus(card, id)
     if not Run.pass(e, ctx, s.key .. "_" .. i) then return end
     local n = tonumber(e.n) or 0
     for _ = 1, s.times do
-      if id == "xmult" then total = (total or 1) * n else total = (total or 0) + n end
+      if id == "xmult" or id == "xchips" then total = (total or 1) * n else total = (total or 0) + n end
     end
   end)
   return total
@@ -551,15 +554,12 @@ function Run.install()
       return pool, key
     end
   end
-  if type(get_pack) == "function" then
-    local orig = get_pack
-    get_pack = function(...)
-      local ok, added = pcall(Run.need_bans)
-      local r = {orig(...)}
-      if ok and added then for _, k in ipairs(added) do G.GAME.banned_keys[k] = nil end end
-      return unpack(r)
-    end
-  end
+  require("overhaul.hooks").wrap(_G, "get_pack", function(orig) return function(...)
+    local ok, added = pcall(Run.need_bans)
+    local r = {orig(...)}
+    if ok and added then for _, k in ipairs(added) do G.GAME.banned_keys[k] = nil end end
+    return unpack(r)
+  end end, {id = "forge.get_pack_needs"})
   Run.wrap_funcs()
 end
 
@@ -625,7 +625,7 @@ if mod_loc_register then
       ["+Hands this round"] = "+Mains cette manche", ["{C:blue}%s{} hand this round"] = "{C:blue}%s{} main cette manche",
       ["+Discards this round"] = "+Défausses cette manche", ["{C:red}%s{} discard this round"] = "{C:red}%s{} défausse cette manche",
       ["Disable the Boss Blind"] = "Désactiver la Blinde Boss", ["Disables the {C:attention}Boss Blind{}"] = "Désactive la {C:attention}Blinde Boss{}",
-      ["{C:chips}%s{} Chips"] = "{C:chips}%s{} Jetons", ["{C:mult}%s{} Mult"] = "{C:mult}%s{} Multi", ["{X:mult,C:white}%s{} Mult"] = "{X:mult,C:white}%s{} Multi",
+      ["{C:chips}%s{} Chips"] = "{C:chips}%s{} Jetons", ["{C:mult}%s{} Mult"] = "{C:mult}%s{} Multi", ["{X:mult,C:white}%s{} Mult"] = "{X:mult,C:white}%s{} Multi", ["{X:chips,C:white}%s{} Chips"] = "{X:chips,C:white}%s{} Jetons",
       ["Cards gain Chips for good"] = "Les cartes gagnent des Jetons pour de bon", ["The cards gain {C:chips}%s{} Chips for good"] = "Les cartes gagnent {C:chips}%s{} Jetons pour de bon",
       ["+Hand size for good"] = "+Taille de main pour de bon", ["{C:attention}%s{} hand size for the rest of the run"] = "{C:attention}%s{} taille de main pour le reste de la partie",
       ["+Joker slots for good"] = "+Emplacements de Joker pour de bon", ["{C:attention}%s{} Joker slot for the rest of the run"] = "{C:attention}%s{} emplacement de Joker pour le reste de la partie",
@@ -663,7 +663,7 @@ if mod_loc_register then
       ["+Hands this round"] = "+Manos esta ronda", ["{C:blue}%s{} hand this round"] = "{C:blue}%s{} mano esta ronda",
       ["+Discards this round"] = "+Descartes esta ronda", ["{C:red}%s{} discard this round"] = "{C:red}%s{} descarte esta ronda",
       ["Disable the Boss Blind"] = "Desactivar la ciega jefe", ["Disables the {C:attention}Boss Blind{}"] = "Desactiva la {C:attention}ciega jefe{}",
-      ["{C:chips}%s{} Chips"] = "{C:chips}%s{} fichas", ["{C:mult}%s{} Mult"] = "{C:mult}%s{} multi", ["{X:mult,C:white}%s{} Mult"] = "{X:mult,C:white}%s{} multi",
+      ["{C:chips}%s{} Chips"] = "{C:chips}%s{} fichas", ["{C:mult}%s{} Mult"] = "{C:mult}%s{} multi", ["{X:mult,C:white}%s{} Mult"] = "{X:mult,C:white}%s{} multi", ["{X:chips,C:white}%s{} Chips"] = "{X:chips,C:white}%s{} fichas",
       ["Cards gain Chips for good"] = "Las cartas ganan fichas para siempre", ["The cards gain {C:chips}%s{} Chips for good"] = "Las cartas ganan {C:chips}%s{} fichas para siempre",
       ["+Hand size for good"] = "+Tamaño de mano para siempre", ["{C:attention}%s{} hand size for the rest of the run"] = "{C:attention}%s{} tamaño de mano el resto de la partida",
       ["+Joker slots for good"] = "+Huecos de comodín para siempre", ["{C:attention}%s{} Joker slot for the rest of the run"] = "{C:attention}%s{} hueco de comodín el resto de la partida",

@@ -1,0 +1,30 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 6
+return {
+    descriptions={
+        Enhanced={
+            m_wild={
+                text={
+                    "Bisa dipakai",
+r 40 430 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 9
+                    "{C:attention}Kebal{} terhadap debuff Boss",
+                },
+            },
+        },
+        Stake={
+            stake_blue={
+                text={
+                    "Shop items cost {C:money}+$1{}",
+                    "Rerolls go up by {C:money}$2{} each",
+r 40 2555 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 5
+                },
+            },
+        },
+    },
+}
+end

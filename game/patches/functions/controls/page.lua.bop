@@ -409,7 +409,7 @@ end
 
 local function open_help(from)
     P.from = from
-r 13 1381 %20%20%20%20 -
+r 32 1381 %20%20%20%20 -
 l 28
     G.FUNCS.overlay_menu{definition = P.help_window()}
 end
@@ -439,7 +439,7 @@ function P.init()
             K.ui.notice = nil
             K.refresh()
         end
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 14
         G.FUNCS.overlay_menu{definition = P.binds_window()}
     end
@@ -455,7 +455,7 @@ l 14
     end
     G.FUNCS.ctl_input_mode = function()
         if C.touch() then return end
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 31
         G.FUNCS.overlay_menu{definition = P.mode_window()}
     end
@@ -488,7 +488,7 @@ l 31
             focus_settings_button()
             return
         end
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 18
     end
     G.FUNCS.ctl_help_remap = function()
@@ -508,7 +508,7 @@ l 18
             K.refresh()
         end
         P.binds_from = from
-r 13 1381 %20%20%20%20%20%20%20%20 -
+r 32 1381 %20%20%20%20%20%20%20%20 -
 l 13
         G.FUNCS.overlay_menu{definition = P.binds_window()}
     end
@@ -523,7 +523,7 @@ l 13
         if K and K.refresh then K.refresh() end
         if C.back_to(from, e) then return end
         if G.FUNCS.settings then return G.FUNCS.settings(e) end
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 8
     end
     G.FUNCS.ctl_help_from_settings = function() open_help("settings") end
@@ -533,7 +533,7 @@ l 8
         P.from = nil
         if from == "pause" and G.FUNCS.options then return G.FUNCS.options(e) end
         if from == "settings" and G.FUNCS.settings then return G.FUNCS.settings(e) end
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 56
     end
     G.ESC_BACK_FUNCS = G.ESC_BACK_FUNCS or {}

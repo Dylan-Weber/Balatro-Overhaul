@@ -12,16 +12,16 @@ function M.getBalatroVersion()
     if balatro_ver then return balatro_ver end
     local versionFile = love.filesystem.read("version.jkr")
     if versionFile then
-        balatro_ver = versionFile:match("[^\n]*"):match("^%S*")
+        balatro_ver = versionFile:match("[^\n]*")
         return balatro_ver
     end
 end
 
 function M.hex(hex)
-r 11 356 %20%20 -
-r 11 357 %20%20 -
-r 11 358 %20%20 -
-l 73
+r 13 356 %20%20 -
+r 13 357 %20%20 -
+r 13 358 %20%20 -
+l 69
   return color
 end
 
@@ -64,11 +64,7 @@ v_mt = {
     end,
     __call = function(_, str)
         str = str or '0.0.0'
-        local _, _, major, minorFull, minor, patchFull, patch, rev = string.find(tostring(str), '^(%d+)(%.?([%d%*]*))(%.?([%d%*]*))(.*)$')
-        if not major then
-            if sendWarnMessage then sendWarnMessage('Invalid version "' .. tostring(str) .. '".', "Utils") end
-            major, minorFull, minor, patchFull, patch, rev = -1, "", "", "", "", ""
-        end
+        local _, _, major, minorFull, minor, patchFull, patch, rev = string.find(str, '^(%d+)(%.?([%d%*]*))(%.?([%d%*]*))(.*)$')
         local minorWildcard = string.match(minor, '%*')
         local patchWildcard = string.match(patch, '%*')
         if (minorFull ~= "" and minor == "") or (patchFull ~= "" and patch == "") then

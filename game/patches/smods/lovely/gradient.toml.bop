@@ -37,9 +37,9 @@ match_indent = true
 [patches.pattern]
 target = "functions/UI_definitions.lua"
 pattern = '''
-r 15 896 - -
-r 15 897 - -
-r 15 898 - -
+r 30 896 - -
+r 30 897 - -
+r 30 898 - -
 l 19
 '''
 position = "at"

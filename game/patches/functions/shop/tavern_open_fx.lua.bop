@@ -88,7 +88,7 @@ function FX.play(o, card, current, on_done)
     return base_draw(self, layer)
   end
   card.dissolve_colours = cols
-r 13 2158 %20%20 -
+r 32 2158 %20%20 -
 l 89
   if area then card:hard_set_T(area.T.x + (area.T.w - card.T.w) / 2, area.T.y + (area.T.h - card.T.h) / 2 + 3.5, card.T.w, card.T.h) end
   card.VT.scale = 0.6

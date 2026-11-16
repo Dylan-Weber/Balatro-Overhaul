@@ -116,7 +116,7 @@ function P.draw_background(spr, unzoom)
         end
         c = c or G.C.BLACK
         love.graphics.push('all')
-r 19 278 %20%20%20%20%20%20%20%20 -
+r 12 278 %20%20%20%20%20%20%20%20 -
 r 3 4413 %20%20%20%20%20%20%20%20 -
 l 33
         love.graphics.setColor(c[1], c[2], c[3], 1)
@@ -152,7 +152,7 @@ l 33
         love.graphics.push('all')
         love.graphics.setCanvas(P.bg_canvas)
         love.graphics.clear(0, 0, 0, 1)
-r 19 278 %20%20%20%20%20%20%20%20 -
+r 12 278 %20%20%20%20%20%20%20%20 -
 l 11
         love.graphics.scale(G.CANV_SCALE * bw / cw, G.CANV_SCALE * bh / ch)
         G.BG_UNZOOM = unzoom
@@ -165,7 +165,7 @@ l 11
         add_to_drawhash(spr)
     end
     love.graphics.push('all')
-r 19 278 %20%20%20%20 -
+r 12 278 %20%20%20%20 -
 r 3 4413 %20%20%20%20 -
 l 153
     love.graphics.setColor(1, 1, 1, 1)

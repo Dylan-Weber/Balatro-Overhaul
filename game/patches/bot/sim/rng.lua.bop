@@ -189,7 +189,7 @@ function M.shuffle_id(s, id, list, n)
     mrandomseed(seed_by_id(s, id))
     for i = n, 2, -1 do
         local j = mrandom(i)
-r 11 215 %20%20%20%20%20%20%20%20 -
+r 13 215 %20%20%20%20%20%20%20%20 -
 l 20
     end
 end

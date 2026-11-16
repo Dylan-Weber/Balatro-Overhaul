@@ -203,7 +203,7 @@ match_indent = true
 payload = '''
 self.ability.seal = {}
 for k, v in pairs(G.P_SEALS[_seal].config or {}) do
-r 12 2162 %20%20%20%20 -
+r 31 2162 %20%20%20%20 -
 l 17
         self.ability.seal[k] = copy_table(v)
     else
@@ -240,7 +240,7 @@ match_indent = true
 payload = '''
 if other.seal then
     for k, v in pairs(other.ability.seal or {}) do
-r 12 2162 %20%20%20%20%20%20%20%20 -
+r 31 2162 %20%20%20%20%20%20%20%20 -
 l 7
             new_card.ability.seal[k] = copy_table(v)
         else

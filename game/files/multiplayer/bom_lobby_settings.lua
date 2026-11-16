@@ -267,6 +267,8 @@ M.DEFS = {
     {header = "Seeds and decks", tab = "players"},
     {key = "different_seeds", tab = "players", kind = "toggle", label = "Different seeds", info = "Each player gets their own seed", refresh = true},
     {key = "custom_seed", tab = "players", kind = "seed", label = "Seed", info = "Blank: a new seed each match", show = function(s) return not s.different_seeds end},
+    {key = "deck_filter", tab = "players", kind = "cycle", own = true, label = "Decks to pick from", info = "Decks shown in New Run and lobbies", refresh = true,
+        options = function() return {{value = "vanilla", label = "Only vanilla"}, {value = "new", label = "Only new"}, {value = "both", label = "Both"}} end},
     {key = "deck", tab = "players", kind = "cycle", label = "Deck", options = deck_options, refresh = true, info_fn = deck_info},
     {key = "different_decks", tab = "players", kind = "toggle", label = "Each player picks a deck", info = "Everyone picks theirs at match start", refresh = true, no_party = true},
     {key = "joker_picks", tab = "players", kind = "stepper", label = "Starting joker picks", min = 0, max = 5, refresh = true, no_party = true,
@@ -337,7 +339,7 @@ function M.describe(s)
     local defaults = bom_match.DEFAULT_SETTINGS or {}
     local lines = {}
     for _, d in ipairs(M.DEFS) do
-        if d.key and shown(d, s) then
+        if d.key and not d.own and shown(d, s) then
             local v, def = s[d.key], defaults[d.key]
             local changed = v ~= nil and v ~= def
             if d.kind == "seed" then changed = bom_match.clean_seed(v) ~= nil end
@@ -375,7 +377,25 @@ local function commit_seed()
     if want ~= (bom_match.clean_seed(s.custom_seed) or "random") then commit("custom_seed", want) end
 end
 
+local function own_row(d)
+    local St = G.SETTINGS or {}
+    local o = opts_of(d, St[d.key])
+    local labels, cur = {}, #o
+    for i, x in ipairs(o) do
+        labels[i] = L(x.label)
+        if x.value == St[d.key] then cur = i end
+    end
+    return UIK.cycle{label = L(d.label), info = d.info and L(d.info) or nil, id = "mpls_" .. d.key, options = labels, current = cur,
+        callback = function(i)
+            if not (o[i] and G.SETTINGS) then return end
+            G.SETTINGS[d.key] = o[i].value
+            if G.save_settings then pcall(function() G:save_settings() end) end
+            if d.refresh then UIK.refresh() end
+        end}
+end
+
 local function mp_row(d, s, disabled)
+    if d.own then return own_row(d) end
     local info = d.info_fn and d.info_fn(s) or d.info
     local base = {label = L(d.label), info = info and L(info) or nil, disabled = disabled, id = "mpls_" .. d.key, colour = d.colour_fn and d.colour_fn(s) or nil}
     local function changed(v)

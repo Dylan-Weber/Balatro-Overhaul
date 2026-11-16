@@ -1,0 +1,30 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 6
+return {
+    descriptions={
+        Enhanced={
+            m_wild={
+                text={
+                    "Pode ser usada",
+r 46 430 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 9
+                    "{C:attention}Imune{} a penalidades do Chefe",
+                },
+            },
+        },
+        Stake={
+            stake_blue={
+                text={
+                    "Shop items cost {C:money}+$1{}",
+                    "Rerolls go up by {C:money}$2{} each",
+r 46 2555 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 5
+                },
+            },
+        },
+    },
+}
+end

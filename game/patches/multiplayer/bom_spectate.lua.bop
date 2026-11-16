@@ -341,8 +341,8 @@ local function new_card(e, area, fresh)
     if e.d and type(e.d) == "string" then
         pcall(function() card:set_edition({[e.d:sub(3)] = true}, true, true) end)
     end
-r 6 219 %20%20%20%20 -
-r 15 4154 %20%20%20%20 -
+r 5 219 %20%20%20%20 -
+r 30 4154 %20%20%20%20 -
 l 471
     card.spec_k = e.k ~= nil
     card.spec_sig = esig(e)
@@ -815,7 +815,7 @@ end
 function SP.reopen()
     if V.last_wait and SP.wait_allowed() then return SP.open_wait() end
     if SP.allowed() then return SP.open() end
-r 13 1375 %20%20%20%20 -
+r 32 1375 %20%20%20%20 -
 l 47
 end
 
@@ -864,7 +864,7 @@ function SP.register_funcs()
     G.FUNCS.spec_next = function() step(1) end
     G.FUNCS.spec_close = function()
         SP.close()
-r 13 1375 %20%20%20%20%20%20%20%20 -
+r 32 1375 %20%20%20%20%20%20%20%20 -
 l 277
     end
     G.FUNCS.spec_frame = function() if V.open then pcall(frame) end end

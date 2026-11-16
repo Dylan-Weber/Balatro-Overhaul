@@ -1,0 +1,34 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.pattern]
+id = "animatedsprite.float_bg_open"
+target = "engine/animatedsprite.lua"
+pattern = "if self.float then"
+position = "after"
+payload = '''
+        local _bg = G.SETTINGS.GRAPHICS and G.SETTINGS.GRAPHICS.perf_bg_anims
+        if _bg == nil then _bg = true end
+        if _bg then'''
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "animatedsprite.float_bg_close"
+target = "engine/animatedsprite.lua"
+pattern = "self.offset.x = -(0.7+0.2*math.sin(0.666*G.TIMERS.REAL+self.T.x))*self.shadow_parrallax.x"
+position = "after"
+payload = '''
+        end'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "animatedsprite.remove_scans"
+target = "engine/animatedsprite.lua"
+pattern = '''[ \t]*for [_k], v in pairs\(G\.(ANIMATIONS|I\.SPRITE)\) do\n[ \t]*if v == self then\n[ \t]*table\.remove\(G\.(ANIMATIONS|I\.SPRITE), k\)\n[ \t]*end\n[ \t]*end\n'''
+position = "at"
+payload = ''
+times = 2

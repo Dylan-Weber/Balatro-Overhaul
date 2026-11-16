@@ -14,8 +14,8 @@ target = "game.lua"
 pattern = '''
 if G.AA_CANVAS then 
     love.graphics.push()
-r 9 2964 %20%20%20%20%20%20%20%20 -
-r 9 2965 %20%20%20%20%20%20%20%20 -
+r 7 2964 %20%20%20%20%20%20%20%20 -
+r 7 2965 %20%20%20%20%20%20%20%20 -
 l 34
     love.graphics.pop()
 end
@@ -51,16 +51,12 @@ for index, key in ipairs(SMODS.ScreenShader.obj_buffer) do
 end
 -- I don't like having this out here but id rather not run it when i don't have to
 -- also less setcanvas and setshader means it should run a smidge faster
-r 11 112 - -
+r 13 112 - -
 r 3 4413 - -
-l 3
+l 14
 if last_canvas then
     love.graphics.clear{0,0,0,1}
-    love.graphics.push()
-r 9 2964 %20%20%20%20 -
-l 13
     love.graphics.draw(last_canvas, 0, 0)
-    love.graphics.pop()
     -- Draw everything we just did to the main canvas (what the player actually sees)
 end
 '''
@@ -72,8 +68,8 @@ match_indent = true
 [patches.pattern]
 target = "main.lua"
 pattern = '''
-r 19 386 - -
-r 19 387 - -
+r 12 386 - -
+r 12 387 - -
 l 7
 '''
 position = "after"

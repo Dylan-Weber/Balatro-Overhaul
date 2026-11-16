@@ -2,14 +2,13 @@ BOP 1
 eol lf
 final 1
 base 0
-l 154
+l 137
 local sUtil = require "SMODS.preflight.sharedUtil"
 
 local NFS = SMODS.NFS
 
 local blacklist
 local function readBlacklist(force)
-    if MODLOADER and MODLOADER.active then return {} end
     if blacklist ~= nil and not force then return blacklist end
     local file = SMODS.MODS_DIR .. "/lovely/blacklist.txt"
     if not NFS.getInfo(file) then
@@ -27,10 +26,6 @@ local function readBlacklist(force)
 end
 
 local function addToBlacklist(name)
-    if MODLOADER and MODLOADER.set_enabled then
-        MODLOADER.set_enabled(name, false)
-        return
-    end
     local file = SMODS.MODS_DIR .. "/lovely/blacklist.txt"
     if not NFS.getInfo(file) then
         sendDebugMessage("Blacklist file does not exist, creating it...", "loader")
@@ -42,19 +37,7 @@ local function addToBlacklist(name)
     blacklist = nil -- Invalidate blacklist cache
 end
 
-local function enableFolder(name)
-    if MODLOADER and MODLOADER.set_enabled then
-        MODLOADER.set_enabled(name, true)
-        return
-    end
-    NFS.remove(SMODS.MODS_DIR.. "/" .. name ..'/.lovelyignore')
-end
-
 local function removeFromBlacklist(name)
-    if MODLOADER and MODLOADER.set_enabled then
-        MODLOADER.set_enabled(name, true)
-        return
-    end
     local file = SMODS.MODS_DIR .. "/lovely/blacklist.txt"
     if not NFS.getInfo(file) then
         sendWarnMessage("Blacklist file does not exist, can't remove???", "loader")
@@ -157,8 +140,8 @@ function loadMods(modsDirectory)
     local json_spec = {
         id = { type = 'string', required = true },
         author = { type = 'table', required = true, check = function(mod, t)
-r 11 131 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 25
+r 13 131 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 91
                 if type(k) ~= 'number' or type(v) ~= 'string' then t[k] = nil end
             end
             return t
@@ -184,23 +167,11 @@ l 25
                 ['=='] = function(a,b) return a==b end
             }
             for i,v in ipairs(t or {}) do
-r 12 2162 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 76
-                    local s = tostring(v.id or v.name or '')
-                    if v.min_version then s = s .. ' (>=' .. tostring(v.min_version) .. ')' end
-                    if v.max_version then s = s .. ' (<=' .. tostring(v.max_version) .. ')' end
-                    v = s
-                end
-                v = tostring(v)
                 local parts = {}
                 parts.str = v
                 for part in v:gmatch('([^|]+)') do
                     local x = {}
-                    x.id = part:match '^%s*([^(%s<>=]+)'
-                    if not part:find('%(') then
-                        local bop, bver = part:match '^%s*[^%s(<>=]+%s*([<>=][<>=])%s*(%S+)'
-                        if bop then part = part .. '(' .. bop .. bver .. ')' end
-                    end
+                    x.id = part:match '^([^(%s]+)'
                     local j = 1
                     for version_string in string.gmatch(part, '%((.-)%)') do
                         local operator, version = string.match(version_string, '^(..)(.*)$')
@@ -262,8 +233,8 @@ l 76
         -- end},
         provides = { type = 'table', check = function(mod, t)
             t = t or {}
-r 11 193 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 600
+r 13 193 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 585
                 v = v:gsub('%s', '')
                 local id = v:match '^([^(%s]+)'
                 local ver = v:match '%((.-)%)'
@@ -290,8 +261,7 @@ l 600
             local file_path = directory .. "/" .. filename
 
             -- Check if the current file is a directory
-            local file_info = NFS.getInfo(file_path)
-            local file_type = file_info and file_info.type
+            local file_type = NFS.getInfo(file_path).type
             if file_type == 'directory' or file_type == 'symlink' then
                 if not (depth == 1 and filename == "lovely") then -- Ignore lovely's directory
                     -- Lovely patches 
@@ -381,19 +351,6 @@ l 600
                         mod.blacklisted = true
                     end
 
-                    if not NFS.getInfo(mod.path..mod.main_file) then
-                        local found, dir = "", mod.path
-                        for part in mod.main_file:gmatch("[^/\\]+") do
-                            local hit
-                            for _, item in ipairs(NFS.getDirectoryItems(dir) or {}) do
-                                if item:lower() == part:lower() then hit = item break end
-                            end
-                            if not hit then found = nil break end
-                            found = found == "" and hit or (found .. "/" .. hit)
-                            dir = dir .. hit .. "/"
-                        end
-                        if found and found ~= "" and NFS.getInfo(mod.path..found) then mod.main_file = found end
-                    end
                     if not NFS.getInfo(mod.path..mod.main_file) then
                         mod.can_load = false
                         mod.load_issues = {
@@ -798,7 +755,6 @@ local function load_mods()
             local mod = SMODS.Mods[mod_id]
             SMODS.mod_list[#SMODS.mod_list + 1] = mod -- keep mod list in prioritized load order
             SMODS.current_mod = mod
-            if LOADING_SCREEN then LOADING_SCREEN.draw() end
             if mod.icon_path then
                 local data = SMODS.NFS.newFileData(mod.path.."/assets/1x/"..mod.icon_path)
                 local succ, image_data = pcall(love.graphics.newImage, data)
@@ -864,7 +820,7 @@ end
 
 function SMODS.injectItems()
     -- Set .key for vanilla undiscovered, locked objects
-r 11 1455 %20%20%20%20 -
+r 13 1455 %20%20%20%20 -
 l 12
         if type(k) == 'string' and (k:sub(-12, -1) == 'undiscovered' or k:sub(-6, -1) == 'locked') then
             v.key = k
@@ -878,7 +834,7 @@ l 12
     boot_print_stage('Initializing Localization')
     init_localization()
     SMODS.SAVE_UNLOCKS()
-r 12 1635 %20%20%20%20 -
+r 31 1635 %20%20%20%20 -
 l 6
     for _, t in ipairs{
         G.P_CENTERS,
@@ -886,8 +842,8 @@ l 6
         G.P_TAGS,
         G.P_SEALS,
     } do
-r 11 131 %20%20%20%20%20%20%20%20 -
-l 64
+r 13 131 %20%20%20%20%20%20%20%20 -
+l 63
             assert(v._discovered_unlocked_overwritten, ("Internal: discovery/unlocked of object \"%s\" failed to override."):format(v and v.key or "UNKNOWN"))
         end
     end
@@ -926,7 +882,6 @@ end
 SMODS.booted = false
 
 function SMODS.load_file(path, id)
-    if LOADING_SCREEN then LOADING_SCREEN.draw() end
     if not path or path == "" then
         error("No path was provided to load.")
     end
@@ -952,8 +907,8 @@ end
 
 local function doGameHooks()
     local init_item_prototypes_ref = Game.init_item_prototypes
-r 9 216 %20%20%20%20 -
-l 36
+r 7 216 %20%20%20%20 -
+l 34
         init_item_prototypes_ref(self)
         if SMODS.booted then
             SMODS.injectItems()
@@ -977,7 +932,6 @@ local function initSteamodded()
     convert_save_data()
     SMODS.populate_attributes()
     SMODS.booted = true
-    if LOADING_SCREEN then LOADING_SCREEN.finish() end
 
 
     -- re-inject on reload
@@ -987,7 +941,6 @@ return {
     initSteamodded = initSteamodded,
     readBlacklist = readBlacklist,
     addToBlacklist = addToBlacklist,
-    enableFolder = enableFolder,
     removeFromBlacklist = removeFromBlacklist,
 }
 end

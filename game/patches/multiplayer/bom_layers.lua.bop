@@ -235,11 +235,11 @@ function M.small_world_bans(seed, centers, tags, banned)
         local list = groups[g]
         table.sort(list)
         local next_r = rng(tostring(seed) .. ":" .. g)
-r 11 213 %20%20%20%20%20%20%20%20 -
+r 13 213 %20%20%20%20%20%20%20%20 -
 l 2
             local j = 1 + math.floor(next_r() * i)
             if j > i then j = i end
-r 11 215 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 215 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 93
         end
         local n = math.min(math.floor(#list * 0.75 + 0.5), #list - 1)
@@ -401,7 +401,7 @@ l 50
     end
     if CardArea and CardArea.update then
         local orig_update = CardArea.update
-r 6 243 %20%20%20%20%20%20%20%20 -
+r 5 243 %20%20%20%20%20%20%20%20 -
 l 63
             if self == G.jokers and G.GAME then
                 if M.on_frame and G.GAME.bom_rs then pcall(M.on_frame) end

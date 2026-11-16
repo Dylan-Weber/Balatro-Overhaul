@@ -414,7 +414,7 @@ G.FUNCS.start_custom_run = function()
   G.SETTINGS.custom_run_last = RunRules.diff(v)
   pcall(function() G:save_settings() end)
   G.CUSTOM_RUN.enabled = true
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 24
   RunRules.start(v, {rules_source = 'custom'})
 end
@@ -440,53 +440,53 @@ G.UIDEF.run_setup = function(from_game_over)
   if BOT and BOT.ui then BOT.ui.select_tab = nil end
   if _select_bot then _select_custom = true end
 
-r 15 5225 %20%20 -
-r 15 5299 %20%20 -
-r 15 5300 %20%20 -
+r 30 5225 %20%20 -
+r 30 5299 %20%20 -
+r 30 5300 %20%20 -
 l 1
 
-r 15 5302 %20%20 -
-r 15 5303 %20%20 -
+r 30 5302 %20%20 -
+r 30 5303 %20%20 -
 l 3
 
   local tabs = {
     {
-r 15 5309 %20%20%20%20%20%20 -
+r 30 5309 %20%20%20%20%20%20 -
 l 1
       chosen = (not _select_custom) and (not _challenge_chosen) and (not _can_continue),
-r 15 5311 %20%20%20%20%20%20 -
-r 15 5312 %20%20%20%20%20%20 -
+r 30 5311 %20%20%20%20%20%20 -
+r 30 5312 %20%20%20%20%20%20 -
 l 3
     },
   }
 
-r 15 2244 %20%20 -
+r 30 2244 %20%20 -
 l 1
     table.insert(tabs, {
-r 15 5315 %20%20%20%20%20%20 -
+r 30 5315 %20%20%20%20%20%20 -
 l 1
       chosen = (not _select_custom) and (not _challenge_chosen) and _can_continue,
-r 15 5311 %20%20%20%20%20%20 -
-r 15 5318 %20%20%20%20%20%20 -
-r 15 5319 %20%20%20%20%20%20 -
+r 30 5311 %20%20%20%20%20%20 -
+r 30 5318 %20%20%20%20%20%20 -
+r 30 5319 %20%20%20%20%20%20 -
 l 3
     })
   else
     table.insert(tabs, {
-r 15 5321 %20%20%20%20%20%20 -
-r 15 5322 %20%20%20%20%20%20 -
-r 15 5323 %20%20%20%20%20%20 -
+r 30 5321 %20%20%20%20%20%20 -
+r 30 5322 %20%20%20%20%20%20 -
+r 30 5323 %20%20%20%20%20%20 -
 l 4
       chosen = (not _select_custom) and _challenge_chosen
     })
   end
 
-r 15 2244 %20%20 -
+r 30 2244 %20%20 -
 l 1
     table.insert(tabs, {
-r 15 5321 %20%20%20%20%20%20 -
-r 15 5322 %20%20%20%20%20%20 -
-r 15 5323 %20%20%20%20%20%20 -
+r 30 5321 %20%20%20%20%20%20 -
+r 30 5322 %20%20%20%20%20%20 -
+r 30 5323 %20%20%20%20%20%20 -
 l 64
       chosen = (not _select_custom) and _challenge_chosen
     })

@@ -70,7 +70,7 @@ local function line_image(text, size)
     love.graphics.push("all")
     love.graphics.setCanvas(canvas)
     love.graphics.clear(0, 0, 0, 0)
-r 19 278 %20%20%20%20 -
+r 12 278 %20%20%20%20 -
 l 98
     love.graphics.setFont(font)
     love.graphics.setColor(INK)

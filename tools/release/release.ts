@@ -42,7 +42,9 @@ function newestApk(): string | undefined {
 }
 
 async function gameVersion(file: string, inner: string): Promise<{ version: string; protocol: number; name?: string }> {
-  const src = await $`unzip -p ${file} ${inner}`.quiet().text();
+  const first = inner.replace(/globals\.lua$/, 'overhaul/version.lua');
+  const own = await $`unzip -p ${file} ${first}`.quiet().nothrow();
+  const src = own.exitCode === 0 && /^OVERHAUL_VERSION\s*=/m.test(own.text()) ? own.text() : await $`unzip -p ${file} ${inner}`.quiet().text();
   const version = /^OVERHAUL_VERSION\s*=\s*'([^']+)'/m.exec(src)?.[1];
   const protocol = Number(/^MP_PROTOCOL_VERSION\s*=\s*(\d+)/m.exec(src)?.[1]);
   if (!version || !protocol) throw new Error(`${basename(file)}: no OVERHAUL_VERSION / MP_PROTOCOL_VERSION in ${inner}`);
@@ -115,7 +117,7 @@ async function main(): Promise<void> {
     found.push({ platform: j.platform, ...v });
     const old = current?.builds[j.platform];
     if (old && compareVersions(v.version, old.version) <= 0 && !o.force) {
-      throw new Error(`${j.platform} build is V ${v.version} but V ${old.version} is already released. Bump OVERHAUL_VERSION in assets/globals.lua and rebuild (or pass --force).`);
+      throw new Error(`${j.platform} build is V ${v.version} but V ${old.version} is already released. Bump OVERHAUL_VERSION in assets/overhaul/version.lua and rebuild (or pass --force).`);
     }
   }
   if (new Set(found.map(f => `${f.version}/${f.protocol}`)).size > 1) {

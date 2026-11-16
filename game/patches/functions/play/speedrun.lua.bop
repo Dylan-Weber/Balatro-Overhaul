@@ -545,12 +545,12 @@ function SR.start(cfg)
   if not (center and center.unlocked) then return end
   local stake = math.max(1, math.min(cfg.stake or 1, SR.max_stake(cfg.deck)))
   local seed = cfg.seed == 'weekly' and SR.week_seed() or nil
-r 13 1375 %20%20 -
+r 32 1375 %20%20 -
 l 3
   if RunRules then RunRules.disarm() end
   if G.CUSTOM_RUN then G.CUSTOM_RUN.enabled = false end
   if G.SAVED_GAME ~= nil and G.SAVED_GAME.GAME and not G.SAVED_GAME.GAME.won then
-r 23 900 %20%20%20%20 -
+r 17 900 %20%20%20%20 -
 l 16
     pcall(function() G:save_settings() end)
   end
@@ -568,7 +568,7 @@ l 16
 end
 
 local _sr_game_start_run = Game.start_run
-r 9 2018 - -
+r 7 2018 - -
 l 11
   local pending = SR.pending
   SR.pending = nil
@@ -581,7 +581,7 @@ l 11
 end
 
 local _sr_game_update = Game.update
-r 9 2449 - -
+r 7 2449 - -
 l 131
   _sr_game_update(self, dt)
   local ok, err = pcall(SR.update)
@@ -714,7 +714,7 @@ end
 
 local function swap(id, def)
   local e = G.OVERLAY_MENU and G.OVERLAY_MENU:get_UIE_by_ID(id)
-r 13 1300 %20%20 -
+r 32 1300 %20%20 -
 l 164
   if e.config.object then e.config.object:remove() end
   e.config.object = UIBox{definition = def, config = {offset = {x = 0, y = 0}, parent = e, type = 'cm'}}

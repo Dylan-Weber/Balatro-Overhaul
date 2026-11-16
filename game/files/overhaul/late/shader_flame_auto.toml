@@ -1,0 +1,24 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.shader_flame.001"
+target = "flame.fs"
+pattern = '''^(?<pre>)[\t ]*#endif\n[\t ]*#ifdef GL_ES\n[\t ]*precision MY_HIGHP_OR_MEDIUMP float;\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.shader_flame.002"
+target = "flame.fs"
+pattern = '''^(?<pre>)[\t ]*mediump vec4 effect\( mediump vec4 colour, Image texture, mediump vec2 texture_coords, mediump vec2 screen_coords \)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}vec4 effect( vec4 colour, Image texture, vec2 texture_coords, vec2 screen_coords )
+${post}'''
+times = 1

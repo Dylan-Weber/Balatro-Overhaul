@@ -32,8 +32,8 @@ function inspectDepth(table, indent, depth)
     end
 
     local str = ""
-r 11 323 %20%20%20%20 -
-l 70
+r 13 323 %20%20%20%20 -
+l 50
 
     for k, v in pairs(table) do
         local formatting = string.rep("  ", indent) .. tostring(k) .. ": "
@@ -75,19 +75,6 @@ function inspectFunction(func)
     return result
 end
 
-function SMODS.renderer_name()
-    if SMODS._renderer_name == nil then
-        local ok, name = pcall(love.graphics.getRendererInfo)
-        if ok and type(name) == "string" then
-            SMODS._renderer_name = name
-        else
-            local os_name = love.system and love.system.getOS and love.system.getOS() or ""
-            SMODS._renderer_name = (os_name == "Android" or os_name == "iOS") and "OpenGL ES" or "OpenGL"
-        end
-    end
-    return SMODS._renderer_name
-end
-
 function SMODS._save_d_u(o)
     assert(not o._discovered_unlocked_overwritten, ("Internal: discovery/unlocked of object \"%s\" should not be overwritten at this stage."):format(o and o.key or "UNKNOWN"))
     o._d, o._u = o.discovered, o.unlocked
@@ -96,23 +83,33 @@ end
 
 function SMODS.SAVE_UNLOCKS()
     boot_print_stage("Saving Unlocks")
-    local meta = G.FILES and G.FILES[G.SETTINGS.profile .. '/' .. 'meta.jkr'] or {}
-    if type(meta) == 'string' then meta = STR_UNPACK(meta) or {} end
-    meta = {
-        unlocked = copy_table(meta.unlocked or {}),
-        discovered = copy_table(meta.discovered or {}),
-        alerted = copy_table(meta.alerted or {}),
-    }
     G:save_progress()
-r 9 732 %20%20%20%20 -
-r 9 733 %20%20%20%20 -
-r 9 732 %20%20%20%20 -
+r 7 732 %20%20%20%20 -
+r 7 733 %20%20%20%20 -
+r 7 732 %20%20%20%20 -
+l 9
+    if not love.filesystem.getInfo(G.SETTINGS.profile .. '') then
+        love.filesystem.createDirectory(G.SETTINGS.profile ..
+            '')
+    end
+    if not love.filesystem.getInfo(G.SETTINGS.profile .. '/' .. 'meta.jkr') then
+        love.filesystem.append(
+            G.SETTINGS.profile .. '/' .. 'meta.jkr', 'return {}')
+    end
+
+r 7 738 %20%20%20%20 -
+l 2
+
+    local meta = STR_UNPACK(get_compressed(G.SETTINGS.profile .. '/' .. 'meta.jkr') or 'return {}')
+r 20 29 %20%20%20%20 -
+r 20 30 %20%20%20%20 -
+r 20 31 %20%20%20%20 -
 l 2
 
     G.P_LOCKED = {}
 r 3 229 %20%20%20%20 -
-r 9 746 %20%20%20%20%20%20%20%20 -
-l 10
+r 7 746 %20%20%20%20%20%20%20%20 -
+l 9
             if TESTHELPER_unlocks then
                 v.unlocked = true; v.discovered = true; v.alerted = true
             end --REMOVE THIS
@@ -122,14 +119,14 @@ l 10
             if not v.unlocked then
                 G.P_LOCKED[#G.P_LOCKED + 1] = v
             end
-            local default_seen = v.discovered and not v.mod
-r 9 769 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 4
+r 7 769 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
                 v.discovered = true
             end
-            if v.discovered and meta.alerted[k] or v.set == 'Back' or v.start_alerted or default_seen then
+r 7 755 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 1
                 v.alerted = true
-r 9 757 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 757 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 7
                 v.alerted = false
             end
@@ -141,55 +138,55 @@ l 7
 r 2 703 %20%20%20%20 -
 l 1
         v.key = k
-r 9 746 %20%20%20%20%20%20%20%20 -
-r 9 768 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 9 769 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 746 %20%20%20%20%20%20%20%20 -
+r 7 768 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 769 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 v.discovered = true
             end
-r 9 772 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 772 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 v.alerted = true
-r 9 757 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 757 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 4
                 v.alerted = false
             end
         end
     end
-r 15 3917 %20%20%20%20 -
+r 30 3917 %20%20%20%20 -
 l 1
         v.key = k
-r 9 746 %20%20%20%20%20%20%20%20 -
-r 9 768 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 9 769 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 746 %20%20%20%20%20%20%20%20 -
+r 7 768 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 769 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 v.discovered = true
             end
-r 9 772 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 772 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 v.alerted = true
-r 9 757 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 757 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 4
                 v.alerted = false
             end
         end
     end
-r 12 683 %20%20%20%20 -
+r 31 683 %20%20%20%20 -
 l 1
         v.key = k
-r 9 746 %20%20%20%20%20%20%20%20 -
+r 7 746 %20%20%20%20%20%20%20%20 -
 l 3
             if TESTHELPER_unlocks then
                 v.discovered = true; v.alerted = true
             end                                                                   --REMOVE THIS
-r 9 769 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 769 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
                 v.discovered = true
             end
-r 9 772 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 772 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 v.alerted = true
-r 9 757 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 757 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 10
                 v.alerted = false
             end
@@ -201,12 +198,11 @@ l 10
         G.P_TAGS,
         G.P_SEALS,
     } do
-r 11 131 %20%20%20%20%20%20%20%20 -
-l 99
+r 13 131 %20%20%20%20%20%20%20%20 -
+l 98
             v._discovered_unlocked_overwritten = true
         end
     end
-    G:save_progress()
 end
 
 function SMODS.process_loc_text(ref_table, ref_value, loc_txt, key)
@@ -302,7 +298,7 @@ function SMODS.juice_up_blind()
     for _, v in ipairs(ui_elem.children) do
         v.children[1]:juice_up(0.3, 0)
     end
-r 12 571 %20%20%20%20 -
+r 31 571 %20%20%20%20 -
 l 87
 end
 
@@ -391,8 +387,8 @@ end
 -- to avoid name conflicts with other mods.
 function SMODS.find_card(key, count_debuffed)
     local results = {}
-r 11 905 %20%20%20%20 -
-l 107
+r 13 905 %20%20%20%20 -
+l 106
     for _, area in ipairs(SMODS.get_card_areas('jokers')) do
         if area.cards then
             for _, v in pairs(area.cards) do
@@ -406,7 +402,6 @@ l 107
 end
 
 function SMODS.create_card(t)
-    if type(t) == 'table' and type(t.is) == 'function' and Card and t:is(Card) then return t end
     -- move setting enhancement into card creation
     if t.enhancement then
         if t.key then
@@ -501,7 +496,7 @@ function SMODS.debuff_card(card, debuff, source, delay)
     if delay then
         card.delay_debuff = true
 r 1 112 %20%20%20%20%20%20%20%20 -
-l 24
+l 20
             func = function()
                 card.delay_debuff = nil   
                 return true
@@ -516,17 +511,13 @@ function SMODS.recalc_debuff(card)
 end
 
 function SMODS.restart_game()
-    if MODLOADER and MODLOADER.restart then
-        MODLOADER.restart()
-        return
-    end
     if ((G or {}).SOUND_MANAGER or {}).channel then
         G.SOUND_MANAGER.channel:push({
             type = "kill",
         })
     end
     if ((G or {}).SAVE_MANAGER or {}).channel then
-r 9 1218 %20%20%20%20%20%20%20%20 -
+r 7 1218 %20%20%20%20%20%20%20%20 -
 l 79
             type = "kill",
         })
@@ -607,10 +598,10 @@ function SMODS.create_mod_badge(mod, obj, width, text_height)
         end,
     })
     return {n=G.UIT.R, config={align = "cm", id = 'badge_'..mod.id, colour = mod.badge_colour or G.C.GREEN, shader = not obj.no_shader_on_modbadge and mod.badge_shader or nil, r = 0.1, minw = 2, minh = 0.36, emboss = 0.05, padding = 0.027}, nodes={
-r 15 1157 %20%20%20%20%20%20%20%20 -
+r 30 1157 %20%20%20%20%20%20%20%20 -
 l 1
         {n=G.UIT.O, config={id = 'smods_mod_badge_text', object=badge_scroll}},
-r 15 1157 %20%20%20%20%20%20%20%20 -
+r 30 1157 %20%20%20%20%20%20%20%20 -
 l 23
     }}
 end
@@ -635,7 +626,7 @@ function SMODS.create_loc_dump()
     recurse(_old, _new, _dump)
     local function cleanup(dump)
         for k, v in pairs(dump) do
-r 12 2162 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2162 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 33
                 cleanup(v)
                 if not next(v) then dump[k] = nil end
@@ -670,8 +661,8 @@ function serialize(t, indent)
         end
         str = str .. ',\n'
     end
-r 11 131 %20%20%20%20 -
-l 196
+r 13 131 %20%20%20%20 -
+l 191
         if type(k) == 'string' then
             str = str .. indent .. '\t' .. '[' .. serialize_string(k) .. '] = '
 
@@ -851,11 +842,6 @@ function SMODS.poll_seal(args)
 end
 
 function SMODS.get_blind_amount(ante)
-    if ante > 1 and ante < 8 and ante ~= math.floor(ante) then
-        local lo = math.floor(ante)
-        local a, b = SMODS.get_blind_amount(lo), SMODS.get_blind_amount(lo + 1)
-        return a + (b - a) * (ante - lo)
-    end
     local scale = G.GAME.modifiers.scaling
     local amounts = {
         300,
@@ -868,12 +854,12 @@ function SMODS.get_blind_amount(ante)
         50000 * (scale+1)^2 * (scale/7)^2
     }
 
-r 11 925 %20%20%20%20 -
+r 13 925 %20%20%20%20 -
 l 3
     if ante <= 8 then return amounts[ante] - amounts[ante]%(10^math.floor(math.log10(amounts[ante])-1)) end
     local a, b, c, d = amounts[8], amounts[8]/amounts[7], ante-8, 1 + 0.2*(ante-8)
     local amount = math.floor(a*(b + (0.75*c)^d)^c)
-r 11 929 %20%20%20%20 -
+r 13 929 %20%20%20%20 -
 l 66
     return amount
 end
@@ -941,7 +927,7 @@ function SMODS.poll_rarity(_pool_key, _rand_key)
             SMODS.remove_pool(available_rarities, v.key)
         end
     end
-r 12 1965 %20%20%20%20 -
+r 31 1965 %20%20%20%20 -
 l 89
 
     -- Calculate total rates of rarities
@@ -1032,7 +1018,7 @@ function SMODS.poll_enhancement(args)
 end
 
 function time(func, ...)
-r 11 650 %20%20%20%20 -
+r 13 650 %20%20%20%20 -
 l 141
     func(...)
     local end_time = love.timer.getTime()
@@ -1175,7 +1161,7 @@ function SMODS.calculate_quantum_enhancements(card, effects, context)
         card:quantum_set_ability(G.P_CENTERS[k])
         card.ability.extra_enhancement = k
         local eval = eval_card(card, context)
-r 16 185 %20%20%20%20%20%20%20%20 -
+r 15 185 %20%20%20%20%20%20%20%20 -
 l 244
     end
     card.ability = old_ability
@@ -1230,7 +1216,7 @@ SMODS.collection_pool = function(_base_pool)
             pool[#pool+1] = v
         end
     end
-    if not is_array then table.sort(pool, function(a,b) return (a.order or 999) < (b.order or 999) end) end
+    if not is_array then table.sort(pool, function(a,b) return a.order < b.order end) end
     return pool
 end
 
@@ -1421,9 +1407,9 @@ SMODS.calculate_individual_effect = function(effect, scored_card, key, amount, f
 
     if key == 'swap' then
         if effect.card and effect.card ~= scored_card then juice_card(effect.card) end
-r 16 740 %20%20%20%20%20%20%20%20 -
-r 16 741 %20%20%20%20%20%20%20%20 -
-r 16 742 %20%20%20%20%20%20%20%20 -
+r 15 740 %20%20%20%20%20%20%20%20 -
+r 15 741 %20%20%20%20%20%20%20%20 -
+r 15 742 %20%20%20%20%20%20%20%20 -
 l 11
         update_hand_text({delay = 0}, {chips = hand_chips, mult = mult})
         juice_card(scored_card)
@@ -1729,7 +1715,7 @@ SMODS.calculate_repetitions = function(card, context, reps)
     --From jokers
     for _, area in ipairs(SMODS.get_card_areas('jokers')) do
         for _, _card in ipairs(area.cards) do
-r 16 201 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 201 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 145
             local eval, post = eval_card(_card, context)
             local first = true
@@ -1876,7 +1862,7 @@ function SMODS.calculate_card_areas(_type, context, return_table, args)
         for _, area in ipairs(SMODS.get_card_areas('jokers')) do
             if args and args.joker_area and not args.has_area then context.cardarea = area end
             for _, _card in ipairs(area.cards) do
-r 16 201 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 201 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 420
                 if SMODS.check_looping_context(_card) then
                     goto skip
@@ -2298,7 +2284,7 @@ function SMODS.score_card(card, context)
                 SMODS.calculate_effect(eff, eff.card); j = j+1; _, eff = next(reps[j])
             end
             SMODS.calculate_effect(eff, eff.card)
-r 16 633 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 633 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 51
         end
 
@@ -2351,7 +2337,7 @@ end
 function SMODS.calculate_main_scoring(context, scoring_hand)
     for _, card in ipairs(context.cardarea.cards) do
         local in_scoring = scoring_hand and SMODS.in_scoring(card, context.scoring_hand)
-r 16 649 %20%20%20%20%20%20%20%20 -
+r 15 649 %20%20%20%20%20%20%20%20 -
 l 6
         if scoring_hand and not SMODS.has_no_rank(card) and in_scoring then
             G.GAME.cards_played[card.base.value].total = G.GAME.cards_played[card.base.value].total + 1
@@ -2359,11 +2345,11 @@ l 6
                 G.GAME.cards_played[card.base.value].suits[card.base.suit] = true
             end
         end
-r 16 654 %20%20%20%20%20%20%20%20 -
+r 15 654 %20%20%20%20%20%20%20%20 -
 l 2
         if card.debuff then
             if in_scoring then
-r 16 656 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 656 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 1 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 2 398 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 33
@@ -2400,7 +2386,7 @@ function SMODS.calculate_end_of_round_effects(context)
             end
 
             context.playing_card_end_of_round = true
-r 16 179 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 179 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 43
             local effects = {eval_card(card, context)}
             SMODS.calculate_quantum_enhancements(card, effects, context)
@@ -2445,8 +2431,8 @@ end
 
 function SMODS.calculate_destroying_cards(context, cards_destroyed, scoring_hand)
     for i,card in ipairs(context.cardarea.cards) do
-r 16 952 %20%20%20%20%20%20%20%20 -
-r 16 953 %20%20%20%20%20%20%20%20 -
+r 15 952 %20%20%20%20%20%20%20%20 -
+r 15 953 %20%20%20%20%20%20%20%20 -
 l 55
         local in_scoring = scoring_hand and SMODS.in_scoring(card, context.scoring_hand)
         if scoring_hand and in_scoring and not card.destroyed then
@@ -2574,7 +2560,7 @@ function SMODS.get_card_areas(_type, _context)
         if G.GAME.blind and G.GAME.blind.children and G.GAME.blind.children.animatedSprite then
             t[#t + 1] = { object = G.GAME.blind, scored_card = G.GAME.blind.children.animatedSprite, set = "Blind", key = G.GAME.blind.config.blind.key}
         end
-        if G.GAME.challenge and SMODS.Challenges[G.GAME.challenge] then t[#t + 1] = { object = SMODS.Challenges[G.GAME.challenge], scored_card = G.deck and G.deck.cards[1] or G.deck, set = "Challenge", key = SMODS.Challenges[G.GAME.challenge].id } end
+        if G.GAME.challenge then t[#t + 1] = { object = SMODS.Challenges[G.GAME.challenge], scored_card = G.deck and G.deck.cards[1] or G.deck, set = "Challenge", key = SMODS.Challenges[G.GAME.challenge].id } end
         for _, stake in ipairs(SMODS.get_stake_scoring_targets(_context)) do
             t[#t + 1] = { object = stake, scored_card = G.deck and G.deck.cards[1] or G.deck, set = "Stake", key = stake.key }
         end
@@ -2744,17 +2730,17 @@ SMODS.get_optional_features = function()
 end
 
 G.FUNCS.can_select_from_booster = function(e)
-r 13 2157 %20%20%20%20 -
+r 32 2157 %20%20%20%20 -
 l 3
     local area = booster_obj and card:selectable_from_pack(booster_obj)
     local edition_card_limit = card.ability.card_limit - card.ability.extra_slots_used
     if area and #G[area].cards < G[area].config.card_limit + edition_card_limit then
-r 13 101 %20%20%20%20%20%20%20%20 -
-r 13 102 %20%20%20%20%20%20%20%20 -
+r 32 101 %20%20%20%20%20%20%20%20 -
+r 32 102 %20%20%20%20%20%20%20%20 -
 l 1
     else
-r 13 57 %20%20%20%20%20%20 -
-r 13 58 %20%20%20%20%20%20 -
+r 32 57 %20%20%20%20%20%20 -
+r 32 58 %20%20%20%20%20%20 -
 l 33
     end
   end
@@ -2789,7 +2775,7 @@ end
 
 function SMODS.get_next_vouchers(vouchers)
     vouchers = vouchers or {spawn = {}}
-r 12 1902 %20%20%20%20 -
+r 31 1902 %20%20%20%20 -
 l 14
     for i=#vouchers+1, math.min(SMODS.size_of_pool(_pool), G.GAME.starting_params.vouchers_in_shop + (G.GAME.modifiers.extra_vouchers or 0)) do
         local center
@@ -2805,12 +2791,12 @@ l 14
                 return pool
             end})
         else
-r 12 2114 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2114 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
             local it = 1
             while center == 'UNAVAILABLE' or vouchers.spawn[center] do
                 it = it + 1
-r 12 1908 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 1908 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 17
             end
         end
@@ -2829,13 +2815,13 @@ function SMODS.add_voucher_to_shop(key, dont_save)
             G.GAME.current_round.voucher[#G.GAME.current_round.voucher + 1] = key
         end
     end
-r 9 3126 %20%20%20%20 -
+r 7 3126 %20%20%20%20 -
 l 1
         G.shop_vouchers.T.y, G.CARD_W, G.CARD_H, G.P_CARDS.empty, G.P_CENTERS[key],{bypass_discovery_center = true, bypass_discovery_ui = true})
-r 9 3128 %20%20%20%20%20%20%20%20 -
-r 9 3129 %20%20%20%20%20%20%20%20 -
+r 7 3128 %20%20%20%20%20%20%20%20 -
+r 7 3129 %20%20%20%20%20%20%20%20 -
 r 3 1446 %20%20%20%20%20%20%20%20 -
-r 9 3131 %20%20%20%20%20%20%20%20 -
+r 7 3131 %20%20%20%20%20%20%20%20 -
 l 15
         G.shop_vouchers.config.card_limit = #G.shop_vouchers.cards
         return card
@@ -2852,14 +2838,14 @@ end
 
 function SMODS.add_booster_to_shop(key)
     if key then assert(G.P_CENTERS[key], "Invalid booster key: "..key) else key = get_pack('shop_pack').key end
-r 9 3152 %20%20%20%20 -
+r 7 3152 %20%20%20%20 -
 l 1
     G.shop_booster.T.y, G.CARD_W*1.27, G.CARD_H*1.27, G.P_CARDS.empty, G.P_CENTERS[key], {bypass_discovery_center = true, bypass_discovery_ui = true})
-r 9 3154 %20%20%20%20 -
+r 7 3154 %20%20%20%20 -
 l 1
     card.ability.booster_pos = #G.shop_booster.cards + 1
 r 3 1446 %20%20%20%20 -
-r 9 3157 %20%20%20%20 -
+r 7 3157 %20%20%20%20 -
 l 15
     return card
 end
@@ -2981,16 +2967,16 @@ end
 
 function SMODS.localize_box(lines, args)
     args.vars = args.vars or {}
-r 11 1755 %20%20%20%20 -
-r 11 1711 %20%20%20%20 -
+r 13 1755 %20%20%20%20 -
+r 13 1711 %20%20%20%20 -
 l 4
         if part.control.element then
             local elem = (args.vars.elements or {})[tonumber(part.control.element)]
             final_line[#final_line+1] = SMODS.process_loc_element(elem)
         end
-r 11 1712 %20%20%20%20%20%20%20%20 -
-r 11 1713 %20%20%20%20%20%20%20%20 -
-l 51
+r 13 1712 %20%20%20%20%20%20%20%20 -
+r 13 1713 %20%20%20%20%20%20%20%20 -
+l 18
             assembled_string = assembled_string..(type(subpart) == 'string' and subpart or format_ui_value(args.vars[tonumber(subpart[1])]) or 'ERROR')
         end
 
@@ -3009,7 +2995,8 @@ l 51
             scale_mod = part.control.s and tonumber(part.control.s) or args.scale or 1,
         }
         local desc_scale = (thunk.font or G.LANG.font).DESCSCALE
-        if G.F_MOBILE_UI then desc_scale = 1.5*desc_scale end
+r 13 1762 %20%20%20%20%20%20%20%20 -
+l 32
 
         -- tooltip modifier
         local T
@@ -3042,19 +3029,19 @@ l 51
                 text_outline_scale = thunk.text_outline_scale,
                 font = thunk.font,
                 scale = 0.32*thunk.scale_mod*desc_scale,
-r 11 1797 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1797 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 4
                 detailed_tooltip = T and (G.P_CENTERS[T.key] or G.P_TAGS[T.key] or T) or nil
             })
         end
         
-r 11 1763 %20%20%20%20%20%20%20%20 -
+r 13 1763 %20%20%20%20%20%20%20%20 -
 l 1
             local final_name_assembled_string = ''
-r 11 1711 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1711 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 local assembled_string_part = ''
-r 11 1713 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1713 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 21
                     assembled_string_part = assembled_string_part..(type(subpart) == 'string' and subpart or format_ui_value(format_ui_value(args.vars[tonumber(subpart[1])])) or 'ERROR')
                 end
@@ -3077,14 +3064,14 @@ l 21
                     scale = (0.55 - 0.004*#(final_name_assembled_string or assembled_string))*thunk.scale_mod*(args.fixed_scale or 1),
                 })
             }}
-r 11 1778 %20%20%20%20%20%20%20%20 -
-r 11 1779 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1778 %20%20%20%20%20%20%20%20 -
+r 13 1779 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
             local text_effects
-r 11 1780 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 11 1781 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 11 1782 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 11 1783 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1780 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1781 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1782 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1783 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 24
             elseif SMODS.DynaTextEffects[part.control.E] then
                 text_effects = part.control.E
@@ -3110,7 +3097,7 @@ l 24
             }}
         else
             final_line[#final_line+1] = {n=G.UIT.T, config=base_config{
-r 11 1805 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1805 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 21
                 colour = thunk.text_col or args.text_colour or loc_colour(nil, args.default_col),
             }}
@@ -3133,8 +3120,8 @@ end
 
 function SMODS.info_queue_desc_from_rows(desc_nodes, empty, maxw)
   local t = {}
-r 15 1029 %20%20 -
-r 15 1030 %20%20%20%20 -
+r 30 1029 %20%20 -
+r 30 1030 %20%20%20%20 -
 l 23
   end
   return {n=G.UIT.R, config={align = "cm", colour = desc_nodes.background_colour or empty and G.C.CLEAR or G.C.UI.BACKGROUND_WHITE, r = 0.1, emboss = not empty and 0.05 or nil, filler = true, main_box_flag = desc_nodes.main_box_flag and true or nil}, nodes={
@@ -3187,7 +3174,7 @@ function SMODS.destroy_cards(cards, args, ...)
             return
         end
     end
-r 16 978 %20%20%20%20 -
+r 15 978 %20%20%20%20 -
 l 19
     local playing_cards = {}
     local queued_for_destruction = {}
@@ -3208,7 +3195,7 @@ l 19
         end
     end
 
-r 16 983 %20%20%20%20 -
+r 15 983 %20%20%20%20 -
 l 13
 
     if next(playing_cards) then SMODS.calculate_context({scoring_hand = cards, remove_playing_cards = true, removed = playing_cards}) end
@@ -3282,8 +3269,8 @@ end
 
 function SMODS.draw_cards(hand_space)
     if not (G.STATE == G.STATES.TAROT_PACK or G.STATE == G.STATES.SPECTRAL_PACK or G.STATE == G.STATES.SMODS_BOOSTER_OPENED) and
-r 16 357 %20%20%20%20%20%20%20%20 -
-r 16 358 %20%20%20%20%20%20%20%20 -
+r 15 357 %20%20%20%20%20%20%20%20 -
+r 15 358 %20%20%20%20%20%20%20%20 -
 l 7
         return true
     end
@@ -3292,12 +3279,12 @@ l 7
     hand_space = math.min(#G.deck.cards, flags.cards_to_draw or flags.modify or hand_space)
     delay(0.3)
     SMODS.drawn_cards = {}
-r 16 370 %20%20%20%20 -
-r 16 371 %20%20%20%20%20%20%20%20 -
-r 16 372 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 370 %20%20%20%20 -
+r 15 371 %20%20%20%20%20%20%20%20 -
+r 15 372 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
         else
-r 16 372 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 15 372 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
         end
     end
@@ -3440,7 +3427,7 @@ function SMODS.set_scoring_calculation(key)
 end
 
 local game_start_run = Game.start_run
-r 9 2018 - -
+r 7 2018 - -
 l 3
     game_start_run(self, args)
     G.SCORE_DISPLAY_QUEUE = nil
@@ -3506,7 +3493,7 @@ end
 
 -- Adds tag_triggered context
 local tag_apply = Tag.apply_to_run
-r 4 115 - -
+r 9 115 - -
 l 141
     local res = tag_apply(self, _context)
     if self.triggered and not self.triggered_calc then
@@ -3649,13 +3636,13 @@ end
 
 
 local ref_challenge_desc = G.UIDEF.challenge_description_tab
-r 15 5680 - -
+r 30 5680 - -
 l 3
 	args = args or {}
 
 	if args._tab == 'Restrictions' then
-r 15 5683 %09%09 -
-r 15 5764 %09%09 -
+r 30 5683 %09%09 -
+r 30 5764 %09%09 -
 l 138
             if challenge.restrictions.banned_cards and type(challenge.restrictions.banned_cards) == 'function' then
                 challenge.restrictions.banned_cards = challenge.restrictions.banned_cards()
@@ -3685,12 +3672,12 @@ function SMODS.challenge_is_unlocked(challenge, k)
         -- vanilla condition, only for non-smods challenges
         challenge_unlocked = G.PROFILES[G.SETTINGS.profile].challenges_unlocked and (G.PROFILES[G.SETTINGS.profile].challenges_unlocked >= (k or 0))
     end
-    challenge_unlocked = challenge_unlocked or G.PROFILES[G.SETTINGS.profile].all_unlocked or G.PROFILES[G.SETTINGS.profile].debug_unlocked
+    challenge_unlocked = challenge_unlocked or G.PROFILES[G.SETTINGS.profile].all_unlocked
     return challenge_unlocked
 end
 
 function SMODS.stake_is_unlocked(stake_key, deck_key)
-    if G.PROFILES[G.SETTINGS.profile].all_unlocked or G.PROFILES[G.SETTINGS.profile].debug_unlocked then return true end
+    if G.PROFILES[G.SETTINGS.profile].all_unlocked then return true end
     local stake = SMODS.Stakes[stake_key]
     if not stake then return false end
     if stake.unlocked then return true end
@@ -3795,7 +3782,7 @@ function SMODS.localize_perma_bonuses(specific_vars, desc_nodes)
 end
 
 local ease_dollar_ref = ease_dollars
-r 12 68 - -
+r 31 68 - -
 l 51
     local initial_dollars = G.GAME.dollars
     ease_dollar_ref(mod, instant)
@@ -3848,18 +3835,18 @@ function UIElement:draw_pixellated_under(_type, _parallax, _emboss, _progress)
         self.pixellated_under = {
             w = self.VT.w,
             h = self.VT.h,
-r 24 866 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 867 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 868 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 869 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 870 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 871 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 872 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 873 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 866 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 867 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 868 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 869 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 870 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 871 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 872 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 873 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
             parallax = _parallax
         }
-r 24 876 %20%20%20%20%20%20%20%20 -
+r 29 876 %20%20%20%20%20%20%20%20 -
 l 9
         local totw, toth = self.VT.w*G.TILESIZE, (self.VT.h + math.abs(ext_up)/G.TILESIZE)*G.TILESIZE
         local scale = (self.config.underline_scale or 0.1)*toth
@@ -3870,7 +3857,7 @@ l 9
             0, toth+ext_up+scale,
             totw,toth+ext_up+scale,
         }
-r 24 912 %20%20%20%20%20%20%20%20 -
+r 29 912 %20%20%20%20%20%20%20%20 -
 l 37
             if k%2 == 1 and v > totw*self.pixellated_under.progress then v = totw*self.pixellated_under.progress end
             self.pixellated_under.fill.vertices[k] = v
@@ -3909,18 +3896,18 @@ function UIElement:draw_pixellated_over(_type, _parallax, _emboss, _progress)
         self.pixellated_over = {
             w = self.VT.w,
             h = self.VT.h,
-r 24 866 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 867 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 868 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 869 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 870 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 871 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 872 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 24 873 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 866 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 867 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 868 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 869 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 870 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 871 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 872 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 29 873 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 2
             parallax = _parallax
         }
-r 24 876 %20%20%20%20%20%20%20%20 -
+r 29 876 %20%20%20%20%20%20%20%20 -
 l 9
         local totw, toth = self.VT.w*G.TILESIZE, (self.VT.h + math.abs(ext_up)/G.TILESIZE)*G.TILESIZE
         local scale = (self.config.overline_scale or 0.1)*toth
@@ -3931,7 +3918,7 @@ l 9
             0, -scale,
             totw,-scale,
         }
-r 24 912 %20%20%20%20%20%20%20%20 -
+r 29 912 %20%20%20%20%20%20%20%20 -
 l 38
             if k%2 == 1 and v > totw*self.pixellated_over.progress then v = totw*self.pixellated_over.progress end
             self.pixellated_over.fill.vertices[k] = v
@@ -3971,9 +3958,9 @@ function UIElement:draw_pixellated_strikethough(_type, _parallax, _emboss, _prog
 		self.pixellated_strikethrough = {
 			w = self.VT.w,
 			h = self.VT.h,
-r 24 866 %09%09%09 -
-r 24 867 %09%09%09 -
-r 24 868 %09%09%09 -
+r 29 866 %09%09%09 -
+r 29 867 %09%09%09 -
+r 29 868 %09%09%09 -
 l 21
 			fill = { vertices = {} },
 			shadow = { vertices = {} },
@@ -3996,7 +3983,7 @@ l 21
 			totw,
 			toth / 2 + ext_up + half_scale,
 		}
-r 24 912 %09%09 -
+r 29 912 %09%09 -
 l 101
 			if k % 2 == 1 and v > totw * self.pixellated_strikethrough.progress then
 				v = totw * self.pixellated_strikethrough.progress
@@ -4099,7 +4086,7 @@ function CardArea:handle_card_limit()
             self.config.card_limits.extra_slots_used = self:count_property('extra_slots_used')
         end
         self.config.card_count = #self.cards + self.config.card_limits.extra_slots_used
-r 6 107 %20%20%20%20%20%20%20%20 -
+r 5 107 %20%20%20%20%20%20%20%20 -
 l 4
 
         if G.hand and self == G.hand and (self.config.card_count or 0) + (SMODS.cards_to_draw or 0) < (self.config.card_limits.total_slots or 0) then
@@ -4115,7 +4102,7 @@ r 2 398 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20
 l 2
                             func = function()
                                 if (self.config.card_limits.total_slots - self.config.card_count - (SMODS.cards_to_draw or 0)) > 0 and #G.deck.cards > (SMODS.cards_to_draw or 0) and #G.deck.cards > 0 then
-r 9 3374 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3374 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 8
                                 end
                                 return true
@@ -4125,7 +4112,7 @@ l 8
                     end
                 }))
             elseif G.STATE == G.STATES.SELECTING_HAND and #G.deck.cards > 0 and self.config.card_limits.old_slots < self.config.card_limits.total_slots then
-r 9 3374 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 7 3374 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 7
             end
             if self == G.hand and G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.DRAW_TO_HAND then
@@ -4134,7 +4121,7 @@ l 7
             return
         end
     else
-r 6 267 %20%20%20%20%20%20%20%20 -
+r 5 267 %20%20%20%20%20%20%20%20 -
 l 108
         self.config.card_limits.total_slots = (self.config.card_limits.base or 0) + (self.config.card_limits.mod or 0)
         self.config.card_limits.display_slots = math.max(0, self.config.card_limits.total_slots)
@@ -4261,7 +4248,7 @@ l 3
                     play_sound('tarot1')
                     if args.from then args.from:juice_up(0.8, 0.5) end
                     return true end }))
-r 12 486 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 486 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
             end
         end
@@ -4463,7 +4450,7 @@ function SMODS.set_ui_element_shader(element, input_args)
 			G.SHADERS[shader]:send(v.name, val)
 		end
 	elseif shader == "vortex" then
-r 30 89 %09%09 -
+r 26 89 %09%09 -
 l 87
 	else
 		local key = SMODS.Shaders[shader].original_key
@@ -4552,7 +4539,7 @@ function UIElement:set_text_shader(shader, send, shadow)
 end
 
 function UIElement:draw_text_outline(button_active)
-r 24 716 %09 -
+r 29 716 %09 -
 l 8
 		return
 	end
@@ -4562,7 +4549,7 @@ l 8
 		for y = -1, 1 do
 			if x ~= 0 or y ~= 0 then
 				love.graphics.draw(
-r 24 703 %09%09%09%09%09 -
+r 29 703 %09%09%09%09%09 -
 l 18
 					((self.config.font or self.config.lang.font).TEXT_OFFSET.x + x * outline_size)
 						* self.config.scale
@@ -4582,7 +4569,7 @@ l 18
 			end
 		end
 	end
-r 24 719 %09 -
+r 29 719 %09 -
 l 112
 end
 
@@ -4719,7 +4706,7 @@ end
 -- get_index() but with an early return
 function SMODS.get_index(t, value)
 	if not type(t) == "table" then return end
-r 11 131 %09 -
+r 13 131 %09 -
 l 59
 		if v == value then return k end
 	end
@@ -4780,7 +4767,7 @@ function SMODS.card_to_image(card, scale, filename)
     card.T.scale = scale / G.TILE_H * G.window_prev.orig_scale * G.window_prev.orig_scale/G.TILESCALE * 1.5 * ratiox -- Don't ask me why I had to multiply by 1.5 here, and by the per-dimension factors below, I do not know,,, (this may have been brute-tinkered)
     local w, h = old_t.w * 0.997, old_t.h * 0.99348                                                         -- (well these factors are needed to remove extra pixels in height/width for scales == 2.0 -> 16.0 (at least))
     card:hard_set_T(w/2*(card.T.scale-1), h/2*(card.T.scale-1), w, h)
-r 9 1459 %09 -
+r 7 1459 %09 -
 l 15
     G.SETTINGS.reduced_motion = true
     SMODS.texture_filter_override = "nearest"

@@ -175,7 +175,7 @@ end
 
 function SMODS.create_blind_pool(blind_type, skip_cull)
     assert(type(blind_type) == 'string', "SMODS.create_blind_pool called with a non-string type argument."..SMODS.log_crash_info(debug.getinfo(2)))
-r 12 2349 %20%20%20%20 -
+r 31 2349 %20%20%20%20 -
 l 7
 
     local boss_already_chosen = function(key)
@@ -205,8 +205,8 @@ l 19
             end
         end
     end
-r 12 2359 %20%20%20%20 -
-r 12 2360 %20%20%20%20%20%20%20%20 -
+r 31 2359 %20%20%20%20 -
+r 31 2360 %20%20%20%20%20%20%20%20 -
 l 12
     end
 
@@ -220,19 +220,19 @@ l 12
 
     local min_use = 100
     for k, v in pairs(G.GAME.bosses_used[blind_type] or G.GAME.bosses_used) do
-r 12 2365 %20%20%20%20%20%20%20%20 -
-r 12 2366 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 12 2367 %20%20%20%20%20%20%20%20%20%20%20%20 %20
-r 12 2368 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2365 %20%20%20%20%20%20%20%20 -
+r 31 2366 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2367 %20%20%20%20%20%20%20%20%20%20%20%20 %20
+r 31 2368 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 3
             end
         end
     end
-r 12 2372 %20%20%20%20 -
-r 12 2365 %20%20%20%20%20%20%20%20 -
+r 31 2372 %20%20%20%20 -
+r 31 2365 %20%20%20%20%20%20%20%20 -
 l 1
             if eligible_bosses[k] > min_use and not G.P_BLINDS[k][blind_type].allow_duplicates then 
-r 12 2375 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2375 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 190
             end
         end
@@ -424,28 +424,28 @@ end
 -- New create_card_for_shop structure
 function SMODS.create_shop_card(area)
     -- Tutorial Override
-r 15 743 %20%20%20%20 -
-r 15 744 %20%20%20%20%20%20%20%20 -
-r 15 745 %20%20%20%20%20%20%20%20 -
-r 15 746 %20%20%20%20%20%20%20%20 -
+r 30 743 %20%20%20%20 -
+r 30 744 %20%20%20%20%20%20%20%20 -
+r 30 745 %20%20%20%20%20%20%20%20 -
+r 30 746 %20%20%20%20%20%20%20%20 -
 l 1
         t[#t] = nil
-r 15 748 %20%20%20%20%20%20%20%20 -
+r 30 748 %20%20%20%20%20%20%20%20 -
 l 1
         
-r 15 750 %20%20%20%20%20%20%20%20 -
+r 30 750 %20%20%20%20%20%20%20%20 -
 l 3
         return card
     end
     -- Tags that affect shop override
-r 15 753 %20%20%20%20 -
-r 15 754 %20%20%20%20 -
-r 15 755 %20%20%20%20%20%20%20%20 -
-r 15 756 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 753 %20%20%20%20 -
+r 30 754 %20%20%20%20 -
+r 30 755 %20%20%20%20%20%20%20%20 -
+r 30 756 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
             if forced_tag then
-r 15 758 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 759 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 758 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 759 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 20
                 end
             return forced_tag
@@ -467,15 +467,15 @@ l 20
 
     SMODS.calculate_context({modify_shop_card = true, card = card})
 
-r 15 750 %20%20%20%20 -
+r 30 750 %20%20%20%20 -
 l 2
 
     -- Tag modifier check
 r 1 112 %20%20%20%20 -
 l 1
         func = (function()
-r 15 754 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 15 781 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 754 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 781 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 92
             end
             return true
@@ -569,14 +569,14 @@ function SMODS.cull_pool(pool, args)
                     end
                 end
             end
-r 12 2027 %20%20%20%20%20%20%20%20%20%20%20%20 -
-r 12 2028 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2027 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 31 2028 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 4
             if args.no_replace and v.set == 'Enhanced' and v.replace_base_card then add = nil end
             
             add = in_pool and (add or ((not _rarity or _rarity == v.rarity) and pool_opts.override_base_checks))
             
-r 12 2030 %20%20%20%20%20%20%20%20%20%20%20%20 %20
+r 31 2030 %20%20%20%20%20%20%20%20%20%20%20%20 %20
 l 16
                 final_pool[#final_pool + 1] = v.key
             else
@@ -594,7 +594,7 @@ l 16
             if v then
                 if args.types and not args.types[v.set] then add = nil end
                 
-r 12 2030 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 %20
+r 31 2030 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 %20
 l 13
                     final_pool[#final_pool + 1] = v.key
                 else
@@ -609,7 +609,7 @@ l 13
 end
 
 local smods_get_voucher_key = get_next_voucher_key
-r 12 1901 - -
+r 31 1901 - -
 l 3
     if SMODS.optional_features.object_weights then return SMODS.poll_object({type = 'Voucher'}) end
     return smods_get_voucher_key(_from_tag)

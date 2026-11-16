@@ -1,0 +1,50 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.particles.001"
+target = "engine/particles.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*if G\.SETTINGS\.paused and not self\.created_on_pause then self\.last_real_time = G\.TIMERS\[self\.timer_type\] ; return end\n)'''
+position = "at"
+payload = '''
+${pre}    local _mult = PERF_OPTS and PERF_OPTS.particle_mult() or 1
+    if _mult == 0 then return end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.particles.002"
+target = "engine/particles.lua"
+pattern = '''^(?<pre>)[\t ]*while G\.TIMERS\[self\.timer_type\]  > self\.last_real_time \+ self\.timer and \(#self\.particles < self\.max or self\.pulsed < self\.pulse_max\) and added_this_frame < 20 do\n[\t ]*self\.last_real_time = self\.last_real_time \+ self\.timer\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}    local _timer = self.timer*_mult
+    while G.TIMERS[self.timer_type]  > self.last_real_time + _timer and (#self.particles < self.max/_mult or self.pulsed < self.pulse_max/_mult) and added_this_frame < 20 do
+        self.last_real_time = self.last_real_time + _timer
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.particles.003"
+target = "engine/particles.lua"
+pattern = '''^(?<pre>)[\t ]*colour = pseudorandom_element\(self\.colours\),\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}            colour = pseudorandom_element(self.colours) or {1, 1, 1, 1},
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "auto.particles.004"
+target = "engine/particles.lua"
+pattern = '''^(?<pre>)(?<post>[\t ]*alpha = alpha or 1\n)'''
+position = "at"
+payload = '''
+${pre}    if G.SETTINGS.GRAPHICS and not G.SETTINGS.GRAPHICS.perf_particles then return end
+${post}'''
+times = 1

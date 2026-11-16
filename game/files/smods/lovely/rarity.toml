@@ -42,13 +42,12 @@ match_indent = true
 [[patches]]
 [patches.regex]
 target = "functions/common_events.lua"
-pattern = '''(?<indent>[\t ]*)local rarity = _rarity or pseudorandom\('rarity'\.\.G\.GAME\.round_resets\.ante\.\.\(_append or ''\)\) ?\n[\t ]*rarity = \(_legendary and 4\) or \(not _rarity and RunRules and RunRules\.rarity_of and RunRules\.rarity_of\(rarity\)\) or \(rarity > 0\.95 and 3\) or \(rarity > 0\.7 and 2\) or 1'''
+pattern = '''(?<indent>[\t ]*)local rarity = _rarity or pseudorandom\('rarity'\.\.G\.GAME\.round_resets\.ante\.\.\(_append or ''\)\) \n[\s\S]{12}rarity = \(_legendary and 4\) or \(rarity > 0\.95 and 3\) or \(rarity > 0\.7 and 2\) or 1'''
 position = "at"
 payload = '''
 _rarity = (_legendary and 4) or (type(_rarity) == "number" and ((_rarity > 0.95 and 3) or (_rarity > 0.7 and 2) or 1)) or _rarity
 _rarity = ({Common = 1, Uncommon = 2, Rare = 3, Legendary = 4})[_rarity] or _rarity
-local rr_rarity = not _rarity and RunRules and RunRules.rarity_of and RunRules.active and (RunRules.active('rarity_common') ~= nil or RunRules.active('rarity_uncommon') ~= nil or RunRules.active('rarity_rare') ~= nil) and RunRules.rarity_of(pseudorandom('rarity'..G.GAME.round_resets.ante..(_append or '')))
-local rarity = _rarity or rr_rarity or SMODS.poll_rarity("Joker", 'rarity'..G.GAME.round_resets.ante..(_append or ''))
+local rarity = _rarity or SMODS.poll_rarity("Joker", 'rarity'..G.GAME.round_resets.ante..(_append or ''))
 '''
 
 ## Ensure that other cards set to string rarity work the same as set for int rarity

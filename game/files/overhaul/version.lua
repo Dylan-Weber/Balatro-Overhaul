@@ -1,0 +1,6 @@
+OVERHAUL_VERSION = '71'
+OVERHAUL_NAME = '2.1'
+VERSION = 'V ' .. OVERHAUL_NAME .. ' - Overhaul'
+MP_PROTOCOL_VERSION = 10
+
+return {label = VERSION}

@@ -28,7 +28,7 @@ DeckCreatorCardUtils.allCardsEverMade = {}
 
 local function shuffleDeck(deck)
     for i = #deck, 2, -1 do
-r 11 214 %20%20%20%20%20%20%20%20 -
+r 13 214 %20%20%20%20%20%20%20%20 -
 l 130
         deck[i], deck[j] = deck[j], deck[i]
     end
@@ -160,7 +160,7 @@ function DeckCreatorCardUtils.initializeCustomCardList(deckObj)
                         pcall(function()
                             local _card = Card(G.deck.T.x, G.deck.T.y, G.CARD_W, G.CARD_H, G.P_CARDS[s..'_'..r], G.P_CENTERS.c_base)
                             _card:add_to_deck()
-r 11 1630 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 13 1630 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 10
                         end)
                     end

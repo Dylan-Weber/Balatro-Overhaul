@@ -1,0 +1,13 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.smods_index.001"
+target = '=[SMODS _ "src/index.lua"]'
+pattern = '''^(?<pre>)[\t ]*local use_git = os\.execute\('git -v'\) == 0\n[\t ]*if false and use_git and os\.execute\(\('cd %s & git pull'\):format\(mod\.path\)\) == 0 then\n[\t ]*return true\n[\t ]*end\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+times = 1

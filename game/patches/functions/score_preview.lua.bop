@@ -128,8 +128,8 @@ local function build_shared()
         local t = G[name]
         if type(t) == 'table' then
             SHARED[t] = true
-r 11 154 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 149
+r 13 154 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 156
                 if type(v) == 'table' then SHARED[v] = true end
             end
         end
@@ -184,7 +184,7 @@ end
 local function fx_add(real, r, depth)
     local f = SB.fx[real]
     if not f then
-        f = {chips = 0, mult = 0, xmult = 1, dollars = 0, reps = 0, hits = 0}
+        f = {chips = 0, mult = 0, xmult = 1, xchips = 1, dollars = 0, reps = 0, hits = 0}
         SB.fx[real] = f
     end
     local hit = false
@@ -194,6 +194,8 @@ local function fx_add(real, r, depth)
     if m and m ~= 0 then f.mult = f.mult + m; hit = true end
     local x = num(r.x_mult) or num(r.Xmult_mod) or num(r.xmult) or num(r.Xmult) or num(r.x_mult_mod)
     if x and x ~= 1 then f.xmult = f.xmult * x; hit = true end
+    local xc = num(r.x_chips) or num(r.Xchip_mod) or num(r.xchips) or num(r.Xchips)
+    if xc and xc ~= 1 then f.xchips = (f.xchips or 1) * xc; hit = true end
     local d = num(r.dollars) or num(r.p_dollars)
     if d and d ~= 0 then f.dollars = f.dollars + d; hit = true end
     local rp = num(r.repetitions)
@@ -252,15 +254,20 @@ local function fill_tally(p)
     p.ability[t[1]] = n
 end
 
+local function pack_all(...)
+    return {n = select('#', ...), ...}
+end
+
 local function wrap_fx(p, real)
     local base = p.calculate_joker
     if type(base) ~= 'function' then return end
     p.calculate_joker = function(self, ctx, ...)
-        local r, r2 = base(self, ctx, ...)
+        local res = pack_all(base(self, ctx, ...))
+        local r = res[1]
         if SB.fx and type(r) == 'table' and type(ctx) == 'table' and not ctx.blueprint then
             pcall(fx_add, real, r, 0)
         end
-        return r, r2
+        return unpack(res, 1, res.n)
     end
 end
 
@@ -279,18 +286,18 @@ local function proxy_area(a)
     p.highlighted = {}
     for _, k in ipairs(AREA_NOOPS) do p[k] = NOOP end
     p.emplace = function(self, card)
-r 6 646 %20%20%20%20%20%20%20%20 -
+r 5 646 %20%20%20%20%20%20%20%20 -
 l 3
         if type(card) == 'table' then card.area = self end
     end
     p.remove_card = function(self, card)
-r 6 322 %20%20%20%20%20%20%20%20 -
+r 5 322 %20%20%20%20%20%20%20%20 -
 l 4
             if self.cards[i] == card then table.remove(self.cards, i); return card end
         end
     end
     p.add_to_highlighted = function(self, card)
-r 6 648 %20%20%20%20%20%20%20%20 -
+r 5 648 %20%20%20%20%20%20%20%20 -
 l 10
         if type(card) == 'table' then card.highlighted = true end
     end
@@ -302,7 +309,7 @@ l 10
     end
     p.unhighlight_all = function(self)
         for _, c in ipairs(self.highlighted) do if type(c) == 'table' then c.highlighted = false end end
-r 6 17 %20%20%20%20%20%20%20%20 -
+r 5 17 %20%20%20%20%20%20%20%20 -
 l 517
     end
     p.change_size = function(self, d)
@@ -821,8 +828,8 @@ local function order_sig()
 end
 
 local _orig_hand_text_UI_set = G.FUNCS.hand_text_UI_set
-r 13 2036 - -
-l 41
+r 32 2036 - -
+l 66
     if G.STATE == G.STATES.SELECTING_HAND and not P._in_sandbox then
         local s = order_sig()
         if s ~= _order_sig then
@@ -830,34 +837,86 @@ l 41
             if s ~= 0 and P.queue then pcall(P.queue) end
         end
     end
-    if P.display_enabled() and G.GAME and G.GAME.current_round and G.GAME.blind then
-        if P.is_active then
-            G.GAME.current_round.current_hand.handname_text = P.text.value
-            G.GAME.current_round.current_hand.hand_level = ""
-            if e and e.config and e.config.object then
-                local need = (G.GAME.blind.chips or 0)
-                local have = G.GAME.chips or 0
-                local col = G.C.GOLD
-                local ok1, lo_win = pcall(function() return have + (P.data or 0) >= need end)
-                local ok2, hi_win = pcall(function() return have + (P.data_max or 0) >= need end)
-                local okz, zero = pcall(function() return (P.data_max or 0) <= 0 end)
-                if okz and zero then col = G.C.RED
-                elseif ok1 and lo_win then col = G.C.GREEN
-                elseif ok2 and hi_win then col = G.C.FILTER or G.C.ORANGE or G.C.GOLD end
-                e.config.object.colours = { col }
-            end
-        else
-            _orig_hand_text_UI_set(e)
-            if e and e.config and e.config.object then
-                e.config.object.colours = { G.C.UI.TEXT_LIGHT }
-            end
-        end
-    else
-        _orig_hand_text_UI_set(e)
-        if e and e.config and e.config.object then
-            e.config.object.colours = { G.C.UI.TEXT_LIGHT }
-        end
+    if P._fit_shrunk and not (P.display_enabled() and P.is_active) then
+        P._fit_shrunk = nil
+        if G.GAME and G.GAME.current_round then G.GAME.current_round.current_hand.handname_text = '' end
     end
+    _orig_hand_text_UI_set(e)
+    if e and e.config and e.config.object then
+        e.config.object.colours = { G.C.UI.TEXT_LIGHT }
+    end
+    if P.display_enabled() and P.is_active and G.GAME and G.GAME.current_round then
+        G.GAME.current_round.current_hand.hand_level = ""
+    end
+end
+
+local function preview_colour()
+    local need = G.GAME.blind and G.GAME.blind.chips or 0
+    local have = G.GAME.chips or 0
+    local ok1, lo_win = pcall(function() return have + (P.data or 0) >= need end)
+    local ok2, hi_win = pcall(function() return have + (P.data_max or 0) >= need end)
+    local okz, zero = pcall(function() return (P.data_max or 0) <= 0 end)
+    if okz and zero then return G.C.RED end
+    if ok1 and lo_win then return G.C.GREEN end
+    if ok2 and hi_win then return G.C.FILTER or G.C.ORANGE or G.C.GOLD end
+    return G.C.GOLD
+end
+
+local function fit_preview_row(total_e)
+    local box = total_e.UIBox
+    local name_e = box and box:get_UIE_by_ID('hand_name')
+    local chip_a = box and (box:get_UIE_by_ID('hand_chip_area') or box:get_UIE_by_ID('hand_chips_area'))
+    local mult_a = box and box:get_UIE_by_ID('hand_mult_area')
+    if not (name_e and name_e.config.object and chip_a and mult_a) then return end
+    if P._fit_shrunk then
+        P._fit_shrunk = nil
+        G.GAME.current_round.current_hand.handname_text = ''
+        _orig_hand_text_UI_set(name_e)
+    end
+    local n, t = name_e.config.object, total_e.config.object
+    t.scale = n.scale
+    t.strings = {}
+    t:update_text()
+    local budget = chip_a.T.w + mult_a.T.w + 0.6
+    local w = (n.config.W or 0) + (t.config.W or 0)
+    if w > budget and w > 0 then
+        local f = budget / w
+        n.scale = n.scale * f
+        t.scale = t.scale * f
+        n.strings, t.strings = {}, {}
+        n:update_text()
+        t:update_text()
+        P._fit_shrunk = true
+    end
+    n:align_letters()
+    t:align_letters()
+    name_e:update_object()
+    total_e:update_object()
+    box:recalculate()
+end
+
+local _orig_hand_chip_total_UI_set = G.FUNCS.hand_chip_total_UI_set
+r 32 1937 - -
+l 25
+    local ch = G.GAME and G.GAME.current_round and G.GAME.current_round.current_hand
+    local okt, scored = pcall(function() return ch.chip_total >= 1 end)
+    local idle = ch and not (okt and scored)
+    if ch and P.display_enabled() and P.is_active and G.GAME.blind and idle and e and e.config and e.config.object then
+        local obj = e.config.object
+        obj.colours = { preview_colour() }
+        local shown = P.text.value ~= '' and ' ' .. P.text.value or ''
+        if ch.chip_total_text ~= shown or ch.handname_text ~= P._fit_name then
+            ch.chip_total_text = shown
+            P._fit_name = ch.handname_text
+            fit_preview_row(e)
+        end
+        return
+    end
+    if e and e.config and e.config.object and P._fit_name then
+        P._fit_name = nil
+        e.config.object.colours = { G.C.UI.TEXT_LIGHT }
+    end
+    return _orig_hand_chip_total_UI_set(e)
 end
 
 local function _queue_preview()
@@ -879,7 +938,7 @@ end
 PREVIEW.queue = _queue_preview
 
 local _orig_parse_highlighted = CardArea.parse_highlighted
-r 6 162 - -
+r 5 162 - -
 l 66
     if self.config.type ~= "hand" then return _orig_parse_highlighted(self) end
     local ok, err = P.with_hand_info(_orig_parse_highlighted, self)
@@ -968,7 +1027,7 @@ function G.FUNCS.discard_cards_from_highlighted(e, is_hook_blind, ...)
 end
 
 local _orig_emplace = CardArea.emplace
-r 6 32 - -
+r 5 32 - -
 l 7
     _orig_emplace(self, card, location, stay_flipped)
     if self == G.jokers and G.hand and #G.hand.highlighted > 0 and not P._in_sandbox then
@@ -977,7 +1036,7 @@ l 7
 end
 
 local _orig_remove_card = CardArea.remove_card
-r 6 66 - -
+r 5 66 - -
 l 17
     local result = _orig_remove_card(self, card, discarded_only)
     if self == G.jokers and G.hand and #G.hand.highlighted > 0 and not P._in_sandbox then

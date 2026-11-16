@@ -15,7 +15,7 @@ priority = -10
 [patches.pattern]
 target = 'event.lua'
 pattern = '''
-r 25 119 - -
+r 18 119 - -
 l 13
 '''
 position = 'after'
@@ -30,7 +30,7 @@ match_indent = true
 [patches.pattern]
 target = 'engine/event.lua'
 pattern = '''
-r 25 182 - -
+r 18 182 - -
 l 14
 '''
 position = 'before'
@@ -46,7 +46,7 @@ match_indent = true
 [patches.pattern]
 target = 'engine/event.lua'
 pattern = '''
-r 25 182 - -
+r 18 182 - -
 l 22
 '''
 position = 'after'

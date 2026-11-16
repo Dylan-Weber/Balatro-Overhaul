@@ -1,0 +1,13 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "auto.sprite.modded.001"
+target = "engine/sprite.lua"
+pattern = '''^(?<pre>)[\t ]*G\.SHADERS\['vortex'\]:send\('DPI', love\.graphics\.getDPIScale\(\)\)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre}${post}'''
+optional = true

@@ -6,7 +6,7 @@ priority = -5
 [[patches]]
 [patches.pattern]
 target = "game.lua"
-pattern = "G.STAGE_OBJECT_INTERRUPT = false"
+pattern = "self.SPEEDFACTOR = 1"
 position = "after"
 payload = 'require "SMODS.preflight.loader".initSteamodded()'
 match_indent = true

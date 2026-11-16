@@ -1,0 +1,30 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 5
+return {
+    descriptions={
+        Enhanced={
+            m_wild={
+                text={
+r 42 429 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 10
+                    "使用できる",
+                    "ボスの弱体化を{C:attention}受けない",
+                },
+            },
+        },
+        Stake={
+            stake_blue={
+                text={
+                    "Shop items cost {C:money}+$1{}",
+                    "Rerolls go up by {C:money}$2{} each",
+r 42 2555 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 5
+                },
+            },
+        },
+    },
+}
+end

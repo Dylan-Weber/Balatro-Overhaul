@@ -284,8 +284,8 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 15 258 - -
-r 15 259 %20%20%20%20 -
+r 30 258 - -
+r 30 259 %20%20%20%20 -
 l 20
 '''
 payload = '''
@@ -307,7 +307,7 @@ if card.ability.consumeable and card.area == G.pack_cards and G.pack_cards and b
             return {n=G.UIT.ROOT, config = {padding = 0, colour = G.C.CLEAR}, nodes={
                     {n=G.UIT.R, config = {padding = 0, align = "bm"}, nodes={
                         {n=G.UIT.R, config={ref_table = card, r = 0.08, padding = 0.1, align = "bm", minw = 0.5*card.T.w - 0.15, minh = 0.45*card.T.h, maxw = 0.7*card.T.w - 0.15, hover = true, shadow = true, colour = G.C.UI.BACKGROUND_INACTIVE, one_press = true, button = 'use_card', func = 'can_use_consumeable', SMODS_use_card = true}, nodes={
-r 15 265 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 265 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 20
                         }},
                     }},
@@ -329,7 +329,7 @@ target = 'functions/UI_definitions.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 359 - -
+r 30 359 - -
 l 6
 '''
 payload = '''
@@ -337,8 +337,8 @@ if (card.area == G.pack_cards and G.pack_cards) and card.ability.consumeable and
     local select_area, can_also_use = card:selectable_from_pack(booster_obj)
     local select_button_text = SMODS.get_select_text(card, booster_obj) or localize('b_select')
     if can_also_use then
-r 15 361 %20%20%20%20%20%20%20%20 -
-r 15 362 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 361 %20%20%20%20%20%20%20%20 -
+r 30 362 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 11
             func = 'can_use_consumeable', button = 'use_card', card_width = card_width,
             SMODS_use_card = true
@@ -351,8 +351,8 @@ l 11
             focus_button_x_offset = 0.1, align_left = true, 
         }
     else
-r 15 361 %20%20%20%20%20%20%20%20 -
-r 15 368 %20%20%20%20%20%20%20%20%20%20%20%20 -
+r 30 361 %20%20%20%20%20%20%20%20 -
+r 30 368 %20%20%20%20%20%20%20%20%20%20%20%20 -
 l 13
             func = 'can_select_from_booster', button = 'use_card', card_width = card_width,
         }
@@ -396,7 +396,7 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'after'
 pattern = '''
-r 13 2205 - -
+r 32 2205 - -
 l 12
 '''
 payload = '''
@@ -410,7 +410,7 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 15 258 - -
+r 30 258 - -
 l 10
       if nc then
 '''
@@ -422,8 +422,8 @@ if select_to then
         card.config.center:on_select(card)
     end
     SMODS.calculate_context{booster_select_card = true, card = card, booster = booster_obj, cardarea = G[select_to]}
-r 13 2225 %20%20%20%20 -
-r 13 2226 %20%20%20%20 -
+r 32 2225 %20%20%20%20 -
+r 32 2226 %20%20%20%20 -
 l 26
     dont_dissolve = true
     delay_fac = 0.2
@@ -467,12 +467,12 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 15 1266 - -
-r 13 2618 %20%20%20%20 -
+r 30 1266 - -
+r 32 2618 %20%20%20%20 -
 l 2
 end
 
-r 13 2590 - -
+r 32 2590 - -
 l 15
           func = function()
             save_run()
@@ -489,7 +489,7 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'before'
 pattern = '''
-r 13 2562 - -
+r 32 2562 - -
 l 36
 '''
 payload = '''
@@ -527,7 +527,7 @@ target = 'functions/button_callbacks.lua'
 match_indent = true
 position = 'at'
 pattern = '''
-r 13 2270 - -
+r 32 2270 - -
 l 4
 '''
 payload = '''

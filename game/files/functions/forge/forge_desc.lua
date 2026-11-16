@@ -139,4 +139,87 @@ function DE.paint(words, k, brush)
   if w.c == brush then w.c = nil else w.c = brush end
 end
 
+function DE.utf8(s)
+  local out = {}
+  for ch in tostring(s or ""):gmatch("[%z\1-\127\194-\244][\128-\191]*") do out[#out + 1] = ch end
+  return out
+end
+
+function DE.to_chars(lines)
+  local out = {}
+  for li, line in ipairs(lines or {}) do
+    if li > 1 then out[#out + 1] = {ch = "\n"} end
+    local cur
+    local s = tostring(line or "")
+    local i, n = 1, #s
+    while i <= n do
+      local j = s:sub(i, i) == "{" and s:find("}", i + 1, true)
+      if j then
+        local inner = s:sub(i + 1, j - 1)
+        cur = inner ~= "" and inner:match("C:([%w_]+)") or nil
+        i = j + 1
+      else
+        local ch = s:match("^[%z\1-\127\194-\244][\128-\191]*", i)
+        if not ch or ch == "" then ch = s:sub(i, i) end
+        if ch ~= "{" and ch ~= "}" then out[#out + 1] = {ch = ch, c = cur} end
+        i = i + #ch
+      end
+    end
+  end
+  return out
+end
+
+function DE.from_chars(chars)
+  local lines, buf, cur = {}, {}, nil
+  local function close()
+    if cur then buf[#buf + 1] = "{}" end
+    cur = nil
+    lines[#lines + 1] = table.concat(buf)
+    buf = {}
+  end
+  for _, x in ipairs(chars or {}) do
+    if x.ch == "\n" then
+      close()
+    else
+      local c = x.c
+      if x.ch == " " and cur and c ~= cur then c = cur end
+      if c ~= cur then
+        if cur then buf[#buf + 1] = "{}" end
+        if c then buf[#buf + 1] = "{C:" .. c .. "}" end
+        cur = c
+      end
+      buf[#buf + 1] = x.ch
+    end
+  end
+  close()
+  return lines
+end
+
+function DE.word_at(chars, i)
+  local function sp(x) return not x or x.ch == " " or x.ch == "\n" end
+  if sp(chars[i]) then return nil end
+  local a, b = i, i
+  while not sp(chars[a - 1]) do a = a - 1 end
+  while not sp(chars[b + 1]) do b = b + 1 end
+  return a, b
+end
+
+function DE.hex(c)
+  return type(c) == "string" and c:match("^x(%x%x%x%x%x%x)$") or nil
+end
+
+function DE.custom(r, g, b)
+  local function h(v) return string.format("%02x", math.max(0, math.min(255, math.floor((tonumber(v) or 0) + 0.5)))) end
+  return "x" .. h(r) .. h(g) .. h(b)
+end
+
+local ok_h, Hooks = pcall(require, "overhaul.hooks")
+if ok_h and Hooks and Hooks.wrap then
+  Hooks.wrap(_G, "loc_colour", function(orig) return function(c, default, ...)
+    local hx = DE.hex(c)
+    if hx then return HEX(hx) end
+    return orig(c, default, ...)
+  end end, {id = "forge.desc.loc_colour"})
+end
+
 return DE

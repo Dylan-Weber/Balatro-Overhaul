@@ -2,16 +2,15 @@ BOP 1
 eol lf
 final 1
 base 0
-l 8
+l 7
 local isThread = arg == nil
 
-if isThread then pcall(require, "love.filesystem") end
 local succ, https = pcall(require, "https")
 
 local userAgent
 local threadOptions
 if isThread then
-r 26 1 %09 -
+r 19 1 %09 -
 l 283
 	local channel = love.thread.getChannel("SMODS.https")
 	local ua, url, options, id = ...

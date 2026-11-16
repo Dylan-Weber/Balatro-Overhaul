@@ -99,7 +99,9 @@ def make_game(dst, version):
     text = cfg.read_text(encoding="latin-1")
     text = text.replace('"wss://balatro-overhaul-muliplayer.onrender.com/ws"', '"ws://127.0.0.1:%d/ws"' % PORT)
     replace_file(cfg, text.encode("latin-1"))
-    g = dst / "globals.lua"
+    g = dst / "overhaul" / "version.lua"
+    if not g.is_file():
+        g = dst / "globals.lua"
     text = g.read_text(encoding="latin-1")
     text, n = re.subn(r"^OVERHAUL_VERSION = '[^']*'", "OVERHAUL_VERSION = '%s'" % version, text, count=1, flags=re.M)
     if n != 1:
@@ -411,8 +413,7 @@ def main():
     subprocess.run(["ip", "link", "set", "lo", "up"], check=True)
     if not OFFICIAL.is_file():
         sys.exit("missing %s (set OFFICIAL_APK to a stand-in official Balatro APK)" % OFFICIAL)
-    if not (NIGHT / "standin" / "main.lua").is_file():
-        subprocess.run([sys.executable, str(HERE / "make_apk.py"), "standin"], check=True)
+    subprocess.run([sys.executable, str(HERE / "make_apk.py"), "standin"], check=True)
     WORK.mkdir(parents=True, exist_ok=True)
     SHOTS.mkdir(parents=True, exist_ok=True)
     vver = vanilla_version(OFFICIAL)
@@ -664,7 +665,7 @@ def main():
         check(built is not None, "Make the app gives an app from a Mobile Maker game")
         built_marker = (WORK / "app_maker" / "overhaul_built").read_text().split("\n") if built else []
         check(built_marker[:3] == [id1, "2.5", pc_vver], "the marker names the launcher's build, version 2.5 and the PC Balatro inside")
-        conf = (WORK / "app_maker" / "game_conf.lua").read_text(encoding="latin-1") if built else ""
+        conf = (WORK / "app_maker" / "balatro" / "conf.lua").read_text(encoding="latin-1") if built else ""
         check("usedpiscale = false" in conf, "the option the player picked in Mobile Maker is kept")
         out = run("u10_first", WORK / "app_maker", xdg_m, 90, stop="checked", official=False, launcher=None, shots=(3,))
         check("boot 2.5 feed=android_patch_pc" in out and out.count("boot") == 1, "first start goes straight into game 2.5 with the PC feed")
@@ -674,7 +675,7 @@ def main():
         out = run("u10_update", WORK / "app_maker", xdg_m, 150, stop="boot 9.9", official=False, launcher=None)
         check("state ready" in out and "boot 9.9" in out, "the game downloads the update in game and starts 9.9")
         check(marker(xdg_m)[:2] == [pc2, "9.9"] and marker(xdg_m)[4:5] == [id1], "the update is installed on top of the built game")
-        conf = save_m / "overhaul_game" / "conf.lua"
+        conf = save_m / "overhaul_game" / "balatro" / "conf.lua"
         check(conf.is_file() and "usedpiscale = false" in conf.read_text(encoding="latin-1"), "the Mobile Maker option survives the update")
         Feed.build = None
 

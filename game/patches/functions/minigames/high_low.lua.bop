@@ -67,7 +67,7 @@ function Game:key(k)
     if k == "up" or k == "w" then self:guess(true) elseif k == "down" or k == "s" then self:guess(false) end
 end
 
-r 9 2449 - -
+r 7 2449 - -
 l 105
     self.t = self.t + dt
     if self.state == "reveal" and self.t >= REVEAL then

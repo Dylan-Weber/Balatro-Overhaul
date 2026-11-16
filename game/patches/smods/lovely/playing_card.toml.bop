@@ -109,7 +109,7 @@ match_indent = true
 [[patches]]
 [patches.pattern]
 target = 'functions/misc_functions.lua'
-pattern = 'return G.ARGS.LOC_COLOURS[_c] or _default or G.C.BLACK'
+pattern = 'return G.ARGS.LOC_COLOURS[_c] or _default or G.C.UI.TEXT_DARK'
 position = 'before'
 match_indent = true
 payload = '''
@@ -234,7 +234,7 @@ self.base.id = rank.id'''
 [[patches]]
 [patches.regex]
 target = 'card.lua'
-pattern = "(?<indent>[\t ]*)if self.base.suit == 'Diamonds' then self.base.suit_nominal = 0.01; self.base.suit_nominal_original = suit_base_nominal_original or 0.001 ?(\n[\t ]+elseif .*)*"
+pattern = "(?<indent>[\t ]*)if self.base.suit == 'Diamonds' then self.base.suit_nominal = 0.01; self.base.suit_nominal_original = suit_base_nominal_original or 0.001 (\n[\t ]+elseif .*)*"
 position = 'at'
 line_prepend = '$indent'
 payload = '''
@@ -352,7 +352,7 @@ target = 'functions/common_events.lua'
 pattern = '--Fill all remaining info if this is the main desc'
 position = 'before'
 match_indent = true
-payload = '''if (card_type == 'Default' or card_type == 'Enhanced') and not _c.replace_base_card and card and card.base then
+payload = '''if card_type == 'Default' or card_type == 'Enhanced' and not _c.replace_base_card and card and card.base then
     if not _c.no_suit then
         local suit = SMODS.Suits[card.base.suit] or {}
         if suit.loc_vars and type(suit.loc_vars) == 'function' then

@@ -82,7 +82,7 @@ function bom_sync.send_round_end()
     end)
 
     pcall(function()
-r 12 2531 %20%20%20%20%20%20%20%20 -
+r 31 2531 %20%20%20%20%20%20%20%20 -
 l 127
             data.joker_count = #G.jokers.cards
         end
