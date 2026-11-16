@@ -2,6 +2,52 @@
 
 Changelog for the updates, first being the latest changes. 
 
+## 2.1
+
+*Overhaul 2.1, 2026-11-16. iPhone and iPad, mods that work like on PC, Tally Joker, an edition editor and a lot more in the Forge.*
+
+### New features
+- **iPhone and iPad.** Install the app with AltStore or SideStore (it's not on the App Store), then import your own Steam `Balatro.exe` from the Files app: it gets patched on the device, like the Android app made from Steam. Ported by [JohnG210](https://github.com/JohnG210), thanks a lot!
+- **Mods work like on PC.** Overhaul now keeps Balatro's own files and the official Steamodded untouched and applies its changes after your mods, so mods see the same game as on PC. Many mods that crashed or misbehaved with Overhaul now just work.
+- **Tally Joker.** During a run, a line under each Joker shows its current value and its chances. When you pick cards, it shows what the Joker adds to that hand and how many times it retriggers. Works with every Joker, modded and Forge ones included. Turn it off in Settings > Helpers.
+- **Mouse wheel keys.** In Keyboard keys, the mouse wheel can be mapped, for example Play on wheel up and Discard on wheel down. In menus the wheel still scrolls.
+- **In-game keyboard setting.** In Settings > Controls: off by default on PC, on by default on phones. When it's off, every text field uses your own keyboard.
+
+### The Forge
+- **Edition editor.** Start from any edition in the game, the 4 classic ones and the 12 Overhaul shines (Hologram, Prism, Spectral Glow...), and pick its shine, colour and strength with a live preview. What you draw for an edition now shows on every card that has it. Editing a game edition makes your own copy.
+- **XChips.** Jokers can multiply your Chips, and XChips works on every kind of creation.
+- **Downsides.** Jokers can lose money, give -Chips or -Mult, divide Mult, take away hands or discards, or make the current Blind bigger.
+- **Variables.** They can hold a suit, a rank, a poker hand, an edition, an enhancement or a seal, not only a number, and "Set a variable" can pick a random one.
+- **New rules.** "Every N times" (like Yorick), make a Joker with a chosen edition, draw cards, copy a random Joker, count cards or Jokers with an edition, and booster packs that put one edition on every card.
+- **Card text.** The text editor is now one free text box: type with your real keyboard, Return starts a new line, and you can paint words in any colour.
+- **Try it in a run.** The pause menu has Back to the Forge, which takes you straight back to the builder on the same creation.
+- **Builder.** The settings line up in even columns, every rule can be removed, and the pixel editor has a Replace colour tool (key C) and a Save button.
+- **Fixes.** Your vouchers on a custom deck work from the start of the run, your vouchers and booster packs work with Cryptid, Tag art shows everywhere, your vouchers sit in pairs in the Collection, and "ERROR in 7" is gone.
+- Creations that use the new features need Overhaul 2.1 or later.
+
+### Mods
+- **Fewer crashes.** Frost_Utils, Maximus, Spectrallib and Cryptid.
+- **Big numbers.** With Talisman or Amulet, "Score reached", Jimbo's comments and the best hand finder work again.
+- **Custom Run.** "No boss blinds", "Showdown bosses only" and turning off card types in the shop now work with mods.
+- **Mod stakes.** Overhaul's extra stake effects no longer pile onto a mod's own stakes, and wins on them count as Gold Stake wins.
+- **Smoother.** Less work every frame with Steamodded.
+
+### Phones
+- **Texture packs.** Malverk packs can be turned on: tap a pack, then Apply.
+- **Shop.** Tap any card to get the same buttons as on PC, also for cards mods put in another row (#38).
+- **Right click for mods.** A long press works as a right click for mods that use one, like Saturn.
+- **Crash fixes.** At start on some Android phones, at the title screen with mods, and when leaving the shop while the screen changed size.
+
+### Multiplayer
+- **Decks to pick from.** Now on the Players tab of the lobby, next to Deck.
+
+### Fixes
+- **Slowdown.** The game no longer gets slower the longer you play with Jokers.
+- **Score preview.** The hand name stays visible and long scores shrink to fit (#39).
+- **No more flashing.** Windows that refresh no longer jump to the top left first.
+
+If you already have the Overhaul, update from the launcher or the Update button on the title screen.
+
 ## 2.0.7
 
 *Overhaul 2.0.7, 2026-11-15. A redone New Run, Run Modifiers, Advanced mode for every Forge creation, faster modpacks, and much bigger text on phones.*

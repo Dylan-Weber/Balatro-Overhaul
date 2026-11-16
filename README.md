@@ -12,6 +12,7 @@
 ![macOS](https://img.shields.io/badge/macOS-supported-555555?logo=apple&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-supported-f0b400?logo=linux&logoColor=black)
 ![Android](https://img.shields.io/badge/Android-supported-3ddc84?logo=android&logoColor=white)
+![iOS](https://img.shields.io/badge/iPhone%20%7C%20iPad-sideload-000000?logo=apple&logoColor=white)
 ![Languages](https://img.shields.io/badge/languages-EN%20%7C%20FR%20%7C%20ES-8a63d2)
 
 [**Download**](https://github.com/JupiterianSoul/Balatro-Overhaul/releases/latest) &nbsp;·&nbsp; [Install guide](#install) &nbsp;·&nbsp; [Changelog](CHANGELOG.md) &nbsp;·&nbsp; [Report a bug](https://github.com/JupiterianSoul/Balatro-Overhaul/issues) &nbsp;·&nbsp; [Discord](https://discord.gg/uu4pu8NySP) &nbsp;·&nbsp; [Ko-fi](https://ko-fi.com/jupiteriansoull)
@@ -64,7 +65,7 @@ Get the file for your device from the [latest release](https://github.com/Jupite
 | macOS | `BalatroOverhaulLauncher-2.0-macos.zip` | Balatro on Steam |
 | Linux | `BalatroOverhaulLauncher-2.0-linux-x86_64.tar.gz` | Balatro on Steam |
 | Android | `BalatroOverhaulLauncher-2.0-android.apk` | Balatro from Google Play |
-| iPhone / iPad | No release file yet: the IPA comes from the Build iOS IPA workflow ([guide](tools/release/ios/README.md)) | Balatro on Steam, AltStore or SideStore |
+| iPhone / iPad | No release file yet: the IPA comes from the Build iOS IPA workflow ([guide](tools/release/ios/README.md)) | Balatro on Steam, plus AltStore or SideStore |
 
 It's simple to use : it finds your Balatro, you press **Install**, then **Play**.
 
