@@ -886,8 +886,8 @@ return {
       kind = "patch",
       patch = "patches/functions/portrait.lua.bop",
       path = "functions/portrait.lua",
-      sha256 = "17498efdb0950b7dbd82cec104cd50075446768473bd27b5ce2df7f8e01a0bc5",
-      size = 101997,
+      sha256 = "e324debb4e533c8980421b1dd7710181dfd707581f160e0d17ed6ce4b5ee29e2",
+      size = 102387,
     },
     {
       file = "files/functions/profile_rewards.lua",
