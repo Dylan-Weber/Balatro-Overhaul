@@ -620,8 +620,8 @@ return {
       kind = "patch",
       patch = "patches/functions/daily_challenge.lua.bop",
       path = "functions/daily_challenge.lua",
-      sha256 = "33cc19047579cbf63e1ee57670ecaebefee8324b65c20e64cea82c01ee86cf71",
-      size = 25865,
+      sha256 = "a788e8c8f7d6316be3f43d16f8b68f8047564d153b2f3f9e3491fab2f85d449b",
+      size = 26204,
     },
     {
       kind = "patch",
@@ -1628,8 +1628,8 @@ return {
       kind = "patch",
       patch = "patches/functions/play/play_menu.lua.bop",
       path = "functions/play/play_menu.lua",
-      sha256 = "2a8f819dd9bd12b460615a623d71952983f4ba513ab071eb54920e07f437670f",
-      size = 63218,
+      sha256 = "c5304964d918d9e939b44f26939efdde00c4052dd96709818d046d8d615ef2f8",
+      size = 63417,
     },
     {
       kind = "patch",
