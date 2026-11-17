@@ -1957,7 +1957,7 @@ l 10
 r 3 349 %20%20%20%20%20%20%20%20%20%20 -
 r 32 1367 %20%20%20%20%20%20%20%20%20%20%20%20 -
 r 32 1363 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 938
+l 947
           end
         end
       elseif G.OVERLAY_MENU_KEY == 'mods_menu' and def and def.config and def.config.back_func == 'workshop_back' and rawget(_G, 'ModWorkshop') and ModWorkshop.mod_page and G.MODS_MENU and G.MODS_MENU.ws_entry then
@@ -2350,11 +2350,20 @@ end
 function P.unflow(o)
   if type(o) ~= 'table' or not o.recalculate then return end
   local hit = false
+  local nested_boxes = {}
   for _, list in ipairs(o.portrait_flips or {}) do
-    for _, k in ipairs(list) do k.UIT = G.UIT.C end
+    for _, k in ipairs(list) do
+      k.UIT = G.UIT.C
+      if k.UIBox and k.UIBox ~= o then nested_boxes[k.UIBox] = true end
+    end
     hit = true
   end
   o.portrait_flips = nil
+  -- Columns flipped inside a nested box (a tab's contents) must be measured before o, or o keeps
+  -- the stacked width and the next reflow thinks nothing is too wide.
+  for nested_box in pairs(nested_boxes) do
+    if not nested_box.REMOVED then nested_box:recalculate() end
+  end
   local fl = o.portrait_fill
   if fl and fl.box and not fl.box.REMOVED then
     grow_live(fl.content, 1 / fl.f, 0, {})
