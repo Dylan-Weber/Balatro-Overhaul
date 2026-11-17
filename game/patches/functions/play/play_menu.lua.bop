@@ -2,7 +2,7 @@ BOP 2
 eol lf
 final 1
 base 0
-l 1142
+l 1148
 PlayMenu = PlayMenu or {}
 local PM = PlayMenu
 
@@ -904,8 +904,14 @@ function PM.daily_panel(z)
   local rows = {
     line(today .. "    " .. L("New daily in") .. " " .. (DY.countdown and DY.countdown() or ""), z.small, UIK.C.muted, z.iw),
     vgap(0.06),
-    R({}, {deck_col, hgap(0.25), C({minw = rw, minh = 2.6, r = 0.1, colour = G.C.WHITE, padding = 0.1, align = 'tl'}, rules), hgap(0.25), tiles}),
   }
+  if z.port and DY.rule_panels then
+    rows[#rows + 1] = R({}, {deck_col, hgap(0.25), tiles})
+    rows[#rows + 1] = vgap(0.15)
+    rows[#rows + 1] = DY.rule_panels(Rr)
+  else
+    rows[#rows + 1] = R({}, {deck_col, hgap(0.25), C({minw = rw, minh = 2.6, r = 0.1, colour = G.C.WHITE, padding = 0.1, align = 'tl'}, rules), hgap(0.25), tiles})
+  end
   if #jk + #vk > 0 then
     rows[#rows + 1] = vgap(0.1)
     rows[#rows + 1] = R({}, pack(

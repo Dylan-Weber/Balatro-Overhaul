@@ -611,7 +611,7 @@ r 30 1934 %20%20%20%20%20%20 -
 l 1
       stat_box(mod_loc("Streak"), tostring(streak), G.C.GOLD),
 r 30 1934 %20%20%20%20%20%20 -
-l 19
+l 27
       stat_box(mod_loc("Best streak"), tostring(math.max(pd.best_streak or 0, streak)), G.C.WHITE),
     }},
     {n=G.UIT.R, config={align = "cm", padding = 0.02}, nodes={
@@ -622,6 +622,14 @@ l 19
         {n=G.UIT.T, config={text = (entry and entry.won) and mod_loc("PLAY AGAIN") or localize('b_play_cap'), scale = 0.5, colour = G.C.UI.TEXT_LIGHT, func = 'set_button_pip', focus_args = {button = 'x', set_button_pip = true}}}
       }}
     }},
+  }}
+end
+
+function DY.rule_panels(rules)
+  return {n=G.UIT.R, config={align = "cm", padding = 0.05}, nodes={
+    rule_panel(mod_loc("Twists"), G.C.RED, rule_rows(rules.twists, DY.twist, G.C.RED), 3.6),
+    {n=G.UIT.B, config={h = 0.1, w = 0.1}},
+    rule_panel(mod_loc("Boon"), G.C.GREEN, rule_rows(rules.boons, DY.boon, G.C.GREEN), 3.2),
   }}
 end
 
