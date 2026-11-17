@@ -48,23 +48,23 @@ Hooks.wrap("G.FUNCS", "text_input", function(orig) return function(e, ...)
 end end, {id = "overhaul.ingame_keyboard"})
 
 -- Tapping a focused field again brings back a system keyboard the player hid with Back.
-Hooks.wrap("G.FUNCS", "select_text_input", function(orig) return function(e, ...)
-    local r = Hooks.pack(orig(e, ...))
-    local c = G.CONTROLLER
-    if K.sys and c and c.text_input_hook == K.sys and not K.on() then system_keys(true) end
-    return Hooks.unpack(r)
+Hooks.wrap("G.FUNCS", "select_text_input", function(original) return function(element, ...)
+    local results = Hooks.pack(original(element, ...))
+    local controller = G.CONTROLLER
+    if K.sys and controller and controller.text_input_hook == K.sys and not K.on() then system_keys(true) end
+    return Hooks.unpack(results)
 end end, {id = "overhaul.ingame_keyboard.select"})
 
 -- The field's own func stops running once its menu closes, so let go of the system keyboard here.
-Hooks.wrap("love", "update", function(orig) return function(dt, ...)
-    local r = Hooks.pack(orig(dt, ...))
-    local c = G and G.CONTROLLER
-    if K.sys and (not c or c.text_input_hook ~= K.sys or K.sys.REMOVED or K.on()) then
+Hooks.wrap("love", "update", function(original) return function(delta_time, ...)
+    local results = Hooks.pack(original(delta_time, ...))
+    local controller = G and G.CONTROLLER
+    if K.sys and (not controller or controller.text_input_hook ~= K.sys or K.sys.REMOVED or K.on()) then
         K.sys = nil
-        local h = c and c.text_input_hook
-        if not h or h.REMOVED or K.on() then system_keys(false) end
+        local focused_field = controller and controller.text_input_hook
+        if not focused_field or focused_field.REMOVED or K.on() then system_keys(false) end
     end
-    return Hooks.unpack(r)
+    return Hooks.unpack(results)
 end end, {id = "overhaul.ingame_keyboard.update"})
 
 return K

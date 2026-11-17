@@ -2692,8 +2692,8 @@ return {
       file = "files/overhaul/ingame_keyboard.lua",
       kind = "own",
       path = "overhaul/ingame_keyboard.lua",
-      sha256 = "1021e72731a1171b572b462d0061ec296aa592cc7f8b0e16017dca37a3290fc1",
-      size = 2603,
+      sha256 = "37b5c16f9e3a7dcb36e850ce1a456d16e361862c06893fe151bac9b0d84bfaa5",
+      size = 2779,
     },
     {
       file = "files/overhaul/init.lua",
