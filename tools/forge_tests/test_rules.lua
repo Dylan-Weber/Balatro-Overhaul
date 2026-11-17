@@ -763,7 +763,7 @@ do
   G.GAME.joker_buffer = 1
   G.jokers = area(5)
   check("slots: pending creates still count", R.slots_used(G.jokers, "joker_buffer") == 1)
-  G.GAME.joker_buffer = 0
+  G.GAME["joker_buffer"] = 0
   check("slots: order unchanged without a create before a destroy", R.slot_order({DJ, CJ})[1] == DJ and R.slot_order({CJ})[1] == CJ)
   check("slots: destroys move ahead of creates", R.slot_order({CJ, {id = "money", n = 1}, DJ})[1] == DJ and R.slot_order({CJ, {id = "money", n = 1}, DJ})[2] == CJ)
   reset_game()
