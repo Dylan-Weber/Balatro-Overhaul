@@ -2055,8 +2055,8 @@ return {
       kind = "patch",
       patch = "patches/functions/town/town.lua.bop",
       path = "functions/town/town.lua",
-      sha256 = "62575f71a3530e33319b483778c347fea43dcb66186f27fd92f64096c82ba766",
-      size = 27251,
+      sha256 = "b0ea5dda59d3dfa91d75bd0fc3f1fa5f8e951137f53de4ef435c4a6d64846bd8",
+      size = 27288,
     },
     {
       kind = "keep",
@@ -2818,8 +2818,8 @@ return {
       kind = "patch",
       patch = "patches/overhaul/late/UI_definitions_auto.toml.bop",
       path = "overhaul/late/UI_definitions_auto.toml",
-      sha256 = "8df6ccd1cfa68abb1bc717363620af8df7c4627c7fc2220ea19846a13d58309f",
-      size = 335842,
+      sha256 = "499dd59179e7e89bc9f731b74f6730d679faa8c51163637d5a480c31937299df",
+      size = 335872,
     },
     {
       file = "files/overhaul/late/animatedsprite.toml",

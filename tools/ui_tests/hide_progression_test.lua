@@ -6,18 +6,18 @@ end
 
 local clock = 0
 love = {timer = {getTime = function() return clock end}, filesystem = {getInfo = function() return nil end}}
-function mod_loc(s) return s end
+function mod_loc(text) return text end
 function mod_loc_register() end
 function play_sound() end
-function number_format(n) return tostring(n) end
-Event = function(t) return t end
-local function box(def, cfg)
-  return {def = def, config = cfg, states = {collide = {}}, remove = function(self) self.REMOVED = true end,
+function number_format(number) return tostring(number) end
+Event = function(event_args) return event_args end
+local function box(definition, config)
+  return {def = definition, config = config, states = {collide = {}}, remove = function(self) self.REMOVED = true end,
     UIRoot = {children = {}}, alignment = {offset = {x = 0, y = 0}}}
 end
 UIBox = box
-UIK = setmetatable({touch = function() return true end, portrait = function() return false end, C = {}}, {__index = function(t, k)
-  return function(args) return {uik = k, args = args} end
+UIK = setmetatable({touch = function() return true end, portrait = function() return false end, C = {}}, {__index = function(_, element_kind)
+  return function(args) return {uik = element_kind, args = args} end
 end})
 Game = {update = function() end}
 
@@ -50,7 +50,7 @@ G.SETTINGS.hide_progression, G.SETTINGS.hide_progression_popups = false, false
 ok(progression_hidden() == false and progression_popups_hidden() == false, "shown by default")
 local toasts = {}
 local real_toast = PUI.toast
-PUI.toast = function(t) toasts[#toasts + 1] = t return real_toast(t) end
+PUI.toast = function(toast) toasts[#toasts + 1] = toast return real_toast(toast) end
 progression_notify("level", 3)
 ok(#toasts == 1, "level toast with the setting off")
 PUI.pump = function() end
@@ -89,10 +89,10 @@ PUI.badge_tick(true)
 ok(G.progression_badge == nil, "no red count while hidden, even with quests ready")
 
 -- XP still counts while hidden, so turning it back on shows the real level
-local pr = G.PROFILES[1].progression
-local before = pr.total_xp
+local profile_progression = G.PROFILES[1].progression
+local xp_before = profile_progression.total_xp
 progression_add_xp(5000, "test")
-ok(pr.total_xp == before + 5000, "XP still adds up while hidden")
+ok(profile_progression.total_xp == xp_before + 5000, "XP still adds up while hidden")
 
 -- Settings: default and toggle
 UIK.toggle = function(args) return {toggle = args} end
@@ -103,16 +103,16 @@ dofile("assets/functions/settings/catalog.lua")
 SettingsUI.defaults()
 ok(G.SETTINGS.hide_progression == false and G.SETTINGS.hide_progression_popups == false, "both default to shown")
 local found, found_popups
-for _, c in ipairs(SettingsUI.CATS) do
-  if c.key == "gameplay" then
+for _, category in ipairs(SettingsUI.CATS) do
+  if category.key == "gameplay" then
     bom_match, FairLock = nil, nil
-    localize = function(s) return s end
-    local ok_build, sections = pcall(c.build, {map = {}, order = {}})
-    ok(ok_build, "gameplay settings build: " .. tostring(sections))
-    for _, s in ipairs(ok_build and sections or {}) do
-      for _, it in ipairs(s.items or {}) do
-        if type(it) == "table" and it.toggle and it.toggle.id == "set_hide_progression" then found = {section = s.title, args = it.toggle} end
-        if type(it) == "table" and it.toggle and it.toggle.id == "set_hide_progression_popups" then found_popups = {section = s.title, args = it.toggle} end
+    localize = function(text) return text end
+    local built, sections = pcall(category.build, {map = {}, order = {}})
+    ok(built, "gameplay settings build: " .. tostring(sections))
+    for _, section in ipairs(built and sections or {}) do
+      for _, item in ipairs(section.items or {}) do
+        if type(item) == "table" and item.toggle and item.toggle.id == "set_hide_progression" then found = {section = section.title, args = item.toggle} end
+        if type(item) == "table" and item.toggle and item.toggle.id == "set_hide_progression_popups" then found_popups = {section = section.title, args = item.toggle} end
       end
     end
   end
@@ -129,13 +129,13 @@ if found_popups then found_popups.args.callback(true) end
 ok(changed == 2, "toggling clears toasts and the red count right away")
 
 -- The Casino: no Quests door while hidden
-for _, k in ipairs({"open_quest_menu", "open_run_history", "open_shop_menu", "open_profile_menu"}) do G.FUNCS[k] = function() end end
+for _, func_name in ipairs({"open_quest_menu", "open_run_history", "open_shop_menu", "open_profile_menu"}) do G.FUNCS[func_name] = function() end end
 dofile("assets/functions/town/town.lua")
 local function tavern()
-  for _, p in ipairs(Town.shown()) do
-    if p.place.key == "tavern" then
+  for _, shown_place in ipairs(Town.shown()) do
+    if shown_place.place.key == "tavern" then
       local names = {}
-      for _, d in ipairs(p.doors) do names[d.button] = true end
+      for _, door in ipairs(shown_place.doors) do names[door.button] = true end
       return names
     end
   end
@@ -150,20 +150,20 @@ ok(not doors.open_quest_menu and doors.open_run_history, "Quests door hidden, Ru
 -- Jimbo never points at the quests (popups setting)
 G.SETTINGS.hide_progression, G.SETTINGS.hide_progression_popups = false, true
 JIMBO_COMMENTS = nil
-local ok_jc, err = pcall(dofile, "assets/functions/jimbo_comments.lua")
-ok(ok_jc, "jimbo comments load: " .. tostring(err))
-if ok_jc then
+local loaded, load_error = pcall(dofile, "assets/functions/jimbo_comments.lua")
+ok(loaded, "jimbo comments load: " .. tostring(load_error))
+if loaded then
   local said = {}
   JIMBO_COMMENTS.show = function(text) said[#said + 1] = text return true end
   for _ = 1, 60 do JIMBO_COMMENTS.fire("menu", nil, nil, true) end
   local quests = 0
-  for _, s in ipairs(said) do if s:find("quests") then quests = quests + 1 end end
+  for _, line in ipairs(said) do if line:find("quests") then quests = quests + 1 end end
   ok(#said == 60 and quests == 0, "no quest line from Jimbo while hidden")
   G.SETTINGS.hide_progression_popups = false
   said = {}
   for _ = 1, 60 do JIMBO_COMMENTS.fire("menu", nil, nil, true) end
   quests = 0
-  for _, s in ipairs(said) do if s:find("quests") then quests = quests + 1 end end
+  for _, line in ipairs(said) do if line:find("quests") then quests = quests + 1 end end
   ok(quests > 0, "quest line still used with the setting off")
 end
 

@@ -4679,14 +4679,14 @@ l 133
     {id = 'achievements_button', button = "open_achievements_menu", colour = G.C.PALE_GREEN, label = up(mod_loc("Achievements"))},
     {id = 'collection_button', button = "your_collection", colour = G.C.ORANGE, label = localize('b_collection_cap')},
   }
-  local _prog_on = not (progression_hidden and progression_hidden())
-  if _mods_on and _prog_on then left_specs[3] = {id = 'progression_button', button = "open_progression_screen", colour = G.C.GREEN, label = up(mod_loc("Progression"))} end
+  local _progression_shown = not (progression_hidden and progression_hidden())
+  if _mods_on and _progression_shown then left_specs[3] = {id = 'progression_button', button = "open_progression_screen", colour = G.C.GREEN, label = up(mod_loc("Progression"))} end
   local right_specs = {
     _mods_on and {id = 'tavern_button', button = "open_tavern_hub", colour = G.C.GREEN, label = up(mod_loc("The Casino"))}
       or {id = 'progression_button', button = "open_progression_screen", colour = G.C.GREEN, label = up(mod_loc("Progression"))},
     {button = 'options', colour = G.C.ORANGE, label = localize('b_options_cap')},
   }
-  if not (_mods_on or _prog_on) then table.remove(right_specs, 1) end
+  if not (_mods_on or _progression_shown) then table.remove(right_specs, 1) end
   if G.F_QUIT_BUTTON then right_specs[#right_specs + 1] = {button = quit_func, colour = G.C.RED, label = localize('b_quit_cap')} end
   local _mpm = rawget(_G, 'mpm_menu')
   local _mp = _mpm and _mpm.active and true or false

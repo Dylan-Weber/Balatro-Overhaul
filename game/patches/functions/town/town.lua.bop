@@ -79,8 +79,8 @@ T.PLACES = {
     doors = function() return list(door(hub_label("SpeedrunBoard", L("SPEEDRUNS")), "open_speedrun_board", nil, G.C.SECONDARY_SET.Planet)) end},
 }
 
-local function line_of(p)
-  return L(p.hidden_line and progression_hidden() and p.hidden_line or p.line)
+local function line_for_place(place)
+  return L(place.hidden_line and progression_hidden() and place.hidden_line or place.line)
 end
 
 local function colour_of(p)
@@ -260,7 +260,7 @@ function T.set_focus(key)
   local names = {}
   for _, dd in ipairs(entry.doors) do names[#names + 1] = dd.label end
   T.info.name = L(p.name)
-  T.info.line = line_of(p)
+  T.info.line = line_for_place(p)
   T.info.doors = table.concat(names, ",  ")
   local net = (p.online and not online()) and L("Online part needs a connection") or ""
   T.info.net = (net ~= "" and not portrait()) and ("   " .. net) or net
@@ -484,7 +484,7 @@ function T.place_def(key)
     }}
   end
   local right = {
-    {n = G.UIT.R, config = {align = "cm", padding = 0.06, maxw = bw + 0.4}, nodes = {UIK.text(line_of(p), {scale = touch() and 0.4 or 0.36, colour = UIK.C.text})}},
+    {n = G.UIT.R, config = {align = "cm", padding = 0.06, maxw = bw + 0.4}, nodes = {UIK.text(line_for_place(p), {scale = touch() and 0.4 or 0.36, colour = UIK.C.text})}},
     {n = G.UIT.R, config = {minh = 0.15, minw = 0.1}, nodes = {}},
   }
   for _, b in ipairs(buttons) do right[#right + 1] = b end
