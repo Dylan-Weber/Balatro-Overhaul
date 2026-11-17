@@ -24,7 +24,7 @@
 .end method
 
 .method public static apply(Landroid/app/Activity;)V
-    .locals 12
+    .locals 14
 
     const-string v0, "HighRefreshRate"
 
@@ -59,6 +59,17 @@
     invoke-virtual {v4}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
     move-result-object v4
     invoke-static {v0, v4}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+
+    # Only consider modes at the current resolution. A mode at another resolution
+    # (the 1344x2992 mode when the phone is set to 1080p) switches the whole display;
+    # Android switches it back when the game goes to the background and kills the
+    # game's process for the density change, so coming back cold starts the game.
+    invoke-virtual {v2}, Landroid/view/Display;->getMode()Landroid/view/Display$Mode;
+    move-result-object v12
+    invoke-virtual {v12}, Landroid/view/Display$Mode;->getPhysicalHeight()I
+    move-result v13          # curH
+    invoke-virtual {v12}, Landroid/view/Display$Mode;->getPhysicalWidth()I
+    move-result v12          # curW
 
     invoke-virtual {v2}, Landroid/view/Display;->getSupportedModes()[Landroid/view/Display$Mode;
     move-result-object v4
@@ -102,6 +113,13 @@
     invoke-virtual {v3}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
     move-result-object v3
     invoke-static {v0, v3}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+
+    invoke-virtual {v9}, Landroid/view/Display$Mode;->getPhysicalWidth()I
+    move-result v3
+    if-ne v3, v12, :cond_not_best
+    invoke-virtual {v9}, Landroid/view/Display$Mode;->getPhysicalHeight()I
+    move-result v3
+    if-ne v3, v13, :cond_not_best
 
     cmpg-float v3, v11, v5
     if-lez v3, :cond_not_best
