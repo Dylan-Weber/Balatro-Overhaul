@@ -2,7 +2,7 @@ BOP 2
 eol lf
 final 1
 base 0
-l 108
+l 109
 [manifest]
 version = "1.0.0"
 priority = 0
@@ -92,6 +92,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.ui.006"
+requires = ["auto.ui.003"]
 target = "engine/ui.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*node\.config\.lang = node\.config\.lang or G\.LANG\n)'''
 position = "at"
@@ -112,7 +113,7 @@ ${pre}            local td = node.config.text_drawable
             if td then
                 if node.config.text_drawable_font ~= node.config.lang.font.FONT then
 r 29 135 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 188
+l 191
                 elseif node.config.text_drawable_text ~= node.config.text then
                     td:set(node.config.text)
                     node.config.text_drawable_text = node.config.text
@@ -192,6 +193,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.ui.013"
+requires = ["auto.ui.012"]
 target = "engine/ui.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*self\.states\.click\.can = false\n)'''
 position = "at"
@@ -240,6 +242,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.ui.016"
+requires = ["auto.ui.003"]
 target = "engine/ui.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*self\.config\.lang = self\.config\.lang or G\.LANG\n)'''
 position = "at"
@@ -263,6 +266,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.ui.018"
+requires = ["auto.ui.003"]
 target = "engine/ui.lua"
 pattern = '''^(?<pre>)[\t ]*self\.config\.text = tostring\(self\.config\.ref_table\[self\.config\.ref_value\]\)\n(?<post>)'''
 position = "at"
@@ -359,7 +363,7 @@ r 29 870 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 29 871 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 29 872 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 29 873 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 168
+l 171
                 parallax = _parallax
             }
         end
@@ -369,6 +373,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.ui.024"
+requires = ["auto.ui.022"]
 target = "engine/ui.lua"
 pattern = '''^(?<pre>)[\t ]*local vertices = \{\n[\t ]*subw/2, subh/2-ext_up,\n[\t ]*0,4\*res-ext_up,\n[\t ]*1\*res,4\*res-ext_up,\n[\t ]*1\*res,2\*res-ext_up,\n[\t ]*2\*res,2\*res-ext_up,\n[\t ]*2\*res,1\*res-ext_up,\n[\t ]*4\*res,1\*res-ext_up,\n[\t ]*4\*res,0\*res-ext_up,\n[\t ]*subw,0\*res-ext_up,\n[\t ]*subw,1\*res-ext_up,\n[\t ]*subw\+2\*res,1\*res-ext_up,\n[\t ]*subw\+2\*res,2\*res-ext_up,\n[\t ]*subw\+3\*res,2\*res-ext_up,\n[\t ]*subw\+3\*res,4\*res-ext_up,\n[\t ]*totw,4\*res-ext_up,\n[\t ]*totw,subh-ext_up,\n[\t ]*subw\+3\*res, subh-ext_up,\n[\t ]*subw\+3\*res, subh\+2\*res-ext_up,\n[\t ]*subw\+2\*res, subh\+2\*res-ext_up,\n[\t ]*subw\+2\*res, subh\+3\*res-ext_up,\n[\t ]*subw, subh\+3\*res-ext_up,\n[\t ]*subw, toth-ext_up,\n[\t ]*4\*res, toth-ext_up,\n[\t ]*4\*res, subh\+3\*res-ext_up,\n[\t ]*2\*res, subh\+3\*res-ext_up,\n[\t ]*2\*res, subh\+2\*res-ext_up,\n[\t ]*1\*res, subh\+2\*res-ext_up,\n[\t ]*1\*res, subh-ext_up,\n[\t ]*0, subh-ext_up,\n[\t ]*0,4\*res-ext_up,\n[\t ]*\}\n(?<post>)'''
 position = "at"
@@ -447,6 +452,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.ui.025"
+requires = ["auto.ui.023"]
 target = "engine/ui.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*function UIElement:update\(dt\)\n)'''
 position = "at"
@@ -475,6 +481,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.ui.026"
+requires = ["auto.ui.025"]
 target = "engine/ui.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*G\.ARGS\.FUNC_TRACKER = G\.ARGS\.FUNC_TRACKER or \{\}\n)'''
 position = "at"

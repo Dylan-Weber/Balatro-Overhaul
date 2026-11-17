@@ -194,7 +194,7 @@ payload = '''
 ${pre}function create_UIBox_loading_screen()
 e 30 627 %20%20 - =43,-1,+%27,=2,-1,+%27,=2,-7,+%72,=36
 e 30 2807 %20%20%20%20 - =49,+%27%4C%6F%61%64%69%6E%67%20%43,=2,-1,+%75%64%20%73,=1,-3,+%76,=1,-1,+%2E%2E%2E,=1,-18,=40,-5,+%62%75%6D%70,=19,-1,+%35,=2,+%2C,=3
-l 186
+l 188
   }}
 return t
 end
@@ -331,6 +331,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.028"
+requires = ["auto.UI_definitions.027"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*G\.GAME\.spectral_rate = G\.GAME\.spectral_rate or 0\n(?<post>)'''
 position = "at"
@@ -342,6 +343,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.029"
+requires = ["auto.UI_definitions.028"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*if polled_rate > check_rate and polled_rate <= check_rate \+ v\.val then\n)'''
 position = "at"
@@ -554,7 +556,7 @@ position = "at"
 payload = '''
 ${pre}                  {n=G.UIT.T, config={text = "/ ", scale = 0.7*scale, colour = G.C.WHITE, shadow = true, lang = G.LANGUAGES['en-us']}},
 e 30 1325 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 - =110,+%2C%20%6C%61%6E%67%20%3D%20%47%2E%4C%41%4E%47%55%41%47%45%53%5B%27%65%6E%2D%75%73%27%5D,=2
-l 61
+l 63
 ${post}'''
 times = 1
 
@@ -597,6 +599,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.044"
+requires = ["auto.UI_definitions.043"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", minh = 1\.75, minw = 1\.5,padding = 0\.05, r = 0\.1, hover = true, colour = G\.C\.ORANGE, button = "options", shadow = true\}, nodes=\{\n(?<post>)'''
 position = "at"
@@ -608,6 +611,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.045"
+requires = ["auto.UI_definitions.043"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\}\}\n[\t ]*\}\}\n(?<post>[\t ]*\}\n[\t ]*\n)'''
 position = "at"
@@ -621,7 +625,7 @@ l 2
               {n=G.UIT.T, config={text = mod_loc("Lobby"), scale = 1.2*scale, colour = G.C.UI.TEXT_LIGHT, shadow = true}}
             }},
 r 30 1386 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 491
+l 502
               {n=G.UIT.T, config={text = mod_loc("Info"), scale = 1*scale, colour = G.C.UI.TEXT_LIGHT, shadow = true}}
             }}
           }})
@@ -640,6 +644,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.046"
+requires = ["auto.UI_definitions.045"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", id = 'row_round'\}, nodes=\{\n(?<post>)'''
 position = "at"
@@ -721,6 +726,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.053"
+requires = ["auto.UI_definitions.052"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*local blind_state = G\.GAME\.round_resets\.blind_states\[type\]\n)'''
 position = "at"
@@ -763,6 +769,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.056"
+requires = ["auto.UI_definitions.054"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", maxw = 3\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = localize\('ph_blind_score_at_least'\), scale = 0\.3, colour = disabled and G\.C\.UI\.TEXT_INACTIVE or G\.C\.WHITE, shadow = not disabled\}\}\n(?<post>)'''
 position = "at"
@@ -775,6 +782,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.057.001"
+requires = ["auto.UI_definitions.054"]
 target = "functions/UI_definitions.lua"
 pattern = '''(?<pre>           \{n=G\.UIT\.T, config=\{text = localize\('ph_blind_reward'\), scale = 0\.35)(?<post>)'''
 position = "at"
@@ -785,6 +793,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.057.002"
+requires = ["auto.UI_definitions.054"]
 target = "functions/UI_definitions.lua"
 pattern = '''(?<pre>\+', scale = 0\.35)(?<post>)'''
 position = "at"
@@ -854,6 +863,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.060"
+requires = ["auto.UI_definitions.059"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*args\.text_scale = args\.text_scale or 0\.3\n(?<post>)'''
 position = "at"
@@ -996,6 +1006,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.069"
+requires = ["auto.UI_definitions.068"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*tab_buttons\[#tab_buttons\+1\] = UIBox_button\(\{id = 'tab_but_'\.\.\(v\.label or ''\), ref_table = v, button = 'change_tab', label = \{v\.label\}, minh = 0\.8\*args\.scale, minw = 2\.5\*args\.scale, col = true, choice = true, scale = args\.text_scale, chosen = v\.chosen, func = v\.func, focus_args = \{type = 'none'\}\}\)\n[\t ]*end\n(?<post>)'''
 position = "at"
@@ -1022,6 +1033,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.070"
+requires = ["auto.UI_definitions.068"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\(#args\.tabs > 1 and not args\.no_shoulders\) and \{n=G\.UIT\.C, config=\{minw = 0\.7,align = "cm", colour = G\.C\.CLEAR,func = 'set_button_pip', focus_args = \{button = 'leftshoulder', type = 'none', orientation = 'cm', scale = 0\.7, offset = \{x = -0\.1, y = 0\}\}\}, nodes = \{\}\} or nil,\n(?<post>)'''
 position = "at"
@@ -1033,6 +1045,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.071"
+requires = ["auto.UI_definitions.068"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\(#args\.tabs > 1 and not args\.no_shoulders\) and \{n=G\.UIT\.C, config=\{minw = 0\.7,align = "cm", colour = G\.C\.CLEAR,func = 'set_button_pip', focus_args = \{button = 'rightshoulder', type = 'none', orientation = 'cm', scale = 0\.7, offset = \{x = 0\.1, y = 0\}\}\}, nodes = \{\}\} or nil,\n(?<post>)'''
 position = "at"
@@ -1044,6 +1057,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.072"
+requires = ["auto.UI_definitions.069|auto.UI_definitions.modded.006"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>[\t ]*\{n=G\.UIT\.O, config=\{id = 'tab_contents', object = UIBox\{definition = args\.current\.v\.tab_definition_function\(args\.current\.v\.tab_definition_function_args\), config = \{offset = \{x=0,y=0\}\}\}\}\}\n[\t ]*\}\},\n[\t ]*\}\}\n)(?<post>)'''
 position = "at"
@@ -1076,6 +1090,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.074"
+requires = ["auto.UI_definitions.073"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*text\.letters\[i\] = \(args\.ref_table\[args\.ref_value\] and \(string\.sub\(args\.ref_table\[args\.ref_value\], i, i\) or ''\)\) or ''\n(?<post>)'''
 position = "at"
@@ -1215,7 +1230,7 @@ position = "at"
 payload = '''
 ${pre}    if not (G.GAME and G.GAME.multiplayer) then
 r 30 2225 %20%20%20%20%20%20 -
-l 385
+l 387
     end
 ${post}'''
 times = 1
@@ -1282,6 +1297,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.088"
+requires = ["auto.UI_definitions.080", "auto.UI_definitions.087"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*settings,\n[\t ]*G\.GAME\.seeded and current_seed or nil,\n(?<post>)'''
 position = "at"
@@ -1318,6 +1334,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.091"
+requires = ["auto.UI_definitions.072"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*end\n[\t ]*\n[\t ]*function create_UIBox_settings\(\)\n)'''
 position = "at"
@@ -1790,7 +1807,7 @@ local function settings_tab_account()
     UIK.action{id = 'set_profile', label = mod_loc("Profile"), info = mod_loc("Switch or manage save profiles"), button_label = mod_loc("Open"), button = 'profile_select', colour = UIK.C.accent},
   }
 r 30 6197 %20%20 -
-l 169
+l 170
     items[#items+1] = UIK.action{id = 'set_language', label = mod_loc("Language"), info = mod_loc("Change the game language"), button_label = mod_loc("Open"), button = 'language_selection', colour = UIK.C.accent}
   end
   items[#items+1] = UIK.header(mod_loc("Other"))
@@ -1879,6 +1896,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.092"
+requires = ["auto.UI_definitions.091"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*function create_UIBox_test_framework\(variables\)\n)'''
 position = "at"
@@ -1961,7 +1979,7 @@ function create_UIBox_settings(selected_tab)
 end
 
 r 30 2299 - -
-l 373
+l 382
   local map = {Game = settings_tab_game, QoL = QOL and QOL.settings_tab or nil, Helpers = settings_tab_helpers, Display = settings_tab_display, Video = settings_tab_display, Interface = settings_tab_interface,
     Graphics = settings_tab_graphics, Audio = settings_tab_audio, Account = settings_tab_account, Other = settings_tab_account,
     Guide = settings_tab_guide, Debug = BOM_DEBUG_BUILD and settings_tab_debug or nil}
@@ -2009,6 +2027,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.096"
+requires = ["auto.UI_definitions.095"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.C, config=\{align = "bm",minh = 6\.2,  colour = G\.C\.UI\.TRANSPARENT_DARK, r = 0\.1\}, nodes=\{\n(?<post>[\t ]*\n)'''
 position = "at"
@@ -2020,6 +2039,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.097"
+requires = ["auto.UI_definitions.095"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.T, config=\{text = v\.count, scale = 0\.35, colour = mix_colours\(G\.C\.FILTER, G\.C\.WHITE, 0\.8\), shadow = true\}\}\n(?<post>)'''
 position = "at"
@@ -2031,6 +2051,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.098"
+requires = ["auto.UI_definitions.095"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", minh = v\.count/max_amt\*3\.6, minw = 0\.8, colour = G\.C\.SECONDARY_SET\[G\.P_CENTERS\[v\.key\]\.set\] or G\.C\.RED, res = 0\.15, r = 0\.001\}, nodes=\{\}\},\n(?<post>)'''
 position = "at"
@@ -2042,6 +2063,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.099"
+requires = ["auto.UI_definitions.095"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.C, config=\{align = "bm",minh = 6\.2,  colour = G\.C\.UI\.TRANSPARENT_DARK, r = 0\.1\}, nodes=\{\n(?<post>)'''
 position = "at"
@@ -2053,6 +2075,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.100"
+requires = ["auto.UI_definitions.095"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.T, config=\{text = '-', scale = 0\.35, colour = mix_colours\(G\.C\.FILTER, G\.C\.WHITE, 0\.8\), shadow = true\}\}\n(?<post>)'''
 position = "at"
@@ -2124,6 +2147,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.104"
+requires = ["auto.UI_definitions.103"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*for k, v in pairs\(G\.COLLABS\.options\[_suit\]\) do\n(?<post>)'''
 position = "at"
@@ -2135,6 +2159,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.105"
+requires = ["auto.UI_definitions.103"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>[\t ]*if G\.SETTINGS\.CUSTOM_DECK\.Collabs\[_suit\] == v then current_option = k end\n[\t ]*end\n)(?<post>)'''
 position = "at"
@@ -2147,6 +2172,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.106"
+requires = ["auto.UI_definitions.103"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*create_option_cycle\(\{options = loc_options, w = 5\.5, cycle_shoulders = true, curr_suit = _suit, opt_callback = 'change_collab', current_option = current_option, colour = G\.C\.RED, focus_args = \{snap_to = true, nav = 'wide'\}\}\),\n(?<post>)'''
 position = "at"
@@ -2260,6 +2286,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.115"
+requires = ["auto.UI_definitions.114"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>[\t ]*\}\}   \n)[\t ]*--t\.nodes\[1\]\.config\.mid = true\n(?<post>)'''
 position = "at"
@@ -2336,7 +2363,7 @@ position = "at"
 payload = '''
 ${pre}          {n=G.UIT.R, config={align = "cm", minw = 5, padding = 0.1, r = 0.1, hover = true, colour = G.C.BLUE, button = "replay_run", shadow = true, focus_args = {nav = 'wide'}}, nodes={
 r 30 2907 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 115
+l 121
               {n=G.UIT.T, config={text = 'Replay (same seed)', scale = 0.5, colour = G.C.UI.TEXT_LIGHT}}
             }}
           }},
@@ -2390,18 +2417,20 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.125"
+requires = ["auto.UI_definitions.124"]
 target = "functions/UI_definitions.lua"
-pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.C, config=\{align = "cl", padding = 0, minw = 5\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.01, r = 0\.1, colour = G\.C\.HAND_LEVELS\[math\.min\(7, G\.GAME\.hands\[handname\]\.level\)\], minw = 1\.5, outline = 0\.8, outline_colour = G\.C\.WHITE\}, nodes=\{\n(?<post>)'''
+pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.C, config=\{align = "cl", padding = 0, minw = 5\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.01, r = 0\.1, colour = G\.C\.HAND_LEVELS\[(?<hlevel>math\.min\(7, G\.GAME\.hands\[handname\]\.level\)|math\.floor\(to_number\(math\.min\(7, G\.GAME\.hands\[handname\]\.level\)\)\))\], minw = 1\.5, outline = 0\.8, outline_colour = G\.C\.WHITE\}, nodes=\{\n(?<post>)'''
 position = "at"
 payload = '''
 ${pre}      {n=G.UIT.C, config={align = "cl", padding = 0, minw = port and nw + lw or 5}, nodes={
-        {n=G.UIT.C, config={align = "cm", padding = 0.01, r = 0.1, colour = G.C.HAND_LEVELS[math.min(7, G.GAME.hands[handname].level)], minw = lw, outline = 0.8, outline_colour = G.C.WHITE}, nodes={
+        {n=G.UIT.C, config={align = "cm", padding = 0.01, r = 0.1, colour = G.C.HAND_LEVELS[${hlevel}], minw = lw, outline = 0.8, outline_colour = G.C.WHITE}, nodes={
 ${post}'''
 times = 1
 
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.126"
+requires = ["auto.UI_definitions.124"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", minw = 4\.5, maxw = 4\.5\}, nodes=\{\n(?<post>)'''
 position = "at"
@@ -2413,6 +2442,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.127"
+requires = ["auto.UI_definitions.124"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.C, config=\{align = "cr", padding = 0\.01, r = 0\.1, colour = G\.C\.CHIPS, minw = 1\.1\}, nodes=\{\n(?<post>)'''
 position = "at"
@@ -2424,6 +2454,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.128"
+requires = ["auto.UI_definitions.124"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.T, config=\{text = "X", scale = 0\.45, colour = G\.C\.MULT\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cl", padding = 0\.01, r = 0\.1, colour = G\.C\.MULT, minw = 1\.1\}, nodes=\{\n(?<post>)'''
 position = "at"
@@ -2436,6 +2467,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.129"
+requires = ["auto.UI_definitions.124"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.T, config=\{text = '  #', scale = 0\.45, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\}\n(?<post>)'''
 position = "at"
@@ -2447,19 +2479,21 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.130"
+requires = ["auto.UI_definitions.124"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.05, colour = G\.C\.L_BLACK,r = 0\.1, minw = 0\.9\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = G\.GAME\.hands\[handname\]\.played, scale = 0\.45, colour = G\.C\.FILTER, shadow = true\}\},\n(?<post>)'''
 position = "at"
 payload = '''
 ${pre}      {n=G.UIT.C, config={align = "cm", padding = 0.05, colour = G.C.L_BLACK,r = 0.1, minw = port and 0.75 or 0.9}, nodes={
 e 30 3069 %20%20%20%20%20%20%20%20 - =72,+%6C%61%6E%67%20%3D%20%47%2E%4C%41%4E%47%55%41%47%45%53%5B%27%65%6E%2D%75%73%27%5D%2C%20,=37
-l 73
+l 76
 ${post}'''
 optional = true
 
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.131"
+requires = ["auto.UI_definitions.124"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>[\t ]*or nil\n)(?<post>)'''
 position = "at"
@@ -2491,6 +2525,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.132"
+requires = ["auto.UI_definitions.131"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>[\t ]*\},\n[\t ]*\}\}\n)(?<post>)'''
 position = "at"
@@ -2509,6 +2544,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.133"
+requires = ["auto.UI_definitions.131"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>[\t ]*function G\.UIDEF\.deck_info\(_show_remaining\)\n)(?<post>)'''
 position = "at"
@@ -2536,7 +2572,7 @@ l 2
       {n=G.UIT.O, config={object = DynaText({string = {seed}, colours = {G.C.WHITE}, shadow = true, float = true, scale = 0.75})}},
     }},
 r 30 118 %20%20%20%20 -
-l 33
+l 34
       UIBox_button({button = 'copy_seed', label = {localize('b_copy')}, colour = G.C.BLUE, scale = 0.4, minw = 3.5, minh = 0.6, focus_args = {nav = 'wide'}}),
     }},
   }}
@@ -2558,6 +2594,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.136"
+requires = ["auto.UI_definitions.131"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>[\t ]*\} or nil,\n)[\t ]*\},\n[\t ]*tab_h = 8,\n(?<post>)'''
 position = "at"
@@ -2571,7 +2608,7 @@ ${pre}    }
   end
   local wide = hands_wide()
 r 30 3106 %20%20 -
-l 308
+l 311
     {tabs = tabs,
     tab_h = wide and 4.6 or 8,
 ${post}'''
@@ -2629,6 +2666,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.140"
+requires = ["auto.UI_definitions.092"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>[\t ]*current_col,other_col\n[\t ]*\}\}\n)(?<post>)'''
 position = "at"
@@ -2663,6 +2701,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.142"
+requires = ["auto.UI_definitions.141"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*rank_cols\[#rank_cols\+1\] = \{n=G\.UIT\.R, config=\{align = "cm", padding = 0\.07\}, nodes=\{\n(?<post>)'''
 position = "at"
@@ -2700,6 +2739,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.145"
+requires = ["auto.UI_definitions.141"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*\n[\t ]*local t = \n[\t ]*\{n=G\.UIT\.ROOT, config=\{align = "cm", colour = G\.C\.CLEAR\}, nodes=\{\n)'''
 position = "at"
@@ -2887,7 +2927,7 @@ l 4
       idx = idx + 1
       local center = pool[idx]
 r 32 614 %20%20%20%20%20%20 -
-l 16
+l 17
       local card = Card(a.T.x + a.T.w/2, a.T.y, G.CARD_W*(scale or 1), G.CARD_H*(scale or 1), nil, center)
       if after then after(card, center, i, j, idx) else card:start_materialize(nil, i>1 or j>1) end
       a:emplace(card)
@@ -2897,6 +2937,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.156"
+requires = ["auto.UI_definitions.155"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*local t =  create_UIBox_generic_options\(\{ back_func = 'your_collection', contents = \{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", r = 0\.1, colour = G\.C\.BLACK, emboss = 0\.05\}, nodes=deck_tables\}, \n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=\{\n[\t ]*create_option_cycle\(\{options = joker_options, w = 4\.5, cycle_shoulders = true, opt_callback = 'your_collection_joker_page', current_option = 1, colour = G\.C\.RED, no_pips = true, focus_args = \{snap_to = true, nav = 'wide'\}\}\)\n[\t ]*\}\}\n[\t ]*\}\}\)\n(?<post>)'''
 position = "at"
@@ -3043,7 +3084,7 @@ l 3
       idx = idx + 1
       local center = G.P_CENTER_POOLS["Planet"][idx]
 r 32 614 %20%20%20%20%20%20 -
-l 48
+l 49
 ${post}'''
 times = 1
 
@@ -3073,6 +3114,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.165"
+requires = ["auto.UI_definitions.156"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*local deck_tables = \{\}\n[\t ]*\n[\t ]*G\.your_collection = \{\}\n[\t ]*for j = 1, 2 do\n[\t ]*G\.your_collection\[j\] = CardArea\(\n[\t ]*G\.ROOM\.T\.x \+ 0\.2\*G\.ROOM\.T\.w/2,G\.ROOM\.T\.h,\n[\t ]*4\.25\*G\.CARD_W,\n[\t ]*1\*G\.CARD_H, \n[\t ]*\{card_limit = 4, type = 'voucher', highlight_limit = 0, collection = true\}\)\n[\t ]*table\.insert\(deck_tables, \n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0, no_fill = true\}, nodes=\{\n[\t ]*\{n=G\.UIT\.O, config=\{object = G\.your_collection\[j\]\}\}\n[\t ]*\}\}\n[\t ]*\)\n[\t ]*end\n[\t ]*\n[\t ]*local voucher_options = \{\}\n[\t ]*for i = 1, math\.ceil\(#G\.P_CENTER_POOLS\.Voucher/\(4\*#G\.your_collection\)\) do\n[\t ]*table\.insert\(voucher_options, localize\('k_page'\)\.\.' '\.\.tostring\(i\)\.\.'/'\.\.tostring\(math\.ceil\(#G\.P_CENTER_POOLS\.Voucher/\(4\*#G\.your_collection\)\)\)\)\n[\t ]*end\n[\t ]*\n[\t ]*for i = 1, 4 do\n[\t ]*for j = 1, #G\.your_collection do\n[\t ]*local center = G\.P_CENTER_POOLS\["Voucher"\]\[i\+\(j-1\)\*4\]\n[\t ]*local card = Card\(G\.your_collection\[j\]\.T\.x \+ G\.your_collection\[j\]\.T\.w/2, G\.your_collection\[j\]\.T\.y, G\.CARD_W, G\.CARD_H, nil, center\)\n[\t ]*card\.ability\.order = i\+\(j-1\)\*4\n[\t ]*card:start_materialize\(nil, i>1 or j>1\)\n[\t ]*G\.your_collection\[j\]:emplace\(card\)\n[\t ]*end\n[\t ]*end\n[\t ]*\n[\t ]*INIT_COLLECTION_CARD_ALERTS\(\)\n[\t ]*\n[\t ]*local t = create_UIBox_generic_options\(\{ back_func = exit or 'your_collection', contents = \{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", minw = 2\.5, padding = 0\.1, r = 0\.1, colour = G\.C\.BLACK, emboss = 0\.05\}, nodes=deck_tables\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=\{\n[\t ]*create_option_cycle\(\{options = voucher_options, w = 4\.5, cycle_shoulders = true, opt_callback = 'your_collection_voucher_page', focus_args = \{snap_to = true, nav = 'wide'\}, current_option = 1, colour = G\.C\.RED, no_pips = true\}\)\n[\t ]*\}\}\n[\t ]*\}\}\)\n[\t ]*return t\n(?<post>)'''
 position = "at"
@@ -3156,7 +3198,7 @@ payload = '''
 ${pre}  local deck_tables = COLL.areas(COLL.rows({5}, 1.06, 1.03), 1, 0.3, 1.03)
   local idx = 0
 r 30 3558 %20%20 -
-l 184
+l 186
     local a = G.your_collection[j]
     for i = 1, a.config.card_limit do
       idx = idx + 1
@@ -3204,6 +3246,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.173"
+requires = ["auto.UI_definitions.172"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", minw = 2\.5, padding = 0\.1, r = 0\.1, colour = G\.C\.BLACK, emboss = 0\.05\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\.2, colour = G\.C\.BLACK, r = 0\.2\}, nodes=\{\n)[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\}, nodes=\{\n(?<post>)'''
 position = "at"
@@ -3215,6 +3258,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.174"
+requires = ["auto.UI_definitions.172"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.C, config=\{align = "tm", minw = 3\.7, minh = 2\.1, r = 0\.1, colour = G\.C\.L_BLACK, padding = 0\.1\}, nodes=\{\n(?<post>)'''
 position = "at"
@@ -3348,7 +3392,7 @@ l 4
           temp_sprite.hover_tilt = 3
           temp_sprite:juice_up(0.05, 0.02)
 r 2 434 %20%20%20%20%20%20%20%20%20%20 -
-l 210
+l 213
           temp_sprite.config.h_popup = {n=G.UIT.ROOT, config={align="cm", r=0.1, colour=G.C.L_BLACK, padding=0.1}, nodes=popup_nodes}
           temp_sprite.config.h_popup_config = {align='cl', offset={x=-0.1,y=0}, parent=temp_sprite}
           Node.hover(temp_sprite)
@@ -3414,6 +3458,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.178"
+requires = ["auto.UI_definitions.177"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=tag_matrix\[1\]\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=tag_matrix\[2\]\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=tag_matrix\[3\]\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=tag_matrix\[4\]\},\n[\t ]*\}\}\n(?<post>)'''
 position = "at"
@@ -3503,6 +3548,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.184"
+requires = ["auto.UI_definitions.183"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*if spacing > 0 and i > 1 then \n(?<post>)'''
 position = "at"
@@ -3550,6 +3596,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.188"
+requires = ["auto.UI_definitions.136", "auto.UI_definitions.183"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", r = 0\.1, colour = G\.C\.L_BLACK, padding = 0\.1, force_focus = true, focus_args = \{nav = 'tall'\}\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\.05\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", minw = 0\.7\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = localize\('k_ante_cap'\), scale = 0\.4, colour = lighten\(G\.C\.FILTER, 0\.2\), shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cr", minw = 2\.8\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = localize\('k_base_cap'\), scale = 0\.4, colour = lighten\(G\.C\.RED, 0\.2\), shadow = true\}\},\n(?<post>)'''
 position = "at"
@@ -3565,7 +3612,7 @@ l 2
                 {n=G.UIT.T, config={text = localize('k_ante_cap'), scale = 0.43, colour = lighten(G.C.FILTER, 0.2), shadow = true}},
               }},
 r 30 4056 %20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 230
+l 233
                 {n=G.UIT.T, config={text = localize('k_base_cap'), scale = 0.43, colour = lighten(G.C.RED, 0.2), shadow = true}},
               }}
             }},
@@ -3576,6 +3623,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.189"
+requires = ["auto.UI_definitions.188"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=ante_amounts\}\n[\t ]*\}\},\n(?<post>)'''
 position = "at"
@@ -3594,6 +3642,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.190"
+requires = ["auto.UI_definitions.180|auto.UI_definitions.modded.031"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=blind_matrix\[1\]\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=blind_matrix\[2\]\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=blind_matrix\[3\]\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=blind_matrix\[4\]\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=blind_matrix\[5\]\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=blind_matrix\[6\]\},\n[\t ]*\}\}\n(?<post>)'''
 position = "at"
@@ -3635,6 +3684,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.193"
+requires = ["auto.UI_definitions.136"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*function G\.UIDEF\.multiline_credit_text\(_lines\)\n(?<post>)'''
 position = "at"
@@ -3798,7 +3848,7 @@ function CR.credits_production(text_scale)
     CR.line({{"composed by ", text_scale*0.8}, {"LouisF", text_scale*0.8, G.C.BLUE}}),
 r 30 6292 %20%20%20%20 -
 r 30 4348 %20%20%20%20%20%20 -
-l 327
+l 341
     }} or nil,
     {n=G.UIT.R, config={align = "cm", padding = 0.1}, nodes={CR.t("Modified with their permission", text_scale*0.5)}},
   }
@@ -3965,6 +4015,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.195"
+requires = ["auto.UI_definitions.193"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>[\t ]*local collab_sprite = Sprite\(0,0,0\.8\*G\.CARD_W,0\.8\*G\.CARD_H,G\.ASSET_ATLAS\[curr_collab\.art\.\.'_1'\], \{x=2,y=0\}\)\n)(?<post>)'''
 position = "at"
@@ -3982,6 +4033,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.196"
+requires = ["auto.UI_definitions.195"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.1, minw = 9, minh = 4\.2\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=G\.UIDEF\.multiline_credit_text\(\{\n(?<post>)'''
 position = "at"
@@ -3994,6 +4046,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.197"
+requires = ["auto.UI_definitions.195"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*curr_collab\.ml_text and \{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=G\.UIDEF\.multiline_credit_text\(curr_collab\.ml_text\)\} or nil,\n(?<post>)'''
 position = "at"
@@ -4005,6 +4058,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.198"
+requires = ["auto.UI_definitions.195"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.1, minw = 3, minh = 4\.2\}, nodes=\{\n(?<post>)'''
 position = "at"
@@ -4016,6 +4070,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.199"
+requires = ["auto.UI_definitions.195"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.T, config=\{text = "Art created by:", scale = 0\.3, colour = G\.C\.WHITE\}\},\n(?<post>)'''
 position = "at"
@@ -4027,6 +4082,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.200"
+requires = ["auto.UI_definitions.195"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.T, config=\{text = curr_collab\.artist, scale = 0\.3, colour = G\.C\.GOLD\}\}\n(?<post>)'''
 position = "at"
@@ -4038,6 +4094,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.201"
+requires = ["auto.UI_definitions.195"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.T, config=\{text = curr_collab\.artist_link, scale = 0\.3, colour = G\.C\.BLUE\}\}\n(?<post>)'''
 position = "at"
@@ -4049,6 +4106,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.202"
+requires = ["auto.UI_definitions.193"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*function G\.UIDEF\.credits\(\)\n(?<post>)'''
 position = "at"
@@ -4061,6 +4119,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.203"
+requires = ["auto.UI_definitions.193"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*local t =   create_UIBox_generic_options\(\{contents =\{\n(?<post>)'''
 position = "at"
@@ -4075,6 +4134,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.204"
+requires = ["auto.UI_definitions.193"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*chosen = true,\n[\t ]*tab_definition_function = function\(\) return \n[\t ]*\{n=G\.UIT\.ROOT, config=\{align = "cm", padding = 0\.2, colour = G\.C\.BLACK, r = 0\.1, emboss = 0\.05, minh = 6, minw = 10\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.2,outline_colour = G\.C\.JOKER_GREY, r = 0\.1, outline = 1\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Original Soundtrack", scale = text_scale\*0\.8, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "composed by ", scale = text_scale\*0\.8, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\{n=G\.UIT\.T, config=\{text = "LouisF", scale = text_scale\*0\.8, colour = G\.C\.BLUE, shadow = true\}\}\n[\t ]*\}\},\n[\t ]*G\.F_EXTERNAL_LINKS and \{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*UIBox_button\(\{label = \{'Instagram'\}, button = 'louisf_insta'\}\)\n[\t ]*\}\} or nil,\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\.2\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Modified with their permission", scale = text_scale\*0\.5, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tm", padding = 0\.1,outline_colour = G\.C\.JOKER_GREY, r = 0\.1, outline = 1\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Porting", scale = text_scale\*0\.6, colour = G\.C\.WHITE, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "PlayStation", scale = text_scale\*0\.45, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.03\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Maarten De Meyer', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Xbox", scale = text_scale\*0\.45, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.03\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Maarten De Meyer', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Android", scale = text_scale\*0\.45, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.03\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Maarten De Meyer', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Apple Platforms", scale = text_scale\*0\.45, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.03\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Maarten De Meyer', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Mac \(Steam\)", scale = text_scale\*0\.45, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.03\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'william341', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.1,outline_colour = G\.C\.JOKER_GREY, r = 0\.1, outline = 1\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Localization", scale = text_scale\*0\.6, colour = G\.C\.WHITE, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Universally Speaking", scale = text_scale\*0\.6, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.05\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'German', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Spanish Latam', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'French', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Indonesian', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Italian', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Japanese', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Korean', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Dutch', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Polish', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Portuguese Brasilian', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Russian', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Simplified Chinese', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Traditional Chinese', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Project managers', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.05\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Dominik May, Lisa-Marie Beck', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Román René Orozco, Javier Gómez', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Romain Vervaecke, Claire Gérard', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Yopi Jalu Paksi, Sutarto Mohammad', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Oliver Cozzio, Giulia Benassi', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Takashi Fujimoto, Ai Parlow', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Haejung Lee, Sanghyun Bae', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Ellis Jongsma, Erik Nusselder', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Mariusz Wlodarczyk, Bartosz Klofik', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Samuel Modesto, R\. Cali', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Yuliia Tatsenko, Natalia Rudane', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Shuai Fang, Liqi Ye', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Pauline Lin, AngelRabbitBB', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Ruoyang Yuan, Tania Carè', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tm", padding = 0\.1,outline_colour = G\.C\.JOKER_GREY, r = 0\.1, outline = 1\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Testing/QA", scale = text_scale\*0\.6, colour = G\.C\.WHITE, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.03\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Vishwak Kondapalli', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Basha Syed', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'CampfireCollective', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'drspectred', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'TheRealEvab', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Brightqwerty', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'MrWizzrd', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'mcpower', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\n[\t ]*\}\}\n[\t ]*end,\n(?<post>)'''
 position = "at"
@@ -4087,6 +4147,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.205"
+requires = ["auto.UI_definitions.193"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*tab_definition_function = function\(\) return \n[\t ]*\{n=G\.UIT\.ROOT, config=\{align = "cm", padding = 0\.2, colour = G\.C\.BLACK, r = 0\.1, emboss = 0\.05, minh = 6, minw = 10\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.1,outline_colour = G\.C\.JOKER_GREY, r = 0\.1, outline = 1\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Playstack", scale = text_scale\*0\.6, colour = G\.C\.RED, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.05\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Harvey Elliott', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Kevin Shrapnell', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Rob Crossley', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Liz Cheng-Moore', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Will Newell', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Charlotte Riley', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Alexander Saunders', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Naman Budhwar', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Tomasz Wisniowski', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Patrick Johnson', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Tom Verney', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Wouter van Halderen', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Shawn Cotter', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.093\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'CEO', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'COO', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'VP of Publishing', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Lead Marketing Manager', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Producer', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Producer', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Producer', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Lead Visual Marketing Manager', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Producer', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Senior Discovery Scout', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Discovery Scout', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'PR Manager', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Marketing Manager', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.B, config=\{align = "tl", w=0\.25, h=0\}, nodes=\{\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.05\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Marta Matyjewicz', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Rebecca Bell', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Alex Flynn', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Justas Pugaciauskas', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Jessica Chu', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Millicent Su', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Carla Malavasi', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Pawel Kwietniak', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Ela Müller', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Edgar Khoo', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Dami Ajiboye', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Aaron Ludlow', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Jenny Quintero', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.093\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Marketing Manager', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Finance', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Creative Director', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Graphic Designer', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Lead Video Artist', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Senior User Acquisition Manager', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Director of Publishing Services', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Front-end Developer', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Graphic Designer', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Video Editor', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Data Analyst', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Product Director', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Senior Partnerships Manager', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.B, config=\{align = "tl", w=0\.25, h=0\}, nodes=\{\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.05\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Stephanie Marti', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Emma Smith-Bodie', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Moe Abrams', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Piotr Kowalik', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Carmen Martino', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Rong Lin', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Bea Gomez', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Jose Olivares', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Joanna Kieronska', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Zuzanna Dawidowska', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Jean-Claude Vidanes ', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'AJ Purnell', scale = text_scale\*0\.42, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.093\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Senior Video Artist', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Community Manager', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Customer Support', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Software Engineer', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'HR & Office Manager', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Finance Manager', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Video Editor', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'QA & Localisation Manager', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'QA Tester', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'QA Tester', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'QA Tester', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'QA Tester', scale = text_scale\*0\.35, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\}\n[\t ]*\}\}\n[\t ]*end,\n(?<post>)'''
 position = "at"
@@ -4098,6 +4159,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.206"
+requires = ["auto.UI_definitions.193"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*local middle = \{n=G\.UIT\.R, config=\{align = "cm", minh = 4\.8, minw = 12\.3\}, nodes=\{\n(?<post>)'''
 position = "at"
@@ -4109,6 +4171,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.207"
+requires = ["auto.UI_definitions.193"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>[\t ]*label = "Sounds",\n)[\t ]*tab_definition_function = function\(\) return \n(?<post>)'''
 position = "at"
@@ -4120,6 +4183,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.208"
+requires = ["auto.UI_definitions.193"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\},\n(?<post>[\t ]*snap_to_nav = true\}\),\n[\t ]*\}\}\n)'''
 position = "at"
@@ -4253,7 +4317,7 @@ ${pre}  G:load_profile(G.focused_profile)
   local stored = G.FILES[_profile..'/profile.jkr']
   local profile_data = (stored and next(stored) and not stored.deleted) and stored or nil
 r 30 5375 %20%20 -
-l 146
+l 148
     profile_data.name = profile_data.name or (${pname})
   end
   local _shared_name = PlayerName and PlayerName.shared and PlayerName.shared()
@@ -4316,6 +4380,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.217.001"
+requires = ["auto.UI_definitions.216"]
 target = "functions/UI_definitions.lua"
 pattern = '''(?<pre>\}, scale = 0\.35, colour = )G\.C\.WHITE(?<post>)'''
 position = "at"
@@ -4370,6 +4435,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.222"
+requires = ["auto.button_callbacks.062"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>[\t ]*return \{n=G\.UIT\.ROOT, config=\{align = "cm", padding = 0\.1, colour = G\.C\.CLEAR\}, nodes=challenge_list\}\n)(?<post>)'''
 position = "at"
@@ -4481,7 +4547,7 @@ function G.UIDEF.achievements_list_page(_page)
       local status_text = ach.unlocked and "UNLOCKED" or "LOCKED"
 
 r 30 2663 %20%20%20%20%20%20 -
-l 98
+l 99
         {n=G.UIT.C, config={align = "cl", padding = 0.05, minw = 3.2, maxw = 3.2}, nodes={
           {n=G.UIT.T, config={text = ach.name, scale = 0.38, colour = G.C.UI.TEXT_LIGHT, shadow = true}},
         }},
@@ -4523,6 +4589,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.224"
+requires = ["auto.game.035"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*if not G\.SAVED_GAME then\n[\t ]*G\.SAVED_GAME = get_compressed\(G\.SETTINGS\.profile\.\.'/'\.\.'save\.jkr'\)\n[\t ]*if G\.SAVED_GAME ~= nil then G\.SAVED_GAME = STR_UNPACK\(G\.SAVED_GAME\) end\n[\t ]*end\n(?<post>)'''
 position = "at"
@@ -4584,7 +4651,7 @@ r 30 2219 %20%20 -
 l 1
 
 r 30 6210 %20%20 -
-l 130
+l 131
   local _mods_on = G.FUNCS.mods_button and true or false
   local _modded_game = _mods_on and MODLOADER and MODLOADER.modded and true or false
   local _show_mode = _modded_game or (_mods_on and MODS_INSTALLED and MODS_INSTALLED())
@@ -4645,6 +4712,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.229"
+requires = ["auto.UI_definitions.228"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\.2, r = 0\.1, emboss = 0\.1, colour = G\.C\.L_BLACK, mid = true\}, nodes=\{\n[\t ]*UIBox_button\{id = 'main_menu_play', button = not G\.SETTINGS\.tutorial_complete and "start_run" or "setup_run", colour = G\.C\.BLUE, minw = 3\.65, minh = 1\.55, label = \{localize\('b_play_cap'\)\}, scale = text_scale\*2, col = true\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cm"\}, nodes=\{\n[\t ]*UIBox_button\{button = 'options', colour = G\.C\.ORANGE, minw = 2\.65, minh = 1\.35, label = \{localize\('b_options_cap'\)\}, scale = text_scale \* 1\.2, col = true\},\n[\t ]*G\.F_QUIT_BUTTON and \{n=G\.UIT\.C, config=\{align = "cm", minw = 0\.2\}, nodes=\{\}\} or nil,\n[\t ]*G\.F_QUIT_BUTTON and UIBox_button\{button = quit_func, colour = G\.C\.RED, minw = 2\.65, minh = 1\.35, label = \{localize\('b_quit_cap'\)\}, scale = text_scale \* 1\.2, col = true\} or nil,\n[\t ]*\}\},\n[\t ]*UIBox_button\{id = 'collection_button', button = "your_collection", colour = G\.C\.PALE_GREEN, minw = 3\.65, minh = 1\.55, label = \{localize\('b_collection_cap'\)\}, scale = text_scale\*1\.5, col = true\},\n(?<post>)'''
 position = "at"
@@ -4717,7 +4785,7 @@ G.UIDEF.profile_icon_frame = function()
             icon_sprite:define_draw_steps({
 r 30 662 %20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 9 505 %20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 437
+l 441
               {shader = effect_def.shader},
             })
           end
@@ -4780,6 +4848,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.233"
+requires = ["auto.UI_definitions.232"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*_row\[#_row\+1\] = \{n=G\.UIT\.C, config=\{align = "cm", func = 'beta_lang_alert', padding = 0\.05, r = 0\.1, minh = 0\.7, minw = 4\.5, button = v\.beta and 'warn_lang' or 'change_lang', ref_table = v, colour = v\.beta and G\.C\.RED or G\.C\.BLUE, hover = true, shadow = true, focus_args = \{snap_to = \(k == 1\)\}\}, nodes=\{\n(?<post>)'''
 position = "at"
@@ -4791,6 +4860,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.234"
+requires = ["auto.UI_definitions.232"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*if _row\[3\] or \(k == #langs\) then \n(?<post>)'''
 position = "at"
@@ -4923,6 +4993,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.modded.006"
+requires = ["auto.UI_definitions.068"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*tab_buttons\[#tab_buttons\+1\] = UIBox_button\(\{id = 'tab_but_'\.\.\(v\.label or ''\), ref_table = v, button = 'change_tab', label = \{v\.label\}, minh = 0\.8\*args\.scale, minw = 2\.5\*args\.scale, col = true, choice = true, scale = args\.text_scale, chosen = v\.chosen, func = v\.func, colour = args\.colour, focus_args = \{type = 'none'\}\}\)\n[\t ]*end\n(?<post>)'''
 position = "at"
@@ -4979,6 +5050,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.modded.010"
+requires = ["auto.UI_definitions.195"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.05, colour = G\.C\.L_BLACK,r = 0\.1, minw = 0\.9\}, nodes=\{\n[\t ]*\{n=G\.UIT\.O, config=\{object = DynaText\(\{string = \{tostring\(in_collection and G\.PROFILES\[G\.SETTINGS\.profile\]\.hand_usage\[string\.gsub\(handname, " ", ""\)\] and G\.PROFILES\[G\.SETTINGS\.profile\]\.hand_usage\[string\.gsub\(handname, " ", ""\)\]\.count or G\.GAME\.hands\[handname\]\.played\)\}, maxw = 0\.9, scale = 0\.45, colours = \{G\.C\.FILTER\}, shadow = true\}\)\}\},\n(?<post>)'''
 position = "at"
@@ -5218,7 +5290,7 @@ position = "at"
 payload = '''
 ${pre}  for k, v in pairs(G.P_TAGS) do
 r 30 3918 %20%20%20%20 -
-l 144
+l 147
 ${post}'''
 optional = true
 
@@ -5236,6 +5308,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.modded.030"
+requires = ["auto.UI_definitions.177"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.R, config=\{align = "cm"\}, nodes=table_nodes\}\n(?<post>)'''
 position = "at"
@@ -5289,6 +5362,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.modded.033"
+requires = ["auto.UI_definitions.modded.032"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*local temp_blind =  SMODS\.create_sprite\(0,0,s,s,  discovered and v\.atlas or 'blind_chips',  discovered and v\.pos or G\.b_undiscovered\.pos\) \n(?<post>)'''
 position = "at"
@@ -5300,6 +5374,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.UI_definitions.modded.034"
+requires = ["auto.UI_definitions.193"]
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*chosen = not SMODS\.init_collab_credits,\n[\t ]*tab_definition_function = function\(\) return \n[\t ]*\{n=G\.UIT\.ROOT, config=\{align = "cm", padding = 0\.2, colour = G\.C\.BLACK, r = 0\.1, emboss = 0\.05, minh = 6, minw = 10\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.2,outline_colour = G\.C\.JOKER_GREY, r = 0\.1, outline = 1\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Original Soundtrack", scale = text_scale\*0\.8, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "composed by ", scale = text_scale\*0\.8, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\{n=G\.UIT\.T, config=\{text = "LouisF", scale = text_scale\*0\.8, colour = G\.C\.BLUE, shadow = true\}\}\n[\t ]*\}\},\n[\t ]*G\.F_EXTERNAL_LINKS and \{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*UIBox_button\(\{label = \{'Instagram'\}, button = 'louisf_insta'\}\)\n[\t ]*\}\} or nil,\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\.2\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Modified with their permission", scale = text_scale\*0\.5, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tm", padding = 0\.1,outline_colour = G\.C\.JOKER_GREY, r = 0\.1, outline = 1\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Porting", scale = text_scale\*0\.6, colour = G\.C\.WHITE, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "PlayStation", scale = text_scale\*0\.45, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.03\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Maarten De Meyer', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Xbox", scale = text_scale\*0\.45, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.03\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Maarten De Meyer', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Android", scale = text_scale\*0\.45, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.03\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Maarten De Meyer', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Apple Platforms", scale = text_scale\*0\.45, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.03\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Maarten De Meyer', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Mac \(Steam\)", scale = text_scale\*0\.45, colour = G\.C\.GOLD, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.03\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'william341', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.1,outline_colour = G\.C\.JOKER_GREY, r = 0\.1, outline = 1\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Localization", scale = text_scale\*0\.6, colour = G\.C\.WHITE, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Universally Speaking", scale = text_scale\*0\.6, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.05\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'German', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Spanish Latam', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'French', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Indonesian', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Italian', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Japanese', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Korean', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Dutch', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Polish', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Portuguese Brasilian', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Russian', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Simplified Chinese', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Traditional Chinese', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Project managers', scale = text_scale\*0\.35, colour = G\.C\.FILTER, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.05\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Dominik May, Lisa-Marie Beck', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Román René Orozco, Javier Gómez', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Romain Vervaecke, Claire Gérard', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Yopi Jalu Paksi, Sutarto Mohammad', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Oliver Cozzio, Giulia Benassi', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Takashi Fujimoto, Ai Parlow', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Haejung Lee, Sanghyun Bae', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Ellis Jongsma, Erik Nusselder', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Mariusz Wlodarczyk, Bartosz Klofik', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Samuel Modesto, R\. Cali', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Yuliia Tatsenko, Natalia Rudane', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Shuai Fang, Liqi Ye', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Pauline Lin, AngelRabbitBB', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Ruoyang Yuan, Tania Carè', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tm", padding = 0\.1,outline_colour = G\.C\.JOKER_GREY, r = 0\.1, outline = 1\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = "Testing/QA", scale = text_scale\*0\.6, colour = G\.C\.WHITE, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "tm", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "tl", padding = 0\.03\}, nodes=\{\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Vishwak Kondapalli', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Basha Syed', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'CampfireCollective', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'drspectred', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'TheRealEvab', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'Brightqwerty', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'MrWizzrd', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cl", padding = 0\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = 'mcpower', scale = text_scale\*0\.35, colour = G\.C\.UI\.TEXT_LIGHT, shadow = true\}\},\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\n[\t ]*\}\},\n[\t ]*\}\},\n[\t ]*\n[\t ]*\}\}\n[\t ]*end,\n(?<post>)'''
 position = "at"

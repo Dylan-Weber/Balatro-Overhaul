@@ -254,7 +254,7 @@ function bom_match.set_starting_mp_run()
     if G and G.SETTINGS and not G.SETTINGS.tutorial_complete then
 r 15 1212 %20%20%20%20%20%20%20%20 -
 r 15 1213 %20%20%20%20%20%20%20%20 -
-l 632
+l 633
     end
 end
 
@@ -432,6 +432,7 @@ function bom_match.enter_lobby(is_host, room_code)
         end
     end)
     bom_match.reset()
+    match.opp_deck_filter = nil
     bom_match.transition(bom_match.PHASE.LOBBY)
     match.is_host = is_host
     match.room_code = room_code
@@ -500,7 +501,7 @@ function bom_match.set_ready(ready)
     mp_log.debug("BOM_MATCH", "set_ready=%s", tostring(ready))
     pcall(function()
         if bom_core and bom_core.send then
-            bom_core.send({ type = "ready_state", ready = ready })
+            bom_core.send({ type = "ready_state", ready = ready, deck_filter = bom_match.my_deck_filter() })
         end
     end)
 end
@@ -1779,7 +1780,7 @@ function bom_match.release_unplayed_pvp_blind()
         local rerolled = rr.boss_rerolled
 r 9 288 %20%20%20%20%20%20%20%20 -
 r 9 289 %20%20%20%20%20%20%20%20 -
-l 501
+l 552
         rr.boss_rerolled = rerolled
     end
 end
@@ -2069,8 +2070,59 @@ function bom_match.deck_pool()
         if ok and type(extra) == "table" then for _, o in ipairs(extra) do add(o.value) end end
     end
     local PR = rawget(_G, "PlayRandom")
-    if PR and PR.filter_decks and PR.deck_name_shown then out = PR.filter_decks(out, PR.deck_name_shown) end
+    if PR and PR.filter_decks and PR.deck_name_shown then
+        local f = bom_match.shared_deck_filter()
+        out = PR.filter_decks(out, function(n) return PR.deck_name_shown(n, f) end, f)
+    end
     return out
+end
+
+function bom_match.my_deck_filter()
+    local PR = rawget(_G, "PlayRandom")
+    return PR and PR.deck_filter and PR.deck_filter() or "both"
+end
+
+function bom_match.shared_deck_filter()
+    local PR = rawget(_G, "PlayRandom")
+    if not (PR and PR.shared_deck_filter) then return "both" end
+    return PR.shared_deck_filter(bom_match.my_deck_filter(), match.opp_deck_filter)
+end
+
+function bom_match.deck_allowed(name)
+    local PR = rawget(_G, "PlayRandom")
+    if not (PR and PR.deck_name_shown) or name == bom_match.RANDOM_DECK then return true end
+    return PR.deck_name_shown(name, bom_match.shared_deck_filter())
+end
+
+function bom_match.fit_deck_to_filter()
+    local s = match.settings
+    if not (s and match.is_host and match.phase == bom_match.PHASE.LOBBY) then return false end
+    if type(s.deck) == "string" and not bom_match.deck_allowed(s.deck) then
+        s.deck = bom_match.deck_pool()[1] or "Red Deck"
+        mp_log.info("BOM_MATCH", "deck filter %s: lobby deck set to %s", bom_match.shared_deck_filter(), s.deck)
+    end
+    bom_match.sync_settings()
+    return true
+end
+
+function bom_match.on_opponent_deck_filter(f)
+    if f == nil then return end
+    local PR = rawget(_G, "PlayRandom")
+    local clean = PR and PR.clean_deck_filter and PR.clean_deck_filter(f) or "both"
+    if clean == match.opp_deck_filter then return end
+    local before = bom_match.shared_deck_filter()
+    match.opp_deck_filter = clean
+    if bom_match.shared_deck_filter() ~= before then bom_match.fit_deck_to_filter() end
+end
+
+function bom_match.send_deck_filter()
+    if match.phase ~= bom_match.PHASE.LOBBY then return end
+    pcall(function()
+        if bom_core and bom_core.send then
+            bom_core.send({ type = "ready_state", ready = match.my_ready == true, deck_filter = bom_match.my_deck_filter() })
+        end
+    end)
+    bom_match.fit_deck_to_filter()
 end
 
 function bom_match.fill_deck_pool()

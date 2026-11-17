@@ -36,7 +36,7 @@ times = 1
 [patches.regex]
 id = "auto.button_callbacks.002"
 target = "functions/button_callbacks.lua"
-pattern = '''^(?<pre>)[\t ]*G\.FUNCS\.can_buy = function\(e\)\n[\t ]*if \(e\.config\.ref_table\.cost > G\.GAME\.dollars - G\.GAME\.bankrupt_at\) and \(e\.config\.ref_table\.cost > 0\) then\n(?<post>)'''
+pattern = '''^(?<pre>)[\t ]*G\.FUNCS\.can_buy = function\(e\)\n[\t ]*if \((?:to_big\(e\.config\.ref_table\.cost\) > to_big\(G\.GAME\.dollars\) - to_big\(G\.GAME\.bankrupt_at\)|e\.config\.ref_table\.cost > G\.GAME\.dollars - G\.GAME\.bankrupt_at)\) and \(e\.config\.ref_table\.cost > 0\) then\n(?<post>)'''
 position = "at"
 payload = '''
 ${pre}G.FUNCS.shop_check_result = function(ok, e)
@@ -55,7 +55,7 @@ G.FUNCS.card_can_buy_and_use = function(_card)
 end
 
 e 32 887 - - =8,-2,+%62%75,=8,+%5F%63%68%65%63%6B,=14
-l 48
+l 49
     if not G.FUNCS.shop_check_result(G.FUNCS.can_buy(e), e) then
 ${post}'''
 times = 1
@@ -86,8 +86,9 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.004"
+requires = ["auto.button_callbacks.002"]
 target = "functions/button_callbacks.lua"
-pattern = '''^(?<pre>)[\t ]*G\.FUNCS\.can_buy_and_use = function\(e\)\n[\t ]*if \(\(\(e\.config\.ref_table\.cost > G\.GAME\.dollars - G\.GAME\.bankrupt_at\) and \(e\.config\.ref_table\.cost > 0\)\) or \(not e\.config\.ref_table:can_use_consumeable\(\)\)\) then\n(?<post>)'''
+pattern = '''^(?<pre>)[\t ]*G\.FUNCS\.can_buy_and_use = function\(e\)\n[\t ]*if \(\(\((?:to_big\(e\.config\.ref_table\.cost\) > to_big\(G\.GAME\.dollars\) - to_big\(G\.GAME\.bankrupt_at\)|e\.config\.ref_table\.cost > G\.GAME\.dollars - G\.GAME\.bankrupt_at)\) and \(e\.config\.ref_table\.cost > 0\)\) or \(not e\.config\.ref_table:can_use_consumeable\(\)\)\) then\n(?<post>)'''
 position = "at"
 payload = '''
 ${pre}G.FUNCS.buy_and_use_button_check = function(e)
@@ -372,7 +373,7 @@ position = "at"
 payload = '''
 ${pre}    if e.children[1] then
 r 32 483 %20%20%20%20%20%20 -
-l 186
+l 188
       local obj = e.children[1].config.object
       if obj then obj.states.visible = true end
     end
@@ -382,6 +383,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.022"
+requires = ["auto.UI_definitions.156"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)[\t ]*if not args or not args\.cycle_config then return end\n[\t ]*for j = 1, #G\.your_collection do\n[\t ]*for i = #G\.your_collection\[j\]\.cards,1, -1 do\n[\t ]*local c = G\.your_collection\[j\]:remove_card\(G\.your_collection\[j\]\.cards\[i\]\)\n[\t ]*c:remove\(\)\n[\t ]*c = nil\n[\t ]*end\n[\t ]*end\n[\t ]*for i = 1, 5 do\n[\t ]*for j = 1, #G\.your_collection do\n[\t ]*local center = G\.P_CENTER_POOLS\["Joker"\]\[i\+\(j-1\)\*5 \+ \(5\*#G\.your_collection\*\(args\.cycle_config\.current_option - 1\)\)\]\n[\t ]*if not center then break end\n[\t ]*local card = Card\(G\.your_collection\[j\]\.T\.x \+ G\.your_collection\[j\]\.T\.w/2, G\.your_collection\[j\]\.T\.y, G\.CARD_W, G\.CARD_H, G\.P_CARDS\.empty, center\)\n[\t ]*card\.sticker = get_joker_win_sticker\(center\)\n[\t ]*G\.your_collection\[j\]:emplace\(card\)\n[\t ]*end\n[\t ]*end\n[\t ]*INIT_COLLECTION_CARD_ALERTS\(\)\n(?<post>)'''
 position = "at"
@@ -426,6 +428,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.026"
+requires = ["auto.UI_definitions.156"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)[\t ]*if not args or not args\.cycle_config then return end\n[\t ]*for j = 1, #G\.your_collection do\n[\t ]*for i = #G\.your_collection\[j\]\.cards,1, -1 do\n[\t ]*local c = G\.your_collection\[j\]:remove_card\(G\.your_collection\[j\]\.cards\[i\]\)\n[\t ]*c:remove\(\)\n[\t ]*c = nil\n[\t ]*end\n[\t ]*end\n[\t ]*for i = 1, 4 do\n[\t ]*for j = 1, #G\.your_collection do\n[\t ]*local center = G\.P_CENTER_POOLS\["Voucher"\]\[i\+\(j-1\)\*4 \+ \(8\*\(args\.cycle_config\.current_option - 1\)\)\]\n[\t ]*if not center then break end\n[\t ]*local card = Card\(G\.your_collection\[j\]\.T\.x \+ G\.your_collection\[j\]\.T\.w/2, G\.your_collection\[j\]\.T\.y, G\.CARD_W, G\.CARD_H, G\.P_CARDS\.empty, center\)\n[\t ]*card:start_materialize\(nil, i>1 or j>1\)\n[\t ]*G\.your_collection\[j\]:emplace\(card\)\n[\t ]*end\n[\t ]*end\n[\t ]*INIT_COLLECTION_CARD_ALERTS\(\)\n(?<post>)'''
 position = "at"
@@ -598,7 +601,7 @@ function create_UIBox_performance_settings()
 
   return create_UIBox_generic_options({back_func = 'settings', contents = {
 r 30 71 %20%20%20%20 -
-l 222
+l 223
       {n=G.UIT.T, config={text = mod_loc("PERFORMANCE SETTINGS"), scale = 0.5, colour = G.C.ORANGE}}
     }},
     {n=G.UIT.R, config={align = "cm", padding = 0.03}, nodes={
@@ -816,6 +819,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.033"
+requires = ["auto.button_callbacks.031"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)[\t ]*local OSkeyboard_e = e\.parent\.parent\.parent\n[\t ]*if G\.CONTROLLER\.text_input_hook == e and G\.CONTROLLER\.HID\.controller then\n[\t ]*if not OSkeyboard_e\.children\.controller_keyboard then \n[\t ]*OSkeyboard_e\.children\.controller_keyboard = UIBox\{\n[\t ]*definition = create_keyboard_input\{backspace_key = true, return_key = true, space_key = false\},\n[\t ]*config = \{\n[\t ]*align= 'cm',\n[\t ]*offset = \{x = 0, y = G\.CONTROLLER\.text_input_hook\.config\.ref_table\.keyboard_offset or -4\},\n[\t ]*major = e\.UIBox, parent = OSkeyboard_e\}\n[\t ]*\}\n[\t ]*G\.CONTROLLER\.screen_keyboard = OSkeyboard_e\.children\.controller_keyboard\n[\t ]*G\.CONTROLLER:mod_cursor_context_layer\(1\)\n[\t ]*end\n[\t ]*elseif OSkeyboard_e\.children\.controller_keyboard then\n[\t ]*OSkeyboard_e\.children\.controller_keyboard:remove\(\)\n[\t ]*OSkeyboard_e\.children\.controller_keyboard = nil\n[\t ]*G\.CONTROLLER\.screen_keyboard = nil\n[\t ]*G\.CONTROLLER:mod_cursor_context_layer\(-1\)\n[\t ]*end\n(?<post>)'''
 position = "at"
@@ -857,7 +861,7 @@ r 32 925 %20%20%20%20%20%20 -
 r 32 926 %20%20%20%20%20%20 -
 r 32 927 %20%20%20%20%20%20 -
 r 29 972 %20%20%20%20%20%20 -
-l 98
+l 101
     end
   end
 end
@@ -902,6 +906,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.036"
+requires = ["auto.button_callbacks.031"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)[\t ]*local corpus = '123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'\.\.\(hook\.config\.ref_table\.extended_corpus and " 0!\$&\(\)<>\?:\{\}\+-=,\.\[\]_" or ''\)\n[\t ]*\n[\t ]*if hook\.config\.ref_table\.extended_corpus then \n(?<post>)'''
 position = "at"
@@ -928,6 +933,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.038"
+requires = ["auto.button_callbacks.031"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)[\t ]*args\.key = keymap\[args\.key\] or \(args\.caps and string\.upper\(args\.key\) or args\.key\)\n(?<post>)'''
 position = "at"
@@ -939,6 +945,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.039"
+requires = ["auto.button_callbacks.031", "auto.button_callbacks.036"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)[\t ]*elseif hook_config\.max_length > string\.len\(text\.ref_table\[text\.ref_value\]\) and\n[\t ]*\(string\.len\(args\.key\) == 1\) and\n[\t ]*string\.find\( corpus,  args\.key , 1, true\) then --check to make sure the key is in the valid corpus, add it to the string\n(?<post>)'''
 position = "at"
@@ -992,7 +999,7 @@ end
 
 G.FUNCS.profile_icon_page = function(args)
 r 32 603 %20%20 -
-l 186
+l 192
   if not G.profile_icon_collection then return end
 
   local num_rows = #G.profile_icon_collection
@@ -1012,6 +1019,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.043"
+requires = ["auto.button_callbacks.027"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*G\.FUNCS\.overlay_menu  = function\(args\)\n)'''
 position = "at"
@@ -1090,6 +1098,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.044"
+requires = ["auto.button_callbacks.043"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*--Remove any existing overlays if there is one\n)'''
 position = "at"
@@ -1107,6 +1116,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.045"
+requires = ["auto.button_callbacks.043", "auto.button_callbacks.044"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>[\t ]*if G\.OVERLAY_MENU then G\.OVERLAY_MENU:remove\(\) end\n)(?<post>)'''
 position = "at"
@@ -1135,6 +1145,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.046"
+requires = ["auto.button_callbacks.044"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)[\t ]*G\.CONTROLLER:mod_cursor_context_layer\(G\.NO_MOD_CURSOR_STACK and 0 or 1\)\n(?<post>)'''
 position = "at"
@@ -1146,6 +1157,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.047"
+requires = ["auto.button_callbacks.044"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*G\.OVERLAY_MENU = true\n)'''
 position = "at"
@@ -1169,6 +1181,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.049"
+requires = ["auto.button_callbacks.043", "auto.button_callbacks.044", "auto.button_callbacks.048"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>[\t ]*config = args\.config\n)[\t ]*\}\n(?<post>)'''
 position = "at"
@@ -1181,7 +1194,7 @@ ${pre}  })
     G.OVERLAY_MENU_KEY = nil
 r 32 1363 %20%20%20%20 -
 r 32 1367 %20%20%20%20 -
-l 65
+l 68
     pcall(play_sound, 'cancel')
     return
   end
@@ -1194,6 +1207,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.050"
+requires = ["auto.button_callbacks.044"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)[\t ]*G\.ROOM\.jiggle = G\.ROOM\.jiggle \+ 1\n(?<post>)'''
 position = "at"
@@ -1205,6 +1219,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.051"
+requires = ["auto.button_callbacks.043", "auto.button_callbacks.044", "auto.button_callbacks.045", "auto.controller.005"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>[\t ]*G\.OVERLAY_MENU:align_to_major\(\)\n)(?<post>)'''
 position = "at"
@@ -1231,6 +1246,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.053"
+requires = ["auto.controller.005"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*--Save settings to file\n)'''
 position = "at"
@@ -1283,7 +1299,7 @@ G.FUNCS.mp_lobby_info_text_visible = function(e)
     e.config.shadow = true
   else
 r 32 2647 %20%20%20%20 -
-l 15
+l 16
     e.config.shadow = false
   end
 end
@@ -1293,6 +1309,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.055"
+requires = ["auto.button_callbacks.027"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*G\.FUNCS\.settings = function\(e, instant\)\n)'''
 position = "at"
@@ -1392,7 +1409,7 @@ payload = '''
 ${pre}G.FUNCS.mp_stats = function(e)
 r 32 1381 %20%20 -
 r 32 1382 %20%20 -
-l 89
+l 90
     definition = create_UIBox_mp_stats()
   }
 end
@@ -1472,6 +1489,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.062"
+requires = ["auto.UI_definitions.222"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>[\t ]*G\.FUNCS\.change_challenge_description\{config = \{id = 'nil'\}\}\n)(?<post>)'''
 position = "at"
@@ -1926,7 +1944,7 @@ r 32 1381 %20%20%20%20 -
 l 1
     pcall(function()
 r 32 1382 %20%20%20%20%20%20 -
-l 62
+l 63
         definition = create_UIBox_booster_selection(args)
       }
     end)
@@ -1938,6 +1956,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.093"
+requires = ["auto.button_callbacks.092"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)[\t ]*if e and e\.config\.id == 'restart_button' then G\.GAME\.viewed_back = nil end\n(?<post>)'''
 position = "at"
@@ -2040,7 +2059,7 @@ ${pre}      G.SAVED_GAME = G.SAVED_GAME or savefile
           G.SAVED_GAME = nil
 r 32 57 %20%20%20%20%20%20%20%20%20%20 -
 r 32 58 %20%20%20%20%20%20%20%20%20%20 -
-l 12
+l 13
           return _can_continue
 ${post}'''
 optional = true
@@ -2048,6 +2067,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.button_callbacks.modded.002"
+requires = ["auto.button_callbacks.031"]
 target = "functions/button_callbacks.lua"
 pattern = '''^(?<pre>)[\t ]*local OSkeyboard_e = e\.parent\.parent\.parent\n[\t ]*if G\.CONTROLLER\.text_input_hook == e and \(G\.CONTROLLER\.HID\.controller or G\.CONTROLLER\.HID\.touch\) then\n[\t ]*if not OSkeyboard_e\.children\.controller_keyboard then \n[\t ]*OSkeyboard_e\.children\.controller_keyboard = UIBox\{\n[\t ]*definition = create_keyboard_input\{backspace_key = true, return_key = true, space_key = false\},\n[\t ]*config = \{\n[\t ]*align= 'cm',\n[\t ]*offset = \{x = 0, y = G\.CONTROLLER\.text_input_hook\.config\.ref_table\.keyboard_offset or -4\},\n[\t ]*major = e\.UIBox, parent = OSkeyboard_e\}\n[\t ]*\}\n[\t ]*G\.CONTROLLER\.screen_keyboard = OSkeyboard_e\.children\.controller_keyboard\n[\t ]*G\.CONTROLLER:mod_cursor_context_layer\(1\)\n[\t ]*end\n[\t ]*elseif OSkeyboard_e\.children\.controller_keyboard then\n[\t ]*OSkeyboard_e\.children\.controller_keyboard:remove\(\)\n[\t ]*OSkeyboard_e\.children\.controller_keyboard = nil\n[\t ]*G\.CONTROLLER\.screen_keyboard = nil\n[\t ]*G\.CONTROLLER:mod_cursor_context_layer\(-1\)\n[\t ]*end\n(?<post>)'''
 position = "at"

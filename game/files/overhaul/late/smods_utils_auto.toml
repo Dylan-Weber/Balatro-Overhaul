@@ -66,6 +66,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_utils.005"
+requires = ["auto.smods_utils.004"]
 target = '=[SMODS _ "src/utils.lua"]'
 pattern = '''^(?<pre>)[\t ]*if v\.discovered and meta\.alerted\[k\] or v\.set == 'Back' or v\.start_alerted then\n(?<post>)'''
 position = "at"

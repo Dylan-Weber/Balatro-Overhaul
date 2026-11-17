@@ -924,7 +924,7 @@ local function _queue_preview()
     if P._queued and t - P._queued < 0.5 then return end
     P._queued = t
 r 1 112 %20%20%20%20 -
-l 13
+l 80
         trigger  = "immediate",
         blockable = false,
         blocking  = false,
@@ -938,10 +938,9 @@ end
 PREVIEW.queue = _queue_preview
 
 local _orig_parse_highlighted = CardArea.parse_highlighted
-r 5 162 - -
-l 66
-    if self.config.type ~= "hand" then return _orig_parse_highlighted(self) end
-    local ok, err = P.with_hand_info(_orig_parse_highlighted, self)
+function CardArea:parse_highlighted(...)
+    if self.config.type ~= "hand" then return _orig_parse_highlighted(self, ...) end
+    local ok, err = P.with_hand_info(_orig_parse_highlighted, self, ...)
     if not ok then error(err, 0) end
     _queue_preview()
 end
@@ -1007,7 +1006,7 @@ function G.FUNCS.evaluate_play(e, ...)
     local r1, r2, r3 = _orig_evaluate_play(e, ...)
     if q then pcall(check_after, q, n0) end
 r 1 112 %20%20%20%20 -
-l 19
+l 45
         trigger   = "after",
         blockable = false,
         blocking  = false,
@@ -1027,18 +1026,16 @@ function G.FUNCS.discard_cards_from_highlighted(e, is_hook_blind, ...)
 end
 
 local _orig_emplace = CardArea.emplace
-r 5 32 - -
-l 7
-    _orig_emplace(self, card, location, stay_flipped)
+function CardArea:emplace(card, location, stay_flipped, ...)
+    _orig_emplace(self, card, location, stay_flipped, ...)
     if self == G.jokers and G.hand and #G.hand.highlighted > 0 and not P._in_sandbox then
         _queue_preview()
     end
 end
 
 local _orig_remove_card = CardArea.remove_card
-r 5 66 - -
-l 17
-    local result = _orig_remove_card(self, card, discarded_only)
+function CardArea:remove_card(card, discarded_only, ...)
+    local result = _orig_remove_card(self, card, discarded_only, ...)
     if self == G.jokers and G.hand and #G.hand.highlighted > 0 and not P._in_sandbox then
         _queue_preview()
     end

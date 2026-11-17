@@ -4,6 +4,28 @@ export const DRAFT_DECKS = [
   'Lilac Deck', 'Seer Deck', 'Tangerine Deck', 'Cobalt Deck', 'Gemini Deck',
 ];
 
+export const VANILLA_DRAFT_DECKS = DRAFT_DECKS.slice(0, 15);
+
+export type DeckFilter = 'vanilla' | 'new' | 'both';
+
+export function cleanDeckFilter(f: unknown): DeckFilter | null {
+  return f === 'vanilla' || f === 'new' || f === 'both' ? f : null;
+}
+
+export function sharedDeckFilter(filters: unknown[]): DeckFilter {
+  const clean = filters.map(cleanDeckFilter);
+  if (clean.includes('vanilla')) return 'vanilla';
+  if (clean.includes('new')) return 'new';
+  return 'both';
+}
+
+export function draftDecksFor(filter: DeckFilter): { decks: string[]; spare: string[] } {
+  const vanilla = new Set(VANILLA_DRAFT_DECKS);
+  if (filter === 'vanilla') return { decks: [...VANILLA_DRAFT_DECKS], spare: [] };
+  if (filter === 'new') return { decks: DRAFT_DECKS.filter(d => !vanilla.has(d)), spare: [...VANILLA_DRAFT_DECKS] };
+  return { decks: [...DRAFT_DECKS], spare: [] };
+}
+
 export const draftTiming = { turnMs: 30_000, botMs: 900 };
 export const DRAFT_BANS_EACH = 2;
 
@@ -59,23 +81,29 @@ export function seededRandom(seed: string): () => number {
   };
 }
 
-export function draftPool(seed: string, size = 7, decks: string[] = DRAFT_DECKS): string[] {
-  const rnd = seededRandom('draft:' + seed);
-  const list = [...decks];
-  for (let i = list.length - 1; i > 0; i--) {
+function shuffled(list: string[], rnd: () => number): string[] {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(rnd() * (i + 1));
-    [list[i], list[j]] = [list[j], list[i]];
+    [out[i], out[j]] = [out[j], out[i]];
   }
+  return out;
+}
+
+export function draftPool(seed: string, size = 7, decks: string[] = DRAFT_DECKS, spare: string[] = []): string[] {
+  const rnd = seededRandom('draft:' + seed);
+  const list = shuffled(decks, rnd);
+  if (list.length < size && spare.length > 0) list.push(...shuffled(spare.filter(d => !list.includes(d)), rnd));
   return list.slice(0, Math.max(3, Math.min(size, list.length)));
 }
 
-export function newDraft(seed: string, pids: number[] = [0, 1], bansEach = DRAFT_BANS_EACH, size = pids.length * bansEach + 1): Draft {
+export function newDraft(seed: string, pids: number[] = [0, 1], bansEach = DRAFT_BANS_EACH, size = pids.length * bansEach + 1, filter: DeckFilter = 'both'): Draft {
   const first = pids.length > 0 ? Math.floor(seededRandom('order:' + seed)() * pids.length) : 0;
   const turns = [...pids.slice(first), ...pids.slice(0, first)];
   const order: number[] = [];
   for (let i = 0; i < bansEach; i++) for (const pid of turns) order.push(pid);
   const d: Draft = {
-    id: crypto.randomUUID().slice(0, 12), pool: draftPool(seed, size), bans: [], picks: {}, order, pids: [...pids],
+    id: crypto.randomUUID().slice(0, 12), pool: draftPool(seed, size, draftDecksFor(filter).decks, draftDecksFor(filter).spare), bans: [], picks: {}, order, pids: [...pids],
     phase: 'ban', turn: order.length > 0 ? order[0] : null, deadline: 0, random: {}, timer: null, deck: null,
   };
   if (order.length === 0) finishDraft(d, seed);
@@ -195,12 +223,13 @@ export function draftLeftForPicks(room: DraftRoom): number {
   return picks && !room.ranked && room.settings.different_decks === true ? 3 : 1;
 }
 
-export function startDraft(room: DraftRoom, deps: DraftDeps, seed?: string | null): Draft {
+export function startDraft(room: DraftRoom, deps: DraftDeps, seed?: string | null, filters: unknown[] = []): Draft {
   if (room.draft) clear(room.draft);
   const pids = [0, 1];
-  const d = newDraft(seed || room.rankedSeed || crypto.randomUUID(), pids, DRAFT_BANS_EACH, pids.length * DRAFT_BANS_EACH + draftLeftForPicks(room));
+  const filter = sharedDeckFilter(filters);
+  const d = newDraft(seed || room.rankedSeed || crypto.randomUUID(), pids, DRAFT_BANS_EACH, pids.length * DRAFT_BANS_EACH + draftLeftForPicks(room), filter);
   room.draft = d;
-  deps.log('INFO', 'DRAFT', `${room.code} started pool=${d.pool.join(',')}`);
+  deps.log('INFO', 'DRAFT', `${room.code} started decks=${filter} pool=${d.pool.join(',')}`);
   arm(room, deps);
   broadcast(room, deps);
   return d;

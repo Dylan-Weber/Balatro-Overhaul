@@ -70,7 +70,7 @@ local function fresh_store()
   Mods.index, Mods.list, Mods.jokers, Mods.items = nil, {}, {}, {}
 end
 
-check("version 12 for mods", Mods.V == 12)
+check("version 15 for mods", Mods.V == 15)
 check("rooms follow the creation version", Room.V == Mods.V)
 
 for _, kind in ipairs({"tarot", "spectral", "planet", "tag", "voucher", "stake", "blind", "deck"}) do
@@ -194,9 +194,9 @@ check("install: tarot names the installed joker", by.tarot and by.tarot.effects[
 check("install: deck names the installed tarot", by.deck and by.deck.effects[1].v == "c_forge_" .. by.tarot.id)
 check("install: joker rule names the installed tarot", jk2 and jk2.rules[1].give[1].v == "c_forge_" .. by.tarot.id)
 local t8 = json.decode(raw)
-t8.v = 13
+t8.v = 16
 local m8, err8 = Mods.parse(json.encode(t8))
-check("older game refuses v13 as newer", m8 == nil and err8 == "newer")
+check("older game refuses v16 as newer", m8 == nil and err8 == "newer")
 
 G.FUNCS = G.FUNCS or {}
 local okM, KM = pcall(require, "functions/forge/forge_kinds_more")

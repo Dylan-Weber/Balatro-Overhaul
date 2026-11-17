@@ -35,7 +35,7 @@ function UI.card_node(c, o)
   if o.still then
 r 7 1460 %20%20%20%20 -
 r 5 220 %20%20%20%20 -
-l 244
+l 246
   end
   area:emplace(card)
   return {n = G.UIT.R, config = {align = "cm", minw = w, minh = h, padding = 0}, nodes = {{n = G.UIT.O, config = {object = area}}}}
@@ -251,9 +251,11 @@ function UI.footer(tab)
     local ok, r = pcall(extra)
     if ok and type(r) == "table" then return r end
   end
+  local guide = require("functions/forge/forge_guide").entry_button()
   if tab == "my" and Store.count() > 0 then
-    return {UIK.button{label = mod_loc("MAKE SOMETHING"), button = "forge_new", colour = UIK.C.ok}, UIK.button{label = mod_loc("EXPORT A MOD"), button = "forge_export_open", colour = UIK.C.warn, id = "forge_export_open"}}
+    return {UIK.button{label = mod_loc("MAKE SOMETHING"), button = "forge_new", colour = UIK.C.ok}, UIK.button{label = mod_loc("EXPORT A MOD"), button = "forge_export_open", colour = UIK.C.warn, id = "forge_export_open"}, guide}
   end
+  if tab == "my" then return {guide} end
   return nil
 end
 

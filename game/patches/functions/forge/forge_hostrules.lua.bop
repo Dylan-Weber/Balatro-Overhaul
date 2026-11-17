@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 461
+l 470
 local R = require("functions/forge/forge_rules")
 local Store = require("functions/forge/forge_store")
 local Cat = require("functions/forge/forge_catalog")
@@ -45,12 +45,21 @@ function H.extra_values(kind)
   return out
 end
 
+R.run_num = function(id)
+  for _, k in ipairs({"voucher", "stake", "blind", "deck"}) do
+    local ok, spec = pcall(run_spec, k, id)
+    if ok and spec and spec.num then return spec.num end
+  end
+  return nil
+end
+
 R.extra_give_fn = function(kind, g)
   if g.id == "chips" or g.id == "mult" or g.id == "xmult" then return nil end
   local spec = run_spec(kind, g.id)
   if not spec then return nil end
   local c = {id = g.id}
   if spec.num then c.n = Cat.clamp(spec.num, g.n) end
+  R.keep_nv(g, c)
   if spec.v then
     local ok = false
     for _, v in ipairs(Cat.values(spec.v, true)) do if v == g.v or tostring(v) == tostring(g.v) then c.v = v; ok = true end end

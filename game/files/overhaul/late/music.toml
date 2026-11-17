@@ -1,0 +1,18 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.regex]
+id = "music.modded_main_thread_restart"
+target = "functions/misc_functions.lua"
+pattern = '''^(?<head>[\t ]*function MODULATE\(args\)\n)(?<loop>[\t ]*for k, v in pairs\(SOURCES\) do\n[\t ]*if \(string\.find\(k,'music'\) and \(args\.desired_track ~= ''\)\) then\n[\t ]*if v\[1\] and v\[1\]\.sound and v\[1\]\.sound:isPlaying\(\) then\n[\t ]*else\n[\t ]*RESTART_MUSIC\(args\)\n[\t ]*break;?\n[\t ]*end\n[\t ]*end\n[\t ]*end\n)'''
+position = "at"
+payload = '''
+${head}  if SMODS_Sounds and args.desired_track ~= '' then
+    local cur = SOURCES[args.desired_track]
+    if not (cur and cur[1] and cur[1].sound and cur[1].sound:isPlaying()) then RESTART_MUSIC(args) end
+  else
+${loop}  end
+'''
+times = 1

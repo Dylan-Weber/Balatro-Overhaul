@@ -13,6 +13,7 @@ export interface PublishOpts {
   minLauncher?: number;
   page?: string;
   force: boolean;
+  phoneAfter: boolean;
   dryRun: boolean;
   env: Record<string, string | undefined>;
   say: (line: string) => void;
@@ -34,7 +35,7 @@ export interface Target {
 }
 
 function usage(): never {
-  console.log(`Usage: bun tools/release/publish_feed.ts [--from DIR] [--to r2|DIR] [--channel prod|debug] [--min-launcher N] [--page URL] [--force] [--dry-run]
+  console.log(`Usage: bun tools/release/publish_feed.ts [--from DIR] [--to r2|DIR] [--channel prod|debug] [--min-launcher N] [--page URL] [--force] [--phone-after] [--dry-run]
   Publishes the launcher update (patchset-<version>.zip and feed.json written by pack_overhaul.sh) so
   https://balatro-overhaul-muliplayer.onrender.com/release/feed.json offers it to launcher installs.
   --from DIR      the pack_overhaul.sh output (default dist/release)
@@ -42,12 +43,14 @@ function usage(): never {
                   (debug channel: under debug/). Needs R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET.
   --to DIR        a folder instead (a server started with RELEASE_DIR=DIR serves it; used by the tests)
   --min-launcher  launchers that read an older feed format are told to download a new launcher
+  --phone-after   republishes the published version with the phone installer added (pack_overhaul.sh --pc-first, then
+                  --phone-after): same version and same patch set as the published feed only
   Refuses a version that is not newer than the published one unless --force. Keeps the last ${KEEP} patch sets.`);
   process.exit(1);
 }
 
 export function parseArgs(argv: string[], env: Record<string, string | undefined> = process.env): PublishOpts {
-  const o: PublishOpts = { from: join(root, 'dist/release'), to: 'r2', channel: 'prod', force: false, dryRun: false, env, say: l => console.log(l) };
+  const o: PublishOpts = { from: join(root, 'dist/release'), to: 'r2', channel: 'prod', force: false, phoneAfter: false, dryRun: false, env, say: l => console.log(l) };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const next = () => argv[++i] ?? usage();
@@ -57,6 +60,7 @@ export function parseArgs(argv: string[], env: Record<string, string | undefined
     else if (a === '--min-launcher') { const n = Number(next()); if (!Number.isInteger(n) || n < 1) usage(); o.minLauncher = n; }
     else if (a === '--page') o.page = next();
     else if (a === '--force') o.force = true;
+    else if (a === '--phone-after') o.phoneAfter = true;
     else if (a === '--dry-run') o.dryRun = true;
     else usage();
   }
@@ -259,15 +263,21 @@ export async function publish(o: PublishOpts, target?: Target): Promise<ReleaseF
   }
   const current = parseFeed(await t.readFeed());
   if (current) o.say(`published now: Overhaul ${current.latest.version}`);
-  if (current && compareVersions(v, current.latest.version) <= 0 && !o.force) {
+  if (o.phoneAfter) {
+    if (!feed.latest.android_apk) throw new Error(`${feedFile} has no phone installer: run pack_overhaul.sh --phone-after first`);
+    if (!current || current.latest.version !== v) throw new Error(`--phone-after adds the phone installer to the published Overhaul ${v}, but ${t.name} offers ${current?.latest.version ?? 'nothing'}`);
+    if (current.latest.sha256 !== feed.latest.sha256) throw new Error(`--phone-after: the published patch set ${v} is not this one (sha256 ${current.latest.sha256}), pack again with --pc-first`);
+  } else if (current && compareVersions(v, current.latest.version) <= 0 && !o.force) {
     throw new Error(`Overhaul ${v} is not newer than the published ${current.latest.version}. Bump OVERHAUL_VERSION in assets/overhaul/version.lua and pack again (or pass --force).`);
   }
   const body = JSON.stringify(feed, null, 2) + '\n';
   const globals = o.globals ?? await versionSource(root);
   if (o.dryRun) { o.say(`dry run, would upload ${patchsetName(v)} and feed.json to ${t.name}:\n${body}`); await publishPhone(o, t, v, zip, globals); return feed; }
   await publishPhone(o, t, v, zip, globals);
-  o.say(`uploading ${patchsetName(v)} to ${t.name}`);
-  await t.putZip(zip, patchsetName(v));
+  if (!o.phoneAfter) {
+    o.say(`uploading ${patchsetName(v)} to ${t.name}`);
+    await t.putZip(zip, patchsetName(v));
+  }
   for (const x of extra) {
     o.say(`uploading ${x.name} to ${t.name}`);
     await t.putZip(x.file, x.name);

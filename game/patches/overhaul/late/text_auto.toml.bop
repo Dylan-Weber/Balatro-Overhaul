@@ -2,7 +2,7 @@ BOP 2
 eol lf
 final 1
 base 0
-l 70
+l 72
 [manifest]
 version = "1.0.0"
 priority = 0
@@ -35,6 +35,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.text.002"
+requires = ["auto.text.001"]
 target = "engine/text.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*local old_letter = old_letters and old_letters\[current_letter\] or nil\n)'''
 position = "at"
@@ -46,6 +47,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.text.003"
+requires = ["auto.text.001"]
 target = "engine/text.lua"
 pattern = '''^(?<pre>)[\t ]*local let_tab = \{letter = [A-Za-z_.:]+\(self\.font\.FONT, c\), char = c, scale = old_letter and old_letter\.scale or part_scale\}\n(?<post>)'''
 position = "at"

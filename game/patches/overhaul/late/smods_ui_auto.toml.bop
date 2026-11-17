@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 133
+l 135
 [manifest]
 version = "1.0.0"
 priority = 0
@@ -51,6 +51,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_ui.004"
+requires = ["auto.smods_ui.003"]
 target = '=[SMODS _ "src/ui.lua"]'
 pattern = '''^(?<pre>)[\t ]*UIBox\(\{\n[\t ]*definition = \{\n[\t ]*n = G\.UIT\.ROOT,\n[\t ]*config = \{\n[\t ]*align = "cm",\n[\t ]*colour = G\.C\.UI\.TRANSPARENT_DARK\n[\t ]*\},\n[\t ]*nodes = \{\n[\t ]*\{\n[\t ]*n = G\.UIT\.T,\n[\t ]*config = \{\n[\t ]*scale = 0\.3,\n[\t ]*text = "Steamodded v" \.\. MODDED_VERSION,\n[\t ]*colour = G\.C\.UI\.TEXT_LIGHT\n[\t ]*\}\n[\t ]*\}\n[\t ]*\}\n[\t ]*\},\n[\t ]*config = \{\n[\t ]*align = "tri",\n[\t ]*bond = "Weak",\n[\t ]*offset = \{\n[\t ]*x = 0,\n[\t ]*y = 0\.3\n[\t ]*\},\n[\t ]*major = G\.ROOM_ATTACH\n[\t ]*\}\n[\t ]*\}\)\n(?<post>)'''
 position = "at"
@@ -106,6 +107,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_ui.009"
+requires = ["auto.UI_definitions.152"]
 target = '=[SMODS _ "src/ui.lua"]'
 pattern = '''^(?<pre>)(?<post>[\t ]*local deck_tables = \{\}\n)'''
 position = "at"

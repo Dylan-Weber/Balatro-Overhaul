@@ -341,7 +341,7 @@ local function install()
     bom_room.start_match = function(...)
         if D.needed() and not S.result then
             S.starting = true
-            if bom_core and bom_core.send then bom_core.send({type = "draft_start"}) end
+            if bom_core and bom_core.send then bom_core.send({type = "draft_start", deck_filter = bom_core.deck_filter_field and bom_core.deck_filter_field() or nil}) end
             return
         end
         return D.orig_start(...)

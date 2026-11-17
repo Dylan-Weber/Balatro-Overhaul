@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 446
+l 447
 local Store = require("functions/forge/forge_store")
 local Cat = require("functions/forge/forge_catalog")
 local D = require("functions/forge/forge_doc")
@@ -79,6 +79,7 @@ function K.center_for(c, index)
   center.cost = tonumber(f.cost) or 3
   center.forge_kind = c.kind
   center.forge_id = c.id
+  center.forge_start_ed = require("functions/forge/forge_always").value(c)
   center.forge_on = c.enabled
   center.mod = c.forge_mod or FJ.MOD
   center.forge_mod_badge = c.mod_id and ("forge_mod_" .. c.mod_id) or nil
@@ -704,7 +705,7 @@ function K.install_hooks()
         if K.deck_starting then
           if G.GAME and G.GAME.used_vouchers then G.GAME.used_vouchers[cen.key] = true end
 r 3 617 %20%20%20%20%20%20%20%20%20%20 -
-l 118
+l 120
             if G.GAME and G.GAME.used_vouchers then G.GAME.used_vouchers[cen.key] = true end
             pcall(keep_card, nil, cen)
             local ok, err = pcall(K.apply_voucher, cen)
@@ -747,6 +748,8 @@ l 118
     local Ed = require("functions/forge/forge_editions")
     pcall(Ed.install_draw)
     pcall(Ed.install_pack)
+    pcall(require("functions/forge/forge_always").install)
+    pcall(require("functions/forge/forge_looks").install)
   end
   if Back and Back.apply_to_run then
     local orig = Back.apply_to_run

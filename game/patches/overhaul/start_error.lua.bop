@@ -1,0 +1,178 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 60
+local M = {}
+
+M.FONT = "resources/fonts/m6x11plus.ttf"
+M.DISCORD = "https://discord.gg/uu4pu8NySP"
+M.TITLE = "Balatro Overhaul ran into an error"
+M.HELP = "Copy the error and send it to us on Discord so we can fix it."
+M.BUTTONS = {"Copy error", "Open Discord", "Quit"}
+
+function M.version()
+	local name, build = rawget(_G, "OVERHAUL_NAME"), rawget(_G, "OVERHAUL_VERSION")
+	if name then return "Overhaul " .. tostring(name) .. " build " .. tostring(build or "?") end
+	return tostring(rawget(_G, "VERSION") or "?")
+end
+
+function M.report_text(msg, trace)
+	local os_name = love.system and love.system.getOS and love.system.getOS() or "?"
+	return tostring(msg) .. "\n\n" .. M.version() .. " (" .. tostring(os_name) .. ")\n" .. tostring(trace or "")
+end
+
+function M.usable(G)
+	return type(G) == "table" and not G.F_NO_ERROR_HAND and type(G.SETTINGS) == "table" and type(G.C) == "table" and G.C.BLACK ~= nil
+end
+
+local fonts = {}
+
+local function font(px)
+	px = math.max(8, math.floor(px + 0.5))
+	if fonts[px] == nil then
+		local ok, f = pcall(love.graphics.newFont, M.FONT, px)
+		if not ok then ok, f = pcall(love.graphics.newFont, px) end
+		fonts[px] = ok and f or false
+	end
+	return fonts[px] or love.graphics.getFont()
+end
+
+function M.layout(w, h, f)
+	local s = math.min(w, h)
+	local pad = math.floor(s * 0.05)
+	local bh = math.floor(f:getHeight() * 2.2)
+	local gap = math.floor(pad / 2)
+	local n = #M.BUTTONS
+	local bw = math.floor(math.min((w - pad * 2 - gap * (n - 1)) / n, s * 0.6))
+	local total = bw * n + gap * (n - 1)
+	local x0 = math.floor((w - total) / 2)
+	local by = h - pad - bh
+	local out = {}
+	for i = 1, n do out[i] = {x = x0 + (i - 1) * (bw + gap), y = by, w = bw, h = bh} end
+	return out, pad
+end
+
+function M.hit(buttons, x, y)
+	for i, b in ipairs(buttons) do
+		if x >= b.x and x <= b.x + b.w and y >= b.y and y <= b.y + b.h then return i end
+	end
+	return nil
+end
+
+local function draw(text, note, buttons, pad, small, big)
+	local w, h = love.graphics.getDimensions()
+	love.graphics.push("all")
+r 13 112 %09 -
+r 3 4413 %09 -
+r 12 278 %09 -
+l 23
+	love.graphics.clear(0.086, 0.137, 0.145, 1)
+	love.graphics.setColor(1, 1, 1, 1)
+	love.graphics.setFont(big)
+	love.graphics.printf(M.TITLE, pad, pad, w - pad * 2, "center")
+	local _, tl = big:getWrap(M.TITLE, w - pad * 2)
+	local y = pad + #tl * big:getHeight() + small:getHeight()
+	love.graphics.setFont(small)
+	love.graphics.setColor(1, 1, 1, 0.8)
+	love.graphics.printf(note or M.HELP, pad, y, w - pad * 2, "center")
+	local _, hl = small:getWrap(note or M.HELP, w - pad * 2)
+	y = y + (#hl + 1) * small:getHeight()
+	love.graphics.setColor(1, 1, 1, 1)
+	love.graphics.setScissor(pad, y, w - pad * 2, math.max(0, buttons[1].y - pad - y))
+	love.graphics.printf(text, pad, y, w - pad * 2, "left")
+	love.graphics.setScissor()
+	for i, b in ipairs(buttons) do
+		love.graphics.setColor(i == 3 and {0.4, 0.42, 0.45, 1} or {0.996, 0.373, 0.333, 1})
+		love.graphics.rectangle("fill", b.x, b.y, b.w, b.h, b.h / 5, b.h / 5)
+		love.graphics.setColor(1, 1, 1, 1)
+		local label = M.BUTTONS[i]
+		love.graphics.print(label, math.floor(b.x + (b.w - small:getWidth(label)) / 2 + 0.5), math.floor(b.y + (b.h - small:getHeight()) / 2 + 0.5))
+	end
+	love.graphics.pop()
+r 13 123 %09 -
+l 35
+end
+
+local function guarded(fn, ...)
+	local g = love.graphics
+	local depth = g and g.getStackDepth and g.getStackDepth()
+	local ok, r = pcall(fn, ...)
+	if not ok and depth then
+		while g.getStackDepth() > depth do g.pop() end
+	end
+	return ok, r
+end
+
+function M.show(msg, trace)
+	if M.failed and M.failed.msg == msg then trace = M.failed.trace end
+	local text = M.report_text(msg, trace)
+	print(text)
+	pcall(function()
+		local ML = rawget(_G, "MODLOADER")
+		if ML and ML.record_plain_crash then ML.record_plain_crash(msg, trace) end
+	end)
+	if not (love.window and love.graphics and love.event) then return end
+	if not (love.graphics.isCreated and love.graphics.isCreated()) or not love.window.isOpen() then
+		local ok, made = pcall(love.window.setMode, 800, 600)
+		if not ok or not made then return end
+	end
+	if love.mouse then pcall(love.mouse.setVisible, true) pcall(love.mouse.setGrabbed, false) pcall(love.mouse.setRelativeMode, false) end
+	if love.audio then pcall(love.audio.stop) end
+	pcall(love.graphics.reset)
+	local note
+	while true do
+		local w, h = love.graphics.getDimensions()
+		local s = math.min(w, h)
+		local small, big = font(s * 0.04), font(s * 0.06)
+		local buttons, pad = M.layout(w, h, small)
+		love.event.pump()
+r 12 299 %09%09 -
+l 46
+			local pick
+			if e == "quit" then return end
+			if e == "keypressed" and a == "escape" then return end
+			if e == "keypressed" and (a == "c" or a == "return") then pick = 1 end
+			if e == "mousereleased" then pick = M.hit(buttons, a, b) end
+			if e == "touchreleased" then pick = M.hit(buttons, b, c) end
+			if pick == 1 and love.system and love.system.setClipboardText then
+				pcall(love.system.setClipboardText, text)
+				note = "Error copied. Paste it in a message to us on Discord."
+			elseif pick == 2 and love.system and love.system.openURL then
+				pcall(love.system.openURL, M.DISCORD)
+			elseif pick == 3 then
+				return
+			end
+		end
+		if not love.graphics.isActive or love.graphics.isActive() then guarded(draw, text, note, buttons, pad, small, big) end
+		if love.timer then love.timer.sleep(0.05) end
+	end
+end
+
+function M.wrap(handler)
+	if type(handler) ~= "function" or M.wrapped == handler then return handler end
+	local safe = function(msg, ...)
+		local trace = debug.traceback("", 2)
+		if M.usable(rawget(_G, "G")) then
+			local ok, err = pcall(handler, msg, ...)
+			if ok then return err end
+			return M.show(tostring(msg) .. "\n\nThe crash screen failed too: " .. tostring(err), trace)
+		end
+		return M.show(msg, trace)
+	end
+	M.wrapped = safe
+	return safe
+end
+
+function M.guard()
+	if getmetatable(love) or rawget(love, "errorhandler") then return end
+	local h = rawget(love, "errhand")
+	if type(h) == "function" and h ~= M.wrapped then
+		rawset(love, "errhand", M.wrap(h))
+	elseif h == nil then
+		rawset(love, "errhand", function(msg) return M.show(msg, debug.traceback("", 2)) end)
+	end
+end
+
+return M
+end

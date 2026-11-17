@@ -106,7 +106,7 @@ end
 
 local function roll_table(t, tag, xnames)
 r 13 131 %20%20%20%20 -
-l 137
+l 208
         if type(v) == 'number' and v ~= 0 then
             t[k] = RZ.roll(v, tag .. '_' .. tostring(k), (RZ.XKEYS[k] or (xnames and xnames[k])) and 'x' or nil, RZ.CAPS[k])
         end
@@ -244,9 +244,8 @@ local function eligible(card)
 end
 
 local orig_set_ability = Card.set_ability
-r 3 223 - -
-l 9
-    local r = orig_set_ability(self, center, initial, delay_sprites)
+function Card:set_ability(center, initial, delay_sprites, ...)
+    local r = orig_set_ability(self, center, initial, delay_sprites, ...)
     if eligible(self) and self.ability and not self.playing_card then
         local ok, err = pcall(RZ.roll_card, self)
         if not ok then print('[RANDOMIZER] ' .. tostring(err)) end
@@ -255,13 +254,12 @@ l 9
 end
 
 local orig_set_cost = Card.set_cost
-r 3 369 - -
-l 60
-    if not (RZ.active() and self.ability and self.config and self.config.center and G.GAME) then return orig_set_cost(self) end
+function Card:set_cost(...)
+    if not (RZ.active() and self.ability and self.config and self.config.center and G.GAME) then return orig_set_cost(self, ...) end
     local base = self.base_cost
     local ok, rolled = pcall(RZ.roll_cost, self)
     if ok and rolled then self.base_cost = rolled end
-    local r = orig_set_cost(self)
+    local r = orig_set_cost(self, ...)
     self.base_cost = base
     return r
 end

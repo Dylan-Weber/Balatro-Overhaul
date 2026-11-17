@@ -2,7 +2,7 @@ BOP 2
 eol lf
 final 1
 base 0
-l 202
+l 205
 [manifest]
 version = "1.0.0"
 priority = 0
@@ -135,6 +135,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.common_events.011"
+requires = ["auto.common_events.010"]
 target = "functions/common_events.lua"
 pattern = '''^(?<pre>)[\t ]*if v\.discovered and not v\.alerted then\n(?<post>[\t ]*if v\.set == 'Voucher' then alert_voucher = true end\n)'''
 position = "at"
@@ -146,6 +147,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.common_events.012"
+requires = ["auto.common_events.010"]
 target = "functions/common_events.lua"
 pattern = '''^(?<pre>)[\t ]*if v\.discovered and not v\.alerted then\n(?<post>[\t ]*alert_blind = true\n)'''
 position = "at"
@@ -179,6 +181,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.common_events.015"
+requires = ["auto.common_events.014"]
 target = "functions/common_events.lua"
 pattern = '''^(?<pre>)[\t ]*if alert_any then\n(?<post>)'''
 position = "at"
@@ -445,7 +448,7 @@ ${pre}    if (G.SETTINGS and G.SETTINGS.skip_score_animation) or
        (G.SETTINGS and G.SETTINGS.perf_heavy_scoring and G.E_MANAGER and #G.E_MANAGER.queues.base > 150) then
 r 31 922 %20%20%20%20%20%20%20%20 -
 r 31 923 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 314
+l 316
         end
         return
     end
@@ -597,6 +600,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.common_events.033"
+requires = ["auto.globals.014"]
 target = "functions/common_events.lua"
 pattern = '''^(?<pre>)[\t ]*if G\.CONTROLLER\.GAMEPAD\.object and G\.F_RUMBLE then G\.CONTROLLER\.GAMEPAD\.object:setVibration\(G\.CURR_VIBRATION\*0\.4\*G\.F_RUMBLE, G\.CURR_VIBRATION\*0\.4\*G\.F_RUMBLE\) end\n(?<post>)'''
 position = "at"
@@ -661,6 +665,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.common_events.037"
+requires = ["auto.common_events.001"]
 target = "functions/common_events.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*--\|-------------------------------------------------------\n[\t ]*\n)'''
 position = "at"
@@ -791,7 +796,7 @@ position = "at"
 payload = '''
 ${pre}        if G.achievement_notification and G.achievement_notification.alignment then
 e 31 1820 %20%20%20%20%20%20%20%20%20%20%20%20 - =48,+%6C%65%66%74%5F%6E%6F%74%20%61%6E%64%20%2D,=2,+%20%6F%72%20%32%30
-l 192
+l 194
         end
 ${post}'''
 times = 1
@@ -871,6 +876,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.common_events.049"
+requires = ["auto.common_events.048"]
 target = "functions/common_events.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.R, config=\{align = "tr", minh = G\.ROOM\.T\.h, minw = G\.ROOM\.T\.w\}, nodes=\{\n[\t ]*UIBox_button\{label = \{localize\('b_skip'\)\.\." >"\}, button = "skip_tutorial_section", minw = 1\.3, scale = 0\.45, colour = G\.C\.JOKER_GREY\}\n(?<post>)'''
 position = "at"
@@ -909,6 +915,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.common_events.052"
+requires = ["auto.common_events.051"]
 target = "functions/common_events.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*local align = args\.align or "tm"\n)'''
 position = "at"
@@ -988,7 +995,7 @@ r 2 703 %20%20%20%20 -
 l 1
         if v.boss and (v.in_pool == false or (type(v.in_pool) == 'function' and not v:in_pool())) then
 r 31 2375 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 141
+l 147
         elseif v.boss and force_showdown then
             eligible_bosses[k] = v.boss.showdown and true or nil
 ${post}'''
@@ -997,6 +1004,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.common_events.modded.001"
+requires = ["auto.common_events.010"]
 target = "functions/common_events.lua"
 pattern = '''^(?<pre>)[\t ]*if v\.discovered and not v\.alerted and \(not SMODS\.hide_from_collection\(v\)\) then\n(?<post>[\t ]*if v\.set == 'Voucher' then alert_voucher = true end\n)'''
 position = "at"
@@ -1008,6 +1016,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.common_events.modded.002"
+requires = ["auto.common_events.010"]
 target = "functions/common_events.lua"
 pattern = '''^(?<pre>)[\t ]*if v\.discovered and not v\.alerted and \(not SMODS\.hide_from_collection\(v\)\) then\n(?<post>[\t ]*alert_blind = true\n)'''
 position = "at"
@@ -1055,6 +1064,8 @@ id = "auto.common_events.modded.006"
 target = "functions/common_events.lua"
 pattern = '''^(?<pre>)[\t ]*if not SMODS\.config\.seeded_unlocks and \(G\.GAME\.seeded or G\.GAME\.challenge\) then return end\n(?<post>[\t ]*if card\.unlocked or card\.wip then return end\n)'''
 position = "at"
+needed = "guard.unlock_card"
+needed_when = "fork"
 payload = '''
 ${pre}        if G.GAME.modded_run then return end
 if not SMODS.config.seeded_unlocks and (G.GAME.seeded or G.GAME.challenge) then return end
@@ -1068,6 +1079,8 @@ id = "auto.common_events.modded.007"
 target = "functions/common_events.lua"
 pattern = '''^(?<pre>)[\t ]*if not SMODS\.config\.seeded_unlocks and \(G\.GAME\.seeded or G\.GAME\.challenge\) then return end\n(?<post>[\t ]*card = card or \{\}\n)'''
 position = "at"
+needed = "guard.discover_card"
+needed_when = "fork"
 payload = '''
 ${pre}    if G.GAME.modded_run then return end
 if not SMODS.config.seeded_unlocks and (G.GAME.seeded or G.GAME.challenge) then return end

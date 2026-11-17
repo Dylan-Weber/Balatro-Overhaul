@@ -2,7 +2,7 @@ BOP 2
 eol lf
 final 1
 base 0
-l 24
+l 25
 [manifest]
 version = "1.0.0"
 priority = 0
@@ -21,6 +21,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.misc_functions.002"
+requires = ["auto.globals.004"]
 target = "functions/misc_functions.lua"
 pattern = '''^(?<pre>)[\t ]*progress = progress or 0\n[\t ]*G\.LOADING = G\.LOADING or \{\n[\t ]*font = love\.graphics\.setNewFont\("resources/fonts/m6x11plus\.ttf", 20\),\n[\t ]*love\.graphics\.dis\n[\t ]*\}\n[\t ]*local realw, realh = love\.window\.getMode\(\)\n[\t ]*love\.graphics\.setCanvas\(\)\n[\t ]*love\.graphics\.push\(\)\n[\t ]*love\.graphics\.setShader\(\)\n[\t ]*love\.graphics\.clear\(0,0,0,1\)\n[\t ]*love\.graphics\.setColor\(0\.6, 0\.8, 0\.9,1\)\n[\t ]*if progress > 0 then love\.graphics\.rectangle\('fill', realw/2 - 150, realh/2 - 15, progress\*300, 30, 5\) end\n[\t ]*love\.graphics\.setColor\(1, 1, 1,1\)\n[\t ]*love\.graphics\.setLineWidth\(3\)\n[\t ]*love\.graphics\.rectangle\('line', realw/2 - 150, realh/2 - 15, 300, 30, 5\)\n[\t ]*if G\.F_VERBOSE and not _RELEASE_MODE then love\.graphics\.print\("LOADING: "\.\._next, realw/2 - 150, realh/2 \+40\) end\n[\t ]*love\.graphics\.pop\(\)\n[\t ]*love\.graphics\.present\(\)\n(?<post>)'''
 position = "at"
@@ -216,7 +217,7 @@ times = 1
 [patches.regex]
 id = "auto.misc_functions.013"
 target = "functions/misc_functions.lua"
-pattern = '''^(?<pre>)[\t ]*if G\.GAME\.round_scores\[score\] and math\.floor\(amt\) > G\.GAME\.round_scores\[score\]\.amt then\n(?<post>)'''
+pattern = '''^(?<pre>)[\t ]*if G\.GAME\.round_scores\[score\] and math\.floor\(amt\) > (?:\(G\.GAME\.round_scores\[score\]\.amt or 0\)|G\.GAME\.round_scores\[score\]\.amt) then\n(?<post>)'''
 position = "at"
 payload = '''
 ${pre}  if G.GAME.round_scores[score] and math.floor(amt) > (tonumber(G.GAME.round_scores[score].amt) or 0) then
@@ -280,7 +281,7 @@ position = "at"
 payload = '''
 ${pre}  if G.PROFILES[G.SETTINGS.profile].joker_usage and
 e 13 1061 %20%20 - -3,=59
-l 344
+l 346
 ${post}'''
 times = 1
 
@@ -587,6 +588,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.misc_functions.040"
+requires = ["auto.misc_functions.039"]
 target = "functions/misc_functions.lua"
 pattern = '''^(?<pre>)[\t ]*assembled_string = assembled_string\.\.\(type\(subpart\) == 'string' and subpart or args\.vars\[tonumber\(subpart\[1\]\)\] or 'ERROR'\)\n(?<post>[\t ]*end\n[\t ]*final_line = final_line\.\.assembled_string\n)'''
 position = "at"
@@ -598,6 +600,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.misc_functions.041"
+requires = ["auto.misc_functions.039"]
 target = "functions/misc_functions.lua"
 pattern = '''^(?<pre>)[\t ]*assembled_string = assembled_string\.\.\(type\(subpart\) == 'string' and subpart or args\.vars\[tonumber\(subpart\[1\]\)\] or 'ERROR'\)\n(?<post>)'''
 position = "at"
@@ -670,7 +673,7 @@ l 1
 
 r 13 1827 %20%20%20%20%20%20 -
 r 13 1828 %20%20%20%20%20%20 -
-l 67
+l 68
       Sprite.draw_shader(_sprite, 'polychrome', nil, _sprite.ARGS.send_to_shader)
     end
 ${post}'''
@@ -721,6 +724,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.misc_functions.047"
+requires = ["auto.misc_functions.046"]
 target = "functions/misc_functions.lua"
 pattern = '''^(?<pre>)[\t ]*local s = \{sound = love\.audio\.newSource\("resources/sounds/"\.\.args\.sound_code\.\.'\.ogg', should_stream and "stream" or 'static'\)\}\n(?<post>)'''
 position = "at"
@@ -954,7 +958,7 @@ create_drag_target_from_card = function(_card)
       function(other) return other:can_sell_card() end,
       function(other) G.FUNCS.sell_card{config = {ref_table = other}} end)
 r 32 2270 %20%20%20%20 -
-l 90
+l 91
       drop_zone(Z.C_use, G.C.RED, {localize('b_use')}, _card,
         function(other) return other:can_use_consumeable() end,
         function(other)
@@ -1038,6 +1042,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.misc_functions.modded.005"
+requires = ["auto.misc_functions.039"]
 target = "functions/misc_functions.lua"
 pattern = '''^(?<pre>)[\t ]*assembled_string = assembled_string\.\.\(type\(subpart\) == 'string' and subpart or format_ui_value\(args\.vars\[tonumber\(subpart\[1\]\)\]\) or 'ERROR'\)\n(?<post>)'''
 position = "at"

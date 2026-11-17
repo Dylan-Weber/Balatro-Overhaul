@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 121
+l 197
 
 DeckCreatorHooks = {}
 
@@ -124,10 +124,9 @@ function DeckCreatorHooks.runtime_flags(config)
     return f
 end
 
-r 1 174 - -
-l 75
+function Back:apply_to_run(...)
     if not self.effect or not self.effect.config or not self.effect.config.customDeck then
-        return original_back_apply_to_run(self)
+        return original_back_apply_to_run(self, ...)
     end
     local config = DeckCreatorData.migrate(self.effect.config)
     self.effect.config = config
@@ -225,7 +224,7 @@ l 21
                         local key = dc_pick(pool, "dc_voucher")
                         G.GAME.used_vouchers[key] = true
 r 1 178 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 13
+l 65
                         Card.apply_to_run(nil, G.P_CENTERS[key])
                     end
                 end
@@ -239,9 +238,8 @@ end
 
 local original_back_trigger_effect = Back.trigger_effect
 
-r 1 108 - -
-l 51
-    local r1, r2 = original_back_trigger_effect(self, args)
+function Back:trigger_effect(args, ...)
+    local r1, r2 = original_back_trigger_effect(self, args, ...)
 
     if not is_custom_deck() then return r1, r2 end
     if not args then return r1, r2 end

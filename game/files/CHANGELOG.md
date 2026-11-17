@@ -2,6 +2,83 @@
 
 What each version brings to players. The game shows this file in About > Changelog and in the What's new window on the title screen, in English, French or Spanish.
 
+## 2.1.1 | 2026-11-17
+
+### en Overhaul 2.1.1
+
++ [The Forge] Forge guide: five short pages explain what a rule is, WHEN / IF / DO, variables, Try it in a run and sharing. It opens the first time you visit the Forge, and the GUIDE button in Creations or Options > Guide > The Forge opens it again.
++ [The Forge] Decks: "Cards always come with" gives every Joker, playing card, Tarot, Planet, Spectral, Voucher, Booster pack, or everything, an edition, an enhancement or a seal, with a chance and an option to replace what is there. A deck can have several.
++ [The Forge] "Always comes with": Jokers, Tarots, Planets, Spectrals and Enhancements can start with an edition, and Jokers can put an edition on a random Joker that has none.
++ [The Forge] Variables work in every number box of a rule: press Variable next to Type and pick one. The card text shows its value right now.
++ [The Forge] New condition "Hand has this round's suit" for rules that run when a hand is played.
++ [Gameplay] Negative playing cards give +1 hand size while you hold them, like with Steamodded.
++ [Phones] The first start after installing or updating shows a progress bar instead of a black screen while the game gets ready.
++ [Everything else] If the game fails to start, it shows the error with Copy and Discord buttons instead of a black screen.
++ [Mods] Updating a mod while the game is open now asks you to restart, so its new features load.
++ [Mods] With Talisman, every Overhaul change applies again.
++ [The Forge] Creations that use these features need Overhaul 2.1.1 or later.
+- Fixed on phones: every modded game crashed at start after updating to 2.1, and touch stopped working (GitHub #43).
+- Fixed: crashes with Lost Edition, Paperback, Galdur, and Sagatro with cartomancer.
+- Fixed: continuing a run after turning on a mod like Cryptid crashed when you beat the first Blind.
+- Fixed on phones: music mods like Balatro Takanaka started the song over before it ended.
+- Fixed: mods installed from a zip could miss files with two dots in their name (Wormhole). Install the mod again to get them.
+- Fixed: the "server restarted" message stayed on screen and covered menu buttons.
+- Fixed in multiplayer: a crash after Cash Out when a PvP result arrived late.
+- Fixed: a crash when viewing your deck with a Forge Enhancement that has no rank, and when pressing Start on a controller during the splash screen.
+- Fixed in multiplayer: "Only vanilla" in Decks to pick from now applies to the ranked deck draft, the lobby deck and random decks, for both players (GitHub #44).
+- Fixed: with Tally Joker on, a Joker with a long text no longer blocks the Select button under the Jokers (GitHub #45).
+- Fixed in the Forge: Green Joker loses 1 Mult per discard like the real one, and the Tarot and Planet Merchant and Tycoon recipes match the game.
+
+### fr Overhaul 2.1.1
+
++ [La Forge] Guide de la Forge : cinq pages courtes expliquent ce qu'est une règle, QUAND / SI / ALORS, les variables, Essayer en partie et le partage. Il s'ouvre à votre première visite de la Forge, et le bouton GUIDE dans Créations ou Options > Guide > La Forge le rouvre.
++ [La Forge] Decks : "Les cartes viennent avec" donne à chaque Joker, carte à jouer, Tarot, Planète, Spectrale, Bon, Paquet, ou à tout, une édition, une amélioration ou un sceau, avec une chance et une option pour remplacer ce qui est déjà là. Un deck peut en avoir plusieurs.
++ [La Forge] "Vient toujours avec" : les Jokers, Tarots, Planètes, Spectrales et Améliorations peuvent commencer avec une édition, et les Jokers peuvent mettre une édition sur un Joker au hasard qui n'en a pas.
++ [La Forge] Les variables marchent dans toutes les cases de nombre d'une règle : appuyez sur Variable à côté de Écrire et choisissez-en une. Le texte de la carte montre sa valeur actuelle.
++ [La Forge] Nouvelle condition "La main a la couleur de la manche" pour les règles qui s'activent quand une main est jouée.
++ [Jeu] Les cartes à jouer négatives donnent +1 à la taille de la main tant que vous les tenez, comme avec Steamodded.
++ [Téléphones] Le premier lancement après une installation ou une mise à jour montre une barre de progression au lieu d'un écran noir pendant que le jeu se prépare.
++ [Tout le reste] Si le jeu ne démarre pas, il montre l'erreur avec les boutons Copier et Discord au lieu d'un écran noir.
++ [Mods] Mettre à jour un mod pendant que le jeu est ouvert demande maintenant de redémarrer, pour charger ses nouveautés.
++ [Mods] Avec Talisman, tous les changements d'Overhaul s'appliquent de nouveau.
++ [La Forge] Les créations qui utilisent ces nouveautés demandent Overhaul 2.1.1 ou plus récent.
+- Corrigé sur téléphone : toutes les parties avec mods plantaient au lancement après la mise à jour 2.1, et le tactile ne marchait plus (GitHub #43).
+- Corrigé : des plantages avec Lost Edition, Paperback, Galdur, et Sagatro avec cartomancer.
+- Corrigé : reprendre une partie après avoir activé un mod comme Cryptid plantait en battant la première Blinde.
+- Corrigé sur téléphone : les mods de musique comme Balatro Takanaka recommençaient la chanson avant sa fin.
+- Corrigé : les mods installés depuis un zip pouvaient perdre des fichiers avec deux points à la suite dans leur nom (Wormhole). Réinstallez le mod pour les récupérer.
+- Corrigé : le message "serveur redémarré" restait à l'écran et couvrait les boutons des menus.
+- Corrigé en multijoueur : un plantage après Encaisser quand un résultat JcJ arrivait en retard.
+- Corrigé : un plantage en regardant votre deck avec une Amélioration de la Forge sans valeur, et en appuyant sur Start d'une manette pendant l'écran de démarrage.
+- Corrigé en multijoueur : "Vanilla seulement" dans Jeux proposés s'applique maintenant au draft de decks en classé, au deck du salon et aux decks au hasard, pour les deux joueurs (GitHub #44).
+- Corrigé : avec Tally Joker activé, un Joker au texte long ne bloque plus le bouton Choisir sous les Jokers (GitHub #45).
+- Corrigé dans la Forge : Green Joker perd 1 Multi par défausse comme le vrai, et les recettes de Tarot et Planet Merchant et Tycoon correspondent au jeu.
+
+### es Overhaul 2.1.1
+
++ [La Forja] Guía de la Forja: cinco páginas cortas explican qué es una regla, CUANDO / SI / HAZ, las variables, Probar en partida y compartir. Se abre la primera vez que visitas la Forja, y el botón GUÍA en Creaciones u Opciones > Guía > La Forja la vuelve a abrir.
++ [La Forja] Barajas: "Las cartas vienen con" da a cada comodín, carta de juego, Tarot, Planeta, Espectral, Vale, Sobre, o a todo, una edición, una mejora o un sello, con una probabilidad y una opción para reemplazar lo que ya tiene. Una baraja puede tener varias.
++ [La Forja] "Siempre viene con": los comodines, Tarots, Planetas, Espectrales y Mejoras pueden empezar con una edición, y los comodines pueden poner una edición en un comodín al azar que no tenga.
++ [La Forja] Las variables funcionan en cada casilla de número de una regla: pulsa Variable junto a Escribir y elige una. El texto de la carta muestra su valor actual.
++ [La Forja] Nueva condición "La mano tiene el palo de la ronda" para las reglas que se activan al jugar una mano.
++ [Jugabilidad] Las cartas de juego negativas dan +1 de tamaño de mano mientras las tienes, como con Steamodded.
++ [Móviles] El primer inicio tras instalar o actualizar muestra una barra de progreso en vez de una pantalla negra mientras el juego se prepara.
++ [Todo lo demás] Si el juego no arranca, muestra el error con los botones Copiar y Discord en vez de una pantalla negra.
++ [Mods] Actualizar un mod con el juego abierto ahora pide reiniciar, para cargar sus novedades.
++ [Mods] Con Talisman, todos los cambios de Overhaul se aplican de nuevo.
++ [La Forja] Las creaciones que usan estas novedades necesitan Overhaul 2.1.1 o posterior.
+- Corregido en móviles: todas las partidas con mods se cerraban al iniciar tras actualizar a 2.1, y la pantalla táctil dejaba de funcionar (GitHub #43).
+- Corregido: cierres con Lost Edition, Paperback, Galdur, y Sagatro con cartomancer.
+- Corregido: continuar una partida tras activar un mod como Cryptid se cerraba al vencer la primera ciega.
+- Corregido en móviles: los mods de música como Balatro Takanaka empezaban la canción de nuevo antes de terminar.
+- Corregido: los mods instalados desde un zip podían perder archivos con dos puntos seguidos en su nombre (Wormhole). Instala el mod otra vez para recuperarlos.
+- Corregido: el mensaje "servidor reiniciado" se quedaba en pantalla y tapaba los botones de los menús.
+- Corregido en multijugador: un cierre tras Cobrar cuando un resultado JcJ llegaba tarde.
+- Corregido: un cierre al ver tu baraja con una Mejora de la Forja sin valor, y al pulsar Start en un mando durante la pantalla de inicio.
+- Corregido en multijugador: "Solo vanilla" en Barajas a elegir ahora se aplica al draft de barajas en clasificatoria, a la baraja de la sala y a las barajas al azar, para los dos jugadores (GitHub #44).
+- Corregido: con Tally Joker activado, un comodín con texto largo ya no bloquea el botón Seleccionar bajo los comodines (GitHub #45).
+- Corregido en la Forja: Green Joker pierde 1 Multi por descarte como el original, y las recetas de Tarot y Planet Merchant y Tycoon coinciden con el juego.
+
 ## 2.1 | 2026-11-16
 
 ### en Overhaul 2.1

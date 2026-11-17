@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 251
+l 256
 [manifest]
 version = "1.0.0"
 priority = 0
@@ -155,6 +155,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_game_object.005"
+requires = ["auto.smods_game_object.004"]
 target = '=[SMODS _ "src/game_object.lua"]'
 pattern = '''^(?<pre>)[\t ]*local file_path = type\(self\.path\) == 'table' and\n[\t ]*\(\(G\.SETTINGS\.real_language and self\.path\[G\.SETTINGS\.real_language\]\) or self\.path\[G\.SETTINGS\.language\] or self\.path\['default'\] or self\.path\['en-us'\]\) or self\.path\n[\t ]*if file_path == 'DEFAULT' then return end\n[\t ]*-- language specific sprites override fully defined sprites only if that language is set\n[\t ]*if self\.language and G\.SETTINGS\.language ~= self\.language and G\.SETTINGS\.real_language ~= self\.language then return end\n[\t ]*local texture_scaling = G\.SETTINGS\.GRAPHICS\.texture_scaling\n[\t ]*if self\.force_pixel then\n[\t ]*texture_scaling = 1\n[\t ]*end\n[\t ]*if not self\.language and \(self\.obj_table\[\('%s_%s'\):format\(self\.key, G\.SETTINGS\.language\)\] or self\.obj_table\[\('%s_%s'\):format\(self\.key, G\.SETTINGS\.real_language\)\]\) then return end\n(?<post>)'''
 position = "at"
@@ -179,6 +180,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_game_object.007"
+requires = ["auto.smods_game_object.004", "auto.smods_game_object.006"]
 target = '=[SMODS _ "src/game_object.lua"]'
 pattern = '''^(?<pre>)[\t ]*self\.image_data = assert\(love\.image\.newImageData\(file_data\),\n[\t ]*\('Failed to initialize image data for Atlas %s'\):format\(self\.key\)\)\n(?<post>)'''
 position = "at"
@@ -211,6 +213,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_game_object.008"
+requires = ["auto.smods_game_object.004"]
 target = '=[SMODS _ "src/game_object.lua"]'
 pattern = '''^(?<pre>)[\t ]*local image = love\.graphics\.newImage\(file_data\)\n(?<post>)'''
 position = "at"
@@ -223,6 +226,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_game_object.009"
+requires = ["auto.smods_game_object.008"]
 target = '=[SMODS _ "src/game_object.lua"]'
 pattern = '''^(?<pre>)[\t ]*local w, h = image:getWidth\(\), image:getHeight\(\)\n(?<post>)'''
 position = "at"
@@ -234,6 +238,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_game_object.010"
+requires = ["auto.smods_game_object.004", "auto.smods_game_object.006", "auto.smods_game_object.008"]
 target = '=[SMODS _ "src/game_object.lua"]'
 pattern = '''^(?<pre>)[\t ]*local canvas = love\.graphics\.newCanvas\(nw, nh\)\n[\t ]*image:setFilter\("nearest", "nearest"\)\n[\t ]*love\.graphics\.setCanvas\(canvas\)\n[\t ]*love\.graphics\.setColor\(1,1,1,1\)\n[\t ]*scalingShader:send\("sourceImage", image\)\n[\t ]*scalingShader:send\("dim", \{1/w, 1/h\}\)\n[\t ]*love\.graphics\.setShader\(scalingShader\)\n[\t ]*local bm, abm = love\.graphics\.getBlendMode\(\)\n[\t ]*love\.graphics\.setBlendMode\("replace", "premultiplied"\)\n[\t ]*love\.graphics\.rectangle\("fill", 0, 0, nw, nh\)\n[\t ]*love\.graphics\.setBlendMode\(bm, abm\)\n[\t ]*love\.graphics\.setShader\(\)\n[\t ]*love\.graphics\.setCanvas\(\)\n[\t ]*local imageData2 = canvas:newImageData\(\)\n[\t ]*image:release\(\)\n[\t ]*canvas:release\(\)\n[\t ]*self\.image_data = imageData2\n[\t ]*end\n(?<post>)'''
 position = "at"
@@ -256,7 +261,7 @@ ${pre}                if math.max(w, h) * math.max(1, newScale) > limit then
                     love.graphics.setBlendMode(bm, abm)
 r 3 4413 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 13 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 128
+l 131
                     local imageData2 = canvas:newImageData()
                     image:release()
                     canvas:release()
@@ -281,6 +286,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_game_object.012"
+requires = ["auto.smods_game_object.004"]
 target = '=[SMODS _ "src/game_object.lua"]'
 pattern = '''^(?<pre>)(?<post>[\t ]*pre_inject_class = function\(self\)\n[\t ]*G:set_render_settings\(\) -- restore originals first in case a texture pack was disabled\n)'''
 position = "at"
@@ -313,6 +319,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_game_object.014"
+requires = ["auto.smods_game_object.013"]
 target = '=[SMODS _ "src/game_object.lua"]'
 pattern = '''^(?<pre>)(?<post>[\t ]*table\.sort\(G\.P_CENTER_POOLS\[self\.set\], function\(a, b\) return a\.order < b\.order end\)\n)'''
 position = "at"
@@ -344,6 +351,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_game_object.016"
+requires = ["auto.smods_utils.001"]
 target = '=[SMODS _ "src/game_object.lua"]'
 pattern = '''^(?<pre>)[\t ]*if love\.graphics\.getRendererInfo\(\) ~= "OpenGL ES" and \(self\.mod and not self\.mod\.gles_alerted\) and not love\.graphics\.validateShader\(true, file\) then\n(?<post>)'''
 position = "at"

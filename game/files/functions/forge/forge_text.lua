@@ -63,7 +63,7 @@ local S = {
     destroy_card = "destroy the card", add_card = "add a {C:attention}%s{} to your deck", add_card_any = "add a random card to your deck",
     sell_value = "this joker gains {C:money}$%s{} of sell value",
     perma_chips = "the card permanently gains {C:chips}+%s{} Chips", copy_card = "add a copy of the card to your deck", copy_card_hand = "add a copy of the card to your deck and draw it to your hand", tag = "create a {C:attention}%s{}", tag_random = "create a {C:attention}random Tag{}",
-    disable_boss = "disable the {C:attention}Boss Blind{}", destroy_joker = "destroy a random {C:attention}Joker{}", change_edition = "it becomes {C:dark_edition}%s{}",
+    disable_boss = "disable the {C:attention}Boss Blind{}", destroy_joker = "destroy a random {C:attention}Joker{}", change_edition = "it becomes {C:dark_edition}%s{} if it has no edition",
     ranks = {[14] = "Ace", [13] = "King", [12] = "Queen", [11] = "Jack"},
     kinds = {Tarot = "Tarot", Planet = "Planet", Spectral = "Spectral"},
   },
@@ -94,7 +94,7 @@ local S = {
     destroy_card = "la carte est détruite", add_card = "ajoute une {C:attention}%s{} à votre jeu", add_card_any = "ajoute une carte au hasard à votre jeu",
     sell_value = "ce joker gagne {C:money}%s ${} de valeur de vente",
     perma_chips = "la carte gagne {C:chips}+%s{} jetons pour toujours", copy_card = "ajoute une copie de la carte à votre jeu", copy_card_hand = "ajoute une copie de la carte à votre jeu et la pioche dans votre main", tag = "crée un {C:attention}%s{}", tag_random = "crée une {C:attention}étiquette au hasard{}",
-    disable_boss = "désactive la {C:attention}Blinde de boss{}", destroy_joker = "détruit un {C:attention}Joker{} au hasard", change_edition = "elle devient {C:dark_edition}%s{}",
+    disable_boss = "désactive la {C:attention}Blinde de boss{}", destroy_joker = "détruit un {C:attention}Joker{} au hasard", change_edition = "elle devient {C:dark_edition}%s{} si elle n'a pas d'édition",
     ranks = {[14] = "As", [13] = "Roi", [12] = "Dame", [11] = "Valet"},
     kinds = {Tarot = "Tarot", Planet = "Planète", Spectral = "Spectrale"},
   },
@@ -125,7 +125,7 @@ local S = {
     destroy_card = "la carta se destruye", add_card = "añade una {C:attention}%s{} a tu baraja", add_card_any = "añade una carta al azar a tu baraja",
     sell_value = "este joker gana {C:money}$%s{} de valor de venta",
     perma_chips = "la carta gana {C:chips}+%s{} fichas para siempre", copy_card = "añade una copia de la carta a tu baraja", copy_card_hand = "añade una copia de la carta a tu baraja y la roba a tu mano", tag = "crea una {C:attention}%s{}", tag_random = "crea una {C:attention}etiqueta al azar{}",
-    disable_boss = "desactiva la {C:attention}ciega jefe{}", destroy_joker = "destruye un {C:attention}comodín{} al azar", change_edition = "se convierte en {C:dark_edition}%s{}",
+    disable_boss = "desactiva la {C:attention}ciega jefe{}", destroy_joker = "destruye un {C:attention}comodín{} al azar", change_edition = "se convierte en {C:dark_edition}%s{} si no tiene edición",
     ranks = {[14] = "As", [13] = "Rey", [12] = "Reina", [11] = "Jota"},
     kinds = {Tarot = "Tarot", Planet = "Planeta", Spectral = "Espectral"},
   },
@@ -229,8 +229,21 @@ local function var_slot(str, n)
   return (tostring(str):gsub("\1VAR(%d)", function(k) return "#" .. (4 + tonumber(k)) .. "#" end))
 end
 
+T.NV_MARK = 98765431
+
+function T.nv_text(e, vars, fn)
+  local c = {}
+  for k, v in pairs(e) do c[k] = v end
+  c.nv, c.n = nil, T.NV_MARK
+  local r = fn(c)
+  if type(r) ~= "string" then return r end
+  local name = "[" .. var_name(vars, e.nv) .. "]"
+  return (r:gsub(tostring(T.NV_MARK) .. "%.?0*", function() return name end))
+end
+
 function T.only_text(o, lang, vars)
   local R0 = package.loaded["functions/forge/forge_rules"]
+  if R0 and R0.num_ref and R0.num_ref(o) then return T.nv_text(o, vars, function(c) return T.only_text(c, lang, vars) end) end
   local ref = R0 and R0.var_ref and type(o) == "table" and R0.var_ref(o.v)
   if ref then
     local c = {}
@@ -276,6 +289,7 @@ local give_base
 
 function T.give_text(g, lang, vars, when)
   local R0 = package.loaded["functions/forge/forge_rules"]
+  if R0 and R0.num_ref and R0.num_ref(g) then return T.nv_text(g, vars, function(c) return T.give_text(c, lang, vars, when) end) end
   local ref = R0 and R0.var_ref and type(g) == "table" and R0.var_ref(g.v)
   if ref then
     local c = {}
@@ -452,9 +466,10 @@ function T.rule_lines(c, lang)
       if g.id == "dagger" then gains.gain_mult = true end
       if g.id == "create" or g.id == "make_card" then room = true end
       if g.var then used[g.var] = true end
+      if g.nv then used[g.nv] = true end
     end
-    for _, g in ipairs(rule.alt or {}) do if g.var then used[g.var] = true end end
-    for _, o in ipairs(rule.only or {}) do if o.var then used[o.var] = true end end
+    for _, g in ipairs(rule.alt or {}) do if g.var then used[g.var] = true end if g.nv then used[g.nv] = true end end
+    for _, o in ipairs(rule.only or {}) do if o.var then used[o.var] = true end if o.nv then used[o.nv] = true end end
   end
   local s = S[lang] or S.en
   local now = {}
@@ -475,7 +490,7 @@ function T.rule_lines(c, lang)
   if R and R.TARGET_TEXT then
     local moves = false
     for _, rule in ipairs(c.rules or {}) do
-      for _, o in ipairs(rule.only or {}) do if o.id == "round_suit" or o.id == "round_rank" or o.id == "round_card" or o.id == "round_hand" then moves = true end end
+      for _, o in ipairs(rule.only or {}) do if o.id == "round_suit" or o.id == "round_rank" or o.id == "round_card" or o.id == "round_hand" or o.id == "round_hand_suit" then moves = true end end
     end
     if moves then out[#out + 1] = (R.TARGET_TEXT[lang] or R.TARGET_TEXT.en).changes end
   end
@@ -515,7 +530,15 @@ function T.vars(card, defs, state, rules)
   end
   for i, rule in ipairs(type(rules) == "table" and rules or {}) do
     for _, o in ipairs(type(rule) == "table" and rule.only or {}) do
-      if type(o) == "table" and o.id == "every" and R and R.every_left then out[12 + i] = fmt_n(R.every_left(o, x, i)) end
+      if type(o) == "table" and o.id == "every" and R and R.every_left then
+        local e = o
+        if R.num_ref and R.num_ref(o) then
+          e = {}
+          for k, v in pairs(o) do e[k] = v end
+          e.n = R.live_num(o, cur[o.nv], true)
+        end
+        out[12 + i] = fmt_n(R.every_left(e, x, i))
+      end
     end
   end
   if R and R.XCHIPS_SLOT then out[R.XCHIPS_SLOT] = fmt_n(tonumber(x.xchips) or 1) end

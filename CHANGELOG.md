@@ -2,6 +2,43 @@
 
 Changelog for the updates, first being the latest changes. 
 
+## 2.1.1
+
+*Overhaul 2.1.1, 2026-11-17. Mods on phones work again after 2.1, no more black screen on the first start, a Forge guide and new Forge deck effects, and fixes for #43, #44 and #45.*
+
+### The Forge
+- **Forge guide.** Five short pages explain what a rule is, WHEN / IF / DO, variables, Try it in a run and sharing. It opens the first time you visit the Forge, and the GUIDE button in Creations or Options > Guide > The Forge opens it again.
+- **Cards always come with.** A new deck effect: give every Joker, playing card, Tarot, Planet, Spectral, Voucher, Booster pack, or everything, an edition, an enhancement or a seal, with a chance and an option to replace what is there. A deck can have several, like every Joker Polychrome and every card Negative.
+- **Always comes with.** Jokers, Tarots, Planets, Spectrals and Enhancements can start with an edition, and Jokers can put an edition on a random Joker that has none.
+- **Variables in numbers.** Every number box of a rule can use a variable: press Variable next to Type and pick one. The card text shows its value right now.
+- **This round's suit.** A new condition for rules that run when a hand is played: the hand has a scoring card of this round's suit.
+- **Fixes.** Green Joker loses 1 Mult per discard like the real one, and the Tarot and Planet Merchant and Tycoon recipes match the game.
+- Creations that use the new features need Overhaul 2.1.1 or later.
+
+### Gameplay
+- **Negative playing cards.** They give +1 hand size while you hold them, like with Steamodded.
+- **Tally Joker.** A Joker with a long text no longer blocks the Select button under the Jokers (#45).
+
+### Phones and start
+- **No black screen.** The first start after installing or updating shows a progress bar while the game gets ready.
+- **Start errors.** If the game fails to start, it shows the error with Copy and Discord buttons instead of a black screen.
+- **Mods after updating.** Every modded game crashed at start after updating to 2.1, and touch stopped working. Fixed (#43).
+- **Music mods.** Mods like Balatro Takanaka no longer start the song over before it ends.
+
+### Mods
+- **Fewer crashes.** Lost Edition, Paperback, Galdur, and Sagatro with cartomancer.
+- **Continuing a run.** Continuing a run after turning on a mod like Cryptid no longer crashes when you beat the first Blind.
+- **Updating a mod.** Updating a mod while the game is open asks you to restart, so its new features load.
+- **Talisman.** Every Overhaul change applies again with Talisman.
+- **Zip installs.** Mods installed from a zip no longer miss files with two dots in their name (Wormhole). Install the mod again to get them.
+
+### Multiplayer
+- **Only vanilla decks.** "Only vanilla" in Decks to pick from now applies to the ranked deck draft, the lobby deck and random decks, for both players (#44).
+- **Fixes.** A crash after Cash Out when a PvP result arrived late, and the "server restarted" message that stayed on screen over menu buttons.
+
+### Other fixes
+- A crash when viewing your deck with a Forge Enhancement that has no rank, and when pressing Start on a controller during the splash screen.
+
 ## 2.1
 
 *Overhaul 2.1, 2026-11-16. iPhone and iPad, mods that work like on PC, Tally Joker, an edition editor and a lot more in the Forge.*

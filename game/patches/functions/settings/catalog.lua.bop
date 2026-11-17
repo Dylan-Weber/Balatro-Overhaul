@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 468
+l 473
 local S = SettingsUI
 local L = function(s) return mod_loc(s) end
 
@@ -186,7 +186,12 @@ local function gameplay(pool)
   local filters = {'vanilla', 'new', 'both'}
   run[#run + 1] = UIK.cycle{id = 'set_deck_filter', label = L("Decks to pick from"), info = L("Decks shown in New Run and lobbies"),
     options = {L("Only vanilla"), L("Only new"), L("Both")}, current = find(filters, St.deck_filter or 'both', 3),
-    callback = function(i) St.deck_filter = filters[i] or 'both' save() end}
+    callback = function(i)
+      St.deck_filter = filters[i] or 'both'
+      save()
+      local bm = rawget(_G, 'bom_match')
+      if bm and bm.send_deck_filter then pcall(bm.send_deck_filter) end
+    end}
   for _, r in ipairs(S.speedrun_rows()) do run[#run + 1] = r end
   run[#run + 1] = take(pool, 'set_qol_focus_pause')
   run[#run + 1] = take(pool, 'set_qol_quick_restart')

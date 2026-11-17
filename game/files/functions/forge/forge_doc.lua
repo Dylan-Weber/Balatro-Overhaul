@@ -36,6 +36,7 @@ function D.new(kind, o)
     d.compat = o.compat or {blueprint = true, eternal = true, perishable = true}
     d.vars = o.vars or {}
     d.requires = type(o.requires) == "string" and o.requires ~= "none" and o.requires or nil
+    d.always_ed = type(o.always_ed) == "string" and o.always_ed ~= "none" and o.always_ed or nil
   else
     d.fields = Cat.clean_fields(k.id, o.fields)
     d.effects = o.effects or {}
@@ -65,7 +66,11 @@ D.JOKER_TEMPLATES = {
   {key = "j_8_ball", rules = {{when = "card_scored", only = {{id = "rank", v = 8}, {id = "chance", n = 4}}, give = {{id = "create", v = "Tarot"}}}}},
   {key = "j_dusk", rules = {{when = "card_scored", only = {{id = "last_hand"}}, give = {{id = "retrigger", n = 1}}}}},
   {key = "j_mystic_summit", rules = {{when = "hand_played", only = {{id = "discards_left", op = "exactly", n = 0}}, give = {{id = "mult", n = 15}}}}},
-  {key = "j_green_joker", rules = {{when = "hand_played", give = {{id = "gain_mult", n = 1}}}}},
+  {key = "j_green_joker", vars = {{name = "Mult", start = 0}}, rules = {
+    {when = "before", give = {{id = "var_add", var = 1, n = 1}}},
+    {when = "discard", only = {{id = "once_per_discard"}, {id = "var", var = 1, op = "at_least", n = 1}}, give = {{id = "var_add", var = 1, n = -1}}},
+    {when = "hand_played", give = {{id = "var_mult", var = 1, n = 1}}},
+  }},
   {key = "j_golden", rules = {{when = "round_end", give = {{id = "money", n = 4}}}}},
   {key = "j_gros_michel", rules = {{when = "hand_played", give = {{id = "mult", n = 15}}}, {when = "round_end", only = {{id = "chance", n = 6}}, give = {{id = "destroy_self"}}}}},
   {key = "j_cavendish", rules = {{when = "hand_played", give = {{id = "xmult", n = 3}}}}},
@@ -312,6 +317,8 @@ function D.lines(d, l)
       for _, line in ipairs(T.lines({rules = R.clean_rules(d.rules, d.kind), vars = R.clean_vars(d.vars), kind = d.kind}, l)) do out[#out + 1] = line end
     end
   end
+  local al = require("functions/forge/forge_always").line(d)
+  if al then out[#out + 1] = al end
   if #out == 0 then out = {mod_loc("Does nothing yet")} end
   return out
 end
@@ -375,15 +382,22 @@ local PER_CARD = {card_scored = 3, card_held = 2, discard = 2}
 function D.power(d)
   if d.kind ~= "joker" then return nil end
   local total = 0
+  local vars = R.clean_vars(d.vars)
+  local function num(e, cond)
+    if not R.num_ref(e) then return e.n end
+    local v = vars[e.nv]
+    return R.live_num(e, v and not v.type and v.start, cond)
+  end
   for _, r in ipairs(R.clean_rules(d.rules)) do
     local p = 0
     for _, g in ipairs(r.give) do
       local w = GIVE_POWER[g.id] or 0.5
-      if g.id == "xmult" or g.id == "gain_xmult" then p = p + w * ((g.n or 1) - (g.id == "xmult" and 1 or 0)) else p = p + w * math.abs(g.n or 1) end
+      local n = num(g)
+      if g.id == "xmult" or g.id == "gain_xmult" then p = p + w * ((n or 1) - (g.id == "xmult" and 1 or 0)) else p = p + w * math.abs(n or 1) end
     end
     p = p * (PER_CARD[r.when] or 1)
     for _, o in ipairs(r.only) do
-      if o.id == "chance" then p = p / (o.n or 4) else p = p * (ONLY_POWER[o.id] or 0.6) end
+      if o.id == "chance" then p = p / (num(o, true) or 4) else p = p * (ONLY_POWER[o.id] or 0.6) end
     end
     total = total + p
   end

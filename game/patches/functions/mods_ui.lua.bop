@@ -1134,7 +1134,7 @@ l 2
         {n=G.UIT.T, config={text = mod.display_name or mod.name or mod.id, scale = 0.6, colour = G.C.GOLD, shadow = true}},
       }},
 r 5 297 %20%20%20%20%20%20 -
-l 35
+l 65
         {n=G.UIT.O, config={object = UIBox{definition = def, config = {offset = {x = 0, y = 0}}}}},
       }},
     },
@@ -1170,8 +1170,8 @@ function Game:main_menu(change_context, ...)
 end
 
 local splash_screen = Game.splash_screen
-r 7 1373 - -
-l 28
+function Game:splash_screen(...)
+  local n, a = select('#', ...), {...}
   local L = loader()
   if type(G.GAME) == "table" and G.GAME.pseudorandom == nil then G.GAME.pseudorandom = {} end
   if L and L.fast_boot then
@@ -1179,7 +1179,7 @@ l 28
     local skip = G.SETTINGS.skip_splash
     G.SETTINGS.skip_splash = 'Yes'
     switch_menu_once = true
-    local ok, err = xpcall(function() return splash_screen(self) end, function(e)
+    local ok, err = xpcall(function() return splash_screen(self, unpack(a, 1, n)) end, function(e)
       if type(e) ~= "string" then return e end
       return e .. "\n\nFast boot stack:" .. debug.traceback("", 2)
     end)
@@ -1188,7 +1188,7 @@ l 28
     if not ok then error(err, 0) end
     return
   end
-  return splash_screen(self)
+  return splash_screen(self, ...)
 end
 
 local collection_guarded = setmetatable({}, {__mode = "k"})

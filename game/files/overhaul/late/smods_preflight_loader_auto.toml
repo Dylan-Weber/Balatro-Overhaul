@@ -162,6 +162,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_preflight_loader.012"
+requires = ["auto.smods_preflight_loader.003"]
 target = '=[lovely SMODS.preflight.loader "src/preflight/loader.lua"]'
 pattern = '''^(?<pre>)(?<post>[\t ]*removeFromBlacklist = removeFromBlacklist,\n)'''
 position = "at"

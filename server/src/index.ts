@@ -11,7 +11,7 @@ import { UpdateService, updatesFromEnv, ReleaseService, releaseFromEnv, versionN
 import { SocialService, SOCIAL_TYPES, type PresenceDetail } from './social';
 import type { LobbyInfo } from './chat';
 import { partyCfg, PARTY_MAX } from './party_rules';
-import { startDraft, draftAction, draftDecks, draftMyDeck, wantsDraft, cancelDraft, resendDraft, type Draft, type DraftDeps } from './draft';
+import { startDraft, cleanDeckFilter, draftAction, draftDecks, draftMyDeck, wantsDraft, cancelDraft, resendDraft, type Draft, type DraftDeps } from './draft';
 import { startPick, pickAction, wantsPick, cancelPick, resendPick, cleanJokerList, RANDOM_PICK, type Pick, type PickDeps, type PickOpts } from './pick';
 import { remaining as draftRemaining } from './draft';
 import { raceCleared } from './party_rules';
@@ -78,6 +78,7 @@ interface SocketData {
   socialWhere?: string;
   socialSearchAt?: number[];
   connectedAt?: number;
+  deckFilter?: string;
 }
 
 type BunWS = ServerWebSocket<SocketData>;
@@ -1333,7 +1334,13 @@ function modsFingerprint(list: ModEntry[]): string {
   return list.map(m => `${m.id}@${m.version}`).join('|');
 }
 
+function rememberDeckFilter(ws: BunWS, msg: Record<string, unknown>): void {
+  const f = cleanDeckFilter(msg.deck_filter);
+  if (f) ws.data.deckFilter = f;
+}
+
 function rememberMods(ws: BunWS, msg: Record<string, unknown>): void {
+  rememberDeckFilter(ws, msg);
   if (typeof msg.version === 'string') ws.data.gameVersion = msg.version;
   ws.data.mods   = cleanMods(msg.mods);
   ws.data.modsFp = modsFingerprint(ws.data.mods);
@@ -2029,10 +2036,11 @@ function handleCancelSearch(ws: BunWS): void {
 }
 
 function handleRoomJoined(ws: BunWS, msg: Record<string, unknown>, raw: string | Buffer): void {
+  rememberDeckFilter(ws, msg);
   const room = getRoomForSocket(ws);
   relay(ws, room ? JSON.stringify({ ...msg, pid: getPlayerId(room, ws), players: roomRoster(room) }) : raw);
 }
-function handleReadyState(ws: BunWS, _msg: Record<string, unknown>, raw: string | Buffer): void  { relay(ws, raw); }
+function handleReadyState(ws: BunWS, msg: Record<string, unknown>, raw: string | Buffer): void  { rememberDeckFilter(ws, msg); relay(ws, raw); }
 
 function handleMatchSettings(ws: BunWS, msg: Record<string, unknown>, raw: string | Buffer): void {
   const room = getRoomForSocket(ws);
@@ -3601,7 +3609,7 @@ const L5_HANDLERS: Record<string, Handler> = {
 const HANDLERS: Record<string, Handler> = {
   forge_room_get:  (ws, msg)     => { if (!isBot(ws)) forgeRelay.get(ws, msg); },
   forge_room_put:  (ws, msg)     => { if (!isBot(ws)) forgeRelay.put(ws, msg); },
-  draft_start:     (ws)          => handleDraftStart(ws),
+  draft_start:     (ws, msg)     => handleDraftStart(ws, msg),
   draft_action:    (ws, msg)     => handleDraftAction(ws, msg),
   pick_start:      (ws, msg)     => handlePickStart(ws, msg),
   pick_set:        (ws, msg)     => handlePickSet(ws, msg),
@@ -3963,7 +3971,8 @@ function draftDeps(room: Room): DraftDeps {
   };
 }
 
-function handleDraftStart(ws: BunWS): void {
+function handleDraftStart(ws: BunWS, msg: Record<string, unknown> = {}): void {
+  rememberDeckFilter(ws, msg);
   const room = getRoomForSocket(ws);
   if (!room || (room.match && room.match.phase !== 'finished')) return;
   const pid = getPlayerId(room, ws);
@@ -3971,7 +3980,7 @@ function handleDraftStart(ws: BunWS): void {
   if (room.draft && room.draft.phase !== 'done') { resendDraft(room, pid, draftDeps(room)); return; }
   if (pid !== 0 || !seatSocket(room, 0) || !seatSocket(room, 1)) { sendTo(ws, { type: 'draft_error', reason: 'not_ready' }); return; }
   if (!wantsDraft(room)) { sendTo(ws, { type: 'draft_error', reason: 'off' }); return; }
-  startDraft(room, draftDeps(room), room.rankedSeed ?? null);
+  startDraft(room, draftDeps(room), room.rankedSeed ?? null, [0, 1].map(p => seatSocket(room, p)?.data.deckFilter));
 }
 
 function pickDeps(room: Room): PickDeps {

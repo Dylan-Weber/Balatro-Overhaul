@@ -69,7 +69,9 @@ local function deck_options()
         local rnd = out[1]
         local rest = {}
         for i = 2, #out do rest[#rest + 1] = out[i] end
-        local keep = PR.filter_decks(rest, function(o) return PR.deck_name_shown(o.value) end)
+        local bm = rawget(_G, "bom_match")
+        local f = bm and bm.shared_deck_filter and bm.shared_deck_filter() or nil
+        local keep = PR.filter_decks(rest, function(o) return PR.deck_name_shown(o.value, f) end, f)
         out = {rnd}
         for _, o in ipairs(rest) do
             local ok = o.value == cur
@@ -390,6 +392,7 @@ local function own_row(d)
             if not (o[i] and G.SETTINGS) then return end
             G.SETTINGS[d.key] = o[i].value
             if G.save_settings then pcall(function() G:save_settings() end) end
+            if d.key == "deck_filter" then pcall(function() bom_match.send_deck_filter() end) end
             if d.refresh then UIK.refresh() end
         end}
 end

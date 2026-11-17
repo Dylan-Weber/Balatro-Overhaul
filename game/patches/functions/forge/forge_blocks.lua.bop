@@ -338,7 +338,7 @@ l 8
     if not G.hand then return end
     local v = g.v
 r 3 617 %20%20%20%20 -
-l 563
+l 573
       local made = create_playing_card({front = pseudorandom_element(G.P_CARDS, pseudoseed("forge_hand_fr")), center = G.P_CENTERS.c_base}, G.hand, nil, nil, {G.C.SECONDARY_SET.Enhanced})
       local seal = v
       if seal == "random" or not R.usable("seal", seal) then
@@ -832,15 +832,16 @@ l 563
   function R.target_vars()
     local t = R.round_target()
     local lang = cur_lang()
-    return {T.suit_name(t.suit), rank_text(t.rank), T.hand_name(t.hand), string.format(OF[lang], rank_text(t.card.rank), T.suit_name(t.card.suit, true))}
+    return {T.suit_name(t.suit, true), rank_text(t.rank), T.hand_name(t.hand), string.format(OF[lang], rank_text(t.card.rank), T.suit_name(t.card.suit, true))}
   end
 
-  add_ids(R.ONLY, {"round_suit", "round_rank", "round_card", "round_hand"})
+  add_ids(R.ONLY, {"round_suit", "round_rank", "round_card", "round_hand", "round_hand_suit"})
   R.CARD_ONLY.round_suit = true
   R.CARD_ONLY.round_rank = true
   R.CARD_ONLY.round_card = true
   R.ONLY_WHEN.round_hand = HAND
-  for _, id in ipairs({"round_suit", "round_rank", "round_card", "round_hand"}) do
+  R.ONLY_WHEN.round_hand_suit = HAND
+  for _, id in ipairs({"round_suit", "round_rank", "round_card", "round_hand", "round_hand_suit"}) do
     R.CLEAN_ONLY[id] = function(c) c.v, c.op, c.n, c.mode = nil, nil, nil, nil end
   end
   C.round_suit = function(o, context, card, other) return other ~= nil and other:is_suit(R.round_target().suit) end
@@ -850,28 +851,37 @@ l 563
     return other ~= nil and other:get_id() == t.rank and other:is_suit(t.suit)
   end
   C.round_hand = function(o, context) return context.scoring_name ~= nil and context.scoring_name == R.round_target().hand end
+  C.round_hand_suit = function(o, context)
+    local suit = R.round_target().suit
+    for _, c in ipairs(scoring(context)) do if c:is_suit(suit) then return true end end
+    return false
+  end
 
   local RT = {
     en = {round_suit = "it is of {C:attention}this round's suit{} ({C:attention}#9#{})", round_rank = "its rank is {C:attention}this round's rank{} ({C:attention}#10#{})",
       round_card = "it is {C:attention}this round's card{} ({C:attention}#12#{})", round_hand = "the hand is {C:attention}this round's poker hand{} ({C:attention}#11#{})",
+      round_hand_suit = "the hand has a scoring card of {C:attention}this round's suit{} ({C:attention}#9#{})",
       changes = "{C:inactive}(Changes every round){}"},
     fr = {round_suit = "elle est de {C:attention}la couleur de la manche{} ({C:attention}#9#{})", round_rank = "sa valeur est {C:attention}la valeur de la manche{} ({C:attention}#10#{})",
       round_card = "c'est {C:attention}la carte de la manche{} ({C:attention}#12#{})", round_hand = "la main est {C:attention}la main de poker de la manche{} ({C:attention}#11#{})",
+      round_hand_suit = "la main contient une carte qui marque de {C:attention}la couleur de la manche{} ({C:attention}#9#{})",
       changes = "{C:inactive}(Change à chaque manche){}"},
     es = {round_suit = "es del {C:attention}palo de la ronda{} ({C:attention}#9#{})", round_rank = "su valor es {C:attention}el valor de la ronda{} ({C:attention}#10#{})",
       round_card = "es {C:attention}la carta de la ronda{} ({C:attention}#12#{})", round_hand = "la mano es {C:attention}la mano de póker de la ronda{} ({C:attention}#11#{})",
+      round_hand_suit = "la mano tiene una carta que anota del {C:attention}palo de la ronda{} ({C:attention}#9#{})",
       changes = "{C:inactive}(Cambia cada ronda){}"},
   }
   R.TARGET_TEXT = RT
-  for _, id in ipairs({"round_suit", "round_rank", "round_card", "round_hand"}) do
+  for _, id in ipairs({"round_suit", "round_rank", "round_card", "round_hand", "round_hand_suit"}) do
     TO[id] = function(o, s, lang) return (RT[lang] or RT.en)[id] end
   end
   LO.round_suit, LO.round_rank, LO.round_card, LO.round_hand = "This round's suit", "This round's rank", "This round's card", "This round's poker hand"
+  LO.round_hand_suit = "Hand has this round's suit"
 
   if mod_loc_register then
     mod_loc_register{
-      fr = {["This round's suit"] = "Couleur de la manche", ["This round's rank"] = "Valeur de la manche", ["This round's card"] = "Carte de la manche", ["This round's poker hand"] = "Main de poker de la manche"},
-      es = {["This round's suit"] = "Palo de la ronda", ["This round's rank"] = "Valor de la ronda", ["This round's card"] = "Carta de la ronda", ["This round's poker hand"] = "Mano de póker de la ronda"},
+      fr = {["This round's suit"] = "Couleur de la manche", ["This round's rank"] = "Valeur de la manche", ["This round's card"] = "Carte de la manche", ["This round's poker hand"] = "Main de poker de la manche", ["Hand has this round's suit"] = "La main a la couleur de la manche"},
+      es = {["This round's suit"] = "Palo de la ronda", ["This round's rank"] = "Valor de la ronda", ["This round's card"] = "Carta de la ronda", ["This round's poker hand"] = "Mano de póker de la ronda", ["Hand has this round's suit"] = "La mano tiene el palo de la ronda"},
     }
   end
   add_ids(R.ONLY, {"lucky_hit", "boss_triggered"})

@@ -245,7 +245,7 @@ local function remove_new(r, n0, m0)
         local o = type(c) == 'table' and rawget(c, 'object')
         if o and fresh[o] and o.remove then pcall(o.remove, o); fresh[o] = nil end
 r 13 131 %20%20%20%20%20%20%20%20 -
-l 345
+l 351
             if type(v) == 'table' and k ~= 'object' and not (getmetatable(v) and v.is) then walk(v, d + 1) end
         end
     end
@@ -531,6 +531,7 @@ function T.fit_counter(on)
         b.config.h = want
         a:recalculate()
     end
+    a.states.collide.can = want <= 0.1
 end
 
 local function hidden(card)
@@ -591,9 +592,8 @@ function T.refresh_all()
 end
 
 local _game_update = Game.update
-r 7 2449 - -
-l 4
-    _game_update(self, dt)
+function Game:update(dt, ...)
+    _game_update(self, dt, ...)
     local ok, err = pcall(T.update)
     if not ok then log_once('update', err) end
 end

@@ -1,0 +1,12 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.pattern]
+id = "controller.nodes_at_cursor_init"
+target = "engine/controller.lua"
+pattern = "function Controller:init()"
+position = "after"
+payload = "self.nodes_at_cursor = {}"
+times = 1

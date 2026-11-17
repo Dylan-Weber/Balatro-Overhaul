@@ -103,6 +103,7 @@ function S.clean(c)
   end
   if out.name == "" then out.name = "Joker" end
   if type(c.requires) == "string" and c.requires:match("^v_[%w_]+$") and #c.requires <= 40 then out.requires = c.requires end
+  if require("functions/forge/forge_always").syntax_ok(c.always_ed) then out.always_ed = c.always_ed end
   return out
 end
 

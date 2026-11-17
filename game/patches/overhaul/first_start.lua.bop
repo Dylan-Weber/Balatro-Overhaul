@@ -1,0 +1,118 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 55
+local M = {}
+
+M.FONT = "resources/fonts/m6x11plus.ttf"
+M.TITLE = "Preparing Balatro Overhaul"
+M.LINE = "First start after an install or update, this can take a minute"
+
+local function source_path(engine, target)
+	for path, t in pairs(engine.aliases or {}) do
+		if t == target and love.filesystem.getInfo(path, "file") then return path end
+	end
+	if love.filesystem.getInfo("balatro/" .. target, "file") then return "balatro/" .. target end
+	if love.filesystem.getInfo(target, "file") then return target end
+	return nil
+end
+
+function M.pending(engine)
+	local list = {}
+	if type(engine) ~= "table" or not engine.cache_dir or type(engine.targets) ~= "table" then return list end
+	for target in pairs(engine.targets) do
+		if type(target) == "string" and target:match("^[%w_%-%./]+%.lua$") then
+			local path = source_path(engine, target)
+			if path and not love.filesystem.getInfo(engine.cache_dir .. "/" .. engine.hash(target) .. ".meta", "file") then
+				list[#list + 1] = {target = target, path = path, size = (love.filesystem.getInfo(path) or {}).size or 1}
+			end
+		end
+	end
+	table.sort(list, function(a, b) return a.target < b.target end)
+	return list
+end
+
+local fonts = {}
+
+local function font(px)
+	px = math.max(8, math.floor(px + 0.5))
+	if fonts[px] == nil then
+		local ok, f = pcall(love.graphics.newFont, M.FONT, px)
+		if not ok then ok, f = pcall(love.graphics.newFont, px) end
+		fonts[px] = ok and f or false
+	end
+	return fonts[px] or love.graphics.getFont()
+end
+
+local function centered(text, f, cx, y)
+	love.graphics.setFont(f)
+	love.graphics.print(text, math.floor(cx - f:getWidth(text) / 2 + 0.5), math.floor(y + 0.5))
+end
+
+function M.draw(done, total)
+	if not (love.graphics and love.window and love.window.isOpen and love.window.isOpen()) then return false end
+	if love.event and love.event.pump then love.event.pump() end
+	if love.graphics.isActive and not love.graphics.isActive() then return false end
+	local w, h = love.graphics.getDimensions()
+	local s = math.min(w, h)
+	local frac = total > 0 and math.max(0, math.min(1, done / total)) or 0
+	love.graphics.push("all")
+r 13 112 %09 -
+r 3 4413 %09 -
+r 12 278 %09 -
+l 17
+	love.graphics.clear(0.086, 0.137, 0.145, 1)
+	local big, small = font(s * 0.075), font(s * 0.04)
+	local bw, bh = math.floor(math.min(w * 0.8, s * 1.1)), math.max(8, math.floor(s * 0.04))
+	local bx, by = math.floor((w - bw) / 2), math.floor(h / 2 - bh / 2)
+	love.graphics.setColor(1, 1, 1, 1)
+	centered(M.TITLE, big, w / 2, by - big:getHeight() * 1.6)
+	love.graphics.setColor(0.216, 0.259, 0.267, 1)
+	love.graphics.rectangle("fill", bx, by, bw, bh, bh / 2, bh / 2)
+	love.graphics.setColor(0.996, 0.373, 0.333, 1)
+	if frac > 0 then love.graphics.rectangle("fill", bx, by, math.max(bh, math.floor(bw * frac)), bh, bh / 2, bh / 2) end
+	love.graphics.setColor(1, 1, 1, 0.8)
+	local lw = math.floor(w * 0.9)
+	local _, lines = small:getWrap(M.LINE, lw)
+	love.graphics.setFont(small)
+	love.graphics.printf(M.LINE, math.floor((w - lw) / 2), math.floor(by + bh + small:getHeight() * 0.8), lw, "center")
+	centered(math.floor(frac * 100 + 0.5) .. "%", small, w / 2, by + bh + small:getHeight() * (1.4 + #lines))
+	love.graphics.pop()
+r 13 123 %09 -
+l 34
+	return true
+end
+
+local function guarded(fn, ...)
+	local g = love.graphics
+	local depth = g and g.getStackDepth and g.getStackDepth()
+	local ok, r = pcall(fn, ...)
+	if not ok and depth then
+		while g.getStackDepth() > depth do g.pop() end
+	end
+	return ok, r
+end
+
+function M.run(engine, draw)
+	draw = draw or M.draw
+	local list = M.pending(engine)
+	if #list == 0 then return 0 end
+	local total, done = 0, 0
+	for _, item in ipairs(list) do total = total + item.size end
+	local warnings = type(engine.warnings) == "table" and #engine.warnings or nil
+	guarded(draw, 0, total)
+	for _, item in ipairs(list) do
+		local code = love.filesystem.read(item.path)
+		if type(code) == "string" then pcall(engine.patch_cached, item.target, code) end
+		done = done + item.size
+		guarded(draw, done, total)
+	end
+	if warnings then
+		for i = #engine.warnings, warnings + 1, -1 do engine.warnings[i] = nil end
+	end
+	return #list
+end
+
+return M
+end

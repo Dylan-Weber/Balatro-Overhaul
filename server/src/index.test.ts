@@ -2192,3 +2192,51 @@ describe('match tab: life steal', () => {
     host.close(); guest.close();
   });
 });
+
+describe('deck draft pool follows Decks to pick from', () => {
+  const VANILLA = new Set(['Red Deck', 'Blue Deck', 'Yellow Deck', 'Green Deck', 'Black Deck', 'Magic Deck', 'Nebula Deck', 'Ghost Deck',
+    'Abandoned Deck', 'Checkered Deck', 'Zodiac Deck', 'Painted Deck', 'Anaglyph Deck', 'Plasma Deck', 'Erratic Deck']);
+
+  async function draftRoom(join: Msg): Promise<[TestClient, TestClient]> {
+    const host = await connect();
+    const guest = await connect();
+    host.send({ type: 'create_room', deck_filter: 'both' });
+    const created = await host.waitFor((m) => m.type === 'room_created');
+    guest.send({ type: 'join_room', code: created.code, ...join });
+    await guest.waitFor((m) => m.type === 'room_ready');
+    await host.waitFor((m) => m.type === 'room_ready');
+    host.send({ type: 'match_settings', settings: { deck_draft: true } });
+    await guest.waitFor((m) => m.type === 'match_settings');
+    return [host, guest];
+  }
+
+  async function pools(host: TestClient, guest: TestClient): Promise<[string[], string[]]> {
+    host.send({ type: 'draft_start', deck_filter: 'both' });
+    const a = await host.waitFor((m) => m.type === 'draft_state');
+    const b = await guest.waitFor((m) => m.type === 'draft_state');
+    return [a.pool as string[], b.pool as string[]];
+  }
+
+  it('a guest who joined with only vanilla gets a vanilla pool on both screens', async () => {
+    for (let i = 0; i < 6; i++) {
+      const [host, guest] = await draftRoom({ deck_filter: 'vanilla' });
+      const [a, b] = await pools(host, guest);
+      expect(a).toEqual(b);
+      expect(a.length).toBeGreaterThan(0);
+      for (const d of a) expect(VANILLA.has(d)).toBe(true);
+      host.close(); guest.close();
+    }
+  });
+
+  it('a filter changed in the lobby through ready_state is used', async () => {
+    for (let i = 0; i < 6; i++) {
+      const [host, guest] = await draftRoom({});
+      guest.send({ type: 'ready_state', ready: false, deck_filter: 'vanilla' });
+      await host.waitFor((m) => m.type === 'ready_state');
+      const [a, b] = await pools(host, guest);
+      expect(a).toEqual(b);
+      for (const d of a) expect(VANILLA.has(d)).toBe(true);
+      host.close(); guest.close();
+    }
+  });
+});

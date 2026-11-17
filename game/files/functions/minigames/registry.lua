@@ -1,8 +1,3 @@
-BOP 1
-eol lf
-final 1
-base 0
-l 149
 Minigames = Minigames or {}
 local MG = Minigames
 
@@ -152,13 +147,11 @@ end
 if Game and Game.update and not MG._update_wrapped then
     MG._update_wrapped = true
     local update = Game.update
-r 7 2449 %20%20%20%20 -
-l 7
-        update(self, dt)
+    function Game:update(dt, ...)
+        update(self, dt, ...)
         if not MG.booted then MG.boot() end
         if MG._available and MG.host then MG.host.tick(dt) end
     end
 end
 
 return MG
-end

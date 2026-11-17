@@ -49,6 +49,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_overrides.005"
+requires = ["auto.smods_overrides.003"]
 target = '=[SMODS _ "src/overrides.lua"]'
 pattern = '''^(?<pre>)[\t ]*if #temp_cols >= 13 then\n(?<post>[\t ]*rank_cols\[#rank_cols \+ 1\] = \{\n[\t ]*n = G\.UIT\.C,\n[\t ]*config = \{ align = "cm" \},\n[\t ]*nodes = temp_cols\n[\t ]*\}\n[\t ]*temp_cols = \{\}\n[\t ]*end\n[\t ]*end\n[\t ]*end\n[\t ]*\n[\t ]*if #temp_cols > 0 then\n[\t ]*rank_cols\[#rank_cols \+ 1\] = \{\n[\t ]*n = G\.UIT\.C,\n[\t ]*config = \{ align = "cm" \},\n[\t ]*nodes = temp_cols\n[\t ]*\}\n[\t ]*end\n[\t ]*\n[\t ]*local tally_ui = \{\n[\t ]*-- base cards\n[\t ]*\{n = G\.UIT\.R, config = \{align = "cm", minh = 0\.05, padding = 0\.07\}, nodes = \{\n[\t ]*\{n = G\.UIT\.O, config = \{\n[\t ]*object = DynaText\(\{\n[\t ]*string = \{\n[\t ]*\{ string = localize\('k_base_cards'\), colour = G\.C\.RED \},\n[\t ]*modded and \{ string = localize\('k_effective'\), colour = G\.C\.BLUE \} or nil\n[\t ]*\},\n[\t ]*colours = \{ G\.C\.RED \}, silent = true, scale = 0\.4, pop_in_rate = 10, pop_delay = 4\n[\t ]*\}\)\n[\t ]*\}\}\}\},\n[\t ]*-- aces, faces and numbered cards\n[\t ]*\{n = G\.UIT\.R, config = \{align = "cm", minh = 0\.05, padding = 0\.1\}, nodes = \{\n[\t ]*tally_sprite\(\n[\t ]*\{ x = 1, y = 0 \},\n[\t ]*\{ \{ string = '' \.\. ace_tally, colour = flip_col \}, \{ string = '' \.\. mod_ace_tally, colour = G\.C\.BLUE \} \},\n[\t ]*\{ localize\('k_aces'\) \}\n[\t ]*\), --Aces\n[\t ]*tally_sprite\(\n[\t ]*\{ x = 2, y = 0 \},\n[\t ]*\{ \{ string = '' \.\. face_tally, colour = flip_col \}, \{ string = '' \.\. mod_face_tally, colour = G\.C\.BLUE \} \},\n[\t ]*\{ localize\('k_face_cards'\) \}\n[\t ]*\), --Face\n[\t ]*tally_sprite\(\n[\t ]*\{ x = 3, y = 0 \},\n[\t ]*\{ \{ string = '' \.\. num_tally, colour = flip_col \}, \{ string = '' \.\. mod_num_tally, colour = G\.C\.BLUE \} \},\n[\t ]*\{ localize\('k_numbered_cards'\) \}\n[\t ]*\), --Numbers\n[\t ]*\}\},\n[\t ]*\}\n[\t ]*-- add suit tallies\n[\t ]*local hidden_suits = \{\}\n[\t ]*for _, suit in ipairs\(suit_map\) do\n[\t ]*if suit_tallies\[suit\] == 0 and SMODS\.Suits\[suit\]\.in_pool and not SMODS\.add_to_pool\(SMODS\.Suits\[suit\], \{rank=''\}\) then\n[\t ]*hidden_suits\[suit\] = true\n[\t ]*end\n[\t ]*end\n[\t ]*local i = 1\n)'''
 position = "at"
@@ -229,6 +230,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_overrides.020"
+requires = ["auto.smods_utils.001"]
 target = '=[SMODS _ "src/overrides.lua"]'
 pattern = '''^(?<pre>)(?<post>[\t ]*-- this only supports a single argument passed as code, file names are not supported\n)'''
 position = "at"
@@ -242,6 +244,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_overrides.021"
+requires = ["auto.smods_utils.001"]
 target = '=[SMODS _ "src/overrides.lua"]'
 pattern = '''^(?<pre>)[\t ]*if other_code or not string\.find\(code,'\\n'\) or love\.graphics\.getRendererInfo\(\) ~= "OpenGL ES" then\n(?<post>)'''
 position = "at"
@@ -253,6 +256,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.smods_overrides.022"
+requires = ["auto.smods_overrides.019"]
 target = '=[SMODS _ "src/overrides.lua"]'
 pattern = '''^(?<pre>[\t ]*if old_success then return old_shader end\n)(?<post>)'''
 position = "at"

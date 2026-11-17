@@ -1,0 +1,101 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 19
+local Hooks = require("overhaul.hooks")
+
+local M = {log = {}}
+
+local function setup_mods()
+    local smods = rawget(_G, "SMODS")
+    local list = type(smods) == "table" and smods.mod_list
+    local out = {}
+    if type(list) ~= "table" then return out end
+    for _, mod in ipairs(list) do
+        if type(mod) == "table" and type(mod.id) == "string" and type(mod.reset_game_globals) == "function" then
+            out[#out + 1] = mod
+        end
+    end
+    return out
+end
+
+local function snap(t, seen)
+    local s = {ref = t, vals = {}}
+r 13 131 %20%20%20%20 -
+l 74
+        if type(v) == "table" then
+            if seen[v] then
+                s.vals[k] = {ref = v, shared = true}
+            else
+                seen[v] = true
+                s.vals[k] = snap(v, seen)
+            end
+        else
+            s.vals[k] = {val = v}
+        end
+    end
+    return s
+end
+
+local function restore(t, s)
+    for k, e in pairs(s.vals) do
+        if e.ref ~= nil then
+            if rawget(t, k) ~= e.ref then rawset(t, k, e.ref) end
+            if not e.shared then restore(e.ref, e) end
+        elseif rawget(t, k) ~= e.val then
+            rawset(t, k, e.val)
+        end
+    end
+end
+
+function M.fill_from(game, mod)
+    local seeds = type(game.pseudorandom) == "table" and game.pseudorandom or nil
+    local seed_keys = {}
+    if seeds then for k in pairs(seeds) do seed_keys[k] = true end end
+    local before = snap(game, {[game] = true})
+    local ok, err = pcall(mod.reset_game_globals, true)
+    restore(game, before)
+    if seeds and game.pseudorandom == seeds then
+        for k in pairs(seeds) do if not seed_keys[k] then seeds[k] = nil end end
+    end
+    return ok, err
+end
+
+function M.mark(game)
+    local ids = {}
+    for _, mod in ipairs(setup_mods()) do ids[mod.id] = true end
+    game.overhaul_setup_mods = ids
+end
+
+function M.fill_continued(game)
+    if type(game) ~= "table" then return 0 end
+    local saved = type(game.overhaul_setup_mods) == "table" and game.overhaul_setup_mods or nil
+    local n = 0
+    for _, mod in ipairs(setup_mods()) do
+        if not (saved and saved[mod.id]) then
+            local ok, err = M.fill_from(game, mod)
+            n = n + 1
+            M.log[#M.log + 1] = mod.id
+            print("[LOAD] run start setup of " .. mod.id .. (saved and " (not in the saved run)" or " (save has no mod list)")
+                .. (ok and ", filled what the save lacks" or (" failed: " .. tostring(err))))
+        end
+    end
+    M.mark(game)
+    return n
+end
+
+Hooks.wrap("Game", "start_run", function(orig) return function(self, args, ...)
+    local r = Hooks.pack(orig(self, args, ...))
+    if G and type(G.GAME) == "table" then
+        if type(args) == "table" and args.savetext then
+            pcall(M.fill_continued, G.GAME)
+        else
+            pcall(M.mark, G.GAME)
+        end
+    end
+    return Hooks.unpack(r)
+end end, {id = "continue_mods.start_run"})
+
+return M
+end

@@ -10,7 +10,7 @@ M.IMPORT_DIR = "forge/import"
 M.INDEX = "forge/mods/index.json"
 M.EXT = ".forgemod"
 M.FORMAT = "forgemod"
-M.V = 12
+M.V = 15
 M.MAX_BYTES = 2 * 1024 * 1024
 M.MAX_ITEMS = 60
 M.MAX_FILE = 64 * 1024
@@ -222,7 +222,8 @@ end
 
 function M.needs_v(jokers, creations)
   local v = 1
-  for _, x in ipairs(jokers or {}) do v = math.max(v, Rules.need_v(x.rules, x.vars)) end
+  local Always = require("functions/forge/forge_always")
+  for _, x in ipairs(jokers or {}) do v = math.max(v, Rules.need_v(x.rules, x.vars), Always.joker_need(x)) end
   local Cat = package.loaded["functions/forge/forge_catalog"]
   if Cat and Cat.need_v then
     for _, c in ipairs(creations or {}) do v = math.max(v, Cat.need_v(c)) end

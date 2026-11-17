@@ -1,4 +1,6 @@
 require("overhaul.hooks")
+require("overhaul.late_fallbacks")
+require("overhaul.continue_mods")
 require("overhaul.sprite")
 require("overhaul.blind")
 require("overhaul.save_manager")

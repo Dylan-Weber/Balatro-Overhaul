@@ -1,8 +1,3 @@
-BOP 1
-eol lf
-final 1
-base 0
-l 497
 SpeedrunBoard = SpeedrunBoard or {}
 local SB = SpeedrunBoard
 local SR = Speedrun
@@ -500,9 +495,8 @@ function SB.tick()
 end
 
 local _sb_game_update = Game.update
-r 7 2449 - -
-l 39
-  _sb_game_update(self, dt)
+function Game:update(dt, ...)
+  _sb_game_update(self, dt, ...)
   pcall(SB.tick)
 end
 
@@ -541,4 +535,3 @@ mod_loc_register{
 }
 
 return SB
-end

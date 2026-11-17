@@ -208,7 +208,7 @@ Cat.RUN = {
   run("money_per_discard", "$ per discard left", n(-1e6, 1e6, 1, 1, "$"), "{C:money}%s{} per discard left at cash out", {args = {"n"}, sign = true}),
   run("blind_size", "Blind size", n(0.01, 1e6, 0.8, 0.05, "x"), "Blinds are {C:attention}%s{} as big", {args = {"n"}, simple = true}),
   run("probability", "Chances", n(0.01, 1e6, 2, 0.5, "x"), "All chances are {C:green}%s{}", {args = {"n"}}),
-  run("shop_rate", "Shop weight of a card type", n(-1e6, 1e6, 4, 1), "{C:attention}%s{} cards in the shop: {C:attention}%s{} weight", {v = "shopset", args = {"v", "n"}, sign = true}),
+  run("shop_rate", "Shop weight of a card type", n(-1e6, 1e6, 4, 0.1), "{C:attention}%s{} cards in the shop: {C:attention}%s{} weight", {v = "shopset", args = {"v", "n"}, sign = true}),
   run("edition_rate", "Edition chance", n(0.01, 1e6, 2, 0.5, "x"), "Editions show up {C:dark_edition}%s{} as often", {args = {"n"}}),
   run("rarity_weight", "Joker rarity weight", n(-1e6, 1e6, 10, 1), "{C:attention}%s{} Jokers: {C:attention}%s{} weight", {v = "rarity3", args = {"v", "n"}, sign = true}),
   run("pack_slots", "Booster pack slots", n(-2, 10, 1), "{C:attention}%s{} booster pack slot in the shop", {args = {"n"}, sign = true, simple = true}),
@@ -730,6 +730,7 @@ function Cat.default_effect(kind_id, id)
   if e.v == "tag" then out.v = "tag_double" end
   if e.v == "addcard" then out.v = "c_base" end
   if e.v == "card" then out.v = R.CARD_DEFAULT end
+  if e.init then e.init(out) end
   out.when = Cat.default_when(kind_id, id)
   if out.when == "now" then out.when = nil end
   return out
@@ -783,6 +784,7 @@ function Cat.clean_effects(kind_id, list)
         if not okv and Cat.own_ok(spec.v, e.v) then c.v = e.v; okv = true end
         if not okv then c.v = Cat.default_effect(kind_id, e.id).v end
       end
+      if spec.clean then spec.clean(c, e) end
       local whens = Cat.whens_for(kind_id, e.id)
       if whens and #whens > 0 then
         c.when = member(whens, e.when) or whens[1]
@@ -1018,6 +1020,8 @@ end
 
 require("functions/forge/forge_power3").cat(Cat)
 require("functions/forge/forge_editions").cat(Cat)
+require("functions/forge/forge_always").cat(Cat)
+require("functions/forge/forge_looks").cat(Cat)
 Cat.JOKER.when_simple.passive = true
 
 return Cat

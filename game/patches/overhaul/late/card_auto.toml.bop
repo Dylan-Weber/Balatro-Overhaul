@@ -25,7 +25,7 @@ l 1
                     elseif not v.alerted and not self.children.alert and v.discovered then
 r 3 86 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 3 87 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 129
+l 130
                             config = {align="tri", offset = {x = -0.1, y = 0.1}, parent = self}
                         }
                     end
@@ -150,19 +150,21 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.card.010"
+requires = ["auto.card.009"]
 target = "card.lua"
 pattern = '''^(?<pre>)[\t ]*\{n=G\.UIT\.T, config=\{text = '  \+',colour = G\.C\.MULT, scale = 0\.32\}\},\n[\t ]*\{n=G\.UIT\.O, config=\{object = DynaText\(\{string = r_mults, colours = \{G\.C\.RED\},pop_in_rate = 9999999, silent = true, random_element = true, pop_delay = 0\.5, scale = 0\.32, min_cycle_time = 0\}\)\}\},\n(?<post>)'''
 position = "at"
 payload = '''
 ${pre}                {n=G.UIT.T, config={text = '   +',colour = G.C.MULT, scale = 0.32*text_scale}},
 e 3 774 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 - =167,+%2A%74%65%78%74%5F%73%63%61%6C%65,=25
-l 139
+l 140
 ${post}'''
 times = 1
 
 [[patches]]
 [patches.regex]
 id = "auto.card.011"
+requires = ["auto.card.009"]
 target = "card.lua"
 pattern = '''^(?<pre>)[\t ]*colours = \{G\.C\.UI\.TEXT_DARK\},pop_in_rate = 9999999, silent = true, random_element = true, pop_delay = 0\.2011, scale = 0\.32, min_cycle_time = 0\}\)\}\},\n(?<post>)'''
 position = "at"
@@ -258,10 +260,10 @@ times = 1
 [patches.regex]
 id = "auto.card.019"
 target = "card.lua"
-pattern = '''^(?<pre>)[\t ]*G\.GAME\.chips/G\.GAME\.blind\.chips >= 0\.25 then\n(?<post>)'''
+pattern = '''^(?<pre>)[\t ]*(?<chipq>(?:to_big\(G\.GAME\.chips\)|G\.GAME\.chips)/G\.GAME\.blind\.chips >= (?:to_big\(0\.25\)|0\.25)) then\n(?<post>)'''
 position = "at"
 payload = '''
-${pre}                G.GAME.chips/G.GAME.blind.chips >= 0.25 and
+${pre}                ${chipq} and
                 not G.GAME.multiplayer then
 ${post}'''
 times = 1
@@ -399,13 +401,14 @@ ${pre}function Card:simple_touch()
 end
 
 e 3 4333 - - =40,+%2C%20%64%69%73%61%62%6C%65%5F%72%75%6D%62%6C%65,=1
-l 90
+l 91
 ${post}'''
 times = 1
 
 [[patches]]
 [patches.regex]
 id = "auto.card.030"
+requires = ["auto.globals.014"]
 target = "card.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*local rot_amt = rot_amount and 0\.4\*\(math\.random\(\)>0\.5 and 1 or -1\)\*rot_amount or \(math\.random\(\)>0\.5 and 1 or -1\)\*0\.16\n)'''
 position = "at"

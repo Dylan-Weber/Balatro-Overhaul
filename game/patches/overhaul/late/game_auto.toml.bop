@@ -204,7 +204,7 @@ ${pre}    local mod_boot = package.loaded["modloader.boot"]
         local fill
         fill = function(t1, t2)
 r 7 915 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 19
+l 21
                 if t2[k] == nil then t2[k] = v elseif type(t2[k]) == 'table' and type(v) == 'table' then fill(v, t2[k]) end
             end
         end
@@ -216,9 +216,11 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.013"
+requires = ["auto.game.012", "auto.button_callbacks.027", "auto.game.056"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*--Create the event manager for the game\n[\t ]*self\.E_MANAGER = EventManager\(\)\n[\t ]*self\.SPEEDFACTOR = 1\n[\t ]*\n[\t ]*set_profile_progress\(\)\n(?<post>)'''
 position = "at"
+needed = "boot.start_up"
 payload = '''
 ${pre}    fetch_achievements()
 
@@ -2486,7 +2488,7 @@ ${pre}        b_red=              {name = "Red Deck",         stake = 1, demo = 
         b_erratic=          {name = "Erratic Deck",     stake = 1, demo = true, unlocked = false, order = 15, pos = {x=2,y=3}, set = "Back", config = {randomize_rank_suit = true}, unlock_condition = {type = 'win_stake', stake=7}},
     
 e 7 644 %20%20%20%20%20%20%20%20 - =57,+%2C%20%64%65%6D%6F%20%3D%20%74%72%75%65,=87
-l 195
+l 199
 ${post}'''
 times = 1
 
@@ -2574,6 +2576,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.028"
+requires = ["auto.game.014"]
 target = "game.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*if not v\.wip and not v\.demo then \n[\t ]*if TESTHELPER_unlocks then v\.unlocked = true; v\.discovered = true;v\.alerted = true end --REMOVE THIS\n)'''
 position = "at"
@@ -2602,6 +2605,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.030"
+requires = ["auto.game.014"]
 target = "game.lua"
 pattern = '''^(?<pre>[\t ]*for k, v in pairs\(self\.P_BLINDS\) do\n)(?<post>[\t ]*v\.key = k\n)'''
 position = "at"
@@ -2615,6 +2619,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.031"
+requires = ["auto.game.014"]
 target = "game.lua"
 pattern = '''^(?<pre>[\t ]*for k, v in pairs\(self\.P_TAGS\) do\n)(?<post>[\t ]*v\.key = k\n)'''
 position = "at"
@@ -2626,6 +2631,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.032"
+requires = ["auto.game.014"]
 target = "game.lua"
 pattern = '''^(?<pre>[\t ]*for k, v in pairs\(self\.P_STAKES\) do\n)(?<post>)'''
 position = "at"
@@ -2863,7 +2869,7 @@ function Game:fit_save_to_mods(t)
             bu = flat
         end
 r 2 703 %20%20%20%20%20%20%20%20 -
-l 114
+l 115
             if type(v) == 'table' and v.boss and tonumber(bu[k]) == nil then bu[k] = 0 end
         end
     end
@@ -2927,6 +2933,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.036"
+requires = ["auto.game.035"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*G\.SETTINGS\.profile = _profile\n[\t ]*\n[\t ]*--Load the settings file\n[\t ]*local info = get_compressed\(_profile\.\.'/profile\.jkr'\)\n[\t ]*if info ~= nil then\n[\t ]*for k, v in pairs\(STR_UNPACK\(info\)\) do\n[\t ]*G\.PROFILES\[G\.SETTINGS\.profile\]\[k\] = v\n[\t ]*end\n[\t ]*end\n[\t ]*\n[\t ]*local temp_profile = \{\n(?<post>)'''
 position = "at"
@@ -3186,7 +3193,7 @@ ${pre}    local prof = G.PROFILES[G.SETTINGS.profile]
         prof.unlock_overlays_seen[card.key] = true
     end
 e 7 1218 %20%20%20%20 - =15,+%72%65%71%75%65%73%74%5F,=14
-l 24
+l 25
 ${post}'''
 times = 1
 
@@ -3205,6 +3212,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.052"
+requires = ["auto.button_callbacks.027"]
 target = "game.lua"
 pattern = '''^(?<pre>[\t ]*G\.FILE_HANDLER\.update_queued = true\n)(?<post>[\t ]*end\n)'''
 position = "at"
@@ -3304,7 +3312,7 @@ l 2
         }}})
 
 r 1 112 %20%20%20%20 -
-l 39
+l 40
         no_delete = true,
         blockable = false,
         blocking = false,
@@ -3322,6 +3330,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.057"
+requires = ["auto.game.056"]
 target = "game.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*if change_context ~= 'splash' then \n)'''
 position = "at"
@@ -3348,7 +3357,7 @@ e 7 2457 %20%20%20%20 - =2,-4,=30,-3,+%61,=1,+%64,=3,-2,+%53%45%54%54%49,=1,-1,+
 r 32 2378 %20%20%20%20%20%20%20%20 -
 r 32 2366 %20%20%20%20%20%20%20%20 -
 e 7 29 %20%20%20%20%20%20%20%20 - -4,+%47,=27,+%2E%66%6F%72%63%65%64%5F%73%68%6F%70,=6
-l 220
+l 222
     end
 ${post}'''
 times = 1
@@ -3380,6 +3389,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.061"
+requires = ["auto.game.060"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*\{name = 'colour_1', ref_table = G\.C, ref_value = 'RED'\},\n[\t ]*\{name = 'colour_2', ref_table = G\.C, ref_value = 'BLUE'\},\n(?<post>[\t ]*\{name = 'mid_flash', ref_table = splash_args, ref_value = 'mid_flash'\},\n[\t ]*\{name = 'vort_offset', val = 0\},\n[\t ]*\}\}\}\)\n[\t ]*\n[\t ]*--Display the unlocked decks and cards from the previous run\n)'''
 position = "at"
@@ -3553,6 +3563,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.073"
+requires = ["auto.game.035"]
 target = "game.lua"
 pattern = '''^(?<pre>[\t ]*local saveTable = args\.savetext or nil\n)(?<post>)'''
 position = "at"
@@ -3570,7 +3581,7 @@ position = "at"
 payload = '''
 ${pre}    local prep_ok, prep_err = pcall(function()
 r 7 2024 %20%20%20%20%20%20%20%20 -
-l 120
+l 122
     end)
     if not prep_ok then
         return
@@ -3591,6 +3602,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.076"
+requires = ["auto.game.071"]
 target = "game.lua"
 pattern = '''^(?<pre>[\t ]*self\.GAME\.modifiers = self\.GAME\.modifiers or \{\}\n)(?<post>)'''
 position = "at"
@@ -3644,6 +3656,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.080"
+requires = ["auto.game.079"]
 target = "game.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*G:save_settings\(\)\n)'''
 position = "at"
@@ -3693,7 +3706,7 @@ ${pre}    if not saveTable and cheats_new_run then cheats_new_run() end
     if not (args and args.mp_start) then
 r 1 112 %20%20%20%20%20%20%20%20 -
 r 2 398 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 147
+l 149
             func = (function()
                 unlock_notify()
                 return true
@@ -3752,6 +3765,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.088"
+requires = ["auto.game.131"]
 target = "game.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*timer_checkpoint\('states', 'update'\)\n)'''
 position = "at"
@@ -3801,6 +3815,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.091"
+requires = ["auto.game.090"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*for k, v in pairs\(self\.MOVEABLES\) do\n[\t ]*v:update\(dt\*self\.SPEEDFACTOR\)\n[\t ]*v\.states\.collide\.is = false\n(?<post>)'''
 position = "at"
@@ -3888,7 +3903,7 @@ position = "at"
 payload = '''
 ${pre}            local saves = G.SAVE_MANAGER.request_channel
 r 7 2713 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 18
+l 19
                 saves:push({type = 'save_run', save_table = G.ARGS.save_run, profile_num = G.SETTINGS.profile})
                 if Big then
                     defer_file_copy(G.SETTINGS.profile..'/'..'save.jkr', G.ARGS.save_run)
@@ -3902,13 +3917,14 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.096"
+requires = ["auto.game.095"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*G\.SAVE_MANAGER\.channel:push\(\{\n[\t ]*type = 'save_progress',\n[\t ]*save_progress = G\.ARGS\.save_progress\n[\t ]*\}\)\n(?<post>)'''
 position = "at"
 payload = '''
 ${pre}                saves:push({type = 'save_progress', save_progress = G.ARGS.save_progress})
 e 7 2704 %20%20%20%20%20%20%20%20%20%20%20%20 - =22,-1,=1,+%6D%70,=1,-1,+%79%5F%70%72%6F%66,=1,-3,+%6C%65,=5
-l 56
+l 57
                 local slot = G.FILE_HANDLER.empty_profile
                 saves:push({type = 'empty_profile', save_settings = G.ARGS.save_settings, profile_num = slot, save_profile = G.PROFILES[slot]})
 ${post}'''
@@ -3917,6 +3933,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.097"
+requires = ["auto.game.095"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*G\.SAVE_MANAGER\.channel:push\(\{\n(?<post>[\t ]*type = 'save_settings',\n)'''
 position = "at"
@@ -3980,7 +3997,7 @@ l 5
             love.graphics.pop()
         end
 r 7 2838 %20%20%20%20%20%20%20%20 -
-l 53
+l 54
 ${post}'''
 times = 1
 
@@ -4017,6 +4034,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.103"
+requires = ["auto.game.102"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*G\.SPLASH_BACK:draw\(\)\n(?<post>)'''
 position = "at"
@@ -4035,7 +4053,7 @@ position = "at"
 payload = '''
 ${pre}    local under = self.OVERLAY_TUTORIAL and true or false
 r 22 333 %20%20%20%20 -
-l 81
+l 83
         v.under_overlay = under
     end
 
@@ -4071,6 +4089,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.106"
+requires = ["auto.game.105"]
 target = "game.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*if \(not v\.parent and v ~= self\.CONTROLLER\.dragging\.target and v ~= self\.CONTROLLER\.focused\.target\) then\n)'''
 position = "at"
@@ -4111,6 +4130,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.109"
+requires = ["auto.game.100"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*if self\.OVERLAY_TUTORIAL then\n(?<post>[\t ]*love\.graphics\.push\(\)\n)'''
 position = "at"
@@ -4148,7 +4168,7 @@ payload = '''
 ${pre}        end
         if self.OVERLAY_MENU then
 r 7 2795 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 141
+l 145
                 if v.attention_text and v.over_overlay and not v.REMOVED then
 ${post}'''
 times = 1
@@ -4166,6 +4186,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.113"
+requires = ["auto.game.100", "auto.game.109"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*if \(self\.OVERLAY_MENU\) or \(not self\.F_HIDE_BG\) then\n[\t ]*if self\.OVERLAY_MENU and self\.OVERLAY_MENU ~= self\.CONTROLLER\.dragging\.target then\n(?<post>)'''
 position = "at"
@@ -4183,6 +4204,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.114"
+requires = ["auto.game.113"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*self\.OVERLAY_MENU:translate_container\(\)\n[\t ]*self\.OVERLAY_MENU:draw\(\)\n(?<post>[\t ]*love\.graphics\.pop\(\)\n[\t ]*end\n)'''
 position = "at"
@@ -4228,6 +4250,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.118"
+requires = ["auto.game.117"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*G\.SETTINGS\.GRAPHICS\.crt = G\.SETTINGS\.GRAPHICS\.crt\*0\.3\n[\t ]*G\.SHADERS\['CRT'\]:send\('distortion_fac', \{1\.0 \+ 0\.07\*G\.SETTINGS\.GRAPHICS\.crt/100, 1\.0 \+ 0\.1\*G\.SETTINGS\.GRAPHICS\.crt/100\}\)\n[\t ]*G\.SHADERS\['CRT'\]:send\('scale_fac', \{1\.0 - 0\.008\*G\.SETTINGS\.GRAPHICS\.crt/100, 1\.0 - 0\.008\*G\.SETTINGS\.GRAPHICS\.crt/100\}\)\n(?<post>)'''
 position = "at"
@@ -4253,6 +4276,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.game.120"
+requires = ["auto.game.118|auto.game.modded.025"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*G\.SHADERS\['CRT'\]:send\('noise_fac',0\.001\*G\.SETTINGS\.GRAPHICS\.crt/100\)\n[\t ]*G\.SHADERS\['CRT'\]:send\('crt_intensity', 0\.16\*G\.SETTINGS\.GRAPHICS\.crt/100\)\n[\t ]*G\.SHADERS\['CRT'\]:send\('glitch_intensity', 0\)--0\.1\*G\.SETTINGS\.GRAPHICS\.crt/100 \+ \(G\.screenwipe_amt\) \+ 1\)\n(?<post>)'''
 position = "at"
@@ -4291,7 +4315,7 @@ payload = '''
 ${pre}      end
     end
 r 7 2964 %20%20%20%20%20%20%20%20 -
-l 98
+l 99
 ${post}'''
 optional = true
 
@@ -4362,6 +4386,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.game.128"
+requires = ["auto.game.127"]
 target = "game.lua"
 pattern = '''^(?<pre>[\t ]*G\.shop_vouchers:emplace\(card\)\n[\t ]*end\n[\t ]*end\n)(?<post>)'''
 position = "at"
@@ -4402,7 +4427,7 @@ r 7 3154 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%2
 r 7 3155 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 3 1446 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 7 3157 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 75
+l 77
                                                     end
                                                 end
 ${post}'''
@@ -4470,9 +4495,11 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.game.modded.003"
+requires = ["auto.game.012", "auto.button_callbacks.027", "auto.game.056"]
 target = "game.lua"
-pattern = '''^(?<pre>)[\t ]*set_profile_progress\(\)\n(?<post>[\t ]*boot_timer\('prep stage', 'splash prep',1\)\n)'''
+pattern = '''^(?<pre>)[\t ]*set_profile_progress\(\)\n(?<post>(?:[^\n]*\n)*?[\t ]*boot_timer\('prep stage', 'splash prep',1\)\n)'''
 position = "at"
+needed = "boot.start_up"
 payload = '''
 ${pre}    fetch_achievements()
 
@@ -4617,7 +4644,7 @@ e 7 291 %20%20%20%20%20%20%20%20 - =44,+%20%64%65%6D%6F%20%3D%20%74%72%75%65%2C,
 e 7 292 %20%20%20%20%20%20%20%20 - =44,+%20%64%65%6D%6F%20%3D%20%74%72%75%65%2C,=154
 e 7 293 %20%20%20%20%20%20%20%20 - =44,+%20%64%65%6D%6F%20%3D%20%74%72%75%65%2C,=172
 e 7 294 %20%20%20%20%20%20%20%20 - =45,+%64%65%6D%6F%20%3D%20%74%72%75%65%2C%20,=171
-l 162
+l 164
 ${post}'''
 optional = true
 
@@ -4683,6 +4710,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.game.modded.012"
+requires = ["auto.game.035"]
 target = "game.lua"
 pattern = '''^(?<pre>[\t ]*if G\.SAVED_GAME then SMODS\.save_game = G\.SAVED_GAME\.GAME\.smods_version else SMODS\.save_game = nil end\n)(?<post>)'''
 position = "at"
@@ -4728,6 +4756,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.game.modded.018"
+requires = ["auto.game.090"]
 target = "game.lua"
 pattern = '''^(?<pre>)[\t ]*for k, v in pairs\(self\.MOVEABLES\) do\n[\t ]*v:update\(dt\*self\.SPEEDFACTOR, self\.real_dt\)\n[\t ]*v\.states\.collide\.is = false\n(?<post>)'''
 position = "at"
@@ -4781,7 +4810,7 @@ ${pre}    for k, v in pairs(self.I.DROPDOWN) do
         if v.parent == G.ROOM_ATTACH then
             love.graphics.push()
 r 7 2761 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 48
+l 49
             v:draw()
             love.graphics.pop()
         end
@@ -4822,6 +4851,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.game.modded.025"
+requires = ["auto.game.117"]
 target = "game.lua"
 pattern = '''^(?<pre>[\t ]*G\.screenwipe_amt = G\.screenwipe_amt and \(0\.95\*G\.screenwipe_amt \+ 0\.05\*\(\(self\.screenwipe and 0\.4 or self\.screenglitch and 0\.4\) or 0\)\) or 1\n)[\t ]*\n[\t ]*end\n(?<post>)'''
 position = "at"
@@ -4869,7 +4899,7 @@ position = "at"
 payload = '''
 ${pre}        love.graphics.push()
 r 7 2964 %20%20%20%20%20%20%20%20 -
-l 64
+l 65
 ${post}'''
 optional = true
 
@@ -4902,6 +4932,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.game.modded.029"
+requires = ["auto.game.127"]
 target = "game.lua"
 pattern = '''^(?<pre>[\t ]*end\n)(?<post>[\t ]*\n[\t ]*\n[\t ]*if G\.load_shop_booster then \n)'''
 position = "at"

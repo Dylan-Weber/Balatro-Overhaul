@@ -2,7 +2,7 @@ BOP 2
 eol lf
 final 1
 base 0
-l 172
+l 176
 [manifest]
 version = "1.0.0"
 priority = 0
@@ -26,6 +26,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.002"
+requires = ["auto.state_events.001|auto.state_events.modded.001"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>[\t ]*set_deck_win\(\)\n)(?<post>)'''
 position = "at"
@@ -39,6 +40,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.state_events.003"
+requires = ["auto.state_events.001|auto.state_events.modded.001"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>[\t ]*inc_career_stat\('c_wins', 1\)\n)(?<post>)'''
 position = "at"
@@ -88,6 +90,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.state_events.005"
+requires = ["auto.state_events.004"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*G:save_progress\(\)\n[\t ]*G\.FILE_HANDLER\.force = true\n)'''
 position = "at"
@@ -100,7 +103,7 @@ times = 1
 [patches.regex]
 id = "auto.state_events.006"
 target = "functions/state_events.lua"
-pattern = '''^(?<pre>[\t ]*if G\.GAME\.chips - G\.GAME\.blind\.chips >= 0 then\n[\t ]*game_over = false\n[\t ]*end\n)(?<post>)'''
+pattern = '''^(?<pre>[\t ]*if (?:to_big\(G\.GAME\.chips\) >= to_big\(G\.GAME\.blind\.chips\)|G\.GAME\.chips - G\.GAME\.blind\.chips >= 0) then\n[\t ]*game_over = false\n[\t ]*end\n)(?<post>)'''
 position = "at"
 payload = '''
 ${pre}            local _is_mp = G.GAME.multiplayer
@@ -154,6 +157,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.state_events.007"
+requires = ["auto.state_events.006"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*if (?:to_[a-z_]+\()?G\.GAME\.round_resets\.ante\)? == G\.GAME\.win_ante and G\.GAME\.blind:get_type\(\) == 'Boss' then\n[\t ]*game_won = true\n[\t ]*G\.GAME\.won = true\n(?<post>)'''
 position = "at"
@@ -176,7 +180,7 @@ ${pre}            local win_ante = G.GAME.win_ante
                 end
             else
 r 15 111 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 48
+l 49
                     game_won = true
                     G.GAME.won = true
                 end
@@ -195,6 +199,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.008"
+requires = ["auto.state_events.006"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*if not G\.GAME\.won and not G\.GAME\.seeded and not G\.GAME\.challenge then \n)'''
 position = "at"
@@ -227,7 +232,7 @@ ${pre}                if G.GAME.blind:get_type() == 'Boss' and not G.GAME.mp_bli
                     if not G.GAME.daily then
 r 15 141 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 15 142 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 273
+l 276
                     end
 
                     if QuestManager and QuestManager.on_boss_defeated then
@@ -335,6 +340,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.state_events.015"
+requires = ["auto.state_events.014"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>[\t ]*v\.ability\.played_this_ante = nil\n(?:[\t ]*v\.ability\.[A-Za-z_]+ = nil\n)*[\t ]*end\n)(?<post>)'''
 position = "at"
@@ -388,6 +394,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.018"
+requires = ["auto.state_events.017|auto.state_events.modded.004"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*elseif G\.GAME\.round_resets\.blind == G\.P_BLINDS\.bl_big then\n(?<post>[\t ]*G\.GAME\.round_resets\.blind_states\.Big = 'Current'\n)'''
 position = "at"
@@ -399,6 +406,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.019"
+requires = ["auto.state_events.016"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>[\t ]*G\.GAME\.subhash = \((?:to_[a-z_]+\()?G\.GAME\.round_resets\.ante\)?\)\.\.\(blhash\)\n)(?<post>)'''
 position = "at"
@@ -502,7 +510,7 @@ ${pre}        local mp_redirect = false
         end)
         if not mp_redirect then
 r 15 358 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 373
+l 392
         else
             G.STATE = G.STATES.NEW_ROUND; G.STATE_COMPLETE = false
         end
@@ -589,6 +597,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.029"
+requires = ["auto.state_events.028"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>[\t ]*for i=1, #G\.play\.cards do\n)[\t ]*if next\(find_joker\('Splash'\)\) then\n(?<post>)'''
 position = "at"
@@ -626,6 +635,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.state_events.032"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*local eval = eval_card\(scoring_hand\[i\], \{repetition_only = true,cardarea = G\.play, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, repetition = true\}\)\n(?<post>)'''
 position = "at"
@@ -637,6 +647,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.033"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>[\t ]*--From jokers\n)[\t ]*for j=1, #G\.jokers\.cards do\n(?<post>)'''
 position = "at"
@@ -650,6 +661,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.034"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*local eval = eval_card\(G\.jokers\.cards\[j\], \{cardarea = G\.play, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_card = scoring_hand\[i\], repetition = true\}\)\n(?<post>)'''
 position = "at"
@@ -661,6 +673,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.035"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>[\t ]*for j=1,#reps do\n)(?<post>)'''
 position = "at"
@@ -673,6 +686,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.036"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*local effects = \{eval_card\(scoring_hand\[i\], \{cardarea = G\.play, full_hand = G\.play\.cards, scoring_hand = scoring_hand, poker_hand = text\}\)\}\n[\t ]*for k=1, #G\.jokers\.cards do\n(?<post>)'''
 position = "at"
@@ -685,6 +699,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.037"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*local eval = G\.jokers\.cards\[k\]:calculate_joker\(\{cardarea = G\.play, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_card = scoring_hand\[i\], individual = true\}\)\n(?<post>)'''
 position = "at"
@@ -696,6 +711,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.038"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>[\t ]*while j <= #reps do\n)(?<post>[\t ]*if reps\[j\] ~= 1 then\n)'''
 position = "at"
@@ -709,6 +725,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.039"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*local effects = \{eval_card\(G\.hand\.cards\[i\], \{cardarea = G\.hand, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands\}\)\}\n[\t ]*\n[\t ]*for k=1, #G\.jokers\.cards do\n(?<post>)'''
 position = "at"
@@ -722,6 +739,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.040"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*local eval = G\.jokers\.cards\[k\]:calculate_joker\(\{cardarea = G\.hand, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_card = G\.hand\.cards\[i\], individual = true\}\)\n(?<post>)'''
 position = "at"
@@ -733,6 +751,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.041"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*local eval = eval_card\(G\.hand\.cards\[i\], \{repetition_only = true,cardarea = G\.hand, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, repetition = true, card_effects = effects\}\)\n(?<post>)'''
 position = "at"
@@ -744,6 +763,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.042"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>[\t ]*--From Joker\n)[\t ]*for j=1, #G\.jokers\.cards do\n(?<post>)'''
 position = "at"
@@ -755,6 +775,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.043"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*local eval = eval_card\(G\.jokers\.cards\[j\], \{cardarea = G\.hand, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_card = G\.hand\.cards\[i\], repetition = true, card_effects = effects\}\)\n(?<post>)'''
 position = "at"
@@ -778,6 +799,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.045"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*for i=1, #G\.jokers\.cards \+ #G\.consumeables\.cards do\n[\t ]*local _card = G\.jokers\.cards\[i\] or G\.consumeables\.cards\[i - #G\.jokers\.cards\]\n(?<post>)'''
 position = "at"
@@ -791,6 +813,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.046"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*local edition_effects = eval_card\(_card, \{cardarea = G\.jokers, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, edition = true\}\)\n(?<post>)'''
 position = "at"
@@ -802,6 +825,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.047"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*local effects = eval_card\(_card, \{cardarea = G\.jokers, full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, joker_main = true\}\)\n(?<post>)'''
 position = "at"
@@ -824,6 +848,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.049"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*for _, v in ipairs\(G\.jokers\.cards\) do\n[\t ]*local effect = v:calculate_joker\{full_hand = G\.play\.cards, scoring_hand = scoring_hand, scoring_name = text, poker_hands = poker_hands, other_joker = _card\}\n(?<post>)'''
 position = "at"
@@ -836,6 +861,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.050"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*for j = 1, #G\.jokers\.cards do\n[\t ]*destroyed = G\.jokers\.cards\[j\]:calculate_joker\(\{destroying_card = scoring_hand\[i\], full_hand = G\.play\.cards\}\)\n(?<post>)'''
 position = "at"
@@ -848,6 +874,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.051"
+requires = ["auto.state_events.031"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*for j=1, #G\.jokers\.cards do\n[\t ]*eval_card\(G\.jokers\.cards\[j\], \{cardarea = G\.jokers, remove_playing_cards = true, removed = cards_destroyed\}\)\n(?<post>)'''
 position = "at"
@@ -1018,7 +1045,7 @@ ${pre}                G.blind_select.UIRoot.children[1].children[2].config.objec
             },
             disabled_buttons = { 'skip_blind' },
 e 15 1326 %20%20%20%20%20%20%20%20%20%20%20%20 - =54,+%2E%37,=7,-1,+%30%2E%35,=3
-l 208
+l 209
 ${post}'''
 times = 1
 
@@ -1206,6 +1233,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.state_events.modded.002"
+requires = ["auto.state_events.006"]
 target = "functions/state_events.lua"
 pattern = '''^(?<pre>)[\t ]*if not G\.GAME\.won and (?:to_[a-z_]+\()?G\.GAME\.round_resets\.ante\)? >= G\.GAME\.win_ante and G\.GAME\.blind_on_deck == 'Boss' then\n[\t ]*game_won = true\n[\t ]*G\.GAME\.won = true\n(?<post>)'''
 position = "at"

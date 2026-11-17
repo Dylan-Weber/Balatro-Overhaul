@@ -284,7 +284,7 @@ function R.make_card(v, src)
   if not (area and area.config) or #area.cards + (G.GAME[buf] or 0) >= area.config.card_limit then return false end
   G.GAME[buf] = (G.GAME[buf] or 0) + 1
 r 3 617 %20%20 -
-l 273
+l 282
     local c = create_card(set, area, nil, nil, nil, nil, v, "forge_make")
     c:add_to_deck()
     area:emplace(c)
@@ -487,6 +487,12 @@ function R.clean_vars(list)
   return out
 end
 
+function R.keep_nv(src, e)
+  local i = tonumber(src.nv)
+  if e.n ~= nil and i and i % 1 == 0 and i >= 1 and i <= R.MAX_VARS then e.nv = i else e.nv = nil end
+  return e
+end
+
 function R.extra_give(kind, g)
   local fn = R.extra_give_fn
   if not (kind and fn and type(g) == "table") then return nil end
@@ -505,6 +511,7 @@ function R.clean_rule(r, kind)
       if c.op and not member(R.OPS, c.op) then c.op = "at_least" end
       if c.id == "blind" and not member(R.BLINDS, c.v) then c.v = "Small" end
       if R.CLEAN_ONLY[c.id] then R.CLEAN_ONLY[c.id](c) end
+      R.keep_nv(o, c)
       out.only[#out.only + 1] = c
     end
   end
@@ -520,6 +527,7 @@ function R.clean_rule(r, kind)
       if e.id == "tag" and not R.tag_ok(e.v) then e.v = "tag_double" end
       if e.id == "make_card" and not R.card_ok(e.v) then e.v = R.CARD_DEFAULT end
       if R.CLEAN_GIVE[e.id] then R.CLEAN_GIVE[e.id](e, r.when) end
+      R.keep_nv(g, e)
       out.give[#out.give + 1] = e
     end
   end
@@ -537,6 +545,7 @@ function R.clean_rule(r, kind)
         if e.id == "tag" and not R.tag_ok(e.v) then e.v = "tag_double" end
         if e.id == "make_card" and not R.card_ok(e.v) then e.v = R.CARD_DEFAULT end
         if R.CLEAN_GIVE[e.id] then R.CLEAN_GIVE[e.id](e, r.when) end
+        R.keep_nv(g, e)
         out.alt = out.alt or {}
         out.alt[#out.alt + 1] = e
       end
@@ -801,7 +810,7 @@ function R.change_card(other, g)
     if R.usable("seal", g.v) then other:set_seal(g.v, nil, true) end
   elseif g.what == "edition" then
     local ed = R.edition_arg(g.v)
-    if ed then other:set_edition(ed, true) end
+    if ed and not other.edition then other:set_edition(ed, true) end
   elseif G.P_CENTERS[g.v] and R.usable("enhancement", g.v) then
     other:set_ability(G.P_CENTERS[g.v], nil, true)
   end
@@ -921,7 +930,7 @@ l 14
     if g.v == R.TAG_RANDOM then key = R.roll_tag() end
     if not key or not G.P_TAGS or not G.P_TAGS[key] or not R.usable("tag", key) then return end
 r 3 617 %20%20%20%20 -
-l 295
+l 332
       add_tag(Tag(key))
       play_sound("generic1", 0.9 + math.random() * 0.1, 0.8)
       play_sound("holo1", 1.2 + math.random() * 0.1, 0.4)
@@ -1204,6 +1213,43 @@ function R.need_v(rules, vars)
 end
 
 R.member, R.compare, R.rank_ok, R.suit_ok, R.round_info, R.count_area, R.status, R.destroy, R.log_once = member, compare, card_rank_ok, card_suit_ok, round, count, status, destroy, log_once
+
+R.NV_V = 14
+R.MULT_NUM = {xmult = true, xchips = true, div_mult = true, blind_mult = true}
+
+function R.num_ref(e)
+  local i = type(e) == "table" and e.n ~= nil and tonumber(e.nv)
+  if i and i % 1 == 0 and i >= 1 and i <= R.MAX_VARS then return i end
+  return nil
+end
+
+function R.num_spec(e, cond)
+  if type(e) ~= "table" then return nil end
+  if e.run then return R.run_num and R.run_num(e.id) or nil end
+  return R.NUM[cond and num_key(e.id) or e.id]
+end
+
+function R.live_num(e, raw, cond)
+  local v = tonumber(raw)
+  if not v or v ~= v then return e.n end
+  local spec = R.num_spec(e, cond)
+  local lo = 0
+  if e.id == "chance" or e.id == "every" or R.MULT_NUM[e.id] or (spec and spec.fmt == "x") then lo = 1 end
+  v = math.max(lo, math.min(spec and spec.hi or R.BIG, v))
+  if spec and spec.step % 1 == 0 and spec.lo % 1 == 0 then return math.floor(v + 0.5) end
+  return math.floor(v * 100 + 0.5) / 100
+end
+
+function R.nv_used(rules)
+  for _, r in ipairs(type(rules) == "table" and rules or {}) do
+    if type(r) == "table" then
+      for _, k in ipairs({"only", "give", "alt"}) do
+        for _, e in ipairs(type(r[k]) == "table" and r[k] or {}) do if R.num_ref(e) then return true end end
+      end
+    end
+  end
+  return false
+end
 
 function R.uses_new(rules, vars)
   return R.need_v(rules, vars) > 1

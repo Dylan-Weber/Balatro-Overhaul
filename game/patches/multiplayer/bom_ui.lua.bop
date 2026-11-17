@@ -302,7 +302,7 @@ l 22
             if e and e.config then
 r 32 58 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 32 311 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 201
+l 390
             end
             if e and e.children then
                 for _, child in ipairs(e.children) do
@@ -482,22 +482,211 @@ function bom_ui.on_top(box)
     return box
 end
 
-function bom_ui.top_text(args)
-    if not (attention_text and G and G.E_MANAGER) then return end
-    attention_text(args)
-    local bg = args.box_colour or {0.08, 0.08, 0.1, 0.92}
-    if type(args.cover_colour) == "table" then
-        for i = 1, 4 do args.cover_colour[i] = bg[i] end
+bom_ui.TOP_TEXT_WAIT = 30
+bom_ui.TOP_TEXT_GAP = 0.08
+local top_live = {}
+
+local function top_rgba(c)
+    return {c[1], c[2], c[3], c[4] or 1}
+end
+
+function bom_ui.top_text_y(h, want, mid, lo, hi, ov, keep)
+    if not ov then return want end
+    local gap = bom_ui.TOP_TEXT_GAP
+    local function free(y)
+        local top, bot = mid + y - h / 2, mid + y + h / 2
+        if top < lo or bot > hi then return false end
+        return bot + gap <= ov.y or top - gap >= ov.y + ov.h
     end
-    G.E_MANAGER:add_event(Event({trigger = "immediate", blocking = false, blockable = false, func = function()
-        if not args.AT then return false end
-        args.AT.over_overlay = true
-        if not args.AT.REMOVED and args.AT.UIRoot then
-            args.AT.UIRoot.config.padding = 0.14
-            args.AT:recalculate()
+    if free(want) then return want end
+    if keep and free(keep) then return keep end
+    local above = (lo + ov.y) / 2 - mid
+    if free(above) then return above end
+    local below = (ov.y + ov.h + hi) / 2 - mid
+    if free(below) then return below end
+    return nil
+end
+
+local function top_band(room)
+    local lo, hi = room.y, room.y + room.h
+    pcall(function()
+        local unit = G.TILESIZE * G.TILESCALE
+        local sh = love.graphics.getHeight() / unit
+        if G.ROOM and G.ROOM.T and sh > 0 then
+            lo = room.y - G.ROOM.T.y
+            hi = lo + sh
         end
-        return true
+    end)
+    return room.y + room.h / 2, lo, hi
+end
+
+local function top_panel(node, room, acc, depth)
+    local t = node and node.T
+    if not t or depth > 12 then return acc end
+    if node.states and node.states.visible == false then return acc end
+    local c = node.config or {}
+    local drawn = c.button or c.object or (type(c.colour) == "table" and (c.colour[4] or 1) > 0.01)
+    if not drawn or t.w > room.w * 1.2 or t.h > room.h * 1.2 then
+        for _, ch in pairs(node.children or {}) do
+            if type(ch) == "table" then acc = top_panel(ch, room, acc, depth + 1) end
+        end
+        return acc
+    end
+    if t.w <= 0 or t.h <= 0 then return acc end
+    if not acc then return {x = t.x, y = t.y, w = t.w, h = t.h} end
+    local y0, y1 = math.min(acc.y, t.y), math.max(acc.y + acc.h, t.y + t.h)
+    local x0, x1 = math.min(acc.x, t.x), math.max(acc.x + acc.w, t.x + t.w)
+    return {x = x0, y = y0, w = x1 - x0, h = y1 - y0}
+end
+
+function bom_ui.overlay_rect()
+    local ov, ra = G and G.OVERLAY_MENU, G and G.ROOM_ATTACH
+    if not (ov and not ov.REMOVED and ov.UIRoot and ra and ra.T) then return nil end
+    return top_panel(ov.UIRoot, ra.T, nil, 0) or ov.T
+end
+
+local function top_finish(e)
+    e.done = true
+    if e.key and top_live[e.key] == e then top_live[e.key] = nil end
+    if e.particle and not e.particle.REMOVED then pcall(function() e.particle:remove() end) end
+    e.particle = nil
+    if e.box and not e.box.REMOVED then pcall(function() e.box:remove() end) end
+end
+
+function bom_ui.top_text_clear(key)
+    local e = key and top_live[key]
+    if e then top_finish(e) end
+end
+
+local function top_build(e, y)
+    local a = e.args
+    local items = {}
+    e.texts = {}
+    for i, line in ipairs(e.lines) do
+        local dt = DynaText({scale = a.scale, string = line, maxw = a.maxw, colours = {e.colour}, float = true, shadow = true,
+            silent = not a.noisy, pop_in = 0, pop_in_rate = 6, rotate = a.rotate or nil})
+        e.texts[i] = dt
+        items[i] = {n = G.UIT.O, config = {draw_layer = 1, object = dt}}
+    end
+    if #items > 1 then
+        local rows = {}
+        for i, it in ipairs(items) do rows[i] = {n = G.UIT.R, config = {align = "cm"}, nodes = {it}} end
+        items = {{n = G.UIT.C, config = {align = "cm"}, nodes = rows}}
+    end
+    local box = UIBox{
+        T = {0, 0, 0, 0},
+        definition = {n = G.UIT.ROOT, config = {align = "cm", minw = 0.001, minh = 0.001, padding = 0.14, r = 0.1, emboss = a.emboss, colour = e.cover}, nodes = items},
+        config = {align = a.align or "cm", offset = {x = e.x, y = y}, major = e.major},
+    }
+    box.attention_text = true
+    box.over_overlay = true
+    e.box, e.y = box, y
+    a.AT = box
+    for _, dt in ipairs(e.texts) do dt:pulse(0.5) end
+    return box
+end
+
+local function top_backdrop(e)
+    local P = rawget(_G, "Particles")
+    if e.particle or not e.backdrop or not e.box or not P then return end
+    e.particle = P(0, 0, 0, 0, {timer_type = "REAL", timer = 5, scale = 2.4 * (e.args.backdrop_scale or 1), lifespan = 5, speed = 0, attach = e.box, colours = {e.backdrop}})
+    e.particle.created_on_pause = true
+end
+
+local function top_step(e)
+    if e.done then return true end
+    if e.box and e.box.REMOVED then top_finish(e) return true end
+    local t = love.timer.getTime()
+    local ra = G.ROOM_ATTACH
+    if not (ra and ra.T) then top_finish(e) return true end
+    local mid, lo, hi = top_band(ra.T)
+    local ovt = bom_ui.overlay_rect()
+    local function place(h, keep) return bom_ui.top_text_y(h, e.want, mid, lo, hi, ovt, keep) end
+    if not e.shown_at then
+        if t - e.born > bom_ui.TOP_TEXT_WAIT then top_finish(e) return true end
+        local y = e.h and place(e.h)
+        if e.h and not y then return false end
+        local box = top_build(e, y or e.want)
+        if not e.h then
+            e.h = box.T.h
+            y = place(e.h)
+            if not y then
+                box:remove()
+                e.box = nil
+                return false
+            end
+            if y ~= e.y then
+                box:remove()
+                top_build(e, y)
+            end
+        end
+        if not ovt then top_backdrop(e) end
+        e.shown_at = t
+        return false
+    end
+    local y = place(e.h, e.y)
+    if y and y ~= e.y then
+        if e.particle and not e.particle.REMOVED then e.particle:remove() end
+        e.particle = nil
+        e.box:remove()
+        top_build(e, y)
+        if e.out_at then
+            for _, dt in ipairs(e.texts) do dt:pop_out(3) end
+        elseif not ovt then
+            top_backdrop(e)
+        end
+    end
+    e.box.states.visible = y ~= nil
+    if ovt and e.particle then
+        if not e.particle.REMOVED then e.particle:remove() end
+        e.particle = nil
+    end
+    if not e.out_at then
+        if t - e.shown_at >= e.hold then
+            e.out_at = t
+            for _, dt in ipairs(e.texts) do dt:pop_out(3) end
+        end
+        return false
+    end
+    local fade = math.max(0, 1 - 3 * (t - e.out_at))
+    e.cover[4] = math.min(e.cover[4], 2 * fade)
+    if e.backdrop then e.backdrop[4] = math.min(e.backdrop[4], fade) end
+    e.colour[4] = math.min(e.colour[4], fade)
+    if fade <= 0 then top_finish(e) return true end
+    return false
+end
+
+function bom_ui.top_text(args)
+    if not (G and G.E_MANAGER and G.ROOM_ATTACH and UIBox and DynaText) then return end
+    args = args or {}
+    local lines = type(args.lines) == "table" and #args.lines > 0 and args.lines or {tostring(args.text or "")}
+    local offset = args.offset or {}
+    local e = {
+        args = args,
+        key = args.key,
+        lines = lines,
+        colour = top_rgba(args.colour or G.C.WHITE),
+        cover = top_rgba(args.box_colour or {0.08, 0.08, 0.1, 0.92}),
+        backdrop = args.backdrop_colour and top_rgba(args.backdrop_colour) or nil,
+        major = args.major or G.ROOM_ATTACH,
+        x = offset.x or 0,
+        want = offset.y or 0,
+        hold = (args.hold or 0) + 0.1,
+        born = love.timer.getTime(),
+    }
+    if e.key then
+        bom_ui.top_text_clear(e.key)
+        top_live[e.key] = e
+    end
+    G.E_MANAGER:add_event(Event({trigger = "immediate", blocking = false, blockable = false, pause_force = true, no_delete = true, func = function()
+        local ok, done = pcall(top_step, e)
+        if not ok then
+            top_finish(e)
+            return true
+        end
+        return done
     end}))
+    return e
 end
 
 require("multiplayer.bom_ui_overlays").init(bom_ui)

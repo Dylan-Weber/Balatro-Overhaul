@@ -316,7 +316,12 @@ function bom_core.send_hello()
     local R = rawget(_G, "bom_room")
     local version = R and R.game_version and R.game_version() or nil
     local mods = bom_core.mods_field and bom_core.mods_field() or nil
-    bom_core.send({type = "client_hello", name = name, pkey = bom_core.player_key(), version = version, mods = mods})
+    bom_core.send({type = "client_hello", name = name, pkey = bom_core.player_key(), version = version, mods = mods, deck_filter = bom_core.deck_filter_field()})
+end
+
+function bom_core.deck_filter_field()
+    local PR = rawget(_G, "PlayRandom")
+    return PR and PR.deck_filter and PR.deck_filter() or nil
 end
 
 function bom_core.player_key()

@@ -1,8 +1,3 @@
-BOP 1
-eol lf
-final 1
-base 0
-l 257
 FairLock = FairLock or {}
 local FL = FairLock
 
@@ -260,9 +255,8 @@ function FL.mp_setting_locked(key)
 end
 
 local _fl_game_update = Game.update
-r 7 2449 - -
-l 9
-    _fl_game_update(self, dt)
+function Game:update(dt, ...)
+    _fl_game_update(self, dt, ...)
     local ok, err = pcall(FL.update)
     if not ok and not FL._warned then
         FL._warned = true
@@ -271,4 +265,3 @@ l 9
 end
 
 return FL
-end

@@ -362,7 +362,7 @@ end
 function EFFECT.boss()
     if G.hand and G.hand.change_size then
 r 2 188 %20%20%20%20%20%20%20%20 -
-l 256
+l 347
         G.GAME.mp_trap_handsize = (G.GAME.mp_trap_handsize or 0) + 1
     end
 end
@@ -591,7 +591,7 @@ local function install()
     end
 
     local orig_open = Card.open
-    function Card:open()
+    function Card:open(...)
         if self.ability and self.ability.set == "Booster" then
             if self.config.center and self.config.center.mp_trap_pack then
                 G.GAME.mp_trap_pack = true
@@ -601,7 +601,7 @@ local function install()
                 T.fire("pack", {card = self})
             end
         end
-        return orig_open(self)
+        return orig_open(self, ...)
     end
 
     local orig_celestial_ui = create_UIBox_celestial_pack
@@ -619,18 +619,16 @@ local function install()
     end
 
     local orig_can_use = Card.can_use_consumeable
-r 3 1523 %20%20%20%20 -
-l 8
+    function Card:can_use_consumeable(any_state, skip_check, ...)
         if self.ability and self.ability.set == "Trap" then
             if not skip_check and ((G.play and #G.play.cards > 0) or G.CONTROLLER.locked or (G.GAME.STOP_USE and G.GAME.STOP_USE > 0)) then return false end
             return true
         end
-        return orig_can_use(self, any_state, skip_check)
+        return orig_can_use(self, any_state, skip_check, ...)
     end
 
     local orig_use = Card.use_consumeable
-r 3 1091 %20%20%20%20 -
-l 16
+    function Card:use_consumeable(area, copier, ...)
         local set = self.ability and self.ability.set
         if set == "Trap" then
             T.arm(self.config.center.key)
@@ -643,21 +641,19 @@ l 16
         elseif set == "Spectral" then
             T.fire("spectral")
         end
-        return orig_use(self, area, copier)
+        return orig_use(self, area, copier, ...)
     end
 
     local orig_sell = Card.sell_card
-r 3 1590 %20%20%20%20 -
-l 6
+    function Card:sell_card(...)
         if self.ability and self.ability.set == "Joker" then T.fire("sell", {send = {amount = math.min(8, self.sell_cost or 0)}}) end
-        return orig_sell(self)
+        return orig_sell(self, ...)
     end
 
     if Blind and Blind.set_blind then
         local orig_set_blind = Blind.set_blind
-r 2 78 %20%20%20%20%20%20%20%20 -
-l 57
-            local r = orig_set_blind(self, blind, reset, silent)
+        function Blind:set_blind(blind, reset, silent, ...)
+            local r = orig_set_blind(self, blind, reset, silent, ...)
             if blind and not reset and self.boss and G.GAME and self == G.GAME.blind then T.fire("boss", nil, new_rules) end
             return r
         end

@@ -17,6 +17,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.particles.002"
+requires = ["auto.particles.001"]
 target = "engine/particles.lua"
 pattern = '''^(?<pre>)[\t ]*while G\.TIMERS\[self\.timer_type\]  > self\.last_real_time \+ self\.timer and \(#self\.particles < self\.max or self\.pulsed < self\.pulse_max\) and added_this_frame < 20 do\n[\t ]*self\.last_real_time = self\.last_real_time \+ self\.timer\n(?<post>)'''
 position = "at"

@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 138
+l 139
 local Store = require("functions/forge/forge_store")
 local FJ = require("functions/forge/forge_joker")
 local R = require("functions/forge/forge_rules")
@@ -10,6 +10,7 @@ local T = require("functions/forge/forge_text")
 local Cat = require("functions/forge/forge_catalog")
 local D = require("functions/forge/forge_doc")
 local DE = require("functions/forge/forge_desc")
+local LK = require("functions/forge/forge_looks")
 
 local B = {}
 ForgeBuilder = B
@@ -144,7 +145,7 @@ function B.sprite(kind_id, key, s)
 r 7 1460 %20%20%20%20 -
 r 5 219 %20%20%20%20 -
 r 5 220 %20%20%20%20 -
-l 123
+l 129
     local area = CardArea(0, 0, w, h, {card_limit = 1, type = "title", highlight_limit = 0, collection = true, card_w = w})
     area:emplace(card)
     return area
@@ -232,6 +233,7 @@ function B.preview_center()
     G.P_CENTERS[B.KEY] = c
   end
   c.rarity, c.cost = d.rarity, d.cost
+  c.forge_start_ed = require("functions/forge/forge_always").value(d)
   local atlas, pos = art_atlas(d)
   c.atlas, c.pos = atlas or "Joker", pos or {x = 0, y = 0}
   FJ.set_loc(B.KEY, d.name, D.lines(d, lang()))
@@ -245,7 +247,12 @@ local function draft_center(d, k)
     atlas = atlas or sample.atlas or k.set, pos = pos or sample.pos or {x = 0, y = 0}, config = {}, forge_draft = true, effect = "", cost_mult = 1, consumeable = (k.set == "Tarot" or k.set == "Planet" or k.set == "Spectral") or nil}
   if d.kind == "planet" then c.config.hand_type = d.fields.hand ~= "all" and d.fields.hand or "Pair" end
   if d.kind == "booster" then c.config = {extra = 3, choose = 1}; c.kind = d.fields.pack end
-  if d.kind == "enhancement" then c.atlas = atlas or sample.atlas or "centers" end
+  if d.kind == "enhancement" then
+    c.atlas = atlas or sample.atlas or "centers"
+    c.no_collection = true
+    G.P_CENTERS[c.key] = c
+  end
+  c.forge_start_ed = require("functions/forge/forge_always").value(d)
   return c
 end
 
@@ -326,15 +333,28 @@ function B.card_node(scale)
   card.forge_preview = true
 r 7 1460 %20%20 -
 r 5 219 %20%20 -
-l 1578
+l 1724
   B.preview_card = card
   return area_for(w, h, card)
+end
+
+function B.scale_nodes(list, f)
+  for _, n in ipairs(list or {}) do
+    if type(n) == "table" then
+      if type(n.config) == "table" and type(n.config.scale) == "number" then n.config.scale = n.config.scale * f end
+      if n.nodes then B.scale_nodes(n.nodes, f) end
+      if n[1] then B.scale_nodes(n, f) end
+    end
+  end
 end
 
 local function desc_box(d, w)
   local lines = B.set_desc(d)
   local max = UIK.portrait() and 8 or (touch() and 5 or 6)
-  if #lines > max then
+  local shrink = 1
+  if #lines > max and #lines <= math.floor(max * 1.5) then
+    shrink = max / #lines
+  elseif #lines > max then
     local short = {}
     for i = 1, max - 1 do short[i] = lines[i] end
     short[max] = "{C:inactive}...{}"
@@ -344,6 +364,7 @@ local function desc_box(d, w)
   local nodes = {}
   local ok = pcall(localize, {type = "other", key = "forge_draft_desc", nodes = nodes, vars = T.vars(nil, R.clean_vars(d.vars), nil, d.rules)})
   if not ok or #nodes == 0 then return nil end
+  if shrink < 1 then B.scale_nodes(nodes, shrink) end
   local box = desc_from_rows(nodes)
   box.config.minw = w - 0.2
   return {n = G.UIT.R, config = {align = "cm", minw = w, maxw = w, padding = 0.04}, nodes = {box}}
@@ -695,6 +716,12 @@ local function give_label(g)
   T.cur_kind = prev
   return plain(ok and txt or mod_loc(GIVE_LABEL[g.id] or g.id))
 end
+function B.num_vars()
+  local out = {}
+  for i, v in ipairs(dvars()) do if not typed(v) then out[#out + 1] = i end end
+  return out
+end
+
 local VAR_STEP = {var_pick = "Set %s to", var_add = "Add to %s", var_set = "Set %s to", var_chips = "Chips for each %s", var_mult = "Mult for each %s", var_xmult = "XMult for each %s", var_xchips = "XChips for each %s", var_money = "Money for each %s"}
 local function run_give_spec(g)
   if not (g and g.run) then return nil end
@@ -715,7 +742,7 @@ local function num_label(x, map)
   if rs then return mod_loc(rs.label) end
   if x.var and VAR_STEP[x.id] then return string.format(mod_loc(VAR_STEP[x.id]), T.var_name(dvars(), x.var)) end
   if x.id == "create_rarity" then return mod_loc(map[x.id]) .. ": " .. mod_loc(x.v or "Common") end
-  if x.id == "make_ed_joker" then return mod_loc(map[x.id]) .. ": " .. R.ed_name(x.v or "foil") end
+  if x.id == "make_ed_joker" or x.id == "ed_joker" then return mod_loc(map[x.id]) .. ": " .. R.ed_name(x.v or "foil") end
   if R.PER_GIVE[x.id] and x.per then
     local what = mod_loc(R.LABEL_COUNT[x.per] or x.per)
     if R.COUNT_MATCH[x.per] then what = what .. " (" .. plain(R.count_m_label(x.per, x.m, lang())) .. ")" end
@@ -807,8 +834,12 @@ local function block_lines(r, w)
   end
   local sx = B.step_w(stw)
   local jx = 2 * (B.jump_w() + 0.05)
-  local compact = cw - sx - jx - B.type_w() - 0.25 < 3.0
-  local nmax = cw - sx - (compact and 0 or jx) - B.type_w() - 0.25
+  local nvs = B.num_vars()
+  local vx = #nvs > 0 and (B.type_w() + 0.05) or 0
+  local compact = cw - sx - jx - B.type_w() - vx - 0.25 < 3.0
+  local nmax = cw - sx - (compact and 0 or jx) - B.type_w() - vx - 0.25
+  local stack = vx > 0 and nmax < 1.6
+  if stack then nmax = cw end
   local nw = 0
   local function want(str) nw = math.max(nw, math.min(nmax, math.max(1.3, UIK.text_w(str, touch() and 0.4 or 0.36) + 0.4))) end
   for _, o in ipairs(r.only) do
@@ -824,7 +855,13 @@ local function block_lines(r, w)
     for _, g in ipairs(list) do if give_num(g) and g.n ~= nil then want(num_label(g, GIVE_LABEL)) end end
   end
   local function numeric(label, chip, ref, key, spec, id)
-    line(label, {chip, {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {B.num_row(nil, ref, key, spec, num_fmt(id), stw, compact, true)}}})
+    local row = {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {B.num_row(nil, ref, key, spec, num_fmt(id), stw, compact, true, nvs)}}
+    if stack then
+      line(label, {chip})
+      line("", {row})
+    else
+      line(label, {chip, row})
+    end
   end
   line(mod_loc("WHEN"), {blank(plain(T.when_text(r.when, lang(), draft() and draft().kind)), G.C.ORANGE, "forge_b_pick_when", nil, cw, "forge_when")})
   local max_only = advanced() and 6 or 2
@@ -850,13 +887,22 @@ local function block_lines(r, w)
   if can_if and not has_chance and #r.only < max_only then chips[#chips + 1] = blank(mod_loc("+ With a chance"), G.C.GREEN, "forge_b_add_chance", nil, cw, "forge_add_chance") end
   if #chips > 0 then flow(first_if and mod_loc("IF") or "", chips) end
   local function chip_w(str) return math.min(cw, math.max(1.3, UIK.text_w(str, touch() and 0.4 or 0.36) + 0.4)) end
-  local num_w = nw + 0.1 + sx + (compact and 0 or jx) + 0.05 + B.type_w()
+  local num_w = nw + 0.1 + sx + (compact and 0 or jx) + 0.05 + B.type_w() + vx
+  if stack then num_w = sx + (compact and 0 or jx) + 0.05 + B.type_w() + vx end
   local function gives(label, list, func, prefix, add_label, add_ref, add_id, add_colour)
     local pend = {}
     for i, g in ipairs(list) do
       local spec = give_num(g)
       if spec and g.n ~= nil then
-        pend[#pend + 1] = {nodes = {blank(num_label(g, GIVE_LABEL), G.C.RED, func, {slot = i}, nw, prefix .. i, true), {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {B.num_row(nil, g, "n", spec, num_fmt(g.run and ({["$"] = "money", x = "xmult"})[spec.fmt] or g.id), stw, compact, true)}}}, w = num_w}
+        local chip = blank(num_label(g, GIVE_LABEL), G.C.RED, func, {slot = i}, nw, prefix .. i, true)
+        local fmt = num_fmt(g.run and ({["$"] = "money", x = "xmult"})[spec.fmt] or g.id)
+        local row = {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {B.num_row(nil, g, "n", spec, fmt, stw, compact, true, nvs)}}
+        if stack then
+          pend[#pend + 1] = {nodes = {chip}, w = nw}
+          pend[#pend + 1] = {nodes = {row}, w = num_w}
+        else
+          pend[#pend + 1] = {nodes = {chip, row}, w = num_w}
+        end
       else
         local txt = give_label(g)
         pend[#pend + 1] = {nodes = {blank(txt, G.C.RED, func, {slot = i}, cw, prefix .. i)}, w = chip_w(txt)}
@@ -1124,11 +1170,54 @@ function B.flat_step(ref, key, spec, fmt, cw, h)
   return {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {arrow(-spec.step, "<"), g, mid, {n = G.UIT.C, config = {minw = 0.05}, nodes = {}}, arrow(spec.step, ">")}}
 end
 
-function B.num_row(label, ref, key, spec, fmt, cw, compact, flat)
+function B.nv_button(ref, nvs, h)
+  local tw = B.type_w()
+  local on = ref.nv ~= nil
+  local tl = mod_loc(on and "Number" or "Variable")
+  local colour = on and UIK.C.accent or G.C.PURPLE
+  return UIK.button{label = tl, button = "forge_b_nv", ref_table = {t = ref, list = nvs}, colour = colour, w = tw, h = h, scale = fit(tl, tw, touch() and 0.36 or 0.32), col = true, id = "forge_nv"}
+end
+
+function B.nv_step(ref, nvs, w, h)
+  local aw = touch() and 0.6 or 0.5
+  local s = touch() and 0.4 or 0.36
+  local many = #nvs > 1
+  local vw = many and (w - 2 * aw - 0.1) or w
+  local name = "[" .. T.var_name(dvars(), ref.nv) .. "]"
+  local mid = {n = G.UIT.C, config = {align = "cm", minw = vw, maxw = vw, minh = h, r = 0.1, colour = G.C.PURPLE}, nodes = {
+    {n = G.UIT.C, config = {align = "cm", maxw = vw - 0.3, padding = 0}, nodes = {
+      {n = G.UIT.T, config = {text = name, scale = s * 1.15, colour = G.C.UI.TEXT_LIGHT, shadow = true}},
+    }},
+  }}
+  if not many then return mid end
+  local function arrow(d, glyph)
+    local id = "forge_nv_" .. (d > 0 and "up" or "down")
+    return UIK.button{label = glyph, button = "forge_b_nv_step", ref_table = {t = ref, d = d, list = nvs}, colour = G.C.PURPLE, w = aw, h = h, scale = s, col = true, id = id}
+  end
+  local g = function() return {n = G.UIT.C, config = {minw = 0.05}, nodes = {}} end
+  return {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {arrow(-1, "<"), g(), mid, g(), arrow(1, ">")}}
+end
+
+function B.num_row(label, ref, key, spec, fmt, cw, compact, flat, nvs)
   local ty = B.state.typing
-  if ty and ty.t == ref and ty.k == key then return type_row(label, ty, cw, flat and (compact and 0 or 2 * (B.jump_w() + 0.05) - 0.1) or nil) end
-  local jw = B.jump_w()
   local h = flat and (touch() and 0.7 or 0.56) or (touch() and 0.62 or 0.5)
+  local vb = flat and key == "n" and type(nvs) == "table" and #nvs > 0
+  local function with_nv(cells)
+    if not vb then return cells end
+    cells[#cells + 1] = {n = G.UIT.C, config = {minw = 0.05}, nodes = {}}
+    cells[#cells + 1] = B.nv_button(ref, nvs, h)
+    return cells
+  end
+  if ty and ty.t == ref and ty.k == key then
+    local tr = type_row(label, ty, cw, flat and (compact and -0.15 or 2 * B.jump_w() - 0.05) or nil)
+    if not vb then return tr end
+    return {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = with_nv({tr})}
+  end
+  local jw = B.jump_w()
+  if vb and ref.nv ~= nil then
+    local full = (spec.big and not compact) and (cw + 2 * jw + 0.15 + B.type_w()) or (cw + 0.05 + B.type_w())
+    return {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = with_nv({B.nv_step(ref, nvs, full, h)})}
+  end
   local st = flat and B.flat_step(ref, key, spec, fmt, cw, h) or UIK.stepper{ref_table = ref, ref_value = key, min = spec.lo, max = spec.hi, step = spec.step, w = cw, cw = cw - 0.2, format = fmt, callback = function() B.dirty = true; refresh() end}
   local tw = B.type_w()
   local tl = mod_loc("Type")
@@ -1140,6 +1229,7 @@ function B.num_row(label, ref, key, spec, fmt, cw, compact, flat)
   if st.n == G.UIT.R then st.n = G.UIT.C end
   local gap = function() return {n = G.UIT.C, config = {minw = 0.05}, nodes = {}} end
   local cells = (spec.big and not compact) and {jump(-spec.big), gap(), st, gap(), jump(spec.big), gap(), typer} or {st, gap(), typer}
+  with_nv(cells)
   if not label then return {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = cells} end
   return {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {
     {n = G.UIT.R, config = {align = "cm", minh = touch() and 0.54 or 0.46, padding = 0}, nodes = {{n = G.UIT.C, config = {align = "cm", maxw = cw + 2 * jw + tw}, nodes = {UIK.text(label, {scale = touch() and 0.44 or 0.4, colour = UIK.C.text})}}}},
@@ -1167,8 +1257,20 @@ local function joker_body(w)
     for i, key in ipairs({"blueprint", "eternal", "perishable"}) do
       nodes[#nodes + 1] = hrow({UIK.toggle{label = labels[i], ref_table = d.compat, ref_value = key, w = tw, uik_lw = math.min(lw + 0.1, tw - 1.2)}}, w)
     end
-    nodes[#nodes + 1] = step_title(3, upper(mod_loc("Appears in shops")), w)
-    nodes[#nodes + 1] = hrow({button(B.requires_text(d.requires), "forge_b_requires", {}, UIK.C.accent, math.min(w, touch() and 7 or 6.4), touch() and 0.7 or 0.56, "forge_requires")}, w)
+    local Always = require("functions/forge/forge_always")
+    local af = Always.JOKER_FIELD
+    nodes[#nodes + 1] = step_title(3, upper(Always.title()), w)
+    local per = Always.per_row()
+    local fw = (w - 0.2 * (per - 1)) / per - 0.05
+    local _, ch, cw = B.cell_dims(fw)
+    local shop = B.requires_cell("Appears in shops", d.requires, fw)
+    local ed = B.cell(Always.label(), B.flat_cycle(af, Cat.value_label("always_edition", d.always_ed), cw, ch), fw)
+    if per == 2 then
+      nodes[#nodes + 1] = hrow({shop, ed}, w, 0.2)
+    else
+      nodes[#nodes + 1] = hrow({shop}, w, 0.2)
+      nodes[#nodes + 1] = hrow({ed}, w, 0.2)
+    end
     return nodes
   end
   local nav = rule_nav(d, w)
@@ -1212,6 +1314,11 @@ end
 function B.empty_cell(fw) return {n = G.UIT.C, config = {minw = fw, maxw = fw}, nodes = {}} end
 
 function B.field_set(d, f, v)
+  if f.top then
+    d[f.id] = v ~= "none" and v or nil
+    B.dirty = true
+    return
+  end
   d.fields[f.id] = v
   local More = rawget(_G, "ForgeKinds") and ForgeKinds.more
   if d.kind == "booster" and f.id == "size" and More and More.PACK_SHOWN[v] then
@@ -1243,21 +1350,25 @@ G.FUNCS.forge_b_fcycle = function(e)
   local values = Cat.field_values(f)
   if #values == 0 then return end
   local cur = 1
-  for i, v in ipairs(values) do if v == d.fields[f.id] then cur = i end end
+  local now = f.top and (d[f.id] or "none") or d.fields[f.id]
+  for i, v in ipairs(values) do if v == now then cur = i end end
   cur = (cur - 1 + (r2.d or 1)) % #values + 1
   B.field_set(d, f, values[cur])
   play_sound("paper1", 1, 0.3)
   refresh()
 end
 
+function B.requires_cell(label, v, w)
+  local _, h, cw = B.cell_dims(w)
+  local txt = B.requires_text(v)
+  return B.cell(mod_loc(label), UIK.button{label = txt, button = "forge_b_requires", ref_table = {}, colour = UIK.C.accent, w = cw, h = h, scale = fit(txt, cw, sc()), col = true, id = "forge_requires"}, w)
+end
+
 local function field_row(d, f, w)
   local fields = d.fields
   local _, h, cw = B.cell_dims(w)
   local label = mod_loc(f.label)
-  if f.dynamic == "voucher" then
-    local txt = B.requires_text(fields[f.id])
-    return B.cell(label, UIK.button{label = txt, button = "forge_b_requires", ref_table = {}, colour = UIK.C.accent, w = cw, h = h, scale = fit(txt, cw, sc()), col = true, id = "forge_requires"}, w)
-  end
+  if f.dynamic == "voucher" then return B.requires_cell(f.label, fields[f.id], w) end
   if f.type == "num" then
     return B.cell(label, B.num_row(nil, fields, f.id, f.num, function(v) return Cat.fmt(f.num, v) end, cw - B.type_w() - 0.05, true, true), w)
   end
@@ -1282,8 +1393,50 @@ end
 
 local function num_cell_w(w) return math.max(1.8, math.min(touch() and 2.9 or 2.6, w - B.type_w() - 0.15)) + B.type_w() + 0.15 end
 
+function B.look_toggle(e, w)
+  local label = mod_loc(LK.REPLACE)
+  local box = UIK.checkbox({ref_table = e, ref_value = "replace", callback = function() B.dirty = true; refresh() end})
+  local ts = touch() and 0.44 or 0.4
+  local bw = (touch() and 1.15 or 1) * 0.5 + 0.06
+  local lw = math.min(UIK.text_w(label, ts) + 0.05, w - bw - 0.25)
+  return {n = G.UIT.C, config = {align = "cm", minw = lw + bw + 0.15, minh = btn_h(), padding = 0, focus_args = {funnel_from = true}}, nodes = {
+    {n = G.UIT.C, config = {align = "cr", maxw = lw, padding = 0}, nodes = {UIK.text(label, {scale = ts, colour = UIK.C.text})}},
+    {n = G.UIT.C, config = {minw = 0.15}, nodes = {}},
+    box,
+  }}
+end
+
+local function look_rows(d, i, e, spec, w)
+  local rows = {}
+  local tl, ll = Cat.value_label(spec.v, e.v), LK.look_label(e.lk, e.look)
+  local extra = advanced() or (tonumber(e.n) or 1) > 1 or e.replace
+  if UIK.portrait() then
+    local hw = (w - 0.23) / 2
+    rows[1] = hrow({button(mod_loc(spec.label), "forge_b_pick_effect", {slot = i}, G.C.RED, w, nil, "forge_eff_" .. i)}, w)
+    rows[2] = hrow({button(tl, "forge_b_pick_value", {slot = i}, UIK.C.accent, hw, nil, "forge_val_" .. i),
+      button(ll, "forge_b_pick_look", {slot = i}, UIK.C.accent, hw, nil, "forge_look_" .. i)}, w, 0.15)
+    if extra then
+      local nw = math.min(num_cell_w(w), w * 0.5)
+      rows[3] = hrow({num_cell(e, "n", spec.num, nw), B.look_toggle(e, w - nw - 0.2)}, w, 0.12)
+    end
+  else
+    local vw = touch() and 3.0 or 2.7
+    local lw = math.max(2.6, math.min(touch() and 4.6 or 4.2, w - 2 * vw - 0.4))
+    rows[1] = hrow({button(mod_loc(spec.label), "forge_b_pick_effect", {slot = i}, G.C.RED, lw, nil, "forge_eff_" .. i),
+      button(tl, "forge_b_pick_value", {slot = i}, UIK.C.accent, vw, nil, "forge_val_" .. i),
+      button(ll, "forge_b_pick_look", {slot = i}, UIK.C.accent, vw, nil, "forge_look_" .. i)}, w, 0.12)
+    if extra then
+      local rw = 2 * vw + 0.12
+      rows[2] = hrow({{n = G.UIT.C, config = {align = "cm", minw = lw, maxw = lw, padding = 0}, nodes = {num_cell(e, "n", spec.num, lw)}},
+        {n = G.UIT.C, config = {align = "cm", minw = rw, maxw = rw, padding = 0}, nodes = {B.look_toggle(e, rw)}}}, w, 0.12)
+    end
+  end
+  return rows, #rows
+end
+
 local function effect_rows(d, i, e, w)
   local spec = Cat.effect(d.kind, e.id)
+  if spec and spec.look then return look_rows(d, i, e, spec, w) end
   local port = UIK.portrait()
   local rows = {}
   local has_v, has_n = spec and spec.v, spec and spec.num
@@ -1906,7 +2059,7 @@ do
   Hooks.wrap("Controller", "update", function(orig) return function(self, ...)
     if self.text_input_hook == B.TEXT_HOOK and not B.text_active() then
 r 17 775 %20%20%20%20%20%20 -
-l 920
+l 981
       if UIK.touch() and love.keyboard and love.keyboard.setTextInput then pcall(love.keyboard.setTextInput, false) end
     end
     local r = Hooks.pack(orig(self, ...))
@@ -2005,7 +2158,7 @@ function B.save()
   local art = keep_art(d, id)
   local c
   if d.kind == "joker" then
-    c = Store.put({id = id, name = d.name, rarity = d.rarity, cost = d.cost, enabled = d.enabled, art = art, rules = R.clean_rules(d.rules), vars = R.clean_vars(d.vars), text = d.text, created = d.created, mode = d.mode, compat = d.compat, requires = d.requires})
+    c = Store.put({id = id, name = d.name, rarity = d.rarity, cost = d.cost, enabled = d.enabled, art = art, rules = R.clean_rules(d.rules), vars = R.clean_vars(d.vars), text = d.text, created = d.created, mode = d.mode, compat = d.compat, requires = d.requires, always_ed = d.always_ed})
     if c then FJ.register_all() end
   else
     local rules = {}
@@ -2101,7 +2254,7 @@ local function give_values(g)
     out[#out + 1] = {label = mod_loc("Random seal"), value = "random"}
     for _, v in ipairs(R.seals()) do out[#out + 1] = {label = T.seal_name(v), value = v} end
   end
-  if g.id == "make_ed_joker" then for _, v in ipairs(R.ed_values()) do out[#out + 1] = {label = R.ed_name(v), value = v} end end
+  if g.id == "make_ed_joker" or g.id == "ed_joker" then for _, v in ipairs(R.ed_values()) do out[#out + 1] = {label = R.ed_name(v), value = v} end end
   if g.id == "tag" then for _, v in ipairs(R.tags()) do if G.P_TAGS and G.P_TAGS[v] then out[#out + 1] = {label = T.tag_name(v), value = v} end end end
   if g.id == "var_pick" then
     local v = dvars()[g.var or 1]
@@ -2228,9 +2381,33 @@ local function effect_options(d)
   return out
 end
 
+function B.ask_look(e)
+  local opts = {}
+  for _, x in ipairs(LK.looks(e.v)) do opts[#opts + 1] = {label = LK.look_label(x.lk, x.v), value = x.lk .. ":" .. x.v, colour = x.own and G.C.GREEN or nil} end
+  B.pick{title = mod_loc(LK.ASK_LOOK), options = opts, choose = function(v)
+    local lk, look = tostring(v):match("^(%a+):(.+)$")
+    if lk then e.lk, e.look = lk, look end
+    B.state.pick = nil
+    B.dirty = true
+    refresh()
+  end}
+end
+
+function B.ask_look_target(e)
+  local opts = {}
+  for _, t in ipairs(LK.TARGETS) do opts[#opts + 1] = {label = LK.target_label(t), value = t} end
+  B.pick{title = mod_loc(LK.ASK_TARGET), options = opts, choose = function(t)
+    e.v = t
+    if not LK.look_ok(t, e.lk, e.look) then e.lk, e.look = LK.default_look(t) end
+    B.dirty = true
+    B.ask_look(e)
+  end}
+end
+
 local function ask_effect_value(d, e)
   local spec = Cat.effect(d.kind, e.id)
   if not (spec and spec.v) then refresh() return end
+  if spec.look then return B.ask_look_target(e) end
   if spec.v == "card" then return B.ask_card(mod_loc(spec.label), function(v) e.v = v end) end
   local opts = {}
   for _, v in ipairs(Cat.values(spec.v)) do opts[#opts + 1] = {label = Cat.value_label(spec.v, v), value = v} end
@@ -2284,6 +2461,11 @@ G.FUNCS.forge_b_fx_when = function(e)
     B.dirty = true
     refresh()
   end}
+end
+
+G.FUNCS.forge_b_pick_look = function(e)
+  local _, eff = fx_of(e)
+  if eff then B.ask_look(eff) end
 end
 
 G.FUNCS.forge_b_add_only = function(e)
@@ -2532,6 +2714,13 @@ G.FUNCS.forge_b_var_type = function(e)
     if (v.type or "number") ~= t then
       v.type = t ~= "number" and t or nil
       v.start = t == "number" and 0 or "random"
+      if t ~= "number" then
+        for _, r in ipairs(d.rules or {}) do
+          for _, k in ipairs({"only", "give", "alt"}) do
+            for _, x in ipairs(r[k] or {}) do if tonumber(x.nv) == i then x.nv = nil end end
+          end
+        end
+      end
       B.dirty = true
     end
     refresh()
@@ -2563,6 +2752,8 @@ G.FUNCS.forge_b_var_del = function(e)
     for _, x in ipairs(list or {}) do
       if not ((R.VAR_GIVE[x.id] or x.id == "var") and (x.var or 1) == i) then
         if x.var and x.var > i then x.var = x.var - 1 end
+        local nv = tonumber(x.nv)
+        if nv == i then x.nv = nil elseif nv and nv > i then x.nv = nv - 1 end
         out[#out + 1] = x
       end
     end
@@ -2661,6 +2852,29 @@ G.FUNCS.forge_b_type = function(e)
 end
 
 G.FUNCS.forge_b_type_ok = function() B.type_commit() end
+
+G.FUNCS.forge_b_nv = function(e)
+  local r2 = ref(e)
+  local t = r2.t
+  if type(t) ~= "table" then return end
+  if t.nv ~= nil then t.nv = nil else t.nv = r2.list and r2.list[1] end
+  if B.state.typing and B.state.typing.t == t then B.state.typing = nil; B.type_box = nil end
+  play_sound("button", 1, 0.4)
+  B.dirty = true
+  refresh()
+end
+
+G.FUNCS.forge_b_nv_step = function(e)
+  local r2 = ref(e)
+  local t, list = r2.t, r2.list or {}
+  if type(t) ~= "table" or #list == 0 then return end
+  local at = 1
+  for i, x in ipairs(list) do if x == t.nv then at = i end end
+  t.nv = list[(at - 1 + (tonumber(r2.d) or 1)) % #list + 1]
+  play_sound("button", 1, 0.4)
+  B.dirty = true
+  refresh()
+end
 
 G.FUNCS.forge_b_fx_page = function(e)
   B.state.fx_page = math.max(1, (B.state.fx_page or 1) + (ref(e).d or 0))

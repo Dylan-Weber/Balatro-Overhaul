@@ -894,7 +894,7 @@ l 11
                             end)
                             bom_pvp_hud.update_blind_hud()
 r 1 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 63
+l 64
                                 trigger = "after",
                                 delay = 0.45,
                                 blockable = false,
@@ -941,7 +941,8 @@ l 63
     local update_hand_played_ref = Game.update_hand_played
     Game.update_hand_played = function(self, dt)
         if G and G.GAME and G.GAME.multiplayer and bom_match and bom_match.is_end_pvp()
-            and not (G.GAME.STOP_USE and G.GAME.STOP_USE > 0) then
+            and not (G.GAME.STOP_USE and G.GAME.STOP_USE > 0)
+            and bom_nemesis and bom_nemesis.in_unresolved_pvp_blind() then
             if bom_ui and bom_ui.pvp_result_holding and bom_ui.pvp_result_holding() then return end
             pcall(function()
                 if G.GAME.blind then
@@ -1108,7 +1109,7 @@ l 34
     local update_new_round_ref = Game.update_new_round
     Game.update_new_round = function(self, dt)
         pcall(function()
-            if bom_match and bom_match.is_end_pvp() then
+            if bom_match and bom_match.is_end_pvp() and bom_nemesis and bom_nemesis.in_unresolved_pvp_blind() then
                 if G.STATE ~= G.STATES.NEW_ROUND then
                     pcall(function() G.FUNCS.draw_from_hand_to_deck() end)
                     pcall(function() G.FUNCS.draw_from_discard_to_deck() end)
@@ -1170,7 +1171,7 @@ l 2
                     bom_match.send_play_hand(G.GAME.chips, 0)
 r 2 402 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 15 468 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 9
+l 10
                 end
                 return
             end
@@ -1179,7 +1180,8 @@ l 9
         update_selecting_hand_ref(self, dt)
 
         pcall(function()
-            if bom_match and bom_match.is_end_pvp() and bom_nemesis and bom_nemesis.in_unresolved_pvp_blind() then
+            if bom_match and bom_match.is_end_pvp() and bom_nemesis and bom_nemesis.in_unresolved_pvp_blind()
+                and not (G.GAME.STOP_USE and G.GAME.STOP_USE > 0) then
 r 2 582 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 10
                 pcall(function()
@@ -1333,10 +1335,11 @@ l 34
                     G.GAME.current_round.dollars = total
                     delay(0.4)
 r 1 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 31
+l 32
                         trigger = 'before',
                         delay = 0.5,
                         func = function()
+                            if not G.round_eval then return true end
                             UIBox{
                                 definition = {
                                     n = G.UIT.ROOT,

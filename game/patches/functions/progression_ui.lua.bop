@@ -415,7 +415,7 @@ function PUI.open(tab, from)
   if QuestManager then pcall(QuestManager.init) end
   if check_milestones then pcall(check_milestones) end
 r 32 1381 %20%20 -
-l 539
+l 544
   G.FUNCS.overlay_menu{definition = PUI.window(tab)}
 end
 
@@ -955,9 +955,8 @@ end
 if Game and Game.update and not PUI.badge_wrapped then
   PUI.badge_wrapped = true
   local update = Game.update
-r 7 2449 %20%20 -
-l 4
-    update(self, dt)
+  function Game:update(dt, ...)
+    update(self, dt, ...)
     pcall(PUI.badge_tick)
   end
 end

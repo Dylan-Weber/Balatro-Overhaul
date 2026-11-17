@@ -1,0 +1,13 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.pattern]
+id = "UI_definitions.view_deck_no_rank"
+target = "functions/UI_definitions.lua"
+pattern = "if v.ability.name ~= 'Stone Card' and (not unplayed_only or ((v.area and v.area == G.deck) or v.ability.wheel_flipped)) then"
+position = "at"
+payload = "if v.ability.name ~= 'Stone Card' and v.ability.effect ~= 'Stone Card' and (not unplayed_only or ((v.area and v.area == G.deck) or v.ability.wheel_flipped)) then"
+match_indent = true
+times = 1

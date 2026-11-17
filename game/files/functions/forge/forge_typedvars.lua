@@ -96,9 +96,9 @@ return function(R)
     c = false
     for _, r in ipairs(rules) do
       if type(r) == "table" then
-        for _, o in ipairs(type(r.only) == "table" and r.only or {}) do if R.var_ref(o.v) then c = true end end
+        for _, o in ipairs(type(r.only) == "table" and r.only or {}) do if R.var_ref(o.v) or R.num_ref(o) then c = true end end
         for _, l in ipairs({r.give, r.alt}) do
-          for _, g in ipairs(type(l) == "table" and l or {}) do if R.var_ref(g.v) then c = true end end
+          for _, g in ipairs(type(l) == "table" and l or {}) do if R.var_ref(g.v) or R.num_ref(g) then c = true end end
         end
       end
     end
@@ -112,16 +112,20 @@ return function(R)
     return type(x) == "table" and type(x.vars) == "table" and x.vars or {}
   end
 
-  local function swap(list, vars)
+  local function swap(list, vars, cond)
     if type(list) ~= "table" then return list end
     local out = {}
     for i, e in ipairs(list) do
       local n = type(e) == "table" and R.var_ref(e.v)
-      if n then
+      local nv = type(e) == "table" and R.num_ref(e)
+      if n or nv then
         local c = {}
         for k, v in pairs(e) do c[k] = v end
-        c.v = vars[n]
-        if c.v == nil then c.v = "forge_unset" end
+        if n then
+          c.v = vars[n]
+          if c.v == nil then c.v = "forge_unset" end
+        end
+        if nv then c.n = R.live_num(e, vars[nv], cond) end
         out[i] = c
       else
         out[i] = e
@@ -138,7 +142,7 @@ return function(R)
       if type(r) == "table" then
         local c = {}
         for k, v in pairs(r) do c[k] = v end
-        c.only, c.give, c.alt = swap(r.only, vars), swap(r.give, vars), swap(r.alt, vars)
+        c.only, c.give, c.alt = swap(r.only, vars, true), swap(r.give, vars), swap(r.alt, vars)
         out[i] = c
       else
         out[i] = r
@@ -246,6 +250,7 @@ return function(R)
       if type(v) == "table" and v.type and v.type ~= "number" then need = math.max(need, R.TYPED_V) end
     end
     if rule_refs(rules) then need = math.max(need, R.TYPED_V) end
+    if R.nv_used(rules) then need = math.max(need, R.NV_V) end
     for _, r in ipairs(type(rules) == "table" and rules or {}) do
       for _, o in ipairs(type(r) == "table" and type(r.only) == "table" and r.only or {}) do
         if type(o) == "table" and o.id == "every" then need = math.max(need, R.TYPED_V) end

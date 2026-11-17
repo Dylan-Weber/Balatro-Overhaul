@@ -293,6 +293,50 @@ describe('publishing a release (tools/release/publish_feed.ts)', () => {
     await expect(publish(opts(dir, to, { globals: "OVERHAUL_VERSION = '0'\n" }))).rejects.toThrow(/no matching file/);
   });
 
+  it('publishes PC first, then adds the phone installer to the same version', async () => {
+    const dir = join(work, 'pcfirst');
+    const to = join(work, 'pub_pcfirst');
+    const g = { globals: "OVERHAUL_VERSION = '6.1'\nMP_PROTOCOL_VERSION = 7\n" };
+    await pack(dir, '6.0');
+    mkdirSync(join(dir, 'android'), { recursive: true });
+    copyFileSync(join(dir, 'patchset-6.0.zip'), join(dir, 'android', 'android-patch-6.0.zip'));
+    await publish(opts(dir, to, { globals: "OVERHAUL_VERSION = '6.0'\nMP_PROTOCOL_VERSION = 7\n" }));
+    rmSync(join(dir, 'android'), { recursive: true });
+    await pack(dir, '6.1');
+    await expect(publish(opts(dir, to, { ...g, phoneAfter: true }))).rejects.toThrow(/no phone installer/);
+    const first = await publish(opts(dir, to, g));
+    expect(first.latest.android_apk).toBeUndefined();
+    const m1 = parseManifest(await Bun.file(join(to, 'latest.json')).json())!;
+    expect(m1.builds.android_patch_pc.version).toBe('6.1');
+    expect(m1.builds.android_patch.version).toBe('6.0');
+    mkdirSync(join(dir, 'android'), { recursive: true });
+    copyFileSync(join(dir, 'patchset-6.1.zip'), join(dir, 'android', 'android-patch-6.1.zip'));
+    writeFileSync(join(dir, 'android', 'BalatroOverhaulLauncher-6.1-android.apk'), 'apk six');
+    const raw = await Bun.file(join(dir, 'feed.json')).json() as Record<string, any>;
+    raw.latest.android_apk = { native: 1, url: 'launcher-android-6.1.apk', size: 7, sha256: new Bun.CryptoHasher('sha256').update('apk six').digest('hex') };
+    writeFileSync(join(dir, 'feed.json'), JSON.stringify(raw));
+    await expect(publish(opts(dir, to, g))).rejects.toThrow(/not newer/);
+    const second = await publish(opts(dir, to, { ...g, phoneAfter: true }));
+    expect(second.latest.version).toBe('6.1');
+    expect(second.latest.android_apk?.url).toBe('launcher-android-6.1.apk');
+    expect(await Bun.file(join(to, 'launcher-android-6.1.apk')).text()).toBe('apk six');
+    const m2 = parseManifest(await Bun.file(join(to, 'latest.json')).json())!;
+    expect(m2.builds.android_patch.version).toBe('6.1');
+    expect(m2.builds.android_patch_pc.version).toBe('6.1');
+    writeFileSync(join(dir, 'set', 'extra.lua'), 'x');
+    await $`cd ${join(dir, 'set')} && zip -q -X ${join(dir, 'patchset-6.1.zip')} extra.lua`.quiet();
+    const raw2 = await Bun.file(join(dir, 'feed.json')).json() as Record<string, any>;
+    const data = await Bun.file(join(dir, 'patchset-6.1.zip')).arrayBuffer();
+    raw2.latest.size = data.byteLength;
+    raw2.latest.sha256 = new Bun.CryptoHasher('sha256').update(data).digest('hex');
+    writeFileSync(join(dir, 'feed.json'), JSON.stringify(raw2));
+    await expect(publish(opts(dir, to, { ...g, phoneAfter: true }))).rejects.toThrow(/not this one/);
+    await pack(dir, '6.2');
+    raw2.latest = { ...(await Bun.file(join(dir, 'feed.json')).json() as Record<string, any>).latest, android_apk: raw.latest.android_apk };
+    writeFileSync(join(dir, 'feed.json'), JSON.stringify(raw2));
+    await expect(publish(opts(dir, to, { ...g, phoneAfter: true }))).rejects.toThrow(/offers 6.1/);
+  });
+
   it('skips the phone patches when the version file is another build', async () => {
     const dir = join(work, 'phone_skip');
     await pack(dir, '4.0');

@@ -380,7 +380,7 @@ l 40
       G.GAME.consumeable_buffer = (G.GAME.consumeable_buffer or 0) + 1
     end
 r 3 617 %20%20%20%20 -
-l 167
+l 168
       local pick = pseudorandom_element(area.cards, pseudoseed("forge_perkeo"))
       if pick then
         local c = copy_card(pick, nil)
@@ -506,7 +506,7 @@ function P.passive_of(c)
         elseif g.id == "copy_ability" then info.copy = g.v
         elseif P.KEY[g.id] then
           info.list[#info.list + 1] = g
-          if g.var then info.var = true end
+          if g.var or R.num_ref(g) then info.var = true end
         end
       end
     end
@@ -521,6 +521,7 @@ function P.want(card, info)
   for _, g in ipairs(info.list) do
     local k = P.KEY[g.id]
     local n = tonumber(g.n) or 0
+    if R.num_ref(g) then n = tonumber(R.live_num(g, R.var_val(card, g.nv))) or 0 end
     if g.var then n = n * (tonumber(R.var_val(card, g.var)) or 0) end
     if k == "chances" then w[k] = (w[k] or 1) * math.max(1, n)
     else w[k] = (w[k] or 0) + math.floor(n) end

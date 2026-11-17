@@ -657,7 +657,7 @@ function U.queue_start()
     bom_core.connect(function()
         if Q.status ~= "joining" then return end
         bom_core.send({type = "find_match", ranked = true, pkey = bom_core.player_key(), mods = bom_core.mods_field(true),
-            version = bom_room.game_version(), name = name})
+            version = bom_room.game_version(), name = name, deck_filter = bom_core.deck_filter_field()})
     end, {silent = true, on_fail = function()
         if Q.status ~= "joining" then return end
         Q.status, Q.error = "error", "offline"

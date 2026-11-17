@@ -121,6 +121,7 @@ function FJ.center_for(c, index)
   center.rarity = c.rarity
   center.cost = c.cost
   center.forge_id = c.id
+  center.forge_start_ed = require("functions/forge/forge_always").value(c)
   center.forge_on = c.enabled
   center.mod = c.forge_mod or FJ.MOD
   center.forge_mod_badge = c.mod_id and ("forge_mod_" .. c.mod_id) or nil

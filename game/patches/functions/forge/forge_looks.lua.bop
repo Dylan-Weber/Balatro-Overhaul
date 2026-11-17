@@ -1,0 +1,478 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 369
+local L = {}
+
+L.V = 15
+L.ID = "look"
+L.TARGETS = {"jokers", "cards", "tarots", "planets", "spectrals", "consumables", "vouchers", "boosters", "everything"}
+L.EDITIONS = {"foil", "holo", "polychrome", "negative"}
+L.ENHANCEMENTS = {"m_bonus", "m_mult", "m_wild", "m_glass", "m_steel", "m_stone", "m_gold", "m_lucky"}
+L.SEALS = {"Red", "Blue", "Gold", "Purple"}
+L.KINDS = {ed = true, enh = true, seal = true}
+L.RANK = {consumables = 2, everything = 3}
+L.SET = {jokers = "Joker", tarots = "Tarot", planets = "Planet", spectrals = "Spectral", vouchers = "Voucher", boosters = "Booster"}
+L.CHANCE = {lo = 1, hi = 1e6, def = 1, step = 1, big = 10, fmt = "in"}
+
+L.TARGET_LABEL = {jokers = "Jokers", cards = "Playing cards", tarots = "Tarots", planets = "Planets", spectrals = "Spectrals", consumables = "All consumables",
+  vouchers = "Vouchers", boosters = "Booster packs", everything = "Everything"}
+L.LABEL = "Cards always come with"
+L.ASK_TARGET = "WHAT SHOULD GET A NEW LOOK?"
+L.ASK_LOOK = "WHICH LOOK?"
+L.REPLACE = "Replace what is there"
+
+local NOUN = {
+  en = {jokers = "Joker", cards = "playing card", tarots = "Tarot", planets = "Planet", spectrals = "Spectral", consumables = "consumable",
+    vouchers = "Voucher", boosters = "Booster pack", everything = "card"},
+  fr = {jokers = "Joker", cards = "carte à jouer", tarots = "Tarot", planets = "Planète", spectrals = "Spectrale", consumables = "consommable",
+    vouchers = "Bon", boosters = "Paquet", everything = "carte"},
+  es = {jokers = "Joker", cards = "carta de juego", tarots = "Tarot", planets = "Planeta", spectrals = "Espectral", consumables = "consumible",
+    vouchers = "Cupón", boosters = "Sobre", everything = "carta"},
+}
+local LINE = {
+  en = {ed = "Every {C:attention}%s{} is {C:dark_edition}%s{}", enh = "Every {C:attention}%s{} is a {C:attention}%s{}", seal = "Every {C:attention}%s{} has a {C:attention}%s{}",
+    replace = " (replaces old)"},
+  fr = {ed = "{C:dark_edition}%s{} sur chaque {C:attention}%s{}", enh = "{C:attention}%s{} sur chaque {C:attention}%s{}", seal = "{C:attention}%s{} sur chaque {C:attention}%s{}",
+    replace = " (remplace)", swap = true},
+  es = {ed = "{C:dark_edition}%s{} en cada {C:attention}%s{}", enh = "{C:attention}%s{} en cada {C:attention}%s{}", seal = "{C:attention}%s{} en cada {C:attention}%s{}",
+    replace = " (reemplaza)", swap = true},
+}
+
+local LOC = {
+  fr = {["Cards always come with"] = "Les cartes viennent avec", ["WHAT SHOULD GET A NEW LOOK?"] = "QUOI DOIT AVOIR UN NOUVEAU LOOK ?", ["WHICH LOOK?"] = "QUEL LOOK ?",
+    ["Replace what is there"] = "Remplacer l'existant", ["All consumables"] = "Tous les consommables", ["Always"] = "Toujours", ["1 in %s"] = "1 sur %s"},
+  es = {["Cards always come with"] = "Las cartas vienen con", ["WHAT SHOULD GET A NEW LOOK?"] = "¿QUÉ DEBE TENER UN NUEVO ASPECTO?", ["WHICH LOOK?"] = "¿QUÉ ASPECTO?",
+    ["Replace what is there"] = "Reemplazar lo que hay", ["All consumables"] = "Todos los consumibles", ["Always"] = "Siempre", ["1 in %s"] = "1 entre %s"},
+}
+
+local function rules() return package.loaded["functions/forge/forge_rules"] or require("functions/forge/forge_rules") end
+local function text() return package.loaded["functions/forge/forge_text"] or require("functions/forge/forge_text") end
+local function ml(s)
+  local f = rawget(_G, "mod_loc")
+  return f and f(s) or s
+end
+local function member(list, v) for _, x in ipairs(list) do if x == v then return true end end return false end
+local function smods() return type(rawget(_G, "SMODS")) == "table" end
+local function lang()
+  local Cat = package.loaded["functions/forge/forge_catalog"]
+  return Cat and Cat.lang and Cat.lang() or "en"
+end
+
+local function key_ok(v) return type(v) == "string" and #v > 0 and #v <= 40 and v:match("^[%w_]+$") ~= nil end
+
+function L.target_ok(t) return member(L.TARGETS, t) end
+
+function L.look_ok(t, lk, v)
+  if not (L.KINDS[lk] and key_ok(v)) then return false end
+  if lk ~= "ed" and t ~= "cards" then return false end
+  if lk == "ed" then return member(L.EDITIONS, v) or rules().own_id("edition", v) ~= nil or v:sub(1, 2) == "e_" end
+  if lk == "enh" then return v:sub(1, 2) == "m_" end
+  return true
+end
+
+function L.default_look(t)
+  if t == "cards" then return "ed", "polychrome" end
+  return "ed", "foil"
+end
+
+function L.init(out)
+  out.lk, out.look = L.default_look(out.v)
+end
+
+function L.clean(c, e)
+  if not L.target_ok(c.v) then c.v = "jokers" end
+  if type(e) == "table" and L.look_ok(c.v, e.lk, e.look) then
+    c.lk, c.look = e.lk, e.look
+  else
+    c.lk, c.look = L.default_look(c.v)
+  end
+  if type(e) == "table" and e.replace == true then c.replace = true end
+end
+
+local function game_name(set, key)
+  local loc = rawget(_G, "localize")
+  if not loc then return nil end
+  local ok, s = pcall(loc, {type = "name_text", set = set, key = key})
+  if ok and type(s) == "string" and s ~= "" and s ~= "ERROR" then return s end
+  return nil
+end
+
+function L.mod_editions()
+  local out = {}
+  local pool = smods() and G and G.P_CENTER_POOLS and G.P_CENTER_POOLS.Edition or {}
+  for _, c in ipairs(pool) do
+    local k = c.key
+    if type(k) == "string" and k ~= "e_base" and not member(L.EDITIONS, k:sub(3)) and not c.forge_kind and k:sub(1, 8) ~= "e_forge_" and key_ok(k) then out[#out + 1] = k end
+  end
+  return out
+end
+
+function L.mod_enhancements()
+  local out = {}
+  local pool = smods() and G and G.P_CENTER_POOLS and G.P_CENTER_POOLS.Enhanced or {}
+  for _, c in ipairs(pool) do
+    local k = c.key
+    if type(k) == "string" and not member(L.ENHANCEMENTS, k) and k:sub(1, 8) ~= "m_forge_" and not c.forge_kind and key_ok(k) then out[#out + 1] = k end
+  end
+  return out
+end
+
+function L.mod_seals()
+  local out = {}
+  local seals = smods() and G and G.P_SEALS or {}
+  for k, s in pairs(seals) do
+    if type(k) == "string" and not member(L.SEALS, k) and k:sub(1, 6) ~= "Forge_" and key_ok(k) then out[#out + 1] = {k = k, o = type(s) == "table" and tonumber(s.order) or 999} end
+  end
+  table.sort(out, function(a, b) if a.o ~= b.o then return a.o < b.o end return a.k < b.k end)
+  local list = {}
+  for _, x in ipairs(out) do list[#list + 1] = x.k end
+  return list
+end
+
+function L.looks(t)
+  local R = rules()
+  local out = {}
+  local function add(lk, v, own) out[#out + 1] = {lk = lk, v = v, own = own} end
+  for _, v in ipairs(L.EDITIONS) do add("ed", v) end
+  for _, v in ipairs(R.own_values("edition")) do add("ed", v, true) end
+  local seen = {}
+  for _, x in ipairs(out) do seen[L.look_label("ed", x.v)] = true end
+  for _, v in ipairs(L.mod_editions()) do
+    local name = L.look_label("ed", v)
+    if not seen[name] then
+      seen[name] = true
+      add("ed", v)
+    end
+  end
+  if t == "cards" then
+    for _, v in ipairs(L.ENHANCEMENTS) do add("enh", v) end
+    for _, v in ipairs(R.own_values("enhancement")) do add("enh", v, true) end
+    for _, v in ipairs(L.mod_enhancements()) do add("enh", v) end
+    for _, v in ipairs(L.SEALS) do add("seal", v) end
+    for _, v in ipairs(R.own_values("seal")) do add("seal", v, true) end
+    for _, v in ipairs(L.mod_seals()) do add("seal", v) end
+  end
+  return out
+end
+
+function L.look_label(lk, v)
+  if v == nil then return "" end
+  local T = text()
+  if lk == "ed" then
+    if type(v) == "string" and v:sub(1, 2) == "e_" then return game_name("Edition", v) or v end
+    local Cat = package.loaded["functions/forge/forge_catalog"]
+    return Cat and Cat.value_label("shader", v) or T.edition_name(v)
+  end
+  if lk == "enh" then return T.enh_name(v) end
+  if lk == "seal" then
+    if member(L.SEALS, v) or rules().own_id("seal", v) then return T.seal_name(v) end
+    return game_name("Other", string.lower(v) .. "_seal") or v
+  end
+  return tostring(v)
+end
+
+function L.target_label(t) return ml(L.TARGET_LABEL[t] or tostring(t)) end
+
+function L.chance_text(n)
+  n = math.floor(tonumber(n) or 1)
+  if n <= 1 then return ml("Always") end
+  return string.format(ml("1 in %s"), tostring(n))
+end
+
+function L.line(e, l)
+  l = l or lang()
+  local S = LINE[l] or LINE.en
+  local nouns = NOUN[l] or NOUN.en
+  local lk = L.KINDS[e.lk] and e.lk or "ed"
+  local noun = nouns[e.v] or nouns.everything
+  local look = L.look_label(lk, e.look)
+  local s = S.swap and string.format(S[lk], look, noun) or string.format(S[lk], noun, look)
+  local n = math.floor(tonumber(e.n) or 1)
+  if n > 1 then
+    local Cat = package.loaded["functions/forge/forge_catalog"]
+    local ch = Cat and Cat.only_line and Cat.only_line({id = "chance", n = n})
+    if ch then s = s .. ", " .. ch end
+  end
+  if e.replace then s = s .. S.replace end
+  return s
+end
+
+function L.spec()
+  return {id = L.ID, label = L.LABEL, v = "looktarget", num = L.CHANCE, simple = true, new = true, need = L.V, look = true, init = L.init, clean = L.clean, line = "%s"}
+end
+
+function L.cat(Cat)
+  local list = Cat.EFFECTS.deck
+  local have = false
+  for _, e in ipairs(list) do if e.id == L.ID then have = true end end
+  if not have then list[#list + 1] = L.spec() end
+  local base_values = Cat.values
+  Cat.values = function(what, base_only)
+    if what == "looktarget" then return L.TARGETS end
+    return base_values(what, base_only)
+  end
+  local base_label = Cat.value_label
+  Cat.value_label = function(what, v)
+    if what == "looktarget" then return L.target_label(v) end
+    return base_label(what, v)
+  end
+  local base_fmt = Cat.fmt
+  Cat.fmt = function(spec, v)
+    if spec and spec.fmt == "in" then return L.chance_text(v) end
+    return base_fmt(spec, v)
+  end
+  local base_line = Cat.effect_line
+  Cat.effect_line = function(kind_id, e)
+    if type(e) == "table" and e.id == L.ID and kind_id == "deck" then return L.line(e) end
+    return base_line(kind_id, e)
+  end
+  local reg = rawget(_G, "mod_loc_register")
+  if reg then reg(LOC) end
+end
+
+local function game() return G and G.GAME end
+
+function L.active()
+  local g = game()
+  local back = g and g.selected_back and g.selected_back.effect and g.selected_back.effect.center
+  if not (back and back.forge_kind == "deck" and back.forge_id and not back.forge_lost) then return nil end
+  local S = package.loaded["functions/forge/forge_store"]
+  local c = S and S.get_item and S.get_item(back.forge_id)
+  if not (c and c.kind == "deck" and type(c.effects) == "table") then return nil end
+  if L.cache_src == c and L.cache_fx == c.effects and L.cache_n == #c.effects then return L.cache end
+  local out = {}
+  for i, e in ipairs(c.effects) do
+    if type(e) == "table" and e.id == L.ID and L.target_ok(e.v) and L.look_ok(e.v, e.lk, e.look) then
+      out[#out + 1] = {i = i, t = e.v, lk = e.lk, v = e.look, n = math.max(1, math.floor(tonumber(e.n) or 1)), replace = e.replace == true}
+    end
+  end
+  table.sort(out, function(a, b)
+    local ra, rb = L.RANK[a.t] or 1, L.RANK[b.t] or 1
+    if ra ~= rb then return ra < rb end
+    return a.i < b.i
+  end)
+  L.cache_src, L.cache_fx, L.cache_n, L.cache = c, c.effects, #c.effects, out
+  return out
+end
+
+function L.playing(card)
+  local set = card and card.ability and card.ability.set
+  return set == "Default" or set == "Enhanced"
+end
+
+function L.matches(t, card)
+  local a = card and card.ability
+  if not a then return false end
+  if t == "cards" then return L.playing(card) end
+  if t == "consumables" then return a.consumeable and true or false end
+  if t == "everything" then return L.playing(card) or a.consumeable and true or a.set == "Joker" or a.set == "Voucher" or a.set == "Booster" end
+  return L.SET[t] ~= nil and a.set == L.SET[t]
+end
+
+function L.edition_arg(v)
+  if type(v) == "string" and v:sub(1, 2) == "e_" then
+    if smods() and G.P_CENTERS and G.P_CENTERS[v] and G.P_CENTERS[v].set == "Edition" then return v end
+    return nil
+  end
+  return rules().edition_arg(v)
+end
+
+local function same_edition(card, v)
+  local ed = card.edition
+  if not ed then return false end
+  if type(v) == "string" and v:sub(1, 2) == "e_" then return ed.key == v end
+  return rules().has_edition(card, v)
+end
+
+local function keep_price(card)
+  local set = card.ability and card.ability.set
+  if not (set == "Voucher" or set == "Booster") or not card.set_cost then return end
+  local ed = card.edition
+  card.edition = nil
+  pcall(card.set_cost, card)
+  card.edition = ed
+end
+
+function L.give(card, x)
+  if x.lk == "ed" then
+    if card.edition and (not x.replace or same_edition(card, x.v)) then return false end
+    local arg = L.edition_arg(x.v)
+    if not arg then return false end
+    local had_neg = card.edition and card.edition.negative and card.added_to_deck and not L.playing(card)
+    local ok = pcall(card.set_edition, card, arg, true, true)
+    if ok and had_neg and not smods() and not (card.edition and card.edition.negative) then
+      local area = card.ability.consumeable and G.consumeables or G.jokers
+      if area then area.config.card_limit = area.config.card_limit - 1 end
+    end
+    if ok then keep_price(card) end
+    return ok
+  end
+  if not L.playing(card) then return false end
+  local R = rules()
+  if x.lk == "enh" then
+    local cen = G.P_CENTERS and G.P_CENTERS[x.v]
+    if not (cen and cen.set == "Enhanced" and R.usable("enhancement", x.v)) then return false end
+    local cur = card.config and card.config.center
+    if cur == cen or (cur and cur ~= G.P_CENTERS.c_base and not x.replace) then return false end
+    return pcall(card.set_ability, card, cen, nil, true)
+  end
+  if x.lk == "seal" then
+    if not (G.P_SEALS and G.P_SEALS[x.v] and R.usable("seal", x.v)) then return false end
+    if card.seal == x.v or (card.seal and not x.replace) then return false end
+    return pcall(card.set_seal, card, x.v, true, true)
+  end
+  return false
+end
+
+function L.roll(x)
+  if x.n <= 1 then return true end
+  local p = G.GAME and G.GAME.probabilities and G.GAME.probabilities.normal or 1
+  local rnd, seed = rawget(_G, "pseudorandom"), rawget(_G, "pseudoseed")
+  return rnd(seed("forge_look_" .. x.t)) < p / x.n
+end
+
+function L.apply(card)
+  local list = L.active()
+  if not list or #list == 0 then return end
+  for _, x in ipairs(list) do
+    if L.matches(x.t, card) and L.roll(x) then L.give(card, x) end
+  end
+end
+
+function L.run_area(area)
+  if not (G and area) then return false end
+  return area == G.jokers or area == G.consumeables or area == G.shop_jokers or area == G.shop_vouchers or area == G.shop_booster or area == G.pack_cards
+    or area == G.deck or area == G.hand or area == G.play or area == G.discard
+end
+
+L.NEG_TEXT = {en = "{C:dark_edition}+#1#{} hand size", fr = "{C:dark_edition}+#1#{} à la taille de la main", es = "{C:dark_edition}+#1#{} de tamaño de mano"}
+L.NEG_NAME = {fr = "Négatif", es = "Negativa"}
+L.NEG_ITEM = {key = "e_negative_playing_card", set = "Edition", config = {extra = 1}}
+
+function L.neg_count(area)
+  local n = 0
+  for _, c in ipairs(area and area.cards or {}) do
+    if L.playing(c) and c.edition and c.edition.negative then n = n + 1 end
+  end
+  return n
+end
+
+function L.serpent()
+  local b = G.GAME and G.GAME.blind
+  return b and b.name == "The Serpent" and not b.disabled
+end
+
+function L.drawing()
+  local S = G.STATES or {}
+  return G.STATE ~= nil and (G.STATE == S.DRAW_TO_HAND or G.STATE == S.SELECTING_HAND)
+end
+
+function L.queue_draw()
+  if L.draw_queued or not L.drawing() or L.serpent() or not (G.E_MANAGER and rawget(_G, "Event")) then return end
+  L.draw_queued = true
+r 3 617 %20%20 -
+l 71
+    L.draw_queued = nil
+    local space = G.hand and G.deck and math.min(#G.deck.cards, G.hand.config.card_limit - #G.hand.cards) or 0
+    if space > 0 and L.drawing() and not L.serpent() and G.FUNCS and G.FUNCS.draw_from_deck_to_hand then G.FUNCS.draw_from_deck_to_hand(space) end
+    return true
+  end}))
+end
+
+function L.hand_sync()
+  if smods() or not (G and G.hand and G.hand.config) then return end
+  local cfg = G.hand.config
+  local want, have = L.neg_count(G.hand), tonumber(cfg.forge_neg) or 0
+  if want == have then return end
+  cfg.card_limit = (cfg.card_limit or 0) + want - have
+  cfg.forge_neg = want > 0 and want or nil
+  if want > have then L.queue_draw() end
+end
+
+function L.neg_item()
+  local d = G and G.localization and G.localization.descriptions
+  local FJ = package.loaded["functions/forge/forge_joker"]
+  if not (d and d.Edition and FJ and FJ.parsed) then return nil end
+  local l = lang()
+  if not (d.Edition[L.NEG_ITEM.key] and L.neg_lang == l) then
+    local base = d.Edition.e_negative
+    d.Edition[L.NEG_ITEM.key] = FJ.parsed({name = L.NEG_NAME[l] or base and base.name or "Negative", text = {L.NEG_TEXT[l] or L.NEG_TEXT.en}})
+    L.neg_lang = l
+  end
+  return L.NEG_ITEM
+end
+
+function L.neg_badge(c, badges)
+  if smods() or type(c) ~= "table" or not (c.set == "Default" or c.set == "Enhanced") or type(badges) ~= "table" then return false end
+  for _, b in ipairs(badges) do if b == "negative" then return true end end
+  return false
+end
+
+function L.install()
+  if L.hooked then return end
+  local ok, Hooks = pcall(require, "overhaul.hooks")
+  if not (ok and Hooks and rawget(_G, "Card") and rawget(_G, "CardArea")) then return end
+  L.hooked = true
+  Hooks.wrap("Card", "init", function(orig) return function(self, ...)
+    local r = Hooks.pack(orig(self, ...))
+    self.forge_look_new = true
+    return Hooks.unpack(r)
+  end end, {id = "forge.look_init"})
+  Hooks.wrap("Card", "load", function(orig) return function(self, ...)
+    self.forge_look_new = nil
+    return orig(self, ...)
+  end end, {id = "forge.look_load"})
+  Hooks.wrap("CardArea", "emplace", function(orig) return function(self, card, ...)
+    local r = Hooks.pack(orig(self, card, ...))
+    if type(card) == "table" and card.forge_look_new and L.run_area(self) then
+      card.forge_look_new = nil
+      local okp, err = pcall(L.apply, card)
+      if not okp and not L.warned then
+        L.warned = true
+        print("forge looks failed: " .. tostring(err))
+      end
+    end
+    if G and self == G.hand then pcall(L.hand_sync) end
+    return Hooks.unpack(r)
+  end end, {id = "forge.look_emplace"})
+  Hooks.wrap("CardArea", "remove_card", function(orig) return function(self, ...)
+    local r = Hooks.pack(orig(self, ...))
+    if G and self == G.hand then pcall(L.hand_sync) end
+    return Hooks.unpack(r)
+  end end, {id = "forge.look_remove_card"})
+  Hooks.wrap("Card", "set_edition", function(orig) return function(self, edition, ...)
+    if smods() or not L.playing(self) then return orig(self, edition, ...) end
+    local added = self.added_to_deck
+r 3 62 %20%20%20%20 -
+l 28
+    local r = Hooks.pack(pcall(orig, self, edition, ...))
+    self.added_to_deck = added
+    if not r[1] then error(r[2], 0) end
+    if G and G.hand and self.area == G.hand then pcall(L.hand_sync) end
+    return unpack(r, 2, r.n)
+  end end, {id = "forge.look_set_edition"})
+  Hooks.wrap(_G, "generate_card_ui", function(orig) return function(c, full, vars, ctype, badges, ...)
+    local item = L.neg_badge(c, badges) and G.P_CENTERS and L.neg_item()
+    if not item then return orig(c, full, vars, ctype, badges, ...) end
+    local base = G.P_CENTERS.e_negative
+    G.P_CENTERS.e_negative = item
+    local r = Hooks.pack(pcall(orig, c, full, vars, ctype, badges, ...))
+    G.P_CENTERS.e_negative = base
+    if not r[1] then error(r[2], 0) end
+    return unpack(r, 2, r.n)
+  end end, {id = "forge.look_card_ui"})
+  Hooks.wrap("Card", "remove_from_deck", function(orig) return function(self, ...)
+    if smods() or not (L.playing(self) and self.edition and self.edition.negative) then return orig(self, ...) end
+    local ed = self.edition
+    self.edition = nil
+    local r = Hooks.pack(pcall(orig, self, ...))
+    self.edition = ed
+    if not r[1] then error(r[2], 0) end
+    return unpack(r, 2, r.n)
+  end end, {id = "forge.look_remove"})
+end
+
+return L
+end

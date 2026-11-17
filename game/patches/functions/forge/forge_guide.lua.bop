@@ -1,0 +1,479 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 293
+local Store = require("functions/forge/forge_store")
+local UIK = rawget(_G, "UIK")
+local function mod_loc(str) local f = rawget(_G, "mod_loc") return f and f(str) or str end
+local function forge_ui() return require("functions/forge/forge_ui") end
+
+local Guide = {}
+
+Guide.SEEN_KEY = "guide_seen"
+Guide.PAGES = {
+  {key = "start", label = "First steps"},
+  {key = "rules", label = "Rules"},
+  {key = "vars", label = "Variables"},
+  {key = "try", label = "Try it"},
+  {key = "share", label = "Sharing"},
+}
+Guide.state = Guide.state or {back_tab = nil, cur = nil}
+
+function Guide.index(key)
+  for i, p in ipairs(Guide.PAGES) do if p.key == key then return i end end
+  return nil
+end
+
+function Guide.next_key(key)
+  local i = Guide.index(key) or 0
+  local p = Guide.PAGES[i + 1]
+  return p and p.key or nil
+end
+
+function Guide.seen()
+  return Store.get_setting(Guide.SEEN_KEY, false) == true
+end
+
+function Guide.mark_seen()
+  Store.set_setting(Guide.SEEN_KEY, true)
+end
+
+local function thumb() return UIK.thumb() end
+local function port() return UIK.portrait() end
+local K = 1
+local function text_scale() return K * (port() and 0.48 or thumb() and 0.46 or 0.42) end
+local function head_scale() return K * (port() and 0.66 or thumb() and 0.62 or 0.56) end
+local function chip_scale() return K * (port() and 0.5 or thumb() and 0.46 or 0.42) end
+local function chip_h() return K * (port() and 0.8 or thumb() and 0.74 or 0.7) end
+local function gap_h() return K * (port() and 0.3 or 0.2) end
+local function line_h(s) return s * 1.05 + 0.04 end
+
+local function fit(label, w, scale)
+  local lw = UIK.text_w(label, scale)
+  if lw > w - 0.3 then return scale * (w - 0.3) / lw end
+  return scale
+end
+
+local function greedy(words, scale, limit)
+  local out, cur = {}, ""
+  for _, wd in ipairs(words) do
+    local try = cur == "" and wd or (cur .. " " .. wd)
+    if cur ~= "" and UIK.text_w(try, scale) > limit then
+      out[#out + 1] = cur
+      cur = wd
+    else
+      cur = try
+    end
+  end
+  if cur ~= "" then out[#out + 1] = cur end
+  return out
+end
+
+local function caps(wd)
+  return wd:find("%u") ~= nil and wd:find("%l") == nil
+end
+
+function Guide.words(str, plain)
+  local words = {}
+  for wd in tostring(str):gmatch("%S+") do
+    local last = words[#words]
+    if last and wd:match("^[:;!?]+$") then
+      words[#words] = last .. " " .. wd
+    elseif not plain and last and caps(last) and caps(wd) and #last:gsub("%A", "") + #wd:gsub("%A", "") > 2 then
+      words[#words] = last .. " " .. wd
+    else
+      words[#words + 1] = wd
+    end
+  end
+  return words
+end
+
+function Guide.balance(str, scale, w, plain)
+  local words = Guide.words(str, plain)
+  local need = #greedy(words, scale, w)
+  if need <= 1 then return {str} end
+  local lo, hi = UIK.text_w(str, scale) / need, w
+  for _ = 1, 14 do
+    local mid = (lo + hi) / 2
+    if #greedy(words, scale, mid) <= need then hi = mid else lo = mid end
+  end
+  return greedy(words, scale, hi)
+end
+
+local function say(str)
+  if type(str) == "table" then return string.format(mod_loc(str[1]), unpack(str, 2)) end
+  return mod_loc(str)
+end
+
+local function lines(str, w)
+  local s = text_scale()
+  return UIK.note(Guide.balance(say(str), s, w - 0.2), {w = w, scale = s, colour = UIK.C.text, nowrap = true})
+end
+
+local function chip(label, colour, w, cs)
+  local s = cs or fit(label, w, chip_scale())
+  return {n = G.UIT.R, config = {align = "cm", padding = 0.04}, nodes = {
+    {n = G.UIT.C, config = {align = "cm", minw = w, minh = chip_h(), r = 0.1, colour = colour, shadow = true, padding = 0.06}, nodes = {
+      UIK.text(label, {scale = s, shadow = true}),
+    }},
+  }}
+end
+
+local function word(str)
+  return {n = G.UIT.R, config = {align = "cm", padding = 0.02}, nodes = {UIK.text(mod_loc(str), {scale = chip_scale(), colour = UIK.C.title, shadow = true})}}
+end
+
+local function layout()
+  local W = UIK.W
+  if port() then
+    local cw = W - 0.8
+    return {w = cw, chip = math.min(cw - 1.2, 5.6), stack = true}
+  end
+  local gap = 0.35
+  local cw = (W - 1.0 - 2 * gap) / 3
+  return {w = cw, chip = cw - 0.15, gap = gap}
+end
+
+function Guide.chip_text_scale(list, w, base)
+  local s = base
+  for _, b in ipairs(list) do
+    local lw = UIK.text_w(b.chip, base)
+    if lw > w - 0.6 then s = math.min(s, base * (w - 0.6) / lw) end
+  end
+  return s
+end
+
+local function blocks(list, L)
+  local cols = {}
+  local cs = Guide.chip_text_scale(list, L.chip, chip_scale())
+  for _, b in ipairs(list) do
+    local nodes = {}
+    if b.word then nodes[#nodes + 1] = word(b.word) end
+    nodes[#nodes + 1] = chip(b.chip, b.colour, L.chip, cs)
+    nodes[#nodes + 1] = {n = G.UIT.R, config = {minh = 0.06}, nodes = {}}
+    nodes[#nodes + 1] = lines(b.text, L.w)
+    cols[#cols + 1] = {n = L.stack and G.UIT.R or G.UIT.C, config = {align = "tm", minw = L.w, padding = 0}, nodes = nodes}
+  end
+  if L.stack then
+    local rows = {}
+    for i, c in ipairs(cols) do
+      if i > 1 then rows[#rows + 1] = {n = G.UIT.R, config = {minh = gap_h()}, nodes = {}} end
+      rows[#rows + 1] = c
+    end
+    return {n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = {{n = G.UIT.C, config = {align = "tm", padding = 0}, nodes = rows}}}
+  end
+  local row = {}
+  for i, c in ipairs(cols) do
+    if i > 1 then row[#row + 1] = {n = G.UIT.C, config = {minw = L.gap}, nodes = {}} end
+    row[#row + 1] = c
+  end
+  return {n = G.UIT.R, config = {align = "tm", padding = 0}, nodes = row}
+end
+
+local function text_w() return port() and UIK.W - 0.8 or thumb() and UIK.W - 1.5 or math.min(UIK.W - 1.0, 12) end
+
+local function note_h(str, w)
+  local s = text_scale()
+  return #Guide.balance(say(str), s, w - 0.2) * line_h(s) + 0.08
+end
+
+function Guide.height(head, sub, list, foot)
+  local L = layout()
+  local tw = text_w()
+  local h = #Guide.balance(mod_loc(head), head_scale(), tw, true) * line_h(head_scale()) + 0.12
+  if sub then h = h + note_h(sub, tw) end
+  h = h + gap_h()
+  if list then
+    local most, sum = 0, 0
+    for _, b in ipairs(list) do
+      local bh = chip_h() + 0.08 + 0.06 + note_h(b.text, L.w)
+      if b.word then bh = bh + line_h(chip_scale()) end
+      most = math.max(most, bh)
+      sum = sum + bh
+    end
+    h = h + (L.stack and (sum + gap_h() * (#list - 1)) or most)
+  end
+  if foot then h = h + gap_h() + note_h(foot, tw) end
+  return h
+end
+
+function Guide.fit(head, sub, list, foot)
+  K = 1
+  local room = UIK.H - UIK.TOP - 0.3
+  while K > 0.78 and Guide.height(head, sub, list, foot) > room do K = K - 0.03 end
+  return K
+end
+
+local function page(head, sub, list, foot)
+  Guide.fit(head, sub, list, foot)
+  local L = layout()
+  local W = UIK.W
+  local tw = text_w()
+  local hl = {}
+  for _, l in ipairs(Guide.balance(mod_loc(head), head_scale(), tw, true)) do
+    hl[#hl + 1] = {n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = {UIK.text(l, {scale = head_scale(), colour = UIK.C.title, shadow = true})}}
+  end
+  local nodes = {
+    {n = G.UIT.R, config = {align = "cm", padding = 0.06}, nodes = {{n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = hl}}},
+  }
+  if sub then nodes[#nodes + 1] = lines(sub, tw) end
+  nodes[#nodes + 1] = {n = G.UIT.R, config = {minh = gap_h()}, nodes = {}}
+  if list then nodes[#nodes + 1] = blocks(list, L) end
+  if foot then
+    nodes[#nodes + 1] = {n = G.UIT.R, config = {minh = gap_h()}, nodes = {}}
+    nodes[#nodes + 1] = lines(foot, tw)
+  end
+  K = 1
+  return {n = G.UIT.R, config = {align = "cm", minw = W, minh = UIK.H - UIK.TOP - 0.05, padding = 0}, nodes = {
+    {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = nodes},
+  }}
+end
+
+Guide.BUILD = {
+  start = function()
+    return page("MAKE YOUR OWN CARDS", "Jokers, tarots, planets, decks, blinds and more, with your own rules and art.", {
+      {chip = mod_loc("Creations"), colour = UIK.C.accent, text = "Everything you made. Turn on Use in runs and it can show up in your solo runs."},
+      {chip = mod_loc("Builder"), colour = UIK.C.ok, text = "Pick what to make. Simple asks a few clear questions, Advanced shows every rule."},
+      {chip = mod_loc("Pixel editor"), colour = UIK.C.purple, text = "Draw the art of your card pixel by pixel, or keep the game art."},
+    })
+  end,
+  rules = function()
+    return page("A RULE IS ONE SENTENCE", "When a hand is played, if you have at least $5, give +4 Mult.", {
+      {word = "WHEN", chip = mod_loc("When a hand is played"), colour = G.C.ORANGE, text = "The moment it checks: a hand is played, a card scores, the round ends and more."},
+      {word = "IF", chip = mod_loc("Money: At least $5"), colour = G.C.BLUE, text = "What must be true. Leave it out and the rule works every time."},
+      {word = "DO", chip = mod_loc("+4 Mult"), colour = G.C.RED, text = "What it gives: Mult, Chips, money, cards and more."},
+    }, "OTHERWISE gives something else when the IF is not true. A card can have several rules: Rule 1, Rule 2 and so on.")
+  end,
+  vars = function()
+    return page("A VARIABLE IS A NUMBER THE CARD REMEMBERS", "Example: each scored card adds 1 to c, and the joker gives +[c] Mult.", {
+      {chip = mod_loc("+ Add a variable"), colour = UIK.C.ok, text = "In the Variables tab. Give it a short name like c and a start value. Jokers can also keep a suit, rank, hand and more."},
+      {chip = mod_loc("Variable"), colour = G.C.PURPLE, text = {"Next to %s in any number box. Press it, then pick the name with the arrows.", mod_loc("Type")}},
+      {chip = mod_loc("+[c] Mult"), colour = G.C.RED, text = "The card text shows +[c], and its last line shows the value right now."},
+    }, "A rule can also change a variable or check it. Removing or changing one fixes the boxes that used it.")
+  end,
+  try = function()
+    return page("TEST IT RIGHT AWAY", "No need to wait for it in the shop.", {
+      {chip = mod_loc("TRY IT IN A RUN"), colour = UIK.C.money, text = "In the Builder. Saves your card and starts a test run that gives it to you."},
+      {chip = mod_loc("Back to the Forge"), colour = G.C.PURPLE, text = "In the pause menu of the test run. Takes you back to keep editing."},
+      {chip = mod_loc("Use in runs"), colour = UIK.C.accent, text = "In Creations. When it is on, the card can show up in your normal solo runs."},
+    }, "SAVE and TRY IT IN A RUN wait until the problems the Builder lists are fixed. Creations are off in Ranked and speedruns, and Forge jokers stay out of the daily.")
+  end,
+  share = function()
+    return page("SHARE WHAT YOU MADE", "Send a file, put it online, or play it with friends.", {
+      {chip = mod_loc("EXPORT A MOD"), colour = UIK.C.warn, text = "In Creations. Pick creations and name the mod. It goes to Mods > Forged, with a .forgemod file to send."},
+      {chip = mod_loc("Publish"), colour = UIK.C.ok, text = "In Mods > Forged, on your own mod: puts it online. BROWSE ONLINE gets the mods other players made."},
+      {chip = mod_loc("Forge creations"), colour = UIK.C.accent, text = "In a multiplayer lobby the host turns it on: everyone plays with the host's creations. Off in Ranked."},
+    }, "Got a .forgemod file? Mods > Forged > IMPORT.")
+  end,
+}
+
+local function page_build(key)
+  return function()
+    local b = Guide.BUILD[key]
+    if b then return b() end
+    return page(Guide.PAGES[Guide.index(key)].label)
+  end
+end
+
+function Guide.tabs()
+  local out = {}
+  for _, p in ipairs(Guide.PAGES) do
+    out[#out + 1] = {key = p.key, label = mod_loc(p.label), build = page_build(p.key)}
+  end
+  return out
+end
+
+function Guide.footer_def(key)
+  local last = Guide.next_key(key) == nil
+  local label = mod_loc(last and "DONE" or "NEXT")
+  return {n = G.UIT.ROOT, config = {align = "cm", colour = G.C.CLEAR, padding = 0}, nodes = {
+    UIK.button{label = label, button = "forge_guide_next", colour = last and UIK.C.ok or UIK.C.accent, id = "forge_guide_next"},
+  }}
+end
+
+function Guide.refresh_footer()
+  local win = UIK._win
+  if not (win and win.id == "forge_guide") then return end
+  Guide.state.cur = win._cur
+r 32 1360 %20%20 -
+l 1
+  local e = G.OVERLAY_MENU:get_UIE_by_ID("forge_guide_footer")
+r 32 1300 %20%20 -
+l 23
+  if e.config.object then e.config.object:remove() end
+  e.config.object = UIBox{definition = Guide.footer_def(win._cur), config = {offset = {x = 0, y = 0}, parent = e, type = "cm"}}
+  G.OVERLAY_MENU:recalculate()
+end
+
+function Guide.definition(key)
+  local cur = Guide.index(key) and key or Guide.PAGES[1].key
+  Guide.state.cur = cur
+  return UIK.window{
+    id = "forge_guide",
+    title = mod_loc("FORGE GUIDE"),
+    tabs = Guide.tabs(),
+    tab = cur,
+    back_func = "forge_guide_back",
+    back_inline = "land",
+    footer = function() return {{n = G.UIT.O, config = {id = "forge_guide_footer", object = UIBox{definition = Guide.footer_def(cur), config = {offset = {x = 0, y = 0}}}}}} end,
+  }
+end
+
+function Guide.open(key, back_tab, back_to)
+  Guide.state.back_tab = back_tab
+  Guide.state.back_to = back_to or "forge"
+  if not Guide.seen() then Guide.mark_seen() end
+r 32 1381 %20%20 -
+l 150
+  local ok, err = pcall(function()
+    G.FUNCS.overlay_menu{definition = Guide.definition(key)}
+  end)
+  if not ok then print("[FORGE] guide could not open: " .. tostring(err)) end
+end
+
+function Guide.first_open(tab, from)
+  if Guide.seen() then return false end
+  local UI = forge_ui()
+  if from then UI.state.from = from end
+  Guide.open(nil, tab or "my")
+  return true
+end
+
+function Guide.leave()
+  local tab = Guide.state.back_tab or "my"
+  local to = Guide.state.back_to
+  Guide.state.back_tab, Guide.state.back_to = nil, nil
+  if to == "guide" and G.FUNCS.guide_back_to_guide_tab then return G.FUNCS.guide_back_to_guide_tab() end
+  forge_ui().open(tab)
+end
+
+G.FUNCS.forge_guide_back = function(e)
+  Guide.leave()
+end
+
+G.FUNCS.forge_guide_next = function(e)
+  local nk = Guide.next_key(Guide.state.cur)
+  if not nk then return Guide.leave() end
+  UIK.open_tab(nk)
+  Guide.refresh_footer()
+end
+
+function Guide.entry_button()
+  return UIK.button{label = mod_loc("GUIDE"), button = "forge_guide_open", colour = UIK.C.accent, id = "forge_guide_open"}
+end
+
+G.FUNCS.forge_guide_open = function(e)
+  local win = UIK._win
+  local tab = win and win.id == "forge" and win._cur or "my"
+  Guide.open(nil, tab)
+end
+
+if not Guide.hooked and G.FUNCS.uik_tab then
+  Guide.hooked = true
+  local orig_tab = G.FUNCS.uik_tab
+  G.FUNCS.uik_tab = function(e)
+    orig_tab(e)
+    if UIK._win and UIK._win.id == "forge_guide" then Guide.refresh_footer() end
+  end
+  local orig_forge = G.FUNCS.open_joker_forge
+  G.FUNCS.open_joker_forge = function(e)
+    if Guide.first_open("my", "tavern") then
+      forge_ui().state.page = 1
+      return
+    end
+    return orig_forge(e)
+  end
+  local orig_mods = G.FUNCS.forge_from_mods
+  G.FUNCS.forge_from_mods = function(e)
+    local tab = e and e.config and e.config.ref_table and e.config.ref_table.tab or "my"
+    if Guide.first_open(tab, "mods") then return end
+    return orig_mods(e)
+  end
+end
+
+G.FUNCS.open_guide_joker_forge = function(e)
+  Guide.open(nil, nil, "guide")
+end
+
+G.ESC_BACK_FUNCS = G.ESC_BACK_FUNCS or {}
+G.ESC_BACK_FUNCS.forge_guide_back = true
+
+local register = rawget(_G, "mod_loc_register")
+if register then
+  register{
+    fr = {
+      ["FORGE GUIDE"] = "GUIDE DE LA FORGE", ["GUIDE"] = "GUIDE", ["NEXT"] = "SUIVANT", ["DONE"] = "TERMINÉ",
+      ["First steps"] = "Débuter", ["Sharing"] = "Partager", ["Try it"] = "Essayer", ["When a hand is played"] = "Quand une main est jouée",
+      ["MAKE YOUR OWN CARDS"] = "CRÉEZ VOS PROPRES CARTES",
+      ["Jokers, tarots, planets, decks, blinds and more, with your own rules and art."] = "Jokers, tarots, planètes, jeux, blindes et plus, avec vos règles et vos dessins.",
+      ["Everything you made. Turn on Use in runs and it can show up in your solo runs."] = "Tout ce que vous avez fait. Activez Dans les parties pour le croiser en partie solo.",
+      ["Pick what to make. Simple asks a few clear questions, Advanced shows every rule."] = "Choisissez quoi créer. Simple pose quelques questions claires, Avancé montre chaque règle.",
+      ["Draw the art of your card pixel by pixel, or keep the game art."] = "Dessinez votre carte pixel par pixel, ou gardez le dessin du jeu.",
+      ["A RULE IS ONE SENTENCE"] = "UNE RÈGLE EST UNE PHRASE",
+      ["When a hand is played, if you have at least $5, give +4 Mult."] = "Quand une main est jouée, si vous avez au moins $5, donner +4 Multi.",
+      ["Money: At least $5"] = "Argent : au moins $5", ["+4 Mult"] = "+4 Multi",
+      ["The moment it checks: a hand is played, a card scores, the round ends and more."] = "Le moment où elle vérifie : une main est jouée, une carte marque, la manche finit, etc.",
+      ["What must be true. Leave it out and the rule works every time."] = "Ce qui doit être vrai. Sans condition, la règle marche à chaque fois.",
+      ["What it gives: Mult, Chips, money, cards and more."] = "Ce qu'elle donne : Multi, Jetons, argent, cartes et plus.",
+      ["OTHERWISE gives something else when the IF is not true. A card can have several rules: Rule 1, Rule 2 and so on."] = "SINON donne autre chose quand le SI n'est pas vrai. Une carte peut avoir plusieurs règles : Règle 1, Règle 2, etc.",
+      ["A VARIABLE IS A NUMBER THE CARD REMEMBERS"] = "UNE VARIABLE EST UN NOMBRE QUE LA CARTE RETIENT",
+      ["Example: each scored card adds 1 to c, and the joker gives +[c] Mult."] = "Exemple : chaque carte qui marque ajoute 1 à c, et le joker donne +[c] Multi.",
+      ["+[c] Mult"] = "+[c] Multi",
+      ["In the Variables tab. Give it a short name like c and a start value. Jokers can also keep a suit, rank, hand and more."] = "Dans l'onglet Variables. Donnez-lui un nom court comme c et une valeur de départ. Un joker peut aussi retenir une couleur, une valeur, une main et plus.",
+      ["Next to %s in any number box. Press it, then pick the name with the arrows."] = "À côté de %s dans chaque case de nombre. Appuyez dessus, puis choisissez le nom avec les flèches.",
+      ["The card text shows +[c], and its last line shows the value right now."] = "Le texte de la carte affiche +[c], et sa dernière ligne montre la valeur du moment.",
+      ["A rule can also change a variable or check it. Removing or changing one fixes the boxes that used it."] = "Une règle peut aussi changer une variable ou la vérifier. En retirer ou en changer une corrige les cases qui l'utilisaient.",
+      ["TEST IT RIGHT AWAY"] = "TESTEZ-LA TOUT DE SUITE",
+      ["No need to wait for it in the shop."] = "Pas besoin d'attendre qu'elle sorte en boutique.",
+      ["In the Builder. Saves your card and starts a test run that gives it to you."] = "Dans le Créateur. Enregistre votre carte et lance une partie de test qui vous la donne.",
+      ["In the pause menu of the test run. Takes you back to keep editing."] = "Dans le menu pause de la partie de test. Vous ramène pour continuer à la modifier.",
+      ["In Creations. When it is on, the card can show up in your normal solo runs."] = "Dans Créations. Activé, la carte peut sortir dans vos parties solo normales.",
+      ["SAVE and TRY IT IN A RUN wait until the problems the Builder lists are fixed. Creations are off in Ranked and speedruns, and Forge jokers stay out of the daily."] = "ENREGISTRER et ESSAYER EN PARTIE attendent que les problèmes listés par le Créateur soient réglés. Les créations sont coupées en classé et en speedrun, et les jokers Forge restent hors de la partie du jour.",
+      ["SHARE WHAT YOU MADE"] = "PARTAGEZ VOS CRÉATIONS",
+      ["Send a file, put it online, or play it with friends."] = "Envoyez un fichier, mettez-le en ligne, ou jouez-le entre amis.",
+      ["In Creations. Pick creations and name the mod. It goes to Mods > Forged, with a .forgemod file to send."] = "Dans Créations. Choisissez des créations et nommez le mod. Il va dans Mods > Forgés, avec un fichier .forgemod à envoyer.",
+      ["In Mods > Forged, on your own mod: puts it online. BROWSE ONLINE gets the mods other players made."] = "Dans Mods > Forgés, sur votre mod : le met en ligne. EN LIGNE récupère les mods des autres joueurs.",
+      ["In a multiplayer lobby the host turns it on: everyone plays with the host's creations. Off in Ranked."] = "Dans un salon multijoueur, l'hôte l'active : tout le monde joue avec ses créations. Coupé en classé.",
+      ["Got a .forgemod file? Mods > Forged > IMPORT."] = "Un fichier .forgemod ? Mods > Forgés > IMPORTER.",
+    },
+    es = {
+      ["FORGE GUIDE"] = "GUÍA DE LA FORJA", ["GUIDE"] = "GUÍA", ["NEXT"] = "SIGUIENTE", ["DONE"] = "LISTO",
+      ["First steps"] = "Empezar", ["Sharing"] = "Compartir", ["Try it"] = "Probar", ["When a hand is played"] = "Cuando se juega una mano",
+      ["MAKE YOUR OWN CARDS"] = "CREA TUS PROPIAS CARTAS",
+      ["Jokers, tarots, planets, decks, blinds and more, with your own rules and art."] = "Jokers, tarots, planetas, barajas, ciegas y más, con tus reglas y tu dibujo.",
+      ["Everything you made. Turn on Use in runs and it can show up in your solo runs."] = "Todo lo que hiciste. Activa En las partidas y puede salir en tus partidas solo.",
+      ["Pick what to make. Simple asks a few clear questions, Advanced shows every rule."] = "Elige qué crear. Simple hace unas preguntas claras, Avanzado muestra cada regla.",
+      ["Draw the art of your card pixel by pixel, or keep the game art."] = "Dibuja tu carta píxel a píxel, o deja el dibujo del juego.",
+      ["A RULE IS ONE SENTENCE"] = "UNA REGLA ES UNA FRASE",
+      ["When a hand is played, if you have at least $5, give +4 Mult."] = "Cuando se juega una mano, si tienes al menos $5, da +4 multi.",
+      ["Money: At least $5"] = "Dinero: al menos $5", ["+4 Mult"] = "+4 multi",
+      ["The moment it checks: a hand is played, a card scores, the round ends and more."] = "El momento en que mira: se juega una mano, una carta anota, acaba la ronda y más.",
+      ["What must be true. Leave it out and the rule works every time."] = "Lo que debe cumplirse. Sin condición, la regla funciona siempre.",
+      ["What it gives: Mult, Chips, money, cards and more."] = "Lo que da: multi, fichas, dinero, cartas y más.",
+      ["OTHERWISE gives something else when the IF is not true. A card can have several rules: Rule 1, Rule 2 and so on."] = "SI NO da otra cosa cuando el SI no se cumple. Una carta puede tener varias reglas: Regla 1, Regla 2, etc.",
+      ["A VARIABLE IS A NUMBER THE CARD REMEMBERS"] = "UNA VARIABLE ES UN NÚMERO QUE LA CARTA RECUERDA",
+      ["Example: each scored card adds 1 to c, and the joker gives +[c] Mult."] = "Ejemplo: cada carta que anota suma 1 a c, y el joker da +[c] multi.",
+      ["+[c] Mult"] = "+[c] multi",
+      ["In the Variables tab. Give it a short name like c and a start value. Jokers can also keep a suit, rank, hand and more."] = "En la pestaña Variables. Ponle un nombre corto como c y un valor inicial. Un joker también puede guardar un palo, un valor, una mano y más.",
+      ["Next to %s in any number box. Press it, then pick the name with the arrows."] = "Junto a %s en cualquier casilla de número. Púlsalo y elige el nombre con las flechas.",
+      ["The card text shows +[c], and its last line shows the value right now."] = "El texto de la carta muestra +[c], y su última línea muestra el valor de ahora.",
+      ["A rule can also change a variable or check it. Removing or changing one fixes the boxes that used it."] = "Una regla también puede cambiar una variable o mirarla. Quitar o cambiar una arregla las casillas que la usaban.",
+      ["TEST IT RIGHT AWAY"] = "PRUÉBALA AL MOMENTO",
+      ["No need to wait for it in the shop."] = "No hace falta esperar a que salga en la tienda.",
+      ["In the Builder. Saves your card and starts a test run that gives it to you."] = "En el Creador. Guarda tu carta y empieza una partida de prueba que te la da.",
+      ["In the pause menu of the test run. Takes you back to keep editing."] = "En el menú de pausa de la partida de prueba. Te devuelve para seguir editando.",
+      ["In Creations. When it is on, the card can show up in your normal solo runs."] = "En Creaciones. Activado, la carta puede salir en tus partidas solo normales.",
+      ["SAVE and TRY IT IN A RUN wait until the problems the Builder lists are fixed. Creations are off in Ranked and speedruns, and Forge jokers stay out of the daily."] = "GUARDAR y PROBAR EN PARTIDA esperan a que se arreglen los problemas que lista el Creador. Las creaciones no van en clasificatoria ni en speedrun, y los jokers de la Forja no salen en la diaria.",
+      ["SHARE WHAT YOU MADE"] = "COMPARTE LO QUE HICISTE",
+      ["Send a file, put it online, or play it with friends."] = "Envía un archivo, súbelo en línea o juégalo con amigos.",
+      ["In Creations. Pick creations and name the mod. It goes to Mods > Forged, with a .forgemod file to send."] = "En Creaciones. Elige creaciones y ponle nombre al mod. Va a Mods > Forjados, con un archivo .forgemod para enviar.",
+      ["In Mods > Forged, on your own mod: puts it online. BROWSE ONLINE gets the mods other players made."] = "En Mods > Forjados, en tu mod: lo sube en línea. EN LÍNEA trae los mods de otros jugadores.",
+      ["In a multiplayer lobby the host turns it on: everyone plays with the host's creations. Off in Ranked."] = "En una sala multijugador lo activa el anfitrión: todos juegan con sus creaciones. No va en clasificatoria.",
+      ["Got a .forgemod file? Mods > Forged > IMPORT."] = "¿Tienes un archivo .forgemod? Mods > Forjados > IMPORTAR.",
+    },
+  }
+end
+
+return Guide
+end

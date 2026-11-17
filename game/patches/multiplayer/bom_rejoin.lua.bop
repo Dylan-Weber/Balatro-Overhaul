@@ -387,7 +387,7 @@ r 19 1 - -
 l 1
 require "love.data"
 r 20 6 - -
-l 742
+l 740
 require("love.filesystem")
 local ok_req = pcall(require, "engine/string_packer")
 local cin = love.thread.getChannel("bo_rejoin_pack_in")
@@ -637,23 +637,21 @@ local function toast_scale(text)
     return scale
 end
 
-local function toast_line(text, y)
-    if not (G and G.ROOM_ATTACH and bom_ui and bom_ui.top_text) then return end
-    bom_ui.top_text({text = text, scale = toast_scale(text), hold = 3.5, major = G.ROOM_ATTACH, align = "cm", offset = {x = 0, y = y},
-        backdrop_colour = G.C.BLACK, silent = true})
-end
+R.TOAST_KEY = "server_restart"
 
 local function show_toast(text)
     if not text then return end
-    G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.8, timer = "REAL", blocking = false, blockable = false, func = function()
+    G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.8, timer = "REAL", pause_force = true, blocking = false, blockable = false, func = function()
         pcall(function()
+            if not (G and G.ROOM_ATTACH and bom_ui and bom_ui.top_text) then return end
+            local scale, lines = toast_scale(text), nil
             local a, b = text:match("^(.-[%.!?])%s+(.+)$")
-            if a and toast_scale(text) < 0.45 then
-                toast_line(a, -3.55)
-                toast_line(b, -2.85)
-            elseif bom_ui and bom_ui.l4_toast then
-                bom_ui.l4_toast(text, nil, toast_scale(text))
+            if a and scale < 0.45 then
+                lines = {a, b}
+                scale = math.min(toast_scale(a), toast_scale(b))
             end
+            bom_ui.top_text({text = text, lines = lines, key = R.TOAST_KEY, scale = scale, hold = 3.5, major = G.ROOM_ATTACH, align = "cm",
+                offset = {x = 0, y = -3.2}, backdrop_colour = G.C.BLACK, silent = true})
         end)
         return true
     end}))
@@ -1195,7 +1193,7 @@ l 11
         dbg("no usable snapshot, starting the run from the match seed")
         bom_room.do_mp_start_run(d.seed, "rejoin")
 r 1 112 %20%20%20%20%20%20%20%20 -
-l 366
+l 375
             trigger = "immediate",
             no_delete = true,
             func = function()
@@ -1376,15 +1374,24 @@ function R.on_shutdown()
     end)
 end
 
+local function events_busy()
+    local q = G.E_MANAGER and G.E_MANAGER.queues and G.E_MANAGER.queues.base
+    if not q then return false end
+    for i = 1, #q do
+        if q[i].blocking and not q[i].complete then return true end
+    end
+    return false
+end
+
 local function pvp_watchdog(t)
     local hud = bom_pvp_hud
     if not hud or not in_live_match() or R.rc.active or not bom_core.is_connected() then
         R.pvp_resend_at, R.end_pvp_at = nil, nil
         return
     end
-    if bom_match.is_end_pvp() then
+    if bom_match.is_end_pvp() and bom_nemesis and bom_nemesis.in_unresolved_pvp_blind() then
         R.end_pvp_at = R.end_pvp_at or t + 3
-        if t >= R.end_pvp_at and G.GAME and (G.GAME.STOP_USE or 0) > 0 then
+        if t >= R.end_pvp_at and G.GAME and (G.GAME.STOP_USE or 0) > 0 and not events_busy() then
             dbg("PvP result was waiting on STOP_USE, cleared")
             G.GAME.STOP_USE = 0
         end

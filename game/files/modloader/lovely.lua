@@ -17,6 +17,7 @@ local Engine = {
 local LATE_MISS = "overhaul late patch "
 
 local function late_miss(id, target, why)
+    if Engine.late_global then Engine.late_global[id] = "miss" end
     for _, m in ipairs(Engine.late_misses) do
         if m.id == id and m.target == target then return end
     end
@@ -296,6 +297,27 @@ local function remove_tree(path)
     love.filesystem.remove(path)
 end
 
+function Engine.layer_of(path)
+    local fs = love.filesystem
+    if not fs.getRealDirectory then return nil end
+    local ok, dir = pcall(fs.getRealDirectory, path)
+    return ok and type(dir) == "string" and dir or nil
+end
+
+function Engine.home_only(dir, paths)
+    local home = Engine.layer_of("modloader/lovely.lua")
+    if not home then return paths, {} end
+    local fs = love.filesystem
+    local save = fs.getSaveDirectory and fs.getSaveDirectory() or nil
+    local kept, stale = {}, {}
+    for _, path in ipairs(paths) do
+        local here = Engine.layer_of(path)
+        if here and here ~= home and here ~= save then stale[#stale + 1] = path else kept[#kept + 1] = path end
+    end
+    for _, path in ipairs(stale) do print("[lovely] ignored " .. path .. ": left over from an older install") end
+    return kept, stale
+end
+
 function Engine.load(mods_dir, opts)
     opts = opts or {}
     Engine.mods_dir = mods_dir
@@ -304,6 +326,8 @@ function Engine.load(mods_dir, opts)
     Engine._inputs = {}
     Engine.opts = opts
     Engine.late_misses, Engine.skip_late = {}, {}
+    Engine.late_global, Engine.late_target = {}, {}
+    Engine.has_fork = next(opts.extra or {}) ~= nil
     Engine.dump_dir = nil
     if opts.dump then
         Engine.dump_dir = mods_dir .. "/lovely/dump"
@@ -356,6 +380,7 @@ function Engine.load(mods_dir, opts)
             table.sort(tomls, lower_cmp)
             for _, f in ipairs(tomls) do files[#files + 1] = mod_dir .. "/lovely/" .. f end
         end
+        if opts.extra and opts.extra[name] == mod_dir then files = Engine.home_only(mod_dir, files) end
         for _, file in ipairs(files) do
             Engine.load_patch_file(file, mod_dir, read_file(file) or "")
         end
@@ -398,6 +423,23 @@ local function vars_key()
     return Engine.hash(table.concat(parts, "\0"))
 end
 
+local function cross_key(target)
+    local parts = {}
+    for _, p in ipairs(Engine.patches) do
+        if p.late and p.requires and p.target == target then
+            for _, entry in ipairs(as_list(p.requires)) do
+                for id in tostring(entry):gmatch("[^|]+") do
+                    local other = Engine.late_target[id]
+                    if other and other ~= target and Engine.late_global[id] == "miss" then parts[#parts + 1] = id end
+                end
+            end
+        end
+    end
+    if #parts == 0 then return "" end
+    table.sort(parts)
+    return "x" .. Engine.hash(table.concat(parts, "\0"))
+end
+
 local WSEP = "\0\n"
 
 function Engine.dump_name(name)
@@ -435,7 +477,7 @@ function Engine.patch_cached(name, buffer)
     local dir = Engine.cache_dir
     if not dir then return patch_uncached(name, buffer) end
     local base = dir .. "/" .. Engine.hash(target)
-    local key = Engine.hash(buffer) .. vars_key()
+    local key = Engine.hash(buffer) .. vars_key() .. cross_key(target)
     local meta = love.filesystem.read(base .. ".meta")
     if meta then
         local mkey, count, warns = meta:match("^([^\n]*)\n(%d+)\n(.*)$")
@@ -451,7 +493,10 @@ function Engine.patch_cached(name, buffer)
                     local w = warns:sub(pos, a - 1)
                     Engine.warnings[#Engine.warnings + 1] = w
                     local id, t = w:match("^" .. LATE_MISS .. "(.-) missed on (.*)$")
-                    if id then late_miss(id, t, "no match") end
+                    if id then
+                        local t2, need = t:match("^(.-) %(needs (.-)%)$")
+                        late_miss(id, t2 or t, need and ("needs " .. need) or "no match")
+                    end
                     if Engine.on_warn then pcall(Engine.on_warn, w) end
                     pos = b + 1
                 end
@@ -491,6 +536,7 @@ function Engine.load_patch_file(file, mod_dir, content, late)
             if late then
                 p.late = true
                 p.id = p.id or (file .. "#" .. i)
+                if type(p.target) == "string" then Engine.late_target[p.id] = p.target end
                 if kind ~= "pattern" and kind ~= "regex" then
                     warn("late patch " .. p.id .. " in " .. file .. " is a " .. kind .. " patch, only pattern and regex are allowed")
                     valid = false
@@ -531,6 +577,33 @@ function Engine.load_patch_file(file, mod_dir, content, late)
     end
 end
 
+function Engine.missing_requires(p, state, skip)
+    if skip and skip[p.id] then return skip[p.id].entry, skip[p.id].quiet end
+    local quiet, first, pending = true, nil, nil
+    for _, entry in ipairs(as_list(p.requires)) do
+        local good, open, loud = false, false, false
+        for id in tostring(entry):gmatch("[^|]+") do
+            local st = state[id]
+            local other = Engine.late_target and Engine.late_target[id]
+            if st == nil and other and other ~= p.target then
+                st = Engine.late_global[id] == "miss" and "miss" or "ok"
+            end
+            if st == "ok" then good = true elseif st == nil then open = true elseif st ~= "absent" then loud = true end
+        end
+        if not good then
+            if open then
+                pending = pending or {}
+                pending[#pending + 1] = tostring(entry)
+            else
+                first = first or tostring(entry)
+                if loud then quiet = false end
+            end
+        end
+    end
+    if first then return first, quiet end
+    return nil, nil, pending
+end
+
 local function can_apply(p, target)
     for _, t in ipairs(as_list(p.target)) do
         if t == target then return true end
@@ -544,7 +617,7 @@ function Engine.needs_patching(name)
     return Engine.targets[name] == true
 end
 
-function Engine.apply_patches(name, buffer)
+function Engine.apply_patches(name, buffer, skip)
     if LOADING_SCREEN then pcall(LOADING_SCREEN.draw, "Patching game files") end
     local target = name:sub(1, 1) == "@" and name:sub(2) or name
     if not Engine.targets[target] then return buffer end
@@ -575,11 +648,45 @@ function Engine.apply_patches(name, buffer)
         count = count + 1
     end
     local lines, trimmed
+    local late_state, assumed, retry = {}, {}, {}
+    local has_late = #late > 0
+    local nwarn0, nmiss0, nrec0 = #Engine.warnings, #Engine.late_misses, Engine.misses and #Engine.misses
     for _, p in ipairs(textual) do
-        local ok
+        local ok, absent, needs
         if LOADING_SCREEN then pcall(LOADING_SCREEN.draw) end
         local nwarn = #Engine.warnings
-        quiet_no_match = p.late and p.optional == true
+        local pending
+        if p.late then needs, absent, pending = Engine.missing_requires(p, late_state, skip) end
+        if needs then
+            ok = false
+        else
+            quiet_no_match = p.late and p.optional == true
+            if p.kind == "pattern" then
+                if not lines then lines = split_raw_lines(text); trimmed = {} end
+                lines, ok, trimmed = apply_pattern(p, lines, target, trimmed)
+                text = nil
+            else
+                if lines then text = table.concat(lines); lines = nil; trimmed = nil end
+                text, ok = apply_regex(p, text, target)
+            end
+            absent = quiet_no_match and not ok and #Engine.warnings == nwarn
+            quiet_no_match = false
+        end
+        if ok then count = count + 1 end
+        if not ok and not p.late and has_late and #Engine.warnings == nwarn + 1 and Engine.warnings[#Engine.warnings]:find("resulted in no matches", 1, true) then
+            retry[#retry + 1] = {p = p, warning = #Engine.warnings, miss = Engine.misses and #Engine.misses}
+        end
+        if ok and pending then assumed[#assumed + 1] = {id = p.id, entries = pending} end
+        if p.late then late_state[p.id] = ok and "ok" or absent and "absent" or "miss" end
+        if p.late and not absent and (not ok or #Engine.warnings > nwarn) then
+            late_miss(p.id, target, needs and ("needs " .. needs) or "no match")
+            warn(LATE_MISS .. p.id .. " missed on " .. target .. (needs and (" (needs " .. needs .. ")") or ""), needs and p or nil, target, 0)
+        end
+    end
+    local drop_warn, drop_miss = {}, {}
+    for _, r in ipairs(retry) do
+        local p, ok = r.p, false
+        quiet_no_match = true
         if p.kind == "pattern" then
             if not lines then lines = split_raw_lines(text); trimmed = {} end
             lines, ok, trimmed = apply_pattern(p, lines, target, trimmed)
@@ -588,15 +695,52 @@ function Engine.apply_patches(name, buffer)
             if lines then text = table.concat(lines); lines = nil; trimmed = nil end
             text, ok = apply_regex(p, text, target)
         end
-        local absent = quiet_no_match and not ok and #Engine.warnings == nwarn
         quiet_no_match = false
-        if ok then count = count + 1 end
-        if p.late and not absent and (not ok or #Engine.warnings > nwarn) then
-            late_miss(p.id, target, "no match")
-            warn(LATE_MISS .. p.id .. " missed on " .. target)
+        if ok then
+            count = count + 1
+            drop_warn[r.warning] = true
+            if r.miss then drop_miss[r.miss] = true end
         end
     end
+    for i = #Engine.warnings, 1, -1 do if drop_warn[i] then table.remove(Engine.warnings, i) end end
+    if Engine.misses then
+        for i = #Engine.misses, 1, -1 do if drop_miss[i] then table.remove(Engine.misses, i) end end
+    end
     if lines then text = table.concat(lines) end
+    local redo
+    for _, a in ipairs(assumed) do
+        for _, entry in ipairs(a.entries) do
+            local good, quiet = false, true
+            for id in entry:gmatch("[^|]+") do
+                if late_state[id] == "ok" then good = true elseif late_state[id] ~= "absent" then quiet = false end
+            end
+            if not good then
+                redo = redo or {}
+                for k, v in pairs(skip or {}) do redo[k] = v end
+                redo[a.id] = {entry = entry, quiet = quiet}
+                break
+            end
+        end
+    end
+    if redo then
+        for i = #Engine.warnings, nwarn0 + 1, -1 do Engine.warnings[i] = nil end
+        for i = #Engine.late_misses, nmiss0 + 1, -1 do Engine.late_misses[i] = nil end
+        if nrec0 and Engine.misses then for i = #Engine.misses, nrec0 + 1, -1 do Engine.misses[i] = nil end end
+        return Engine.apply_patches(name, buffer, redo)
+    end
+    local groups = {}
+    for _, p in ipairs(late) do
+        if type(p.needed) == "string" and (p.needed_when ~= "fork" or Engine.has_fork) then
+            if groups[p.needed] == nil then groups[#groups + 1] = p.needed; groups[p.needed] = false end
+            if late_state[p.id] == "ok" then groups[p.needed] = true end
+        end
+    end
+    for _, group in ipairs(groups) do
+        if not groups[group] then
+            late_miss(group, target, "no variant applied")
+            warn(LATE_MISS .. group .. " missed on " .. target)
+        end
+    end
     local out = {}
     for _, line in ipairs(split_inclusive(text)) do
         out[#out + 1] = line:gsub("{{lovely:([%w_]+)}}", function(var)
@@ -736,11 +880,73 @@ function Engine.late_for(target)
     return list
 end
 
+function Engine.salvage_late(target, code, chunkname)
+    local order = {}
+    for _, p in ipairs(Engine.late_for(target)) do if p.id then order[#order + 1] = p end end
+    stable_by_priority(order)
+    local n = #order
+    if n == 0 then return nil end
+    local dropped = {}
+    local nw, nl, nm = #Engine.warnings, #Engine.late_misses, Engine.misses and #Engine.misses
+    local function rewind()
+        for i = #Engine.warnings, nw + 1, -1 do Engine.warnings[i] = nil end
+        for i = #Engine.late_misses, nl + 1, -1 do Engine.late_misses[i] = nil end
+        if nm and Engine.misses then for i = #Engine.misses, nm + 1, -1 do Engine.misses[i] = nil end end
+    end
+    local function try(upto)
+        local skip = {}
+        for id in pairs(dropped) do skip[id] = {entry = "a working " .. target, quiet = true} end
+        for i = upto + 1, n do skip[order[i].id] = {entry = "later patches", quiet = true} end
+        local ok, out = pcall(Engine.apply_patches, target, code, skip)
+        rewind()
+        if ok and type(out) == "string" and raw_loadstring(out, chunkname) then return out end
+    end
+    if not try(0) then return nil end
+    local lo, guard = 0, 0
+    while guard < 2 * n + 2 do
+        guard = guard + 1
+        if try(n) then break end
+        local a, b = lo, n
+        while b - a > 1 do
+            local m = math.floor((a + b) / 2)
+            if try(m) then a = m else b = m end
+        end
+        local found
+        for j = b + 1, math.min(n, b + 8) do
+            if try(j) then found = j break end
+        end
+        if found then
+            lo = found
+        else
+            dropped[order[b].id] = true
+            lo = a
+        end
+    end
+    local skip = {}
+    for id in pairs(dropped) do skip[id] = {entry = "a working " .. target, quiet = true} end
+    local ok, out = pcall(Engine.apply_patches, target, code, skip)
+    local fn = ok and type(out) == "string" and raw_loadstring(out, chunkname)
+    if not fn then rewind() return nil end
+    local list = {}
+    for _, p in ipairs(order) do
+        if dropped[p.id] then
+            list[#list + 1] = p.id
+            late_miss(p.id, target, "broke the file")
+        end
+    end
+    return fn, list
+end
+
 function Engine.compile_patched(target, code, chunkname)
     local fn, err = raw_loadstring(Engine.patch_cached(target, code), chunkname)
     if fn then return fn end
     local late = Engine.late_for(target)
     if #late > 0 and not Engine.skip_late[target] then
+        local ok_s, fn_s, list = pcall(Engine.salvage_late, target, code, chunkname)
+        if ok_s and fn_s then
+            warn("overhaul late patches broke " .. target .. ", loaded it without " .. table.concat(list, ", ") .. ": " .. tostring(err))
+            return fn_s
+        end
         Engine.skip_late[target] = true
         local ok, out = pcall(Engine.apply_patches, target, code)
         local fn2 = ok and type(out) == "string" and raw_loadstring(out, chunkname)

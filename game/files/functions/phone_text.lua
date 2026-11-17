@@ -1,8 +1,3 @@
-BOP 1
-eol lf
-final 1
-base 0
-l 128
 PHONE_TEXT = PHONE_TEXT or {}
 local P = PHONE_TEXT
 
@@ -131,14 +126,13 @@ end
 if UIBox and not P.hooked then
   P.hooked = true
   local raw_init = UIBox.init
-r 29 18 %20%20 -
-l 69
+  function UIBox:init(args, ...)
     if args and type(args.definition) == 'table' and P.wanted(args) then
       local pop = P.popup or (args.config and args.config.instance_type == 'POPUP')
       local ok, err = pcall(P.boost, args.definition, P.unit(), P.floor_px(pop and P.POPUP_FLOOR or nil), pop and P.POPUP_MAX_K or nil)
       if not ok then print('[PHONE_TEXT] ' .. tostring(err)) end
     end
-    return raw_init(self, args)
+    return raw_init(self, args, ...)
   end
   local raw_pop = G.UIDEF and G.UIDEF.card_h_popup
   if raw_pop then
@@ -202,13 +196,12 @@ end
 if UIBox and not P.eval_hooked then
   P.eval_hooked = true
   local raw_add = UIBox.add_child
-r 29 330 %20%20 -
-l 239
+  function UIBox:add_child(node, parent, ...)
     local id = type(node) == 'table' and node.config and node.config.id
     if self == G.round_eval and type(node) == 'table' and node.n ~= G.UIT.T and not (type(id) == 'string' and id:find('^dollar_row')) and P.on() and P.unit() then
       pcall(P.boost, node, P.unit(), P.floor_px())
     end
-    return raw_add(self, node, parent)
+    return raw_add(self, node, parent, ...)
   end
 end
 
@@ -442,5 +435,4 @@ if not P.prefix_wrapped and G.FUNCS and type(G.FUNCS.HUD_blind_debuff_prefix) ==
     end
     return r
   end
-end
 end

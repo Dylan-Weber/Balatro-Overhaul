@@ -59,7 +59,7 @@ function bom_room.create(visibility)
     bom_room.retry = function() bom_room.create(visibility) end
     bom_core.connect(function()
         bom_core.send({ type = "create_room", visibility = visibility, mods = bom_core.mods_field(visibility == "public"),
-            version = bom_room.game_version(), name = my_profile_name() })
+            version = bom_room.game_version(), name = my_profile_name(), deck_filter = bom_core.deck_filter_field() })
     end)
 end
 
@@ -111,7 +111,7 @@ function bom_room.join(code, opts)
     local token = bom_room.held_token(bom_room.last_join.code, opts.id)
     bom_core.connect(function()
         bom_core.send({ type = "join_room", code = bom_room.last_join.code, id = opts.id, mods = bom_core.mods_field(),
-            version = bom_room.game_version(), name = my_profile_name(), token = token })
+            version = bom_room.game_version(), name = my_profile_name(), token = token, deck_filter = bom_core.deck_filter_field() })
     end)
 end
 
@@ -225,7 +225,7 @@ l 12
         { n = G.UIT.R, config = { align = "cm", minh = 0.8, padding = 0.1 }, nodes = {
             create_text_input({
 r 30 5387 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 542
+l 552
                 ref_table = profile, ref_value = 'name', extended_corpus = true, keyboard_offset = 2,
             }),
         }},
@@ -391,7 +391,7 @@ function bom_room.find_match()
     end
     bom_core.connect(function()
         pcall(function() if bom_ui and bom_ui.hide_connecting_screen then bom_ui.hide_connecting_screen() end end)
-        bom_core.send({ type = "find_match", mods = bom_core.mods_field(true), version = bom_room.game_version(), name = my_profile_name() })
+        bom_core.send({ type = "find_match", mods = bom_core.mods_field(true), version = bom_room.game_version(), name = my_profile_name(), deck_filter = bom_core.deck_filter_field() })
         pcall(function()
             if bom_ui and bom_ui.show_searching_screen then
                 bom_ui.show_searching_screen()
@@ -467,6 +467,7 @@ function bom_room.on_room_ready(data)
         st.guest_held = nil
         st.opp_ready = false
         st.my_ready = false
+        st.opp_deck_filter = nil
         st.profile_sent = false
         pcall(function() bom_match.sync_settings() end)
         bom_core.send({ type = "player_name", name = st.my_name or "Player" })
@@ -475,6 +476,7 @@ function bom_room.on_room_ready(data)
             player = build_player_profile(),
             mp_version = MP_PROTOCOL_VERSION or 0,
             version = VERSION or "unknown",
+            deck_filter = bom_core.deck_filter_field(),
         })
         st.profile_sent = true
         pcall(function()
@@ -516,6 +518,7 @@ function bom_room.on_room_ready(data)
         player = player_profile,
         mp_version = MP_PROTOCOL_VERSION or 0,
         version = VERSION or "unknown",
+        deck_filter = bom_core.deck_filter_field(),
     })
     pcall(function()
         if bom_match then
@@ -571,6 +574,9 @@ function bom_room.on_opponent_profile(data)
         if bom_match and bom_match.set_opponent_profile then
             bom_match.set_opponent_profile(data.player)
         end
+        if bom_match and bom_match.on_opponent_deck_filter then
+            bom_match.on_opponent_deck_filter(data.deck_filter)
+        end
     end)
 
     pcall(function()
@@ -588,6 +594,7 @@ function bom_room.on_opponent_profile(data)
                 player = player_profile,
                 mp_version = MP_PROTOCOL_VERSION or 0,
                 version = VERSION or "unknown",
+                deck_filter = bom_core.deck_filter_field(),
             })
             state.profile_sent = true
         end
@@ -641,6 +648,9 @@ function bom_room.on_opponent_ready(data)
     pcall(function()
         if bom_match and bom_match.on_opponent_ready then
             bom_match.on_opponent_ready(data.ready)
+        end
+        if bom_match and bom_match.on_opponent_deck_filter then
+            bom_match.on_opponent_deck_filter(data.deck_filter)
         end
     end)
 

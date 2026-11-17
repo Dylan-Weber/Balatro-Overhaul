@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 220
+l 233
 local E = {}
 
 E.V = 9
@@ -18,14 +18,17 @@ local JOKERS = {
   en = {any = "Jokers with an edition", any1 = "Joker with an edition", ed = "{C:dark_edition}%s{} Jokers", ed1 = "{C:dark_edition}%s{} Joker",
     have = "you have %s {C:attention}%d{} %s", count = "%s you have",
     make = "create {C:attention}%d{} random {C:dark_edition}%s{} Jokers", make1 = "create a random {C:dark_edition}%s{} Joker",
+    add = "add {C:dark_edition}%s{} to {C:attention}%d{} random Jokers without an edition", add1 = "add {C:dark_edition}%s{} to a random Joker without an edition",
     draw = "draw {C:attention}%d{} cards", draw1 = "draw {C:attention}1{} card"},
   fr = {any = "Jokers avec une édition", any1 = "Joker avec une édition", ed = "Jokers {C:dark_edition}%s{}", ed1 = "Joker {C:dark_edition}%s{}",
     have = "vous avez %s {C:attention}%d{} %s", count = "%s possédé",
     make = "crée {C:attention}%d{} Jokers {C:dark_edition}%s{} au hasard", make1 = "crée un Joker {C:dark_edition}%s{} au hasard",
+    add = "ajoute {C:dark_edition}%s{} à {C:attention}%d{} Jokers sans édition au hasard", add1 = "ajoute {C:dark_edition}%s{} à un Joker sans édition au hasard",
     draw = "pioche {C:attention}%d{} cartes", draw1 = "pioche {C:attention}1{} carte"},
   es = {any = "comodines con edición", any1 = "comodín con edición", ed = "comodines {C:dark_edition}%s{}", ed1 = "comodín {C:dark_edition}%s{}",
     have = "tienes %s {C:attention}%d{} %s", count = "%s que tienes",
     make = "crea {C:attention}%d{} comodines {C:dark_edition}%s{} al azar", make1 = "crea un comodín {C:dark_edition}%s{} al azar",
+    add = "añade {C:dark_edition}%s{} a {C:attention}%d{} comodines sin edición al azar", add1 = "añade {C:dark_edition}%s{} a un comodín sin edición al azar",
     draw = "roba {C:attention}%d{} cartas", draw1 = "roba {C:attention}1{} carta"},
 }
 
@@ -36,7 +39,7 @@ local LOC = {
     ["Makes {C:attention}%d{} random Jokers with {C:dark_edition}%s{}"] = "Crée {C:attention}%d{} Jokers {C:dark_edition}%s{} au hasard",
     ["Makes a random {C:dark_edition}%s{} Joker"] = "Crée un Joker {C:dark_edition}%s{} au hasard",
     ["Draw {C:attention}%d{} cards"] = "Piochez {C:attention}%d{} cartes", ["Draw {C:attention}1{} card"] = "Piochez {C:attention}1{} carte",
-    ["Edition on every card"] = "Édition sur chaque carte", ["As usual"] = "Comme d'habitude",
+    ["Edition on every card"] = "Édition sur chaque carte", ["Edition on a random Joker"] = "Édition sur un Joker au hasard", ["As usual"] = "Comme d'habitude",
   },
   es = {
     ["Jokers with an edition"] = "Comodines con edición", ["Any edition"] = "Cualquier edición", ["WHICH EDITION?"] = "¿QUÉ EDICIÓN?",
@@ -44,7 +47,7 @@ local LOC = {
     ["Makes {C:attention}%d{} random Jokers with {C:dark_edition}%s{}"] = "Crea {C:attention}%d{} comodines {C:dark_edition}%s{} al azar",
     ["Makes a random {C:dark_edition}%s{} Joker"] = "Crea un comodín {C:dark_edition}%s{} al azar",
     ["Draw {C:attention}%d{} cards"] = "Roba {C:attention}%d{} cartas", ["Draw {C:attention}1{} card"] = "Roba {C:attention}1{} carta",
-    ["Edition on every card"] = "Edición en cada carta", ["As usual"] = "Como siempre",
+    ["Edition on every card"] = "Edición en cada carta", ["Edition on a random Joker"] = "Edición en un comodín al azar", ["As usual"] = "Como siempre",
   },
 }
 
@@ -202,6 +205,49 @@ function E.rules(R)
     return string.format(l.draw, n)
   end
   R.LABEL_GIVE.make_ed_joker = "Make a Joker with an edition"
+
+  R.GIVE[#R.GIVE + 1] = "ed_joker"
+  R.NUM.ed_joker = {def = 1, lo = 1, hi = 5, step = 1, big = 5}
+  R.HOST_GIVE.ed_joker = {joker = true}
+  R.DEFAULT_GIVE.ed_joker = function() return {id = "ed_joker", v = "foil", n = 1} end
+  R.CLEAN_GIVE.ed_joker = function(e)
+    if not R.member(R.ed_values(), e.v) then e.v = "foil" end
+  end
+  R.DOS.ed_joker = function(g, card, src) R.add_edition_jokers(g.v, g.n, src) end
+  R.TEXT_GIVE.ed_joker = function(g, s, lang)
+    local l = lang_t(JOKERS, lang)
+    local n = math.floor(tonumber(g.n) or 1)
+    if n <= 1 then return string.format(l.add1, R.ed_name(g.v)) end
+    return string.format(l.add, R.ed_name(g.v), n)
+  end
+  R.LABEL_GIVE.ed_joker = "Edition on a random Joker"
+
+  function R.add_edition_jokers(v, n, src)
+    if R.dry or not (G.jokers and G.GAME) then return 0 end
+    local ed = R.edition_arg(v)
+    if not ed then return 0 end
+    local pool = {}
+    for _, j in ipairs(G.jokers.cards or {}) do
+      if not j.edition and not j.forge_ed_pending and not j.forge_dying and not j.removed then pool[#pool + 1] = j end
+    end
+    local done = 0
+    local rnd, seed = rawget(_G, "pseudorandom"), rawget(_G, "pseudoseed")
+    for _ = 1, math.min(math.max(1, math.floor(tonumber(n) or 1)), #pool) do
+      local j = table.remove(pool, rnd(seed("forge_ed_add"), 1, #pool))
+      j.forge_ed_pending = true
+      done = done + 1
+r 3 617 %20%20%20%20%20%20 -
+l 31
+        j.forge_ed_pending = nil
+        if not j.edition and not j.removed and j.area == G.jokers then
+          j:set_edition(ed, true)
+          if src and src.juice_up then src:juice_up(0.3, 0.5) end
+        end
+        return true
+      end}))
+    end
+    return done
+  end
   R.LABEL_GIVE.draw = "Draw cards"
 
   local function frees_slot(ed)
@@ -284,7 +330,7 @@ l 50
       if extra > 0 and e == nil and G.deck and G.hand then
         G.GAME.forge_draw = 0
 r 3 617 %20%20%20%20%20%20%20%20 -
-l 121
+l 128
           local k = math.min(extra, #G.deck.cards)
           if k > 0 then E.draw(k, orig) end
           return true
@@ -320,6 +366,13 @@ l 121
               if g.per and R.V9_IDS[g.per] then top = E.V end
             end
           end
+        end
+      end
+    end
+    for _, r in ipairs(type(rules) == "table" and rules or {}) do
+      for _, l in ipairs(type(r) == "table" and {r.give, r.alt} or {}) do
+        for _, g in ipairs(type(l) == "table" and l or {}) do
+          if type(g) == "table" and g.id == "ed_joker" then top = math.max(top, 13) end
         end
       end
     end

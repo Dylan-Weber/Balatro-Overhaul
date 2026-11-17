@@ -2,13 +2,15 @@
 set -euo pipefail
 
 usage() {
-    echo "Usage: tools/release/pack_overhaul.sh [--launcher-only] [--out DIR] [--vanilla Balatro.exe] [--mobile-apk FILE] [--installer-key FILE] [--changelog FILE] [--assets DIR]"
+    echo "Usage: tools/release/pack_overhaul.sh [--launcher-only] [--pc-first | --phone-after] [--out DIR] [--vanilla Balatro.exe] [--mobile-apk FILE] [--installer-key FILE] [--changelog FILE] [--assets DIR]"
     echo "  Builds the public release into dist/release/: the patch set, the launcher for"
     echo "  Linux, Windows and macOS, the phone installer APK in android/ when an official"
     echo "  Balatro APK is given, RELEASE.md and SHA256SUMS.txt. Nothing from the vanilla game goes in."
     echo "  --mobile-apk FILE    the official Balatro APK (base.apk from Google Play), same as BALATRO_MOBILE_APK"
     echo "  --installer-key FILE PKCS12 key that signs the phone installer (password in FILE.pass), same as INSTALLER_KEYSTORE"
     echo "  --launcher-only  only the patch set, the update feed and launcher.love (for tests)"
+    echo "  --pc-first       everything but the phone installer, so the PC update can be published first"
+    echo "  --phone-after    adds the phone installer to a --pc-first folder (same --out), then publish_feed.ts --phone-after"
     echo "  --changelog FILE text, JSON {\"en\": ..., \"fr\": ..., \"es\": ...} or CHANGELOG.md (default: the version's notes from assets/CHANGELOG.md), put in feed.json"
     echo "  --assets DIR     build the patch set from another assets folder (update tests)"
 }
@@ -22,11 +24,14 @@ out="$repo/dist/release"
 vanilla="${BALATRO_EXE:-$HOME/.local/share/Steam/steamapps/common/Balatro/Balatro.exe}"
 downloads="${LOVE_DOWNLOADS:-$HOME/.local/state/balatro-night/downloads}"
 launcher_only=0
+mode=full
 changelog=""
 assets="$repo/assets"
 while (( $# )); do
     case "$1" in
         --launcher-only) launcher_only=1 ;;
+        --pc-first) mode=pc ;;
+        --phone-after) mode=phone ;;
         --changelog) changelog="$(realpath "$2")"; shift ;;
         --assets) assets="$(realpath "$2")"; shift ;;
         --out) out="$2"; shift ;;
@@ -60,6 +65,34 @@ case "$out" in
 esac
 app="Balatro Overhaul Launcher"
 build="$out/.build"
+code_stamp() {
+    echo "$(git -C "$repo" rev-parse HEAD)-$( { git -C "$repo" diff HEAD -- "$assets" "$here" 2>/dev/null; git -C "$repo" ls-files --others --exclude-standard -z -- "$assets" "$here" 2>/dev/null | xargs -0 -r sha256sum; } | sha256sum | cut -c1-16)"
+}
+if [[ "$mode" == phone ]]; then
+    [[ -f "$out/.pc-first" ]] || { echo "$out was not built with --pc-first"; exit 1; }
+    [[ "$(cat "$out/.pc-first")" == "$(code_stamp)" ]] || { echo "The code changed since the --pc-first pack of $out: pack again with --pc-first"; exit 1; }
+    version="$(sed -n 's/^  overhaul_version = "\(.*\)",$/\1/p' "$out/patchset/manifest.lua")"
+    name="$(sed -n 's/^  overhaul_name = "\(.*\)",$/\1/p' "$out/patchset/manifest.lua")"
+    [[ -n "$name" ]] || name="$version"
+    display="$(echo "$name" | grep -o '^[0-9][0-9.]*' || true)"
+    [[ -n "$display" ]] || display="$version"
+    lbuild="$(sed -n 's/^M\.BUILD = \([0-9]*\)$/\1/p' "$here/launcher/lcode.lua")"
+    feed_args=(--launcher-build "$lbuild" --launcher-zip "$out/launcher-code-$lbuild.zip")
+    [[ -f "$out/launcher-code-phone-$lbuild.zip" ]] && feed_args+=(--launcher-phone-zip "$out/launcher-code-phone-$lbuild.zip")
+    rm -rf "$build" "$out/android"
+    mkdir -p "$build"
+    echo "=== 6 Android maker (phone after PC) ==="
+    PATCH_PC="$out/patchset" OUT="$out/android" OVERHAUL_VERSION="$version" OVERHAUL_DISPLAY="$display" ASSETS="$assets" WORK="$build/android" BALATRO_EXE="$vanilla" bash "$here/android/pack.sh"
+    phone_apk="$out/android/BalatroOverhaulLauncher-$display-android.apk"
+    [[ -f "$phone_apk" ]] || { echo "No phone installer at $phone_apk"; exit 1; }
+    native="$(python3 -B "$here/android/make_apk.py" native)"
+    python3 -B "$here/patcher/make_feed.py" --manifest "$out/patchset/manifest.lua" --zip "$out/patchset-$version.zip" \
+        --changelog "$changelog" "${feed_args[@]}" --android-apk "$phone_apk" --android-native "$native" --out "$out/feed.json"
+    rm -rf "$build" "$out/.pc-first"
+    (cd "$out" && find . -type f -name 'BalatroOverhaulLauncher-*' -printf '%P\n' | LC_ALL=C sort | xargs -d '\n' sha256sum | sed 's#  .*/#  #' > SHA256SUMS.txt)
+    echo "Built $out with the phone installer: publish it with publish_feed.ts --phone-after"
+    exit 0
+fi
 rm -rf "$out"
 mkdir -p "$out" "$build"
 
@@ -290,7 +323,9 @@ cp "$here/github/public/LICENSE" "$here/github/public/THIRD_PARTY_NOTICES.md" "$
 (cd "$mac" && zip -q -r -9 -y -X "$out/$mac_zip" "$app.app" "READ ME FIRST.txt" LICENSE THIRD_PARTY_NOTICES.md)
 
 echo "=== 6 Android maker ==="
-if [[ -f "$here/android/pack.sh" ]]; then
+if [[ "$mode" == pc ]]; then
+    echo "Skipped (--pc-first): run again with --phone-after --out $out"
+elif [[ -f "$here/android/pack.sh" ]]; then
     PATCH_PC="$out/patchset" OUT="$out/android" OVERHAUL_VERSION="$version" OVERHAUL_DISPLAY="$display" ASSETS="$assets" WORK="$build/android" BALATRO_EXE="$vanilla" bash "$here/android/pack.sh"
 else
     echo "No tools/release/android/pack.sh yet: the launcher has no Android maker in this build"
@@ -321,4 +356,5 @@ echo "=== 8 vanilla check ==="
 mapfile -t checked < <(find "$out" -mindepth 1 -maxdepth 1 ! -name android | LC_ALL=C sort)
 python3 -B "$here/patcher/check_patch.py" --vanilla "$vanilla" --vanilla "$mobile" "${old_vanilla[@]}" --allow "$allow" "${checked[@]}" || { rm -f "$allow"; exit 1; }
 rm -f "$allow"
+if [[ "$mode" == pc ]]; then code_stamp > "$out/.pc-first"; fi
 echo "Built $out ($(du -sh "$out" | cut -f1))"

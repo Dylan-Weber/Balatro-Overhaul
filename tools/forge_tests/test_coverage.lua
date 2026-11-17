@@ -79,7 +79,7 @@ local J = {
   {"Constellation", {W("consumable_used", {o("used_kind", "Planet")}, {g("gain_xmult", 0.1)})}},
   {"Hiker", {W("card_scored", nil, {g("perma_chips", 5)})}},
   {"Faceless Joker", {W("discard", {o("once_per_discard"), o("discarded", "face", "at_least", 3)}, {g("money", 5)})}},
-  {"Green Joker", {W("before", nil, {g("gain_mult", 1)}), W("discard", {o("once_per_discard")}, {g("gain_mult", -1)})}},
+  {"Green Joker", {W("before", nil, {vadd(1)}), W("discard", {o("once_per_discard"), var("at_least", 1)}, {vadd(-1)}), W("hand_played", nil, {{id = "var_mult", var = 1, n = 1}})}, V("Mult", 0)},
   {"Superposition", {W("hand_played", {o("played_rank", 14), hand("Straight")}, {g("create", nil, "Tarot")})}},
   {"To Do List", {W("hand_played", {o("round_hand")}, {g("money", 4)})}},
   {"Cavendish", {W("hand_played", nil, {g("xmult", 3)}), W("round_end", {chance(1000)}, {g("destroy_self")})}},
@@ -184,9 +184,14 @@ local function lossless(rules, kind, vars)
     for k, x in ipairs(r.give or {}) do
       if x.v ~= nil and c[i].give[k].v ~= x.v then return false, "rule " .. i .. " value " .. tostring(x.v) end
       if x.per ~= nil and c[i].give[k].per ~= x.per then return false, "rule " .. i .. " count " .. tostring(x.per) end
+      if x.n ~= nil and tonumber(c[i].give[k].n) ~= tonumber(x.n) then return false, "rule " .. i .. " " .. x.id .. " number " .. tostring(x.n) .. " became " .. tostring(c[i].give[k].n) end
+    end
+    for k, x in ipairs(r.alt or {}) do
+      if x.n ~= nil and tonumber(c[i].alt[k].n) ~= tonumber(x.n) then return false, "rule " .. i .. " otherwise " .. x.id .. " number " .. tostring(x.n) .. " became " .. tostring(c[i].alt[k].n) end
     end
     for k, x in ipairs(r.only or {}) do
       if x.v ~= nil and c[i].only[k].v ~= x.v then return false, "rule " .. i .. " condition value " .. tostring(x.v) end
+      if x.n ~= nil and tonumber(c[i].only[k].n) ~= tonumber(x.n) then return false, "rule " .. i .. " condition " .. x.id .. " number " .. tostring(x.n) .. " became " .. tostring(c[i].only[k].n) end
     end
   end
   if R.need_v(rules, vars) > 8 then return false, "version" end
@@ -203,6 +208,11 @@ local function effects_ok(kind, effects)
       if not ok then return false, e.id .. " value " .. tostring(e.v) end
     end
   end
+  local c = Cat.clean_effects(kind, effects or {})
+  for i, e in ipairs(effects or {}) do
+    if not c[i] or c[i].id ~= e.id then return false, "effect " .. e.id .. " dropped" end
+    if e.n ~= nil and tonumber(c[i].n) ~= tonumber(e.n) then return false, e.id .. " number " .. tostring(e.n) .. " became " .. tostring(c[i].n) end
+  end
   return true
 end
 
@@ -214,6 +224,10 @@ local function fields_ok(kind, fields)
       for _, f in ipairs(list) do if f.id == id then found = true end end
     end
     if not found then return false, "field " .. id end
+  end
+  local c = Cat.clean_fields(kind, fields or {})
+  for id, v in pairs(fields or {}) do
+    if c[id] ~= v then return false, "field " .. id .. " " .. tostring(v) .. " became " .. tostring(c[id]) end
   end
   return true
 end
@@ -281,6 +295,40 @@ for _, e in ipairs(J) do
     ok = ok and b
   end
   tally("Jokers", ok, e.close and (e[1] .. ": " .. e.close))
+end
+
+local GREEN
+for _, e in ipairs(J) do if e[1] == "Green Joker" then GREEN = e end end
+do
+  reset()
+  local rules, vars = R.clean_rules(GREEN[2]), R.clean_vars(GREEN[3])
+  local card = {ability = {set = "Joker", extra = {}}, config = {center = {forge_id = "cov"}}}
+  local function play()
+    local cards = {pcard("S_K")}
+    local base = {cardarea = G.jokers, scoring_name = "High Card", poker_hands = {["High Card"] = {{}}}, full_hand = cards, scoring_hand = cards}
+    local b = {before = true}
+    for k, v in pairs(base) do b[k] = v end
+    R.calculate(card, b, rules, vars)
+    base.joker_main = true
+    local r = R.calculate(card, base, rules, vars)
+    return r and r.mult_mod or 0
+  end
+  local function discard(n)
+    local cards = {}
+    for i = 1, n do cards[i] = pcard("H_" .. (i + 1)) end
+    for _, c in ipairs(cards) do R.calculate(card, {discard = true, other_card = c, full_hand = cards}, rules, vars) end
+  end
+  local function now() return tonumber(R.vars_state(card, vars)[1]) end
+  check("Green Joker exact: first hand gives +1 Mult", play() == 1)
+  check("Green Joker exact: second hand gives +2 Mult", play() == 2)
+  discard(3)
+  check("Green Joker exact: a discard of 3 cards loses 1 Mult once", now() == 1, now())
+  discard(1)
+  discard(2)
+  check("Green Joker exact: never below 0", now() == 0, now())
+  check("Green Joker exact: next hand gives +1 Mult again", play() == 1)
+  local raw = R.clean_rules({W("discard", nil, {g("gain_mult", -1)})})[1].give[1].n
+  check("gain_mult still cleans to at least 1, so lose recipes use a variable", raw == 1, raw)
 end
 
 local ENH = {

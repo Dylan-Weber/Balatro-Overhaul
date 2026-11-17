@@ -546,6 +546,12 @@ function Boot.late_files()
         if f:sub(-5) == ".toml" then list[#list + 1] = "overhaul/late/" .. f end
     end
     table.sort(list)
+    local ok, Engine = pcall(require, "modloader.lovely")
+    if ok and type(Engine) == "table" and Engine.home_only then
+        local stale
+        list, stale = Engine.home_only("overhaul/late", list)
+        for _, path in ipairs(stale) do note("ignored " .. path .. ": left over from an older install") end
+    end
     return list
 end
 
@@ -608,6 +614,8 @@ function Boot.start()
     sync_ignores(folders, set)
     Boot.enabled = mods
     Boot.enabled_set = set
+    Boot.stamps = {}
+    for _, name in ipairs(mods) do Boot.stamps[name] = Boot.mod_stamp(name) end
     pcall(Boot.guard_crashes)
     local ok_b, backed = pcall(Boot.backup_before_new_set, mods)
     if not ok_b or backed == false then
@@ -727,6 +735,22 @@ function Boot.remove_mod(name)
     return love.filesystem.getInfo(dir) == nil
 end
 
+function Boot.mod_stamp(name)
+    local fs = love.filesystem
+    local dir = Boot.root .. "/" .. name
+    if not fs.getInfo(dir, "directory") then return "" end
+    local items = fs.getDirectoryItems(dir)
+    table.sort(items)
+    local parts = {}
+    for _, item in ipairs(items) do
+        if item:sub(1, 1) ~= "." then
+            local info = fs.getInfo(dir .. "/" .. item) or {}
+            parts[#parts + 1] = item .. "|" .. tostring(info.type) .. "|" .. tostring(info.size) .. "|" .. tostring(info.modtime)
+        end
+    end
+    return table.concat(parts, "\n")
+end
+
 function Boot.status()
     local on, mods, folders, list = Boot.wanted()
     local keep, refused = mods, {}
@@ -737,6 +761,11 @@ function Boot.status()
     for _, name in ipairs(keep) do want[name] = true end
     local loaded = Boot.active and (Boot.enabled_set or {}) or {}
     local _, set = Boot.read_enabled()
+    local updated = {}
+    for name in pairs(loaded) do
+        local was = Boot.stamps and Boot.stamps[name]
+        if was and Boot.mod_stamp(name) ~= was then updated[name] = true end
+    end
     local entries = {}
     for _, name in ipairs(folders) do
         if not is_steamodded(Boot.root .. "/" .. name) then
@@ -756,6 +785,7 @@ function Boot.status()
                 enabled = set[name] == true,
                 refused = why[name],
                 loaded = loaded[name] == true,
+                updated = updated[name],
             }
         end
     end
@@ -766,7 +796,7 @@ function Boot.status()
         restart = true
     elseif Boot.active then
         for name in pairs(want) do if not loaded[name] then restart = true end end
-        for name in pairs(loaded) do if not want[name] then restart = true end end
+        for name in pairs(loaded) do if not want[name] or updated[name] then restart = true end end
     end
     return {mods = entries, restart = restart, active = Boot.active, modded = Boot.modded}
 end

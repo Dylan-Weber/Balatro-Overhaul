@@ -65,7 +65,7 @@ ${pre}local function remove_last_match(t, obj)
         end
     end
 r 13 131 %20%20%20%20 -
-l 22
+l 23
         if v == obj then
             table.remove(t, k)
             return
@@ -79,6 +79,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.node.005"
+requires = ["auto.node.004"]
 target = "engine/node.lua"
 pattern = '''^(?<pre>)[\t ]*for k, v in pairs\(G\.I\.POPUP\) do\n[\t ]*if v == self then\n[\t ]*table\.remove\(G\.I\.POPUP, k\)\n[\t ]*break;\n[\t ]*end\n[\t ]*end\n[\t ]*for k, v in pairs\(G\.I\.NODE\) do\n[\t ]*if v == self then\n[\t ]*table\.remove\(G\.I\.NODE, k\)\n[\t ]*break;\n[\t ]*end\n[\t ]*end\n[\t ]*for k, v in pairs\(G\.STAGE_OBJECTS\[G\.STAGE\]\) do\n[\t ]*if v == self then\n[\t ]*table\.remove\(G\.STAGE_OBJECTS\[G\.STAGE\], k\)\n[\t ]*break;\n[\t ]*end\n[\t ]*end\n(?<post>)'''
 position = "at"

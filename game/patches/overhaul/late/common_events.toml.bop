@@ -1,0 +1,66 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 29
+[manifest]
+version = "1.0.0"
+priority = 0
+
+[[patches]]
+[patches.pattern]
+id = "common_events.eval_divider_box_gone"
+target = "functions/common_events.lua"
+pattern = "local spacer = {n=G.UIT.R, config={align = \"cm\", minw = width}, nodes={"
+position = "before"
+match_indent = true
+payload = "if not G.round_eval then return true end"
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "common_events.eval_row_box_gone"
+target = "functions/common_events.lua"
+pattern = "--Add the far left text and context first:"
+position = "after"
+match_indent = true
+payload = "if not G.round_eval then return true end"
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "common_events.eval_dollars_box_gone"
+target = "functions/common_events.lua"
+pattern = '''
+r 31 1025 - -
+l 22
+func = function()'''
+position = "after"
+match_indent = true
+payload = "    if not G.round_eval then return true end"
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "common_events.eval_dollar_row_box_gone"
+target = "functions/common_events.lua"
+pattern = "if i%30 == 1 then"
+position = "before"
+match_indent = true
+payload = "if not G.round_eval then return true end"
+times = 1
+
+[[patches]]
+[patches.pattern]
+id = "common_events.eval_cash_out_box_gone"
+target = "functions/common_events.lua"
+pattern = '''
+UIBox{
+r 31 1070 - -
+l 5
+{n=G.UIT.R, config={id = 'cash_out_button', *'''
+position = "before"
+match_indent = true
+payload = "if not G.round_eval then return true end"
+times = 1
+end

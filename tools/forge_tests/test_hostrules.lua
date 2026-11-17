@@ -267,7 +267,7 @@ local plain = put("enhancement", "plainold", nil)
 check("store: old items stay without rules", plain and plain.rules == nil)
 check("version: rules on an item need file version 8", Cat.need_v(stored) == 8)
 check("version: old item stays old", Cat.need_v(plain) < 8)
-check("version: mods and rooms read 12", Mods.V == 12)
+check("version: mods and rooms read 15", Mods.V == 15)
 check("version: jokers without new blocks unchanged", R.need_v({{when = "hand_played", only = {}, give = {{id = "mult", n = 4}}}}) == 1)
 
 json = json or require("bot.sim.json")
@@ -284,8 +284,8 @@ local seal, tar
 for _, c in ipairs(mod and mod.creations or {}) do if c.kind == "seal" then seal = c elseif c.kind == "tarot" then tar = c end end
 check("install: rule names the renamed card", seal and tar and seal.rules and seal.rules[1].give[1].v == "c_forge_" .. tar.id)
 local t9 = json.decode(raw)
-t9.v = 13
-check("older game refuses v13", select(2, Mods.parse(json.encode(t9))) == "newer")
+t9.v = 16
+check("older game refuses v16", select(2, Mods.parse(json.encode(t9))) == "newer")
 
 print(string.format("forge host rules: %d checks, %d failed", total, fails))
 if fails > 0 then os.exit(1) end

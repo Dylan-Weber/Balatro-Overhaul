@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 422
+l 433
 PlayRandom = PlayRandom or {}
 local PR = PlayRandom
 
@@ -168,27 +168,38 @@ PR.VANILLA_DECKS = {
   b_zodiac = true, b_painted = true, b_anaglyph = true, b_plasma = true, b_erratic = true,
 }
 
-function PR.deck_filter()
-  local f = G.SETTINGS and G.SETTINGS.deck_filter
+function PR.clean_deck_filter(f)
   return (f == 'vanilla' or f == 'new') and f or 'both'
 end
 
-function PR.deck_key_shown(key)
-  local f = PR.deck_filter()
+function PR.deck_filter()
+  return PR.clean_deck_filter(G.SETTINGS and G.SETTINGS.deck_filter)
+end
+
+function PR.shared_deck_filter(a, b)
+  a, b = PR.clean_deck_filter(a), PR.clean_deck_filter(b)
+  if a == 'vanilla' or b == 'vanilla' then return 'vanilla' end
+  if a == 'new' or b == 'new' then return 'new' end
+  return 'both'
+end
+
+function PR.deck_key_shown(key, f)
+  f = f and PR.clean_deck_filter(f) or PR.deck_filter()
   if f == 'both' then return true end
   return (PR.VANILLA_DECKS[key] == true) == (f == 'vanilla')
 end
 
-function PR.deck_name_shown(name)
+function PR.deck_name_shown(name, f)
   for k in pairs(PR.VANILLA_DECKS) do
     local c = G.P_CENTERS and G.P_CENTERS[k]
-    if c and c.name == name then return PR.deck_key_shown(k) end
+    if c and c.name == name then return PR.deck_key_shown(k, f) end
   end
-  return PR.deck_key_shown(nil)
+  return PR.deck_key_shown(nil, f)
 end
 
-function PR.filter_decks(list, shown)
-  if PR.deck_filter() == 'both' then return list end
+function PR.filter_decks(list, shown, f)
+  f = f and PR.clean_deck_filter(f) or PR.deck_filter()
+  if f == 'both' then return list end
   local out = {}
   for _, v in ipairs(list) do if shown(v) then out[#out + 1] = v end end
   if #out == 0 then return list end

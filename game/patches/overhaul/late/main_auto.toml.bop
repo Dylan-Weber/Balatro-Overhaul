@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 278
+l 279
 [manifest]
 version = "1.0.0"
 priority = 0
@@ -274,6 +274,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.010"
+requires = ["auto.main.009"]
 target = "main.lua"
 pattern = '''^(?<pre>)[\t ]*if love\.load then love\.load\(love\.arg\.parseGameArguments\(arg\), arg\) end\n(?<post>)'''
 position = "at"
@@ -369,7 +370,7 @@ l 8
 		end
 	else
 r 12 34 %09%09 -
-l 71
+l 73
 ${post}'''
 times = 1
 
@@ -413,6 +414,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.014"
+requires = ["auto.main.010"]
 target = "main.lua"
 pattern = '''^(?<pre>[\t ]*_n,_a,_b,_c,_d,_e,_f = name,a,b,c,d,e,f\n)(?<post>[\t ]*else\n)'''
 position = "at"
@@ -436,13 +438,14 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.016"
+requires = ["auto.main.010"]
 target = "main.lua"
 pattern = '''^(?<pre>)[\t ]*dt_smooth = math\.min\(0\.8\*dt_smooth \+ 0\.2\*dt, 0\.1\)\n(?<post>[\t ]*-- Call update and draw\n)'''
 position = "at"
 payload = '''
 ${pre}		if dt > 0 then
 r 12 71 %09%09%09 -
-l 145
+l 151
 		end
 ${post}'''
 times = 1
@@ -450,6 +453,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.017"
+requires = ["auto.main.009"]
 target = "main.lua"
 pattern = '''^(?<pre>[\t ]*if love\.update then love\.update\(dt_smooth\) end -- will pass 0 if love\.timer is disabled\n)(?<post>)'''
 position = "at"
@@ -468,6 +472,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.018"
+requires = ["auto.main.009"]
 target = "main.lua"
 pattern = '''^(?<pre>[\t ]*if love\.draw then love\.draw\(\) end\n)(?<post>[\t ]*love\.graphics\.present\(\)\n)'''
 position = "at"
@@ -517,6 +522,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.022"
+requires = ["auto.main.001"]
 target = "main.lua"
 pattern = '''^(?<pre>)[\t ]*--Steam integration\n[\t ]*local os = love\.system\.getOS\(\)\n[\t ]*if os == 'OS X' or os == 'Windows' then \n[\t ]*local st = nil\n[\t ]*--To control when steam communication happens, make sure to send updates to steam as little as possible\n[\t ]*if os == 'OS X' then\n[\t ]*local dir = love\.filesystem\.getSourceBaseDirectory\(\)\n[\t ]*local old_cpath = package\.cpath\n[\t ]*package\.cpath = package\.cpath \.\. ';' \.\. dir \.\. '/\?\.so'\n[\t ]*st = require 'luasteam'\n[\t ]*package\.cpath = old_cpath\n[\t ]*else\n[\t ]*st = require 'luasteam'\n[\t ]*end\n[\t ]*\n[\t ]*st\.send_control = \{\n[\t ]*last_sent_time = -200,\n[\t ]*last_sent_stage = -1,\n[\t ]*force = false,\n[\t ]*\}\n[\t ]*if not \(st\.init and st:init\(\)\) then\n[\t ]*love\.event\.quit\(\)\n[\t ]*end\n[\t ]*--Set up the render window and the stage for the splash screen, then enter the gameloop with :update\n[\t ]*G\.STEAM = st\n[\t ]*else\n[\t ]*end\n[\t ]*\n[\t ]*--Set the mouse to invisible immediately, this visibility is handled in the G\.CONTROLLER\n[\t ]*love\.mouse\.setVisible\(false\)\n(?<post>)'''
 position = "at"
@@ -538,6 +544,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.main.023"
+requires = ["auto.game.093"]
 target = "main.lua"
 pattern = '''^(?<pre>[\t ]*function love\.quit\(\)\n)(?<post>)'''
 position = "at"
@@ -565,6 +572,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.024"
+requires = ["auto.main.010"]
 target = "main.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*function love\.update\( dt \)\n)'''
 position = "at"
@@ -579,6 +587,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.025"
+requires = ["auto.main.001", "auto.main.010", "auto.main.024"]
 target = "main.lua"
 pattern = '''^(?<pre>)[\t ]*--Perf monitoring checkpoint\n[\t ]*timer_checkpoint\(nil, 'update', true\)\n[\t ]*G:update\(dt\)\n(?<post>)'''
 position = "at"
@@ -589,7 +598,7 @@ ${pre}	if not PERF_MON._checked then PERF_MON.init() end
 	_perf_frame_count = (_perf_frame_count or 0) + 1
 	if G.F_ENABLE_PERF_OVERLAY or _perf_frame_count >= 10 then
 r 12 128 %09%09 -
-l 133
+l 134
 		_perf_frame_count = 0
 	end
 
@@ -678,6 +687,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.028"
+requires = ["auto.main.001"]
 target = "main.lua"
 pattern = '''^(?<pre>[\t ]*G:draw\(\)\n)(?<post>)'''
 position = "at"
@@ -724,7 +734,7 @@ ${pre}	PERF_MON.checkpoint("after", "draw")
 		else
 			love.graphics.push()
 r 12 278 %09%09%09 -
-l 202
+l 205
 			love.graphics.setColor(0, 0, 0, 0.6 * fps_alpha)
 			love.graphics.rectangle("fill", x, y, text_w, text_h, 4, 4)
 			love.graphics.setColor(fr, fg, fb, fps_alpha)
@@ -760,6 +770,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.029"
+requires = ["auto.main.023"]
 target = "main.lua"
 pattern = '''^(?<pre>[\t ]*G\.CONTROLLER:key_press\(key\)\n)(?<post>)'''
 position = "at"
@@ -788,6 +799,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.031"
+requires = ["auto.main.028"]
 target = "main.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*if button == 1 then \n)'''
 position = "at"
@@ -821,6 +833,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.034"
+requires = ["auto.main.028"]
 target = "main.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*if button == 1 then G\.CONTROLLER:L_cursor_release\(x, y\) end\n)'''
 position = "at"
@@ -928,7 +941,7 @@ UI_SIZE_EDGE_W = 0.8
 function ui_size_fit(w, h)
 	local base
 r 12 330 %09 -
-l 146
+l 150
 		base = G.window_prev.orig_scale*w/G.window_prev.w
 	else
 		base = G.window_prev.orig_scale*h/G.window_prev.h
@@ -1009,6 +1022,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.042"
+requires = ["auto.main.041"]
 target = "main.lua"
 pattern = '''^(?<pre>)[\t ]*if w/h < 1 then --Dont allow the screen to be too square, since pop in occurs above and below screen\n[\t ]*h = w/1\n[\t ]*end\n(?<post>)'''
 position = "at"
@@ -1022,6 +1036,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.043"
+requires = ["auto.main.041"]
 target = "main.lua"
 pattern = '''^(?<pre>)[\t ]*if w/h < G\.window_prev\.orig_ratio then\n[\t ]*G\.TILESCALE = G\.window_prev\.orig_scale\*w/G\.window_prev\.w\n[\t ]*else\n[\t ]*G\.TILESCALE = G\.window_prev\.orig_scale\*h/G\.window_prev\.h\n[\t ]*end\n(?<post>)'''
 position = "at"
@@ -1041,6 +1056,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.044"
+requires = ["auto.main.043"]
 target = "main.lua"
 pattern = '''^(?<pre>[\t ]*G\.ROOM_ATTACH\.T\.h = G\.TILE_H		\n)(?<post>)'''
 position = "at"
@@ -1056,6 +1072,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.045"
+requires = ["auto.main.043", "auto.main.044"]
 target = "main.lua"
 pattern = '''^(?<pre>)[\t ]*G\.ROOM\.T\.x = G\.ROOM_PADDING_W\n[\t ]*G\.ROOM\.T\.y = \(h/\(G\.TILESIZE\*G\.TILESCALE\) - \(G\.ROOM\.T\.h\+G\.ROOM_PADDING_H\)\)/2 \+ G\.ROOM_PADDING_H/2\n[\t ]*else\n[\t ]*G\.ROOM\.T\.y = G\.ROOM_PADDING_H\n[\t ]*G\.ROOM\.T\.x = \(w/\(G\.TILESIZE\*G\.TILESCALE\) - \(G\.ROOM\.T\.w\+G\.ROOM_PADDING_W\)\)/2 \+ G\.ROOM_PADDING_W/2\n(?<post>)'''
 position = "at"
@@ -1076,7 +1093,7 @@ ${pre}			_x0 = (_uw0 - G.ROOM.T.w)/2
 		if _zoom <= 1 and G.MAIN_MENU_UI and G.STAGE == G.STAGES.MAIN_MENU and main_menu_bar_offset then
 			G.MAIN_MENU_UI.alignment.offset.y = main_menu_bar_offset()
 r 31 759 %09%09%09 -
-l 26
+l 27
 ${post}'''
 times = 1
 
@@ -1094,6 +1111,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.main.047"
+requires = ["auto.main.041", "auto.main.042"]
 target = "main.lua"
 pattern = '''^(?<pre>)[\t ]*G\.CANV_SCALE = 1\n[\t ]*\n[\t ]*if love\.system\.getOS\(\) == 'Windows' and false then --implement later if needed\n[\t ]*local render_w, render_h = love\.window\.getDesktopDimensions\(G\.SETTINGS\.WINDOW\.selcted_display\)\n[\t ]*local unscaled_dims = love\.window\.getFullscreenModes\(G\.SETTINGS\.WINDOW\.selcted_display\)\[1\]\n[\t ]*\n[\t ]*local DPI_scale = math\.floor\(\(0\.5\*unscaled_dims\.width/render_w \+ 0\.5\*unscaled_dims\.height/render_h\)\*500 \+ 0\.5\)/500\n[\t ]*\n[\t ]*if DPI_scale > 1\.1 then\n[\t ]*G\.CANV_SCALE = 1\.5\n[\t ]*\n[\t ]*G\.AA_CANVAS = love\.graphics\.newCanvas\(G\.WINDOWTRANS\.real_window_w\*G\.CANV_SCALE, G\.WINDOWTRANS\.real_window_h\*G\.CANV_SCALE, \{type = '2d', readable = true\}\)\n[\t ]*G\.AA_CANVAS:setFilter\('linear', 'linear'\)\n[\t ]*else\n[\t ]*G\.AA_CANVAS = nil\n[\t ]*end\n[\t ]*end\n[\t ]*\n[\t ]*G\.CANVAS = love\.graphics\.newCanvas\(w\*G\.CANV_SCALE, h\*G\.CANV_SCALE, \{type = '2d', readable = true\}\)\n[\t ]*G\.CANVAS:setFilter\('linear', 'linear'\)\n(?<post>)'''
 position = "at"
@@ -1105,7 +1123,7 @@ ${pre}	local _res = (G.SETTINGS and G.SETTINGS.GRAPHICS and G.SETTINGS.GRAPHICS.
 	if not (G.CANVAS and G.CANVAS:getWidth() == _cw and G.CANVAS:getHeight() == _ch) then
 r 12 386 %09%09 -
 r 12 387 %09%09 -
-l 113
+l 115
 	end
 
 	if PORTRAIT and G.ROOM then PORTRAIT.after_resize(_portrait_changed) end
@@ -1136,8 +1154,9 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.main.modded.003"
+requires = ["auto.main.modded.002"]
 target = "main.lua"
-pattern = '''^(?<pre>)(?<post>[\t ]*if \(jit\.arch == 'arm64' or jit\.arch == 'arm'\) then\n[\t ]*jit\.off\(\)\n[\t ]*else\n[\t ]*jit\.opt\.start\("maxtrace=8000", "maxrecord=16000", "maxmcode=65536", "sizemcode=256", "maxside=400", "maxsnap=1000"\)\n[\t ]*end\n[\t ]*\n[\t ]*if not love\.platform then\n[\t ]*love\.platform = \{\n[\t ]*earlyInit = function\(\) end,\n[\t ]*hideSplashScreen = function\(\) end,\n[\t ]*isArcade = function\(\) return false end,\n[\t ]*isPremium = function\(\) return true end,\n[\t ]*isOffline = function\(\) return false end,\n[\t ]*anyButtonPressed = function\(\) return false end,\n[\t ]*isFirstTimePlaying = function\(\) return false end,\n[\t ]*getLocalPlayerName = function\(\) return "" end,\n[\t ]*getLocalPlayerAvatar = function\(\) return nil end,\n[\t ]*getPlatformId = function\(\) return "" end,\n[\t ]*getNotchPosition = function\(\) return 0 end,\n[\t ]*setProfileButtonActive = function\(\) end,\n[\t ]*requestTrackingPermission = function\(\) end,\n[\t ]*requestReview = function\(\) end,\n[\t ]*authenticateLocalPlayer = function\(\) end,\n[\t ]*setOnSaveInitializedCallback = function\(cb\) if cb then cb\(\) end end,\n[\t ]*setOnPlatformStatusChangedCallback = function\(\) end,\n[\t ]*setLoadGameCallback = function\(\) end,\n[\t ]*resolveConflict = function\(\) end,\n[\t ]*loadGameFile = function\(\) end,\n[\t ]*unlockAchievement = function\(\) end,\n[\t ]*unlockAward = function\(\) end,\n[\t ]*init = function\(success_cb\) if success_cb then success_cb\("", ""\) end return true end,\n[\t ]*update = function\(\) end,\n[\t ]*shutdown = function\(\) end,\n[\t ]*event = function\(\) end,\n[\t ]*\}\n[\t ]*end\n[\t ]*\n[\t ]*_G\._IS_DESKTOP = \(love\.system\.getOS\(\) == 'Windows' or love\.system\.getOS\(\) == 'OS X' or love\.system\.getOS\(\) == 'Linux'\);\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"engine/object"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"bit"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"engine/string_packer"\)?;?\n[\t ]*require "overhaul\.string_packer";\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"engine/controller"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"back"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"tag"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"engine/event"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"engine/node"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"engine/moveable"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"engine/sprite"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"engine/animatedsprite"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/perf_monitor"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/misc_functions"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"game"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"globals"\)?;?\n[\t ]*require "overhaul\.globals";\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/mod_localization"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"engine/ui"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/UI_definitions"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/state_events"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/common_events"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/button_callbacks"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/ui_kit"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/misc_functions"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/test_functions"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/mod_menu"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/progress_gate"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/jukebox"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/daily_challenge"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/mod_guide"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/corner_labels"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/achievements_data"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/achievements"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/achievements_ui"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/achievements_hooks"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/overhaul_stats"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/stats_ui"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/progress_events"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/quests"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/quests_ui"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/cosmetics"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/profile_rewards"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/shop_catalog"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/shop"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/debug_mode"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/deck_creator_data"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/deck_creator_utils"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/deck_creator_card_utils"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/deck_creator_persistence"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"card"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"cardarea"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"blind"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"card_character"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"engine/particles"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"engine/text"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"challenges"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/progression"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/progression_ui"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/score_preview"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/tally_joker"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/drag_select"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/bot_hand_engine"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/hand_optimizer"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/jimbo_comments"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/showcase"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/deck_creator_hooks"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/run_rules"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/randomizer"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/custom_runs"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/deck_creator_locale"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/deck_creator_gui"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/mods_ui"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/mods_profile"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/save_transfer"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/title_tagline"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/art/title_fx"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/art/suit_palettes"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/art/trap_pack_label"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/art/booster_tints"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/player_name"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/mod_workshop"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/mod_workshop_ui"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/forge/forge"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/crash_reports"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/perf_options"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/minigames/registry"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/overhaul_update"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/launcher_update"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/bot_bridge"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/bot_brain"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/bot_rules"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/bot_settings"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/bot_ui"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/bot_versus"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/bot_difficulty"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/bot_sim"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/extras"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/controls"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/qol"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/settings/init"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/release_info"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/new/loader"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/play/init"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/run_mods/init"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/shop/tavern"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/portrait"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/hud_scale"\)?;?\n[\t ]*(?:\([A-Za-z_][A-Za-z0-9_.]* or )?require\)?\(? ?"functions/phone_text"\)?;?\n[\t ]*require "overhaul\.init";\n[\t ]*if ReleaseFlags then ReleaseFlags\.apply\(\) end\n[\t ]*\n[\t ]*math\.randomseed\( G\.SEED \)\n[\t ]*\n[\t ]*local FPS_CAP_VALUES = \{30, 40, 60, 90, 120, 144, 165, 9999\}\n[\t ]*local function fps_cap_index\(gr\)\n[\t ]*if gr\.fps_cap_v ~= 2 then\n[\t ]*if gr\.fps_cap == 7 then gr\.fps_cap = 8 end\n[\t ]*local r = gr\._perf_mode_restore\n[\t ]*if type\(r\) == "table" and r\.fps_cap == 7 then r\.fps_cap = 8 end\n[\t ]*gr\.fps_cap_v = 2\n[\t ]*end\n[\t ]*return gr\.fps_cap\n[\t ]*end\n[\t ]*local frame_deadline = nil\n[\t ]*local function pace_frame\(cap\)\n[\t ]*local target = 1 / cap\n[\t ]*local now = love\.timer\.getTime\(\)\n[\t ]*if not frame_deadline or now - frame_deadline > target then\n[\t ]*frame_deadline = now \+ target\n[\t ]*else\n[\t ]*frame_deadline = frame_deadline \+ target\n[\t ]*end\n[\t ]*local left = frame_deadline - now\n[\t ]*if left > 0\.002 then love\.timer\.sleep\(left - 0\.002\) end\n[\t ]*while love\.timer\.getTime\(\) < frame_deadline do end\n[\t ]*end\n[\t ]*\n[\t ]*local mobile_swap = \{cap = nil, interval = 1, last = nil\}\n[\t ]*local function mobile_pace\(cap\)\n[\t ]*local vs = love\.window\.getVSync and love\.window\.getVSync\(\) or 1\n[\t ]*if mobile_swap\.cap ~= cap or vs ~= mobile_swap\.interval then\n[\t ]*mobile_swap\.cap = cap\n[\t ]*local interval = vs == 0 and 0 or 1\n[\t ]*local _, _, flags = love\.window\.getMode\(\)\n[\t ]*local hz = flags and flags\.refreshrate or 0\n[\t ]*if interval == 1 and hz > 0 and cap < 9999 then\n[\t ]*local n = hz / cap\n[\t ]*local r = math\.floor\(n \+ 0\.5\)\n[\t ]*if r >= 2 and math\.abs\(n - r\) < 0\.1 then interval = r end\n[\t ]*end\n[\t ]*if love\.window\.setVSync and interval ~= mobile_swap\.interval then\n[\t ]*pcall\(love\.window\.setVSync, interval\)\n[\t ]*interval = love\.window\.getVSync and love\.window\.getVSync\(\) or interval\n[\t ]*end\n[\t ]*mobile_swap\.interval = interval\n[\t ]*end\n[\t ]*local now = love\.timer\.getTime\(\)\n[\t ]*if cap < 9999 and mobile_swap\.last then\n[\t ]*local left = mobile_swap\.last \+ 1 / cap - 0\.004 - now\n[\t ]*if left > 0\.001 then love\.timer\.sleep\(left\) end\n[\t ]*end\n[\t ]*mobile_swap\.last = love\.timer\.getTime\(\)\n[\t ]*end\n[\t ]*function love\.run\(\)\n[\t ]*if _G\._IS_DESKTOP then\n[\t ]*if love\.ps then love\.ps\.hideSceSplash\(\) end\n[\t ]*if love\.load then love\.load\(\) end\n[\t ]*if love\.timer then love\.timer\.step\(\) end\n[\t ]*\n[\t ]*local dt = 0\n[\t ]*local dt_smooth = 1/100\n[\t ]*local run_time = 0\n[\t ]*\n[\t ]*while true do\n[\t ]*PERF_MON\.loop_top\(\)\n[\t ]*run_time = love\.timer\.getTime\(\)\n[\t ]*if love\.event and G and G\.CONTROLLER then\n[\t ]*love\.event\.pump\(\)\n[\t ]*local _n,_a,_b,_c,_d,_e,_f,touched\n[\t ]*local _held_release = G\.CONTROLLER\.held_release\n[\t ]*G\.CONTROLLER\.held_release = nil\n[\t ]*if _held_release then\n[\t ]*love\.handlers\['mousereleased'\]\(unpack\(_held_release, 1, 5\)\)\n[\t ]*end\n[\t ]*for name, a,b,c,d,e,f in love\.event\.poll\(\) do\n[\t ]*if name == "quit" then\n[\t ]*if not love\.quit or not love\.quit\(\) then\n[\t ]*return function\(\) return a or 0 end\n[\t ]*end\n[\t ]*end\n[\t ]*if name == 'touchpressed' then\n[\t ]*touched = true\n[\t ]*elseif name == 'mousepressed' then\n[\t ]*_n,_a,_b,_c,_d,_e,_f = name,a,b,c,d,e,f\n[\t ]*elseif name == 'mousereleased' and _n and not G\.CONTROLLER\.held_release then\n[\t ]*G\.CONTROLLER\.held_release = \{a,b,c,d,e\}\n[\t ]*else\n[\t ]*love\.handlers\[name\]\(a,b,c,d,e,f\)\n[\t ]*end\n[\t ]*end\n[\t ]*if _n then\n[\t ]*love\.handlers\['mousepressed'\]\(_a,_b,_c,touched or _d\)\n[\t ]*end\n[\t ]*if G\.window_prev then\n[\t ]*local _ww, _wh = love\.graphics\.getDimensions\(\)\n[\t ]*if not G\.resized_to or G\.resized_to\.w ~= _ww or G\.resized_to\.h ~= _wh then\n[\t ]*love\.resize\(_ww, _wh\)\n[\t ]*end\n[\t ]*end\n[\t ]*end\n[\t ]*\n[\t ]*PERF_MON\.lap\("ev"\)\n[\t ]*if love\.timer then dt = love\.timer\.step\(\) end\n[\t ]*if dt > 0 then\n[\t ]*dt_smooth = math\.min\(0\.8\*dt_smooth \+ 0\.2\*dt, 0\.1\)\n[\t ]*end\n[\t ]*if love\.update then love\.update\(dt_smooth\) end\n[\t ]*PERF_MON\.lap\("upd"\)\n[\t ]*\n[\t ]*if G\.SETTINGS and G\.SETTINGS\.GRAPHICS and G\.SETTINGS\.GRAPHICS\.fps_cap then\n[\t ]*G\.FPS_CAP = FPS_CAP_VALUES\[fps_cap_index\(G\.SETTINGS\.GRAPHICS\)\] or 200\n[\t ]*else\n[\t ]*G\.FPS_CAP = G\.FPS_CAP or 200\n[\t ]*end\n[\t ]*if PERF_OPTS and PERF_OPTS\.frame_cap then G\.FPS_CAP = PERF_OPTS\.frame_cap\(G\.FPS_CAP\) end\n[\t ]*\n[\t ]*if love\.graphics then\n[\t ]*local active = love\.graphics\.checkActive and love\.graphics\.checkActive\(\) or love\.graphics\.isActive\(\)\n[\t ]*if active then\n[\t ]*if love\.graphics\.clear then love\.graphics\.clear\(0, 0, 0, 1\) end\n[\t ]*if love\.graphics\.beginFrame then love\.graphics\.beginFrame\(\) end\n[\t ]*if love\.draw then love\.draw\(\) end\n[\t ]*PERF_MON\.lap\("drw"\)\n[\t ]*love\.graphics\.present\(\)\n[\t ]*PERF_MON\.lap\("pres"\)\n[\t ]*end\n[\t ]*end\n[\t ]*\n[\t ]*if G\.FPS_CAP < 9999 then pace_frame\(G\.FPS_CAP\) end\n[\t ]*PERF_MON\.lap\("pace"\)\n[\t ]*end\n[\t ]*else\n[\t ]*if love\.load then love\.load\(love\.arg\.parseGameArguments\(arg\), arg\) end\n[\t ]*\n[\t ]*-- We don't want the first frame's dt to include time taken by love\.load\.\n[\t ]*if love\.timer then love\.timer\.step\(\) end\n[\t ]*\n[\t ]*local dt = 0\n[\t ]*local dt_smooth = 1/100\n[\t ]*local run_time = 0\n[\t ]*local hard_frame_cap\n[\t ]*\n[\t ]*-- Main loop time\.\n[\t ]*return function\(\)\n[\t ]*PERF_MON\.loop_top\(\)\n[\t ]*run_time = love\.timer\.getTime\(\)\n[\t ]*-- Process events\.\n[\t ]*if love\.event and G and G\.CONTROLLER then\n[\t ]*love\.event\.pump\(\)\n[\t ]*local _n,_a,_b,_c,_d,_e,_f,touched\n[\t ]*local _held_release = G\.CONTROLLER\.held_release\n[\t ]*G\.CONTROLLER\.held_release = nil\n[\t ]*if _held_release then\n[\t ]*love\.handlers\['mousereleased'\]\(unpack\(_held_release, 1, 5\)\)\n[\t ]*end\n[\t ]*for name, a,b,c,d,e,f in love\.event\.poll\(\) do\n[\t ]*if name == "quit" then\n[\t ]*if not love\.quit or not love\.quit\(\) then\n[\t ]*return a or 0\n[\t ]*end\n[\t ]*end\n[\t ]*if name == 'touchpressed' then\n[\t ]*touched = true\n[\t ]*elseif name == 'mousepressed' then \n[\t ]*_n,_a,_b,_c,_d,_e,_f = name,a,b,c,d,e,f\n[\t ]*elseif name == 'mousereleased' and _n and not G\.CONTROLLER\.held_release then\n[\t ]*G\.CONTROLLER\.held_release = \{a,b,c,d,e\}\n[\t ]*else\n[\t ]*love\.handlers\[name\]\(a,b,c,d,e,f\)\n[\t ]*end\n[\t ]*end\n[\t ]*if _n then \n[\t ]*love\.handlers\['mousepressed'\]\(_a,_b,_c,touched\)\n[\t ]*end\n[\t ]*end\n[\t ]*\n[\t ]*PERF_MON\.lap\("ev"\)\n[\t ]*-- Update dt, as we'll be passing it to update\n[\t ]*if love\.timer then dt = love\.timer\.step\(\) end\n[\t ]*if dt > 0 then\n[\t ]*dt_smooth = math\.min\(0\.8\*dt_smooth \+ 0\.2\*dt, 0\.1\)\n[\t ]*end\n[\t ]*-- Call update and draw\n[\t ]*if love\.update then love\.update\(dt_smooth\) end -- will pass 0 if love\.timer is disabled\n[\t ]*PERF_MON\.lap\("upd"\)\n[\t ]*\n[\t ]*if G\.SETTINGS and G\.SETTINGS\.GRAPHICS and G\.SETTINGS\.GRAPHICS\.fps_cap then\n[\t ]*G\.FPS_CAP = FPS_CAP_VALUES\[fps_cap_index\(G\.SETTINGS\.GRAPHICS\)\] or 60\n[\t ]*else\n[\t ]*G\.FPS_CAP = G\.FPS_CAP or \(\(G\.F_MOBILE and 60\) or 200\)\n[\t ]*end\n[\t ]*if PERF_OPTS and PERF_OPTS\.frame_cap then G\.FPS_CAP = PERF_OPTS\.frame_cap\(G\.FPS_CAP\) end\n[\t ]*\n[\t ]*if love\.graphics and love\.graphics\.isActive\(\) then\n[\t ]*if love\.draw then love\.draw\(\) end\n[\t ]*PERF_MON\.lap\("drw"\)\n[\t ]*phone_gc\(\)\n[\t ]*PERF_MON\.lap\("pgc"\)\n[\t ]*mobile_pace\(G\.FPS_CAP\)\n[\t ]*PERF_MON\.lap\("pace"\)\n[\t ]*love\.graphics\.present\(\)\n[\t ]*PERF_MON\.lap\("pres"\)\n[\t ]*end\n[\t ]*\n[\t ]*run_time = math\.min\(love\.timer\.getTime\(\) - run_time, 0\.1\)\n[\t ]*end\n[\t ]*end\n[\t ]*end\n[\t ]*\n[\t ]*function love\.load\(\) \n[\t ]*G:init_window\(\)\n[\t ]*pcall\(function\(\) require\("functions\.app_icon"\)\.game_start\(\) end\)\n[\t ]*G:start_up\(\)\n[\t ]*--Steam integration\n)'''
+pattern = '''^(?<pre>)(?<post>[\t ]*if \(jit\.arch == 'arm64' or jit\.arch == 'arm'\) then\n[\t ]*jit\.off\(\)\n)'''
 position = "at"
 payload = '''
 ${pre}if SMODS and SMODS.preflight_force_quit then if SMODS.preflight_quit_before then SMODS.preflight_quit_before() end return end
@@ -1147,6 +1166,7 @@ optional = true
 [[patches]]
 [patches.regex]
 id = "auto.main.modded.004"
+requires = ["auto.main.001"]
 target = "main.lua"
 pattern = '''^(?<pre>)[\t ]*--Steam integration\n[\t ]*local os = love\.system\.getOS\(\)\n[\t ]*if os == 'Android' or os == 'iOS' then love\.window\.updateMode\(2, 1\) end\n[\t ]*if os == 'OS X' or os == 'Windows' or os == 'Linux' then\n[\t ]*local st = nil\n[\t ]*--To control when steam communication happens, make sure to send updates to steam as little as possible\n[\t ]*local cwd = SMODS\.NFS\.getWorkingDirectory\(\)\n[\t ]*SMODS\.NFS\.setWorkingDirectory\(love\.filesystem\.getSourceBaseDirectory\(\)\)\n[\t ]*if os == 'OS X' or os == 'Linux' then\n[\t ]*local dir = love\.filesystem\.getSourceBaseDirectory\(\)\n[\t ]*local old_cpath = package\.cpath\n[\t ]*package\.cpath = package\.cpath \.\. ';' \.\. dir \.\. '/\?\.so'\n[\t ]*local success, _st = pcall\(require, 'luasteam'\)\n[\t ]*if success then st = _st else sendWarnMessage\(_st, "LuaSteam"\); st = \{\} end\n[\t ]*package\.cpath = old_cpath\n[\t ]*else\n[\t ]*local success, _st = pcall\(require, 'luasteam'\)\n[\t ]*if success then st = _st else sendWarnMessage\(_st, "LuaSteam"\); st = \{\} end\n[\t ]*end\n[\t ]*\n[\t ]*st\.send_control = \{\n[\t ]*last_sent_time = -200,\n[\t ]*last_sent_stage = -1,\n[\t ]*force = false,\n[\t ]*\}\n[\t ]*if not \(st\.init and st:init\(\)\) then\n[\t ]*st = nil\n[\t ]*end\n[\t ]*SMODS\.NFS\.setWorkingDirectory\(cwd\)\n[\t ]*--Set up the render window and the stage for the splash screen, then enter the gameloop with :update\n[\t ]*G\.STEAM = st\n[\t ]*else\n[\t ]*end\n[\t ]*\n[\t ]*--Set the mouse to invisible immediately, this visibility is handled in the G\.CONTROLLER\n[\t ]*love\.mouse\.setVisible\(false\)\n(?<post>)'''
 position = "at"

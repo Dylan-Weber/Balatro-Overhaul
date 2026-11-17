@@ -391,6 +391,14 @@ local function remove_tree(path)
     love.filesystem.remove(path)
 end
 
+local function safe_rel(rel)
+    if rel == "" or rel:sub(1, 1) == "/" or rel:find("[%z:]") then return false end
+    for seg in rel:gmatch("[^/]+") do
+        if seg == ".." then return false end
+    end
+    return true
+end
+
 local function extract_root(zip, r, target)
     local prefix = r.root == "" and "" or (r.root .. "/")
     local staging = MODS_DIR .. "/.staging_" .. target
@@ -400,7 +408,7 @@ local function extract_root(zip, r, target)
     for _, e in ipairs(zip.entries) do
         if e.name:sub(1, #prefix) == prefix and not e.name:find("__MACOSX", 1, true) then
             local rel = e.name:sub(#prefix + 1):gsub("\\", "/")
-            if rel ~= "" and not rel:find("%.%.") and rel:sub(1, 1) ~= "/" and not rel:find("[%z:]") then
+            if safe_rel(rel) then
                 total = total + (e.usize or 0)
                 if (e.usize or 0) > MAX_ENTRY_BYTES or total > MAX_TOTAL_BYTES then
                     remove_tree(staging)

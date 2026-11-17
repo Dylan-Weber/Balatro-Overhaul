@@ -618,7 +618,7 @@ function H.open(key, mode)
     H.win:align_to_major()
     H.closing = nil
 r 22 360 %20%20%20%20 -
-l 140
+l 152
     K.sound("whoosh1", 1.1, 0.5)
 end
 
@@ -759,8 +759,7 @@ function H.install()
     H.installed = true
     local press, release = Controller.key_press, Controller.key_release
     H.ate = {}
-r 17 934 %20%20%20%20 -
-l 11
+    function Controller:key_press(key, ...)
         if H.win and not H.closing then H.key(key) return end
         if not H.win and MG.pick and MG.pick.key then
             local ok, used = pcall(MG.pick.key, key)
@@ -770,7 +769,7 @@ l 11
                 return
             end
         end
-        return press(self, key)
+        return press(self, key, ...)
     end
 r 17 939 %20%20%20%20 -
 l 48

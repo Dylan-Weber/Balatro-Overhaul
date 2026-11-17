@@ -37,6 +37,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.card_character.003"
+requires = ["auto.card_character.002"]
 target = "card_character.lua"
 pattern = '''^(?<pre>[\t ]*self\.config = \{args = args\}\n)(?<post>)'''
 position = "at"
@@ -49,6 +50,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.card_character.004"
+requires = ["auto.card_character.003"]
 target = "card_character.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*self\.children\.card\.states\.visible = false\n)'''
 position = "at"
@@ -60,6 +62,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.card_character.005"
+requires = ["auto.card_character.001"]
 target = "card_character.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*self\.children\.button = UIBox\{\n)'''
 position = "at"
@@ -72,6 +75,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.card_character.006"
+requires = ["auto.card_character.005"]
 target = "card_character.lua"
 pattern = '''^(?<pre>)[\t ]*definition = create_UIBox_character_button\(\{button = button, func = func, colour = colour, update_func = update_func, maxw = 3\}\),\n(?<post>)'''
 position = "at"
@@ -83,6 +87,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.card_character.007"
+requires = ["auto.card_character.001"]
 target = "card_character.lua"
 pattern = '''^(?<pre>)[\t ]*definition = G\.UIDEF\.speech_bubble\(text_key, loc_vars\),\n(?<post>)'''
 position = "at"

@@ -52,7 +52,7 @@ payload = '''
 ${pre}        if self.HID.touch ~= (HID_type == 'touch') then 
 r 17 147 %20%20%20%20%20%20%20%20%20%20%20%20 -
 r 5 662 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 152
+l 154
                 v:set_ranks()
             end
         end
@@ -62,6 +62,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.controller.005"
+requires = ["auto.card.036|auto.node.002", "auto.controller.008|auto.controller.010"]
 target = "engine/controller.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*function Controller:update\(dt\)\n)'''
 position = "at"
@@ -200,6 +201,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.controller.009"
+requires = ["auto.controller.005"]
 target = "engine/controller.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*if self\.cursor_down\.target\.states\.drag\.can then\n)'''
 position = "at"
@@ -217,7 +219,7 @@ l 4
         end
         --BOTH
 e 17 1125 %20%20%20%20%20%20%20%20 - =34,-15
-l 23
+l 24
         self.cursor_down.distance, self.cursor_down.duration = 0, 0
 ${post}'''
 times = 1
@@ -236,6 +238,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.controller.011"
+requires = ["auto.controller.005"]
 target = "engine/controller.lua"
 pattern = '''^(?<pre>)[\t ]*--Now, handle the Cursor release\n(?:[\t ]*--[^\n]*\n)*[\t ]*--Was the Cursor release in the same location as the Cursor press and within Cursor timeout\?\n(?:[\t ]*--[^\n]*\n)*[\t ]*if self\.cursor_down\.target then \n(?:[\t ]*--[^\n]*\n)*[\t ]*if \(not self\.cursor_down\.target\.click_timeout or self\.cursor_down\.target\.click_timeout\*G\.SPEEDFACTOR > self\.cursor_up\.time - self\.cursor_down\.time\) then\n(?:[\t ]*--[^\n]*\n)*[\t ]*if Vector_Dist\(self\.cursor_down\.T, self\.cursor_up\.T\) < G\.MIN_CLICK_DIST then \n(?:[\t ]*--[^\n]*\n)*[\t ]*if self\.cursor_down\.target\.states\.click\.can then\n(?:[\t ]*--[^\n]*\n)*[\t ]*self\.clicked\.target = self\.cursor_down\.target\n(?:[\t ]*--[^\n]*\n)*[\t ]*self\.clicked\.handled = false\n(?:[\t ]*--[^\n]*\n)*[\t ]*end\n(?:[\t ]*--[^\n]*\n)*[\t ]*--if not, was the Cursor dragging some other thing\?\n(?:[\t ]*--[^\n]*\n)*[\t ]*elseif self\.dragging\.prev_target and self\.cursor_up\.target and self\.cursor_up\.target\.states\.release_on\.can then \n(?:[\t ]*--[^\n]*\n)*[\t ]*self\.released_on\.target = self\.cursor_up\.target\n(?:[\t ]*--[^\n]*\n)*[\t ]*self\.released_on\.handled = false\n(?:[\t ]*--[^\n]*\n)*[\t ]*end\n(?:[\t ]*--[^\n]*\n)*[\t ]*end\n(?:[\t ]*--[^\n]*\n)*[\t ]*end\n(?<post>)'''
 position = "at"
@@ -272,13 +275,14 @@ e 17 1125 %20%20%20%20%20%20%20%20 - =34,-15
 l 1
     
 r 17 339 %20%20%20%20%20%20%20%20 -
-l 11
+l 12
 ${post}'''
 times = 1
 
 [[patches]]
 [patches.regex]
 id = "auto.controller.012"
+requires = ["auto.controller.005"]
 target = "engine/controller.lua"
 pattern = '''^(?<pre>)[\t ]*--Cursor is currently hovering over something\n[\t ]*if self\.cursor_hover\.target and self\.cursor_hover\.target\.states\.hover\.can and \(not self\.HID\.touch or self\.is_cursor_down\) then \n[\t ]*self\.hovering\.target = self\.cursor_hover\.target\n[\t ]*if self\.hovering\.prev_target and self\.hovering\.prev_target ~= self\.hovering\.target then self\.hovering\.prev_target\.states\.hover\.is = false end\n[\t ]*self\.hovering\.target\.states\.hover\.is = true\n[\t ]*self\.hovering\.target:set_offset\(self\.cursor_hover\.T, 'Hover'\)\n[\t ]*elseif \(self\.cursor_hover\.target == nil or \(self\.HID\.touch and not self\.is_cursor_down\)\) and self\.hovering\.target then\n[\t ]*self\.hovering\.target\.states\.hover\.is = false\n[\t ]*self\.hovering\.target = nil\n[\t ]*end\n(?<post>)'''
 position = "at"
@@ -306,13 +310,14 @@ l 3
     end
     --BOTH
 e 17 1125 %20%20%20%20 - =34,-15
-l 11
+l 12
 ${post}'''
 times = 1
 
 [[patches]]
 [patches.regex]
 id = "auto.controller.013"
+requires = ["auto.controller.005"]
 target = "engine/controller.lua"
 pattern = '''^(?<pre>)[\t ]*--The clicked object\n[\t ]*if not self\.clicked\.handled then\n[\t ]*self\.clicked\.target:click\(\)\n[\t ]*self\.clicked\.handled = true\n[\t ]*end\n[\t ]*\n[\t ]*--Process registry clicks\n[\t ]*self:process_registry\(\)\n[\t ]*\n[\t ]*--The object being dragged\n[\t ]*if self\.dragging\.target then\n[\t ]*self\.dragging\.target:drag\(\)\n[\t ]*end\n[\t ]*\n[\t ]*--The object released on\n[\t ]*if not self\.released_on\.handled and self\.dragging\.prev_target then\n[\t ]*if self\.dragging\.prev_target == self\.hovering\.target then self\.hovering\.target:stop_hover\(\);self\.hovering\.target = nil end\n[\t ]*self\.released_on\.target:release\(self\.dragging\.prev_target\)\n[\t ]*self\.released_on\.handled = true\n[\t ]*end\n[\t ]*\n[\t ]*--The object being hovered over\n[\t ]*if self\.hovering\.target then\n[\t ]*self\.hovering\.target:set_offset\(self\.cursor_hover\.T, 'Hover'\)\n[\t ]*if self\.hovering\.prev_target ~= self\.hovering\.target then \n[\t ]*if self\.hovering\.target ~= self\.dragging\.target and not self\.HID\.touch then               \n[\t ]*self\.hovering\.target:hover\(\) \n[\t ]*elseif self\.HID\.touch then\n[\t ]*local _ID =  self\.hovering\.target\.ID\n[\t ]*G\.E_MANAGER:add_event\(Event\(\{\n[\t ]*trigger = 'after',\n[\t ]*blockable = false, \n[\t ]*blocking = false,\n[\t ]*delay = G\.MIN_HOVER_TIME,\n[\t ]*func = function\(\)\n[\t ]*if self\.hovering\.target and _ID == self\.hovering\.target\.ID then\n[\t ]*self\.hovering\.target:hover\(\) \n[\t ]*end\n[\t ]*return true\n[\t ]*end\n[\t ]*\}\)\)\n(?<post>)'''
 position = "at"
@@ -517,7 +522,7 @@ r 29 980 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 l 1
                 else
 r 17 796 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 236
+l 238
                 end
 ${post}'''
 times = 1
@@ -550,6 +555,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.controller.022"
+requires = ["auto.controller.021"]
 target = "engine/controller.lua"
 pattern = '''^(?<pre>)[\t ]*cursor_trans\.x-G\.ROOM\.T\.x < -G\.DRAW_HASH_BUFF or cursor_trans\.x-G\.ROOM\.T\.x > G\.TILE_W \+ G\.DRAW_HASH_BUFF or\n[\t ]*cursor_trans\.y-G\.ROOM\.T\.y < -G\.DRAW_HASH_BUFF or cursor_trans\.y-G\.ROOM\.T\.y > G\.TILE_H \+ G\.DRAW_HASH_BUFF then\n(?<post>)'''
 position = "at"
@@ -721,6 +727,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.controller.036"
+requires = ["auto.controller.033"]
 target = "engine/controller.lua"
 pattern = '''^(?<pre>)[\t ]*G\.ARGS\.focus_list\[#G\.ARGS\.focus_list\+1\] = \{node = v, dist = math\.abs\(G\.ARGS\.focus_vec\.x\) \+ math\.abs\(G\.ARGS\.focus_vec\.y\)\}\n(?<post>)'''
 position = "at"

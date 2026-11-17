@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 107
+l 108
 [manifest]
 version = "1.0.0"
 priority = 0
@@ -43,7 +43,7 @@ times = 1
 [patches.regex]
 id = "auto.blind.003"
 target = "blind.lua"
-pattern = '''^(?<pre>)(?<post>[\t ]*\n[\t ]*self\.chips = [^\n]*get_blind_amount[^\n]*\n)'''
+pattern = '''^(?<pre>)(?<post>(?:[\t ]*\n)?[\t ]*self\.chips = [^\n]*get_blind_amount[^\n]*\n)'''
 position = "at"
 payload = '''
 ${pre}        local creative_mult = 1
@@ -58,6 +58,7 @@ times = 1
 [[patches]]
 [patches.regex]
 id = "auto.blind.004"
+requires = ["auto.blind.003"]
 target = "blind.lua"
 pattern = '''^(?<pre>[\t ]*self\.chips = [^\n]*get_blind_amount[^\n]*\n)(?<post>)'''
 position = "at"

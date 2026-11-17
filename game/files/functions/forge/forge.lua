@@ -9,6 +9,7 @@ local Mods = require("functions/forge/forge_mods")
 local ModsUI = require("functions/forge/forge_mods_ui")
 local Online = require("functions/forge/forge_online")
 require("functions/forge/forge_room")
+require("functions/forge/forge_guide")
 
 JokerForge = JokerForge or {}
 pcall(Store.ensure_dirs)
@@ -25,7 +26,7 @@ JokerForge.mods = Mods
 JokerForge.mods_ui = ModsUI
 JokerForge.online = Online
 ForgeMods = Mods
-FJ.text_for = function(c, lang) return Text.lines(c, lang) end
+FJ.text_for = function(c, lang) return require("functions/forge/forge_always").with_line(c, Text.lines(c, lang), lang) end
 FJ.vars_for = function(center, card)
   local c = center and center.forge_id and Store.get(center.forge_id)
   if card and card.ability and c and type(c.vars) == "table" and #c.vars > 0 and G.STAGE == G.STAGES.RUN and card.area and not (card.area.config and card.area.config.collection) then
