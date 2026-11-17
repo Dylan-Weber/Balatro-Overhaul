@@ -24,7 +24,7 @@
 .end method
 
 .method public static apply(Landroid/app/Activity;)V
-    .locals 14
+    .locals 13
 
     const-string v0, "HighRefreshRate"
 
@@ -60,22 +60,11 @@
     move-result-object v4
     invoke-static {v0, v4}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
 
-    # Only consider modes at the current resolution. A mode at another resolution
-    # (the 1344x2992 mode when the phone is set to 1080p) switches the whole display;
-    # Android switches it back when the game goes to the background and kills the
-    # game's process for the density change, so coming back cold starts the game.
     invoke-virtual {v2}, Landroid/view/Display;->getMode()Landroid/view/Display$Mode;
-    move-result-object v12
-    invoke-virtual {v12}, Landroid/view/Display$Mode;->getPhysicalHeight()I
-    move-result v13          # curH
-    invoke-virtual {v12}, Landroid/view/Display$Mode;->getPhysicalWidth()I
-    move-result v12          # curW
+    move-result-object v12   # current mode
 
     invoke-virtual {v2}, Landroid/view/Display;->getSupportedModes()[Landroid/view/Display$Mode;
     move-result-object v4
-
-    const/4 v5, 0x0         # bestHz = 0.0f
-    const/4 v6, -0x1        # bestModeId = -1
 
     array-length v7, v4
     const/4 v8, 0x0          # i = 0
@@ -114,24 +103,19 @@
     move-result-object v3
     invoke-static {v0, v3}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
 
-    invoke-virtual {v9}, Landroid/view/Display$Mode;->getPhysicalWidth()I
-    move-result v3
-    if-ne v3, v12, :cond_not_best
-    invoke-virtual {v9}, Landroid/view/Display$Mode;->getPhysicalHeight()I
-    move-result v3
-    if-ne v3, v13, :cond_not_best
-
-    cmpg-float v3, v11, v5
-    if-lez v3, :cond_not_best
-
-    move v5, v11          # bestHz = modeHz
-    move v6, v10          # bestModeId = modeId
-
-    :cond_not_best
     add-int/lit8 v8, v8, 0x1
     goto :loop_start
 
     :loop_end
+
+    invoke-static {v12, v4}, Lorg/love2d/android/HighRefreshRate;->pickMode(Landroid/view/Display$Mode;[Landroid/view/Display$Mode;)Landroid/view/Display$Mode;
+    move-result-object v12
+    if-eqz v12, :cond_no_high_hz
+
+    invoke-virtual {v12}, Landroid/view/Display$Mode;->getModeId()I
+    move-result v6          # bestModeId
+    invoke-virtual {v12}, Landroid/view/Display$Mode;->getRefreshRate()F
+    move-result v5          # bestHz
 
     const/high16 v2, 0x42700000    # 60.0f
     cmpg-float v3, v5, v2
@@ -187,6 +171,54 @@
     invoke-static {v0, v1}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;)I
 
     return-void
+.end method
+
+.method public static pickMode(Landroid/view/Display$Mode;[Landroid/view/Display$Mode;)Landroid/view/Display$Mode;
+    # The highest refresh rate mode at the current resolution, or null.
+    # A mode at another resolution (the 1344x2992 mode when the phone is set to
+    # 1080p) switches the whole display; Android switches it back when the game
+    # goes to the background and kills the game's process for the density change,
+    # so coming back cold starts the game.
+    .locals 8
+
+    const/4 v0, 0x0          # best = null
+    const/4 v1, 0x0          # bestHz = 0.0f
+
+    invoke-virtual {p0}, Landroid/view/Display$Mode;->getPhysicalWidth()I
+    move-result v6           # curW
+    invoke-virtual {p0}, Landroid/view/Display$Mode;->getPhysicalHeight()I
+    move-result v7           # curH
+
+    array-length v2, p1
+    const/4 v3, 0x0          # i = 0
+
+    :pick_loop
+    if-ge v3, v2, :pick_end
+
+    aget-object v4, p1, v3
+
+    invoke-virtual {v4}, Landroid/view/Display$Mode;->getPhysicalWidth()I
+    move-result v5
+    if-ne v5, v6, :pick_next
+    invoke-virtual {v4}, Landroid/view/Display$Mode;->getPhysicalHeight()I
+    move-result v5
+    if-ne v5, v7, :pick_next
+
+    invoke-virtual {v4}, Landroid/view/Display$Mode;->getRefreshRate()F
+    move-result v5
+    cmpg-float v5, v5, v1
+    if-lez v5, :pick_next
+
+    move-object v0, v4
+    invoke-virtual {v4}, Landroid/view/Display$Mode;->getRefreshRate()F
+    move-result v1
+
+    :pick_next
+    add-int/lit8 v3, v3, 0x1
+    goto :pick_loop
+
+    :pick_end
+    return-object v0
 .end method
 
 .method public static applySurface(Landroid/view/Surface;)V
