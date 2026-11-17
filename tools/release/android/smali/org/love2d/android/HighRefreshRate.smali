@@ -61,7 +61,7 @@
     invoke-static {v0, v4}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
 
     invoke-virtual {v2}, Landroid/view/Display;->getMode()Landroid/view/Display$Mode;
-    move-result-object v12   # current mode
+    move-result-object v12   # currentMode
 
     invoke-virtual {v2}, Landroid/view/Display;->getSupportedModes()[Landroid/view/Display$Mode;
     move-result-object v4
@@ -180,25 +180,27 @@
     # goes to the background and kills the game's process for the density change,
     # so coming back cold starts the game.
     .locals 8
+    .param p0, "currentMode"    # Landroid/view/Display$Mode;
+    .param p1, "supportedModes"    # [Landroid/view/Display$Mode;
 
-    const/4 v0, 0x0          # best = null
-    const/4 v1, 0x0          # bestHz = 0.0f
+    const/4 v0, 0x0          # bestMode = null
+    const/4 v1, 0x0          # bestRefreshRate = 0.0f
 
     invoke-virtual {p0}, Landroid/view/Display$Mode;->getPhysicalWidth()I
-    move-result v6           # curW
+    move-result v6           # currentWidth
     invoke-virtual {p0}, Landroid/view/Display$Mode;->getPhysicalHeight()I
-    move-result v7           # curH
+    move-result v7           # currentHeight
 
-    array-length v2, p1
-    const/4 v3, 0x0          # i = 0
+    array-length v2, p1      # modeCount
+    const/4 v3, 0x0          # modeIndex = 0
 
     :pick_loop
     if-ge v3, v2, :pick_end
 
-    aget-object v4, p1, v3
+    aget-object v4, p1, v3   # mode
 
     invoke-virtual {v4}, Landroid/view/Display$Mode;->getPhysicalWidth()I
-    move-result v5
+    move-result v5           # comparison scratch: width, height, then refresh rate
     if-ne v5, v6, :pick_next
     invoke-virtual {v4}, Landroid/view/Display$Mode;->getPhysicalHeight()I
     move-result v5
@@ -209,9 +211,9 @@
     cmpg-float v5, v5, v1
     if-lez v5, :pick_next
 
-    move-object v0, v4
+    move-object v0, v4       # bestMode = mode
     invoke-virtual {v4}, Landroid/view/Display$Mode;->getRefreshRate()F
-    move-result v1
+    move-result v1           # bestRefreshRate
 
     :pick_next
     add-int/lit8 v3, v3, 0x1
