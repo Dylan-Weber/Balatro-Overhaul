@@ -415,7 +415,7 @@ function PUI.open(tab, from)
   if QuestManager then pcall(QuestManager.init) end
   if check_milestones then pcall(check_milestones) end
 r 32 1381 %20%20 -
-l 551
+l 553
   G.FUNCS.overlay_menu{definition = PUI.window(tab)}
 end
 
@@ -598,7 +598,7 @@ local function busy()
 end
 
 function PUI.pump()
-  if progression_hidden() then PUI.queue = {} end
+  if progression_popups_hidden() then PUI.queue = {} end
   if PUI.box or #PUI.queue == 0 or PUI.waiting then return end
   if not (G and G.ROOM_ATTACH and G.E_MANAGER and UIBox) then return end
   if busy() or (PUI.queue[1].quest and not rawget(_G, "QuestManager")) then
@@ -631,7 +631,7 @@ function PUI.pump()
 end
 
 function PUI.toast(t)
-  if not t or progression_hidden() then return end
+  if not t or progression_popups_hidden() then return end
   PUI.queue[#PUI.queue + 1] = t
   PUI.pump()
 end
@@ -954,9 +954,11 @@ function PUI.badge_tick(force)
 end
 
 function PUI.set_hidden()
-  PUI.queue = {}
-  if PUI.box then PUI.hide() end
-  badge_drop()
+  if progression_popups_hidden() then
+    PUI.queue = {}
+    if PUI.box then PUI.hide() end
+  end
+  if progression_hidden() then badge_drop() end
 end
 
 if Game and Game.update and not PUI.badge_wrapped then

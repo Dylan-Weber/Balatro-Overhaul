@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 488
+l 491
 local S = SettingsUI
 local L = function(s) return mod_loc(s) end
 
@@ -52,6 +52,7 @@ function S.defaults()
   if St.ingame_keyboard == nil then St.ingame_keyboard = (G.F_MOBILE or rawget(_G, "_IS_DESKTOP") == false) and true or false end
   if St.safe_sell == nil then St.safe_sell = false end
   if St.hide_progression == nil then St.hide_progression = false end
+  if St.hide_progression_popups == nil then St.hide_progression_popups = false end
   if St.spectate_follow == nil then St.spectate_follow = true end
   if GR.portrait_fill == nil then GR.portrait_fill = false end
   GR.filter_type = GR.filter_type or 1
@@ -220,7 +221,9 @@ local function gameplay(pool)
     }},
     {title = "Run", items = run},
     {title = "Progression", items = {
-      UIK.toggle{id = 'set_hide_progression', label = L("Hide Progression"), info = L("No XP, quest or level pop-ups, badges or button"), ref_table = St, ref_value = 'hide_progression',
+      UIK.toggle{id = 'set_hide_progression_popups', label = L("Hide Progression Pop-ups"), info = L("No pop-ups for quests, levels or milestones"), ref_table = St, ref_value = 'hide_progression_popups',
+        callback = function() save() S.progression_changed() end},
+      UIK.toggle{id = 'set_hide_progression', label = L("Hide Progression Buttons"), info = L("No Progression button, badge or Quests door"), ref_table = St, ref_value = 'hide_progression',
         callback = function() save() S.progression_changed() end},
     }},
   }

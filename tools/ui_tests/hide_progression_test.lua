@@ -46,8 +46,8 @@ local PUI = ProgressionUI
 function progression_unclaimed_levels() return {} end
 
 -- setting off: everything shows as before
-G.SETTINGS.hide_progression = false
-ok(progression_hidden() == false, "shown by default")
+G.SETTINGS.hide_progression, G.SETTINGS.hide_progression_popups = false, false
+ok(progression_hidden() == false and progression_popups_hidden() == false, "shown by default")
 local toasts = {}
 local real_toast = PUI.toast
 PUI.toast = function(t) toasts[#toasts + 1] = t return real_toast(t) end
@@ -60,9 +60,9 @@ ok(#PUI.queue == 1, "toast queued with the setting off")
 PUI.badge_tick(true)
 ok(G.progression_badge ~= nil and PUI.badge.text == "2", "red count on the Progression button with the setting off")
 
--- setting on
-G.SETTINGS.hide_progression = true
-ok(progression_hidden() == true, "hidden when the setting is on")
+-- popups setting on: no toasts, but the badge and buttons stay
+G.SETTINGS.hide_progression_popups = true
+ok(progression_popups_hidden() == true and progression_hidden() == false, "popups setting is separate from the buttons setting")
 toasts = {}
 progression_notify("level", 4)
 progression_notify("milestone", "First Victory", 500)
@@ -73,14 +73,20 @@ real_toast({kind = "level", a = 4})
 QuestManager.popup({id = "q"})
 ok(#PUI.queue == 0, "quest and level toasts are not queued")
 PUI.set_hidden()
-ok(G.progression_badge == nil, "turning the setting on drops the red count")
-clock = clock + 1
-PUI.badge_tick(true)
-ok(G.progression_badge == nil, "no red count while hidden, even with quests ready")
+ok(G.progression_badge ~= nil, "popups setting leaves the red count alone")
 PUI.queue = {{kind = "level", a = 5}}
 dofile("assets/functions/progression_ui.lua")
 ProgressionUI.pump()
 ok(#ProgressionUI.queue == 0 and ProgressionUI.box == nil, "a toast queued before the setting changed is dropped")
+
+-- buttons setting on: no badge
+G.SETTINGS.hide_progression = true
+ok(progression_hidden() == true, "buttons hidden when the setting is on")
+PUI.set_hidden()
+ok(G.progression_badge == nil, "turning the buttons setting on drops the red count")
+clock = clock + 1
+PUI.badge_tick(true)
+ok(G.progression_badge == nil, "no red count while hidden, even with quests ready")
 
 -- XP still counts while hidden, so turning it back on shows the real level
 local pr = G.PROFILES[1].progression
@@ -92,11 +98,11 @@ ok(pr.total_xp == before + 5000, "XP still adds up while hidden")
 UIK.toggle = function(args) return {toggle = args} end
 SettingsUI = {}
 G.SETTINGS.GRAPHICS = {}
-G.SETTINGS.hide_progression = nil
+G.SETTINGS.hide_progression, G.SETTINGS.hide_progression_popups = nil, nil
 dofile("assets/functions/settings/catalog.lua")
 SettingsUI.defaults()
-ok(G.SETTINGS.hide_progression == false, "defaults to shown")
-local found
+ok(G.SETTINGS.hide_progression == false and G.SETTINGS.hide_progression_popups == false, "both default to shown")
+local found, found_popups
 for _, c in ipairs(SettingsUI.CATS) do
   if c.key == "gameplay" then
     bom_match, FairLock = nil, nil
@@ -106,18 +112,21 @@ for _, c in ipairs(SettingsUI.CATS) do
     for _, s in ipairs(ok_build and sections or {}) do
       for _, it in ipairs(s.items or {}) do
         if type(it) == "table" and it.toggle and it.toggle.id == "set_hide_progression" then found = {section = s.title, args = it.toggle} end
+        if type(it) == "table" and it.toggle and it.toggle.id == "set_hide_progression_popups" then found_popups = {section = s.title, args = it.toggle} end
       end
     end
   end
 end
-ok(found and found.section == "Progression", "Hide Progression toggle in Gameplay > Progression")
+ok(found and found.section == "Progression" and found_popups and found_popups.section == "Progression", "both toggles in Gameplay > Progression")
+ok(found_popups and found_popups.args.ref_value == "hide_progression_popups", "popups toggle saves to hide_progression_popups")
 ok(found and found.args.ref_table == G.SETTINGS and found.args.ref_value == "hide_progression", "toggle saves to G.SETTINGS.hide_progression")
 local changed = 0
 PUI.set_hidden = function() changed = changed + 1 end
 G.STAGE = G.STAGES.RUN
 G.save_settings = function() end
 if found then found.args.callback(true) end
-ok(changed == 1, "toggling clears toasts and the red count right away")
+if found_popups then found_popups.args.callback(true) end
+ok(changed == 2, "toggling clears toasts and the red count right away")
 
 -- The Casino: no Quests door while hidden
 for _, k in ipairs({"open_quest_menu", "open_run_history", "open_shop_menu", "open_profile_menu"}) do G.FUNCS[k] = function() end end
@@ -138,7 +147,8 @@ G.SETTINGS.hide_progression = true
 local doors = tavern()
 ok(not doors.open_quest_menu and doors.open_run_history, "Quests door hidden, Run History kept")
 
--- Jimbo never points at the quests
+-- Jimbo never points at the quests (popups setting)
+G.SETTINGS.hide_progression, G.SETTINGS.hide_progression_popups = false, true
 JIMBO_COMMENTS = nil
 local ok_jc, err = pcall(dofile, "assets/functions/jimbo_comments.lua")
 ok(ok_jc, "jimbo comments load: " .. tostring(err))
@@ -149,7 +159,7 @@ if ok_jc then
   local quests = 0
   for _, s in ipairs(said) do if s:find("quests") then quests = quests + 1 end end
   ok(#said == 60 and quests == 0, "no quest line from Jimbo while hidden")
-  G.SETTINGS.hide_progression = false
+  G.SETTINGS.hide_progression_popups = false
   said = {}
   for _ = 1, 60 do JIMBO_COMMENTS.fire("menu", nil, nil, true) end
   quests = 0
