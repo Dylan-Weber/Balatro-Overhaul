@@ -1928,7 +1928,7 @@ ${pre}  local is_restart = e and e.config and e.config.id == 'restart_button'
   local is_mp_start = args and args.mp_start
   local show_boosters = false
 
-  if not is_restart and not is_resume and not is_mp_start then
+  if not is_restart and not is_resume and not is_mp_start and not progression_hidden() then
     pcall(function()
       if BoosterManager and BoosterManager.init and BoosterManager.get_inventory then
         BoosterManager.init()

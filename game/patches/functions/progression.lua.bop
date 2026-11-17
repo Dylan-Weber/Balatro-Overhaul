@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 193
+l 198
 
 local PROGRESSION = {
   XP_PER_HAND = 10,
@@ -66,7 +66,12 @@ function progression_save()
   if G and G.save_progress then pcall(function() G:save_progress() end) end
 end
 
+function progression_hidden()
+  return G and G.SETTINGS and G.SETTINGS.hide_progression and true or false
+end
+
 function progression_notify(kind, a, b)
+  if progression_hidden() then return end
   if ProgressionUI and ProgressionUI.toast then
     pcall(ProgressionUI.toast, {kind = kind, a = a, b = b})
   end

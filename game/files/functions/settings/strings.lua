@@ -70,6 +70,7 @@ mod_loc_register{
     ["Fill the Screen"] = "Remplir l'écran", ["Game windows reach the screen sides"] = "Les fenêtres du jeu vont jusqu'aux bords",
     ["Decks to pick from"] = "Jeux proposés", ["Decks shown in New Run and lobbies"] = "Jeux affichés dans Nouvelle partie et les salons",
     ["Only vanilla"] = "Vanilla seulement", ["Only new"] = "Nouveaux seulement", ["Both"] = "Les deux",
+    ["Hide Progression"] = "Masquer la progression", ["No XP, quest or level pop-ups, badges or button"] = "Ni pop-ups, ni pastilles, ni bouton d'XP, de quêtes ou de niveaux",
   },
   es = {
     set_btn_skip = "Saltar", set_btn_done = "Hecho", set_btn_play = "Jugar",
@@ -116,5 +117,6 @@ mod_loc_register{
     ["Fill the Screen"] = "Llenar la pantalla", ["Game windows reach the screen sides"] = "Las ventanas del juego llegan a los bordes",
     ["Decks to pick from"] = "Barajas a elegir", ["Decks shown in New Run and lobbies"] = "Barajas en Nueva partida y en las salas",
     ["Only vanilla"] = "Solo vanilla", ["Only new"] = "Solo nuevas", ["Both"] = "Ambas",
+    ["Hide Progression"] = "Ocultar el progreso", ["No XP, quest or level pop-ups, badges or button"] = "Sin avisos, insignias ni botón de XP, misiones o niveles",
   },
 }

@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 473
+l 488
 local S = SettingsUI
 local L = function(s) return mod_loc(s) end
 
@@ -51,6 +51,7 @@ function S.defaults()
   if St.keyboard_play == nil then St.keyboard_play = true end
   if St.ingame_keyboard == nil then St.ingame_keyboard = (G.F_MOBILE or rawget(_G, "_IS_DESKTOP") == false) and true or false end
   if St.safe_sell == nil then St.safe_sell = false end
+  if St.hide_progression == nil then St.hide_progression = false end
   if St.spectate_follow == nil then St.spectate_follow = true end
   if GR.portrait_fill == nil then GR.portrait_fill = false end
   GR.filter_type = GR.filter_type or 1
@@ -218,7 +219,21 @@ local function gameplay(pool)
         callback = function(v) if not v then for _, a in ipairs({G.jokers, G.consumeables}) do if a and a.unhighlight_all then a:unhighlight_all() end end end save() end} or nil,
     }},
     {title = "Run", items = run},
+    {title = "Progression", items = {
+      UIK.toggle{id = 'set_hide_progression', label = L("Hide Progression"), info = L("No XP, quest or level pop-ups, badges or button"), ref_table = St, ref_value = 'hide_progression',
+        callback = function() save() S.progression_changed() end},
+    }},
   }
+end
+
+function S.progression_changed()
+  if ProgressionUI and ProgressionUI.set_hidden then pcall(ProgressionUI.set_hidden) end
+  if not (G.STAGE == G.STAGES.MAIN_MENU and G.MAIN_MENU_UI and set_main_menu_UI) then return end
+  G.MAIN_MENU_UI:remove()
+  G.MAIN_MENU_UI = nil
+  if G.collection_alert then G.collection_alert:remove() G.collection_alert = nil end
+  set_main_menu_UI()
+  G.REFRESH_ALERTS = true
 end
 
 local function shop(pool)

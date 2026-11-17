@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 438
+l 439
 JIMBO_COMMENTS = JIMBO_COMMENTS or {}
 local JC = JIMBO_COMMENTS
 
@@ -364,6 +364,7 @@ local function pick(pool)
         JC._bags[pool] = bag
     end
     local i = table.remove(bag)
+    if lines[i] == "The Casino has quests waiting for you." and progression_hidden() then return pick(pool) end
     return lines[i]
 end
 
