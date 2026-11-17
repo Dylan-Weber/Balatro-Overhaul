@@ -4,8 +4,8 @@ return {
       file = "files/CHANGELOG.md",
       kind = "own",
       path = "CHANGELOG.md",
-      sha256 = "91bbdd489c60f7cc669f6912d37ea958c29f87ea39cfdc82479b04bcc099c269",
-      size = 116471,
+      sha256 = "1c60db14feb5053603060c8c8f8bf3d4a02f96731051f10793364f1013f3aa92",
+      size = 116902,
     },
     {
       file = "files/GPL-3.0.txt",
@@ -1229,8 +1229,8 @@ return {
       kind = "patch",
       patch = "patches/functions/forge/forge_blocks.lua.bop",
       path = "functions/forge/forge_blocks.lua",
-      sha256 = "18206f97d7e54e6d263bded216b0be43f61236de0f7b716f810cacb299388dfb",
-      size = 56171,
+      sha256 = "b0fcb9e6c2bd840e327c94fa00a08ebb1e75debd40ceb651168cb70631d19fb2",
+      size = 56137,
     },
     {
       kind = "patch",
@@ -1264,8 +1264,8 @@ return {
       kind = "patch",
       patch = "patches/functions/forge/forge_editions.lua.bop",
       path = "functions/forge/forge_editions.lua",
-      sha256 = "381a2e1f0c172cfa14f4999e59ae8eeb9c9823d2ab06e20b505e9a9e392e1fbb",
-      size = 19546,
+      sha256 = "25398fc4681c80ddac52e20453f9866a335889dbcbd9d2d3b52ad901fff69cd6",
+      size = 19512,
     },
     {
       kind = "patch",
@@ -1292,8 +1292,8 @@ return {
       kind = "patch",
       patch = "patches/functions/forge/forge_kinds.lua.bop",
       path = "functions/forge/forge_kinds.lua",
-      sha256 = "ccdd199b99a8223397fabf90cb31c4c7fb6ed426e4531cc3f22b761418e8478a",
-      size = 34611,
+      sha256 = "be8d386df156f995dbf186ae16300b2a4110525cda6445c45ce57f6395730efe",
+      size = 34574,
     },
     {
       kind = "patch",
@@ -1355,8 +1355,8 @@ return {
       kind = "patch",
       patch = "patches/functions/forge/forge_power3.lua.bop",
       path = "functions/forge/forge_power3.lua",
-      sha256 = "e38813a45b8cf3516c6ffd6c8d8f4ed725814efb88e1d821398da144e9ddf41c",
-      size = 75066,
+      sha256 = "fa67f9cd5f80093cd63afab20d9082552e2cfff9e5a2e4b72439bac327f09475",
+      size = 75077,
     },
     {
       file = "files/functions/forge/forge_room.lua",
@@ -1369,8 +1369,8 @@ return {
       kind = "patch",
       patch = "patches/functions/forge/forge_rules.lua.bop",
       path = "functions/forge/forge_rules.lua",
-      sha256 = "cdbf2c51e9b203d137d7c29945e2575d4f3891a3fbdabe79fb79e6152e20e40c",
-      size = 55806,
+      sha256 = "5eb96d9d312295c38255ab9bece4edb434a374b484d477aa6973d0ca74e59423",
+      size = 56803,
     },
     {
       kind = "patch",
@@ -2804,7 +2804,7 @@ return {
       file = "files/overhaul/version.lua",
       kind = "own",
       path = "overhaul/version.lua",
-      sha256 = "772748616aed9275beda5493d51ec57e58303c929db83e6f5a1c1e575c170d7a",
+      sha256 = "ad71b60518d5459b27b8e40eae9aee20c5afaac64ee7788c568ac10cf2d8c5a9",
       size = 148,
     },
     {
@@ -6162,7 +6162,7 @@ return {
   game_version = "1.0.1o-FULL",
   name = "Balatro Overhaul",
   overhaul_name = "2.1.1",
-  overhaul_version = "73",
+  overhaul_version = "74",
   vanilla = {
     {
       lines = "lines/1.txt",

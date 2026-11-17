@@ -360,9 +360,9 @@ l 40
   D.dup_joker = function(g, card, src, context, other, acc)
     if context.blueprint then return end
     local pool = {}
-    for _, j in ipairs(G.jokers and G.jokers.cards or {}) do if j ~= card then pool[#pool + 1] = j end end
+    for _, j in ipairs(G.jokers and G.jokers.cards or {}) do if j ~= card and not j.forge_dying and not j.getting_sliced then pool[#pool + 1] = j end end
     if #pool == 0 then R.status(src, localize("k_no_other_jokers"), G.C.FILTER) return end
-    local used = #G.jokers.cards + (G.GAME.joker_buffer or 0) - (acc and acc.when == "self_sold" and 1 or 0)
+    local used = R.slots_used(G.jokers, "joker_buffer") - (acc and acc.when == "self_sold" and 1 or 0)
     if used >= G.jokers.config.card_limit then R.status(src, localize("k_no_room_ex"), G.C.FILTER) return end
     local chosen = pseudorandom_element(pool, pseudoseed("forge_invisible"))
     local c = copy_card(chosen, nil, nil, nil, chosen.edition and chosen.edition.negative)
@@ -376,7 +376,7 @@ l 40
     if not (area and area.cards and area.cards[1]) then return end
     local neg = g.v ~= "normal"
     if not neg then
-      if #area.cards + (G.GAME.consumeable_buffer or 0) >= area.config.card_limit then return end
+      if not R.has_room(area, "consumeable_buffer") then return end
       G.GAME.consumeable_buffer = (G.GAME.consumeable_buffer or 0) + 1
     end
 r 3 617 %20%20%20%20 -

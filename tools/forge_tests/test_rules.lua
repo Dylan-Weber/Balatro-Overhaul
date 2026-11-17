@@ -674,5 +674,100 @@ do
   package.loaded["functions/forge/forge_store"] = nil
 end
 
+do
+  reset_game()
+  local queue = {}
+  G.E_MANAGER = {add_event = function(_, e) queue[#queue + 1] = e end}
+  local function flush()
+    local i = 1
+    while queue[i] do queue[i].func(); i = i + 1 end
+    queue = {}
+  end
+  pseudorandom_element = function(list) return list[#list] end
+  pseudoseed = function(s) return s end
+  local function area(limit)
+    local a = {cards = {}, config = {card_limit = limit}}
+    function a:emplace(c) self.cards[#self.cards + 1] = c; c.area = self end
+    function a:remove_card(c)
+      for k, v in ipairs(self.cards) do if v == c then table.remove(self.cards, k) return c end end
+    end
+    return a
+  end
+  local function row(n, o)
+    o = o or {}
+    G.jokers = area(5)
+    local js = {}
+    for k = 1, n do
+      local j = joker()
+      j.area = nil
+      if o.eternal and k > 1 then j.ability.eternal = true end
+      if o.negative and k > 1 then j.edition = {negative = true} end
+      G.jokers:emplace(j)
+      js[k] = j
+    end
+    return js
+  end
+  local function play(js, give)
+    log.created = {}
+    R.calculate(js[1], ctx_for("hand_played"), R.clean_rules({{when = "hand_played", give = give}}))
+    flush()
+  end
+  local DJ, CJ, DS = {id = "destroy_joker"}, {id = "create", v = "Joker"}, {id = "destroy_self"}
+
+  local js = row(5)
+  play(js, {DJ, CJ})
+  check("slots: full row, destroy then create keeps 5/5", #G.jokers.cards == 5 and #log.created == 1 and js[5].removed and G.GAME.joker_buffer == 0)
+  js = row(5)
+  play(js, {CJ, DJ})
+  check("slots: full row, create listed first still swaps", #G.jokers.cards == 5 and #log.created == 1 and js[5].removed)
+  js = row(5)
+  play(js, {DS, CJ})
+  check("slots: destroy self frees its own slot", #G.jokers.cards == 5 and #log.created == 1 and js[1].removed)
+  js = row(5)
+  play(js, {CJ, CJ, DJ})
+  check("slots: one destroy frees one slot only", #G.jokers.cards == 5 and #log.created == 1)
+  js = row(5)
+  play(js, {CJ})
+  check("slots: no destroy, full row, nothing made", #G.jokers.cards == 5 and #log.created == 0)
+  js = row(5, {eternal = true})
+  play(js, {DJ, CJ})
+  check("slots: only Eternal targets, nothing destroyed or made", #G.jokers.cards == 5 and #log.created == 0)
+  js = row(5, {negative = true})
+  play(js, {DJ, CJ})
+  check("slots: a Negative target frees no slot", #log.created == 0 and js[5].removed)
+  js = row(3)
+  play(js, {DJ, CJ})
+  check("slots: with free slots, swap keeps the count", #G.jokers.cards == 3 and #log.created == 1)
+  js = row(5)
+  log.created = {}
+  R.calculate(js[1], ctx_for("hand_played"), R.clean_rules({{when = "hand_played", give = {DJ}}, {when = "hand_played", give = {CJ}}}))
+  flush()
+  check("slots: a destroy in an earlier rule frees the slot", #G.jokers.cards == 5 and #log.created == 1)
+
+  G.consumeables = area(2)
+  local a, b = joker(), joker()
+  a.area, b.area = nil, nil
+  G.consumeables:emplace(a)
+  G.consumeables:emplace(b)
+  check("slots: full consumables, no room", not R.has_room(G.consumeables, "consumeable_buffer"))
+  b.forge_dying = true
+  check("slots: a dying consumable frees its slot", R.has_room(G.consumeables, "consumeable_buffer"))
+  log.created = {}
+  check("slots: create a Tarot into the freed slot", R.create_one("Tarot", a) and #log.created == 0)
+  check("slots: the freed slot is taken once", not R.create_one("Tarot", a))
+  flush()
+  check("slots: Tarot made", #log.created == 1 and G.GAME.consumeable_buffer == 0)
+  b.edition = {negative = true}
+  G.consumeables:remove_card(G.consumeables.cards[3])
+  check("slots: a dying Negative consumable frees nothing", not R.has_room(G.consumeables, "consumeable_buffer"))
+  G.GAME.joker_buffer = 1
+  G.jokers = area(5)
+  check("slots: pending creates still count", R.slots_used(G.jokers, "joker_buffer") == 1)
+  G.GAME.joker_buffer = 0
+  check("slots: order unchanged without a create before a destroy", R.slot_order({DJ, CJ})[1] == DJ and R.slot_order({CJ})[1] == CJ)
+  check("slots: destroys move ahead of creates", R.slot_order({CJ, {id = "money", n = 1}, DJ})[1] == DJ and R.slot_order({CJ, {id = "money", n = 1}, DJ})[2] == CJ)
+  reset_game()
+end
+
 print(string.format("%d checks, %d failed", total, fails))
 os.exit(fails == 0 and 0 or 1)

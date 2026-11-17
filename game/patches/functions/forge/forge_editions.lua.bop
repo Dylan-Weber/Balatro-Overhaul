@@ -266,7 +266,7 @@ l 31
     local free = frees_slot(probe)
     local made = 0
     for _ = 1, math.max(1, math.min(math.floor(tonumber(n) or 1), 50)) do
-      if not free and #G.jokers.cards + (G.GAME.joker_buffer or 0) >= G.jokers.config.card_limit then break end
+      if not free and not R.has_room(G.jokers, "joker_buffer") then break end
       G.GAME.joker_buffer = (G.GAME.joker_buffer or 0) + 1
       made = made + 1
 r 3 617 %20%20%20%20%20%20 -

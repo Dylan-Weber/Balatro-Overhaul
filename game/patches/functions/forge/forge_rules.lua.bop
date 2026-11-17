@@ -168,7 +168,7 @@ function R.map_refs(t, fn, depth)
   depth = depth or 0
   if type(t) ~= "table" or depth > 8 then return end
 r 13 131 %20%20 -
-l 114
+l 130
     if type(v) == "table" then
       R.map_refs(v, fn, depth + 1)
     else
@@ -276,12 +276,28 @@ function R.card_values(set)
   return own
 end
 
+function R.leaving(area)
+  local n = 0
+  for _, c in ipairs(area and area.cards or {}) do
+    if c.forge_dying and not (c.edition and c.edition.negative) then n = n + 1 end
+  end
+  return n
+end
+
+function R.slots_used(area, buf)
+  return #area.cards + (G.GAME[buf] or 0) - R.leaving(area)
+end
+
+function R.has_room(area, buf)
+  return area and area.config and area.cards and R.slots_used(area, buf) < area.config.card_limit and true or false
+end
+
 function R.make_card(v, src)
   if not (R.card_usable(v) and G.GAME) then return false end
   local set = G.P_CENTERS[v].set
   local area = set == "Joker" and G.jokers or G.consumeables
   local buf = set == "Joker" and "joker_buffer" or "consumeable_buffer"
-  if not (area and area.config) or #area.cards + (G.GAME[buf] or 0) >= area.config.card_limit then return false end
+  if not R.has_room(area, buf) then return false end
   G.GAME[buf] = (G.GAME[buf] or 0) + 1
 r 3 617 %20%20 -
 l 282
@@ -764,7 +780,7 @@ end
 
 local function create_one(kind, card)
   if kind == "Joker" then
-    if #G.jokers.cards + (G.GAME.joker_buffer or 0) >= G.jokers.config.card_limit then return false end
+    if not R.has_room(G.jokers, "joker_buffer") then return false end
     G.GAME.joker_buffer = (G.GAME.joker_buffer or 0) + 1
 r 3 617 %20%20%20%20 -
 l 4
@@ -778,7 +794,7 @@ l 6
     end}))
     return true
   end
-  if #G.consumeables.cards + (G.GAME.consumeable_buffer or 0) >= G.consumeables.config.card_limit then return false end
+  if not R.has_room(G.consumeables, "consumeable_buffer") then return false end
   G.GAME.consumeable_buffer = (G.GAME.consumeable_buffer or 0) + 1
 r 3 617 %20%20 -
 l 3
@@ -930,7 +946,7 @@ l 14
     if g.v == R.TAG_RANDOM then key = R.roll_tag() end
     if not key or not G.P_TAGS or not G.P_TAGS[key] or not R.usable("tag", key) then return end
 r 3 617 %20%20%20%20 -
-l 332
+l 351
       add_tag(Tag(key))
       play_sound("generic1", 0.9 + math.random() * 0.1, 0.8)
       play_sound("holo1", 1.2 + math.random() * 0.1, 0.4)
@@ -976,6 +992,25 @@ local function seed_of(card, i)
   return "forge_" .. tostring(c and c.forge_id or "x") .. "_" .. i
 end
 
+R.FREES_SLOT = {destroy_joker = true, destroy_self = true, dagger = true}
+R.FILLS_SLOT = {create = true, make_card = true, create_rarity = true, make_ed_joker = true, ed_joker = true, dup_joker = true, copy_consumable = true}
+
+local function slot_order(list)
+  local fill
+  for _, g in ipairs(list) do
+    if R.FILLS_SLOT[g.id] then fill = true
+    elseif fill and R.FREES_SLOT[g.id] then
+      local out = {}
+      for _, x in ipairs(list) do if R.FREES_SLOT[x.id] then out[#out + 1] = x end end
+      for _, x in ipairs(list) do if not R.FREES_SLOT[x.id] then out[#out + 1] = x end end
+      return out
+    end
+  end
+  return list
+end
+
+R.slot_order = slot_order
+
 local function apply_card(rule, i, card, src, context, other, phase, acc)
   if phase == "repeat" then
     for _, g in ipairs(rule.give) do
@@ -984,7 +1019,7 @@ local function apply_card(rule, i, card, src, context, other, phase, acc)
     return
   end
   local held = context.cardarea == G.hand
-  for _, g in ipairs(rule.give) do
+  for _, g in ipairs(slot_order(rule.give)) do
     local n = g.n
     if g.id == "var_chips" or g.id == "var_mult" then n = g.n * var_val(card, g.var) end
     if R.SCORE_GIVE[g.id] then
@@ -1007,7 +1042,7 @@ local function apply_card(rule, i, card, src, context, other, phase, acc)
 end
 
 local function apply_main(rule, card, src, context, acc)
-  for _, g in ipairs(rule.give) do
+  for _, g in ipairs(slot_order(rule.give)) do
     if R.SCORE_GIVE[g.id] then g = {id = R.SCORE_GIVE[g.id], n = tonumber(R.AMOUNT[g.id](g, card, context, nil)) or 0, neg = R.NEG_GIVE and R.NEG_GIVE[g.id]} end
     if g.id == "chips" and (g.n == 0 or g.n < 0 and not g.neg) or g.id == "mult" and (g.n == 0 or g.n < 0 and not g.neg) or (g.id == "xmult" or g.id == "xchips") and g.n == 1 then
     elseif g.id == "chips" then acc.ret.chip_mod = (acc.ret.chip_mod or 0) + g.n

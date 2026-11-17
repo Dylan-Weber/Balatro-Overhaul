@@ -441,7 +441,7 @@ local function effect(e, c, used, hl)
     G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.3, func = function() used:juice_up(0.3, 0.5); return true end}))
     R.draw_cards(n, nil)
   elseif id == "rare_joker" then
-    if #G.jokers.cards + (G.GAME.joker_buffer or 0) < G.jokers.config.card_limit then
+    if R.has_room(G.jokers, "joker_buffer") then
       G.GAME.joker_buffer = (G.GAME.joker_buffer or 0) + 1
       local r = tonumber(e.v) or 2
       G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.4, func = function()

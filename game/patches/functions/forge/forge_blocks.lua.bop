@@ -316,7 +316,7 @@ l 71
   D.create_rarity = function(g, card, src)
     local made = 0
     for _ = 1, math.floor(tonumber(g.n) or 1) do
-      if #G.jokers.cards + (G.GAME.joker_buffer or 0) >= G.jokers.config.card_limit then break end
+      if not R.has_room(G.jokers, "joker_buffer") then break end
       G.GAME.joker_buffer = (G.GAME.joker_buffer or 0) + 1
       made = made + 1
       local legendary = g.v == "Legendary"

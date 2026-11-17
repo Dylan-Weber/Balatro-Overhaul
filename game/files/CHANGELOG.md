@@ -28,6 +28,7 @@ What each version brings to players. The game shows this file in About > Changel
 - Fixed in multiplayer: "Only vanilla" in Decks to pick from now applies to the ranked deck draft, the lobby deck and random decks, for both players (GitHub #44).
 - Fixed: with Tally Joker on, a Joker with a long text no longer blocks the Select button under the Jokers (GitHub #45).
 - Fixed in the Forge: Green Joker loses 1 Mult per discard like the real one, and the Tarot and Planet Merchant and Tycoon recipes match the game.
+- Fixed in the Forge: a rule that destroys a card and creates one now swaps them even when your Joker row is full (GitHub #46).
 
 ### fr Overhaul 2.1.1
 
@@ -53,6 +54,7 @@ What each version brings to players. The game shows this file in About > Changel
 - Corrigé en multijoueur : "Vanilla seulement" dans Jeux proposés s'applique maintenant au draft de decks en classé, au deck du salon et aux decks au hasard, pour les deux joueurs (GitHub #44).
 - Corrigé : avec Tally Joker activé, un Joker au texte long ne bloque plus le bouton Choisir sous les Jokers (GitHub #45).
 - Corrigé dans la Forge : Green Joker perd 1 Multi par défausse comme le vrai, et les recettes de Tarot et Planet Merchant et Tycoon correspondent au jeu.
+- Corrigé dans la Forge : une règle qui détruit une carte et en crée une les échange maintenant même quand votre rangée de Jokers est pleine (GitHub #46).
 
 ### es Overhaul 2.1.1
 
@@ -78,6 +80,7 @@ What each version brings to players. The game shows this file in About > Changel
 - Corregido en multijugador: "Solo vanilla" en Barajas a elegir ahora se aplica al draft de barajas en clasificatoria, a la baraja de la sala y a las barajas al azar, para los dos jugadores (GitHub #44).
 - Corregido: con Tally Joker activado, un comodín con texto largo ya no bloquea el botón Seleccionar bajo los comodines (GitHub #45).
 - Corregido en la Forja: Green Joker pierde 1 Multi por descarte como el original, y las recetas de Tarot y Planet Merchant y Tycoon coinciden con el juego.
+- Corregido en la Forja: una regla que destruye una carta y crea otra ahora las cambia aunque tu fila de comodines esté llena (GitHub #46).
 
 ## 2.1 | 2026-11-16
 

@@ -4,7 +4,7 @@ Changelog for the updates, first being the latest changes.
 
 ## 2.1.1
 
-*Overhaul 2.1.1, 2026-11-17. Mods on phones work again after 2.1, no more black screen on the first start, a Forge guide and new Forge deck effects, and fixes for #43, #44 and #45.*
+*Overhaul 2.1.1, 2026-11-17. Mods on phones work again after 2.1, no more black screen on the first start, a Forge guide and new Forge deck effects, and fixes for #43, #44, #45 and #46.*
 
 ### The Forge
 - **Forge guide.** Five short pages explain what a rule is, WHEN / IF / DO, variables, Try it in a run and sharing. It opens the first time you visit the Forge, and the GUIDE button in Creations or Options > Guide > The Forge opens it again.
@@ -12,7 +12,7 @@ Changelog for the updates, first being the latest changes.
 - **Always comes with.** Jokers, Tarots, Planets, Spectrals and Enhancements can start with an edition, and Jokers can put an edition on a random Joker that has none.
 - **Variables in numbers.** Every number box of a rule can use a variable: press Variable next to Type and pick one. The card text shows its value right now.
 - **This round's suit.** A new condition for rules that run when a hand is played: the hand has a scoring card of this round's suit.
-- **Fixes.** Green Joker loses 1 Mult per discard like the real one, and the Tarot and Planet Merchant and Tycoon recipes match the game.
+- **Fixes.** Green Joker loses 1 Mult per discard like the real one, the Tarot and Planet Merchant and Tycoon recipes match the game, and a rule that destroys a card and creates one now swaps them even when your Joker row is full (#46).
 - Creations that use the new features need Overhaul 2.1.1 or later.
 
 ### Gameplay
