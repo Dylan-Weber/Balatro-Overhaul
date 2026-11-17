@@ -4651,7 +4651,7 @@ r 30 2219 %20%20 -
 l 1
 
 r 30 6210 %20%20 -
-l 131
+l 133
   local _mods_on = G.FUNCS.mods_button and true or false
   local _modded_game = _mods_on and MODLOADER and MODLOADER.modded and true or false
   local _show_mode = _modded_game or (_mods_on and MODS_INSTALLED and MODS_INSTALLED())
@@ -4679,13 +4679,15 @@ l 131
     {id = 'achievements_button', button = "open_achievements_menu", colour = G.C.PALE_GREEN, label = up(mod_loc("Achievements"))},
     {id = 'collection_button', button = "your_collection", colour = G.C.ORANGE, label = localize('b_collection_cap')},
   }
-  if _mods_on then left_specs[3] = {id = 'progression_button', button = "open_progression_screen", colour = G.C.GREEN, label = up(mod_loc("Progression"))} end
+  local _progression_shown = not (progression_hidden and progression_hidden())
+  if _mods_on and _progression_shown then left_specs[3] = {id = 'progression_button', button = "open_progression_screen", colour = G.C.GREEN, label = up(mod_loc("Progression"))} end
   local right_specs = {
     _mods_on and {id = 'tavern_button', button = "open_tavern_hub", colour = G.C.GREEN, label = up(mod_loc("The Casino"))}
       or {id = 'progression_button', button = "open_progression_screen", colour = G.C.GREEN, label = up(mod_loc("Progression"))},
     {button = 'options', colour = G.C.ORANGE, label = localize('b_options_cap')},
   }
-  if G.F_QUIT_BUTTON then right_specs[3] = {button = quit_func, colour = G.C.RED, label = localize('b_quit_cap')} end
+  if not (_mods_on or _progression_shown) then table.remove(right_specs, 1) end
+  if G.F_QUIT_BUTTON then right_specs[#right_specs + 1] = {button = quit_func, colour = G.C.RED, label = localize('b_quit_cap')} end
   local _mpm = rawget(_G, 'mpm_menu')
   local _mp = _mpm and _mpm.active and true or false
   if _mp then
@@ -4694,7 +4696,7 @@ l 131
   end
 
   local _left_three = _mods_on or _mp
-  local _left_h = _desk and (_left_three and 0.45*k or 0.7*k) or ((_big_h - (#left_specs - 1)*_side_gap)/#left_specs)
+  local _left_h = _desk and ((_left_three and #left_specs >= 3) and 0.45*k or 0.7*k) or ((_big_h - (#left_specs - 1)*_side_gap)/#left_specs)
   local _left_text = _desk and (_left_three and _side_text or text_scale*0.9*k) or (#left_specs == 2 and text_scale*1.03 or _side_text)
   local _big_w = 3.45*k
   local _big_nodes
