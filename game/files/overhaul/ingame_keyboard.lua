@@ -61,7 +61,8 @@ Hooks.wrap("love", "update", function(orig) return function(dt, ...)
     local c = G and G.CONTROLLER
     if K.sys and (not c or c.text_input_hook ~= K.sys or K.sys.REMOVED or K.on()) then
         K.sys = nil
-        if not (c and c.text_input_hook) or K.on() then system_keys(false) end
+        local h = c and c.text_input_hook
+        if not h or h.REMOVED or K.on() then system_keys(false) end
     end
     return Hooks.unpack(r)
 end end, {id = "overhaul.ingame_keyboard.update"})
