@@ -2342,8 +2342,8 @@ return {
       kind = "patch",
       patch = "patches/multiplayer/bom_match.lua.bop",
       path = "multiplayer/bom_match.lua",
-      sha256 = "f0ae8cf44539266c0163e4355413afcdb741b70e9e340431be8de386e8f97f4b",
-      size = 84445,
+      sha256 = "52d60d1266b42e27d06431cfdafdb9bb4a3f5f3c45017a8941615e51b376d33a",
+      size = 85146,
     },
     {
       kind = "patch",
