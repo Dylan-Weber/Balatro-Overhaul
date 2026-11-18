@@ -19,9 +19,6 @@
 
 </div>
 
-> [!NOTE]
-> The security issue is fixed in 2.0.4. If you already have the Overhaul, update from the launcher or the Update button on the title screen, or [download the new launcher](https://github.com/JupiterianSoul/Balatro-Overhaul/releases/latest).
-
 
 > [!IMPORTANT]
 > You need to own Balatro. The downloads here don't contain the game, the launcher builds the mod from your own copy.
