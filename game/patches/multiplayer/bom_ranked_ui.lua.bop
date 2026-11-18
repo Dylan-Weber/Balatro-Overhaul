@@ -512,7 +512,7 @@ function R.show_results()
             return
         end
 r 32 1375 %20%20%20%20%20%20%20%20 -
-l 539
+l 542
     end
     G.FUNCS.mp_ranked_results_view = function()
         close_session()
@@ -574,6 +574,7 @@ local function clock(sec)
     sec = math.max(0, math.floor(sec or 0))
     return string.format("%d:%02d", math.floor(sec / 60), sec % 60)
 end
+U.clock = clock
 
 local function searching()
     return Q.status == "joining" or Q.status == "searching"
@@ -611,12 +612,14 @@ end
 local function update_view()
     Q.view.status = status_text()
     Q.view.counts = counts_text()
+    U.reframe()
 end
 U.update_view = update_view
 
 local function ranked_open()
     return G.OVERLAY_MENU ~= nil and UIK._win ~= nil and UIK._win.id == "mp_ranked" and G.OVERLAY_MENU:get_UIE_by_ID("uik_body") ~= nil
 end
+U.ranked_open = ranked_open
 
 local function start_tick()
     if Q.ticking then return end
@@ -1064,7 +1067,7 @@ l 9
                 R.draw_tile(self)
                 if self.children.mp_fx then self.children.mp_fx:draw() end
 r 2 461 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 127
+l 142
             end
         end
     end
@@ -1158,6 +1161,8 @@ local function tab_profile()
 end
 
 local function window_def(tab)
+    local queued = searching()
+    U.framed = queued
     return UIK.window{zoom = false,
         id = "mp_ranked",
         title = L("RANKED"),
@@ -1169,7 +1174,20 @@ local function window_def(tab)
             {key = "rules", label = L("Rules"), build = tab_rules},
         },
         back_func = "mp_ranked_back",
+        no_back = queued,
+        footer = queued and function()
+            local w = (UIK.W - 0.6) / 2
+            return {
+                UIK.button{label = L("Leave queue & back"), button = "mp_ranked_leave_back", colour = G.C.RED, w = w},
+                UIK.back_node({back_func = "mp_ranked_back", back_label = L("Back, stay in queue"), w = w}),
+            }
+        end or nil,
     }
+end
+
+function U.reframe()
+    if U.framed == searching() or not ranked_open() then return end
+    G.FUNCS.overlay_menu{definition = window_def(UIK._win and UIK._win._cur)}
 end
 
 function R.ui_refresh()
@@ -1305,12 +1323,16 @@ l 12
         start_tick()
     end
     G.FUNCS.mp_ranked_back = function()
-        U.queue_cancel(true)
+        if not searching() then U.queue_cancel(true) end
         local m = menu()
         if m and m.active then return G.FUNCS.exit_overlay_menu() end
         if G.FUNCS.open_multiplayer_menu then return G.FUNCS.open_multiplayer_menu() end
 r 32 1375 %20%20%20%20%20%20%20%20 -
-l 17
+l 21
+    end
+    G.FUNCS.mp_ranked_leave_back = function()
+        U.queue_cancel(true)
+        G.FUNCS.mp_ranked_back()
     end
     G.FUNCS.mp_ranked_queue = function() U.queue_start() end
     G.FUNCS.mp_ranked_queue_cancel = function() U.queue_cancel() end
