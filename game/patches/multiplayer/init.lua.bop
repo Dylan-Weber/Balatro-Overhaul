@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 162
+l 164
 ﻿local MP = {}
 local function try_require(path)
     local ok, result = pcall(require, path)
@@ -69,6 +69,7 @@ bom_playback   = MP.playback
 MP.ranked     = try_require("multiplayer.bom_ranked")
 bom_ranked     = MP.ranked
 MP.ranked_ui  = try_require("multiplayer.bom_ranked_ui")
+MP.queue_run  = try_require("multiplayer.bom_queue_run")
 MP.social     = try_require("multiplayer.bom_social")
 bom_social     = MP.social
 MP.kit        = try_require("multiplayer.bom_kit")
@@ -138,6 +139,7 @@ function MP.init()
     if MP.party_run and MP.party_run.init then pcall(MP.party_run.init) end
     if MP.ranked and MP.ranked.init then pcall(MP.ranked.init) end
     if MP.ranked_ui and MP.ranked_ui.register then pcall(MP.ranked_ui.register) end
+    if MP.queue_run and MP.queue_run.init then pcall(MP.queue_run.init) end
     if MP.fair and MP.fair.init then pcall(MP.fair.init) end
     for _, m in ipairs({MP.ranked_ui, MP.replay, MP.playback, MP.spectate}) do
         if m and m.register_strings then pcall(m.register_strings) end
@@ -166,7 +168,7 @@ function MP.init()
         if G.FUNCS and G.FUNCS.go_to_menu then
             local _original_go_to_menu = G.FUNCS.go_to_menu
 r 32 2981 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 60
+l 61
                 pcall(function()
                     if G and G.GAME and G.GAME.multiplayer and bom_rejoin and bom_rejoin.on_quit_to_menu
                         and bom_rejoin.on_quit_to_menu() then
@@ -196,6 +198,7 @@ function MP.update(dt)
     if AndroidWS then AndroidWS.poll() end
     if MP.core and MP.core.update then MP.core.update(dt) end
     if MP.ranked and MP.ranked.update then pcall(MP.ranked.update, dt) end
+    if MP.queue_run and MP.queue_run.update then pcall(MP.queue_run.update) end
     if MP.social and MP.social.update then pcall(MP.social.update) end
     if MP.emotes and MP.emotes.update then pcall(MP.emotes.update) end
     if MP.ui and MP.ui.pvp_result_tick then pcall(MP.ui.pvp_result_tick) end

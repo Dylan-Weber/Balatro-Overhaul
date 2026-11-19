@@ -1453,8 +1453,8 @@ return {
       kind = "patch",
       patch = "patches/functions/minigames/host.lua.bop",
       path = "functions/minigames/host.lua",
-      sha256 = "48c62a212212b1ffc3679acbd521cf2cb49026181a2f84f367f4c44d2739c796",
-      size = 31345,
+      sha256 = "17d3525ff40e8011414f7ad876ccd3bd04600b451cc323fce233bf977562c78e",
+      size = 31373,
     },
     {
       kind = "patch",
@@ -2395,6 +2395,13 @@ return {
       size = 60853,
     },
     {
+      kind = "patch",
+      patch = "patches/multiplayer/bom_queue_run.lua.bop",
+      path = "multiplayer/bom_queue_run.lua",
+      sha256 = "0e45df4d34e157de54fc4278a46e6d9137389bf47c83caa16c29cc2a9ef15fc1",
+      size = 11757,
+    },
+    {
       file = "files/multiplayer/bom_race.lua",
       kind = "own",
       path = "multiplayer/bom_race.lua",
@@ -2412,8 +2419,8 @@ return {
       kind = "patch",
       patch = "patches/multiplayer/bom_ranked_ui.lua.bop",
       path = "multiplayer/bom_ranked_ui.lua",
-      sha256 = "c02d6c524be7dca1e2ae8fe9dcb0ec24edb0cf2b0be3521fc6c5850dd9af91a6",
-      size = 72569,
+      sha256 = "e96cb506eb0dda5c5fc3a5f6e15eeca07a5696ef9eee14ef10836fabb0645ec4",
+      size = 73386,
     },
     {
       kind = "patch",
@@ -2538,8 +2545,8 @@ return {
       kind = "patch",
       patch = "patches/multiplayer/init.lua.bop",
       path = "multiplayer/init.lua",
-      sha256 = "89ea7508a8d4c96b95b45547a088b815663d2cf60c2fb1cd028b82aced915dec",
-      size = 10552,
+      sha256 = "e311ad4eba56ea865879bccff180f8f11ca4c61912cd15f509d5412b3e7862b5",
+      size = 10765,
     },
     {
       file = "files/multiplayer/mp_config.lua",
@@ -2566,8 +2573,8 @@ return {
       kind = "patch",
       patch = "patches/multiplayer/mpm_menu.lua.bop",
       path = "multiplayer/mpm_menu.lua",
-      sha256 = "613c78b37aa7994be97ba42bf8a220e38010e12b41afead8afa85cc347fea380",
-      size = 27040,
+      sha256 = "2b79c971d865e8b5e0763a7664964c67f4bb45d6c5f88ac878b35e6b530780e5",
+      size = 27169,
     },
     {
       kind = "patch",

@@ -36,7 +36,7 @@ function H.wait_kind()
     if R and not R.dismissed and not R.leaving and in_match() then return "away" end
     if G.GAME and G.GAME.mp_searching and G.OVERLAY_MENU then return "search" end
     local U = bom_ranked_ui and bom_ranked_ui.Q
-    if U and U.status == "searching" then return "queue" end
+    if U and U.status == "searching" and G.STAGE ~= G.STAGES.RUN then return "queue" end
     if bom_match and bom_match.get_phase and bom_match.get_phase() == "lobby" and G.OVERLAY_MENU then
         if bom_party and bom_party.active and bom_party.active() then
             local open = bom_party.lobby_open and bom_party.lobby_open()

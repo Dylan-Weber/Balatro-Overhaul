@@ -164,7 +164,7 @@ l 3
     G.MAIN_MENU_UI = UIBox{definition = create_UIBox_main_menu_buttons(), config = {align = "bmi", offset = {x = 0, y = 10}, major = G.ROOM_ATTACH, bond = "Weak"}}
     G.MAIN_MENU_UI.alignment.offset.y = main_menu_bar_offset()
 r 31 759 %20%20%20%20 -
-l 52
+l 53
     G.MAIN_MENU_UI:hard_set_VT()
     if G.SETTINGS.paused then
         G.MAIN_MENU_UI.created_on_pause = false
@@ -209,9 +209,10 @@ function M.enter()
 end
 
 function M.exit()
-    pcall(function() if bom_ranked_ui and bom_ranked_ui.queue_cancel then bom_ranked_ui.queue_cancel(true) end end)
+    local queued = bom_ranked_ui and bom_ranked_ui.searching and bom_ranked_ui.searching()
+    if not queued then pcall(function() if bom_ranked_ui and bom_ranked_ui.queue_cancel then bom_ranked_ui.queue_cancel(true) end end) end
     local so = rawget(_G, "social_online")
-    if not in_room() and not (so and so.keep and so.keep()) then pcall(function() bom_core.disconnect() end) end
+    if not in_room() and not queued and not (so and so.keep and so.keep()) then pcall(function() bom_core.disconnect() end) end
     pcall(function()
         local hook = rawget(_G, "mps_on_menu")
         if type(hook) == "function" then hook(false) end
