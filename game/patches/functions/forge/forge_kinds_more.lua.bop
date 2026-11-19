@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 572
+l 573
 local Store = require("functions/forge/forge_store")
 local Cat = require("functions/forge/forge_catalog")
 local D = require("functions/forge/forge_doc")
@@ -500,6 +500,7 @@ local function register_blind(c, i)
   p.forge_kind = "blind"
   p.forge_id = c.id
   p.forge_look = c.look
+  require("functions/forge/forge_parity").mark_blind(p, c)
   G.P_BLINDS[key] = p
 end
 
@@ -1241,7 +1242,7 @@ l 4
     made:add_to_deck()
     G.consumeables:emplace(made)
 r 3 1057 %20%20%20%20 -
-l 30
+l 32
     return true
   end}))
   card_eval_status_text(card, "extra", nil, nil, nil, {message = localize("k_plus_tarot"), colour = G.C.PURPLE})
@@ -1269,6 +1270,8 @@ function M.try_give(c)
   end
   if c.kind == "blind" then
     local key = M.blind_key(c)
+    local PP = require("functions/forge/forge_parity")
+    if PP.slot_of(c) then return PP.try_slot(c, key) end
     if not (G.P_BLINDS[key] and G.blind_select_opts and G.blind_select_opts.boss) then return false end
     G.GAME.bosses_used[key] = G.GAME.bosses_used[key] or 0
     G.FORCE_BOSS = key

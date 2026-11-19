@@ -393,5 +393,6 @@ function FJ.install_hooks()
 end
 
 require("functions/forge/forge_grow").joker(FJ)
+require("functions/forge/forge_extras").joker(FJ)
 
 return FJ

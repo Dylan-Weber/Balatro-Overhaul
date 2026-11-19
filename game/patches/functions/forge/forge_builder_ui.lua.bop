@@ -164,7 +164,7 @@ function B.sprite(kind_id, key, s)
 r 7 1460 %20%20%20%20 -
 r 5 219 %20%20%20%20 -
 r 5 220 %20%20%20%20 -
-l 137
+l 144
     local area = CardArea(0, 0, w, h, {card_limit = 1, type = "title", highlight_limit = 0, collection = true, card_w = w})
     area:emplace(card)
     return area
@@ -208,9 +208,15 @@ local function label_rows(label, w, base)
   return rows
 end
 
-local function tile(label, func, ref, spr, w, id, ph)
+local function tile(label, func, ref, spr, w, id, ph, two)
   local nodes = {{n = G.UIT.R, config = {align = "cm", minh = G.CARD_H * (UIK.portrait() and (ph or 0.8) or touch() and 0.62 or 0.56), padding = 0.02}, nodes = {obj(spr)}}}
-  for _, r in ipairs(label_rows(label, w, UIK.portrait() and 0.46 or touch() and 0.42 or 0.34)) do nodes[#nodes + 1] = r end
+  local base = UIK.portrait() and 0.46 or touch() and 0.42 or 0.34
+  local rows = label_rows(label, w, base)
+  if two then
+    nodes[#nodes + 1] = {n = G.UIT.R, config = {align = "cm", minh = base * 2.3, padding = 0}, nodes = {{n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = rows}}}
+    rows = {}
+  end
+  for _, r in ipairs(rows) do nodes[#nodes + 1] = r end
   return {n = G.UIT.C, config = {align = "cm", padding = 0.05}, nodes = {
     {n = G.UIT.C, config = {align = "cm", minw = w, padding = 0.07, r = 0.1, colour = UIK.C.accent, button = func, ref_table = ref, hover = true, shadow = true, id = id}, nodes = nodes},
   }}
@@ -282,6 +288,7 @@ local function draft_center(d, k)
   c.forge_look = d.look
   return c
 end
+B.draft_center = draft_center
 
 local function area_for(w, h, card)
   local area = CardArea(G.ROOM.T.x, G.ROOM.T.y, w, h, {card_limit = 1, type = "title", highlight_limit = 0, collection = true, card_w = w})
@@ -414,7 +421,7 @@ function B.card_node(scale)
   end
   local card
   if d.kind == "enhancement" then
-    card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, G.P_CARDS.S_A, draft_center(d, k))
+    card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, G.P_CARDS.S_A, B.draft_center(d, k))
   elseif d.kind == "seal" then
     card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, G.P_CARDS.S_A, G.P_CENTERS.c_base)
     local atlas = art_atlas(d)
@@ -444,12 +451,12 @@ function B.card_node(scale)
       end
     end
   else
-    card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, nil, draft_center(d, k))
+    card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, nil, B.draft_center(d, k))
   end
   card.forge_preview = true
 r 7 1460 %20%20 -
 r 5 219 %20%20 -
-l 1764
+l 1820
   B.preview_card = card
   return area_for(w, h, card)
 end
@@ -642,21 +649,34 @@ function B.make_title(label)
   return string.format(fmt, label)
 end
 
-local function start_body()
+function B.start_list_def()
   local kid = B.state.start
-  local k = Cat.kind(kid)
   local list = D.templates(kid)
   local per = UIK.portrait() and 3 or 7
   local rows = UIK.portrait() and 3 or touch() and 1 or 2
   local cap = per * rows
-  local pages = math.max(1, math.ceil(#list / cap))
+  local shown = {}
+  local E = package.loaded["functions/forge/forge_easy"]
+  for i, t in ipairs(list) do
+    if not E or E.matches(D.template_name(kid, t), B.state.start_q) then shown[#shown + 1] = i end
+  end
+  local pages = math.max(1, math.ceil(#shown / cap))
   B.state.page = math.max(1, math.min(B.state.page or 1, pages))
   local tw = (UIK.W - 0.6) / per - 0.12
   local items = {}
-  for i = (B.state.page - 1) * cap + 1, math.min(#list, B.state.page * cap) do
+  for j = (B.state.page - 1) * cap + 1, math.min(#shown, B.state.page * cap) do
+    local i = shown[j]
     local t = list[i]
-    items[#items + 1] = tile(D.template_name(kid, t), "forge_b_template", {i = i}, B.sprite(kid, t.key, UIK.portrait() and 0.72 or touch() and 0.55 or 0.5), tw, "forge_tpl_" .. i)
+    items[#items + 1] = tile(D.template_name(kid, t), "forge_b_template", {i = i}, B.sprite(kid, t.key, UIK.portrait() and 0.72 or touch() and 0.55 or 0.5), tw, "forge_tpl_" .. i, nil, true)
   end
+  return items, pages, per, #shown
+end
+
+local function start_body()
+  local kid = B.state.start
+  local k = Cat.kind(kid)
+  local list = D.templates(kid)
+  local items, pages, per = B.start_list_def()
   local nodes = {
     title(B.make_title(upper(mod_loc(k.label))), UIK.W),
     hrow({
@@ -664,11 +684,17 @@ local function start_body()
       button(mod_loc("Another kind"), "forge_b_kinds", nil, UIK.C.accent, touch() and 3.2 or 2.85, nil, "forge_other_kind"),
     }, UIK.W, 0.3),
   }
-  if #items > 0 then
+  if #list > 0 then
     nodes[#nodes + 1] = title(mod_loc(kid == "challenge" and "Or start from a game challenge:" or "Or start from a game card:"), UIK.W, UIK.C.muted)
-    nodes[#nodes + 1] = UIK.grid(items, per, {w = UIK.W - 0.2, padding = 0.04})
-    if pages > 1 then
-      nodes[#nodes + 1] = UIK.pager{prev = "forge_b_page", next = "forge_b_page", prev_ref = {d = -1}, next_ref = {d = 1}, text = string.format(mod_loc("Page %d of %d"), B.state.page, pages), w = UIK.W}
+    if #list > 14 and B.start_search_row then
+      nodes[#nodes + 1] = B.start_search_row()
+      local box = UIBox{definition = B.start_grid_def(), config = {offset = {x = 0, y = 0}}}
+      nodes[#nodes + 1] = {n = G.UIT.R, config = {align = "cm", func = "forge_b_start_watch"}, nodes = {{n = G.UIT.O, config = {object = box, id = "forge_start_list"}}}}
+    else
+      nodes[#nodes + 1] = UIK.grid(items, per, {w = UIK.W - 0.2, padding = 0.04})
+      if pages > 1 then
+        nodes[#nodes + 1] = UIK.pager{prev = "forge_b_page", next = "forge_b_page", prev_ref = {d = -1}, next_ref = {d = 1}, text = string.format(mod_loc("Page %d of %d"), B.state.page, pages), w = UIK.W}
+      end
     end
   end
   return {n = G.UIT.R, config = {align = "tm", minw = UIK.W, minh = UIK.H - 0.4, padding = 0}, nodes = {{n = G.UIT.C, config = {align = "tm", padding = 0.04}, nodes = nodes}}}
@@ -689,6 +715,9 @@ local function left_column(w)
       button(mod_loc("Game art"), "forge_b_art_pick", nil, UIK.C.accent, hw, touch() and 0.7 or 0.56, "forge_art_pick"),
       button(mod_loc("Draw it"), "forge_b_art", nil, UIK.C.purple, hw, touch() and 0.7 or 0.56, "forge_draw"),
     }, bw, 0.1)}
+    if d.kind == "joker" and require("functions/forge/forge_extras").ink_available() then
+      art[#art + 1] = button(mod_loc("InkJoker art"), "forge_x_ink", nil, G.C.SECONDARY_SET.Spectral, bw, touch() and 0.7 or 0.56, "forge_ink")
+    end
   end
   if d.kind == "hand" or d.kind == "challenge" or d.kind == "rarity" or d.kind == "sticker" or d.kind == "fusion" then art = {} end
   if d.kind == "ctype" then art = {button(mod_loc("Draw its pack art"), "forge_b_art", nil, UIK.C.purple, bw, touch() and 0.7 or 0.56, "forge_draw")} end
@@ -701,6 +730,9 @@ local function left_column(w)
     end
     art = {{n = G.UIT.R, config = {align = "cm"}, nodes = {UIK.text(mod_loc("Draw a face card:"), {scale = touch() and 0.4 or 0.32})}}, hrow(faces, bw, 0.08)}
   end
+  local xb = require("functions/forge/forge_extras").item_buttons
+  local extra = xb and xb(d, bw, touch() and 0.7 or 0.56)
+  if extra then art[#art + 1] = extra end
   for _, a in ipairs(art) do nodes[#nodes + 1] = {n = G.UIT.R, config = {align = "cm", padding = 0.03}, nodes = {a}} end
   local box = desc_box(d, w)
   if box then nodes[#nodes + 1] = box end
@@ -713,7 +745,7 @@ end
 
 local function sections()
   local d = draft()
-  if d.kind == "joker" then return {"rules", "vars", "looks", "basics"} end
+  if d.kind == "joker" then return {"rules", "vars", "looks", "basics", "try"} end
   local k = kind()
   if not advanced() then return {} end
   local has_fields = #(k.fields or {}) + #(k.adv_fields or {}) > 0
@@ -730,7 +762,8 @@ end
 local function mode_buttons(h)
   local d = draft()
   local adv = advanced()
-  local locked = d.kind == "joker"
+  local locked = false
+  if d.kind == "joker" then adv = not B.sentence_on() end
   local ms = touch() and 0.42 or 0.36
   local bw = math.max(touch() and 1.9 or 1.6, UIK.text_w(mod_loc("Simple"), ms) + 0.5, UIK.text_w(mod_loc("Advanced"), ms) + 0.5)
   local function seg(label, m, on)
@@ -756,6 +789,7 @@ local function mode_switch(w)
   if not found then sec = secs[1] or "rules" end
   local tabs = {}
   local sw = touch() and 2.2 or 1.9
+  if #secs > 0 then sw = math.min(sw, (w - 0.1 * #secs) / #secs - 0.04) end
   for _, id in ipairs(secs) do
     local label = mod_loc(d.kind ~= "joker" and id == "rules" and (Cat.max_for(d, true) > 0 and "Effects" or "Basics") or B.SEC_LABEL[id])
     tabs[#tabs + 1] = button(label, "forge_b_sec", {sec = id}, sec == id and G.C.RED or UIK.C.inactive, sw, h, "forge_sec_" .. id)
@@ -790,7 +824,7 @@ local function mode_switch(w)
 end
 
 B.SECS = {"rules", "vars", "basics"}
-B.SEC_LABEL = {rules = "Rules", vars = "Variables", basics = "Basics", logic = "Rules"}
+B.SEC_LABEL = {rules = "Rules", vars = "Variables", basics = "Basics", logic = "Rules", try = "Sample hand"}
 B.kit = {button = button, hrow = hrow, title = title, step_title = step_title, obj = obj, still = still}
 
 local ONLY_LABEL = {var = "Variable", hand = "Poker hand", suit = "Suit", rank = "Rank", enhancement = "Enhancement", seal = "Seal", edition = "Edition", cards_played = "Cards played", money = "Money", hands_left = "Hands left", discards_left = "Discards left", first_hand = "First hand", last_hand = "Last hand", ante = "Ante", jokers = "Jokers", boss = "Boss blind", chance = "Chance", blind = "Blind type", deck_cards = "Cards in deck", held_cards = "Cards in hand", consumables = "Consumables", hand_level = "Hand level", round = "Round"}
@@ -1262,6 +1296,12 @@ local function type_row(label, ty, cw, extra)
   B.type_box = box
   local ok = UIK.button{label = mod_loc("OK"), button = "forge_b_type_ok", colour = UIK.C.ok, w = tw, h = h, scale = fit(mod_loc("OK"), tw, touch() and 0.38 or 0.34), col = true, id = "forge_type_ok"}
   local row = {n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = {obj(box), {n = G.UIT.C, config = {minw = 0.1}, nodes = {}}, ok}}
+  if ty.err and not label then
+    local nw = iw + 0.1 + tw
+    local note = UIK.note({ty.err}, {w = nw, scale = touch() and 0.36 or 0.32, colour = G.C.UI.TEXT_LIGHT})
+    local bad = {n = G.UIT.C, config = {align = "cm", r = 0.08, padding = 0.04, colour = UIK.C.danger}, nodes = {note}}
+    return {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {row, {n = G.UIT.R, config = {align = "cm", padding = 0.03}, nodes = {bad}}}}
+  end
   if not label then return {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {row}} end
   return {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {
     {n = G.UIT.R, config = {align = "cm", minh = touch() and 0.54 or 0.46, padding = 0}, nodes = {{n = G.UIT.C, config = {align = "cm", maxw = cw + 2 * jw + tw}, nodes = {UIK.text(label, {scale = touch() and 0.44 or 0.4, colour = UIK.C.text})}}}},
@@ -1276,6 +1316,13 @@ function B.type_commit()
   local v = tonumber(txt)
   local spec = ty.spec
   if v and v == v and spec and type(ty.t) == "table" then
+    local note = B.easy_range_note and B.easy_range_note(ty)
+    if note then
+      ty.err = note
+      refresh()
+      B.focus_type()
+      return
+    end
     v = math.max(spec.lo, math.min(spec.hi, v))
     if spec.step % 1 == 0 and spec.lo % 1 == 0 then v = math.floor(v + 0.5) else v = math.floor(v * 100 + 0.5) / 100 end
     ty.t[ty.k] = v
@@ -1384,6 +1431,7 @@ local function joker_body(w)
   local sec = advanced() and (B.state.sec or "rules") or "all"
   if sec == "vars" then return vars_body(w) end
   if sec == "looks" and B.looks_body then return B.looks_body(w) end
+  if sec == "try" and B.sample_body then return B.sample_body(w) end
   if sec == "basics" then
     local price = joker_price(d, w)
     nodes[#nodes + 1] = step_title(1, mod_loc("PRICE AND RARITY"), w)
@@ -1421,7 +1469,8 @@ local function joker_body(w)
   local avail = UIK.H - 0.16 - mode_h - (touch() and 0.8 or 0.64) * #nav - (has_problem and 0.45 or 0) - (UIK.portrait() and B.port_top_h or 0)
   nodes[#nodes + 1] = {n = G.UIT.R, config = {minh = 0.06}, nodes = {}}
   B.last_avail = avail
-  nodes[#nodes + 1] = #d.rules == 0 and hrow({UIK.text(mod_loc("No rules. Press + New to add one."), {scale = touch() and 0.4 or 0.36, colour = UIK.C.muted})}, w) or rule_block(r, w, avail)
+  local block = #d.rules > 0 and (B.sentence_on() and B.sentence_block(r, w) or rule_block(r, w, avail))
+  nodes[#nodes + 1] = #d.rules == 0 and hrow({UIK.text(mod_loc("No rules. Press + New to add one."), {scale = touch() and 0.4 or 0.36, colour = UIK.C.muted})}, w) or block
   nodes[#nodes + 1] = problems_row(d, w)
   if sec == "rules" then return nodes end
   local price = joker_price(d, w)
@@ -1664,7 +1713,8 @@ local function items_body(w)
   for i = #fields, 1, -1 do
     local f = fields[i]
     if f.id == "ctype" and #R.own_values("ctype") == 0 and ((d.fields or {}).ctype or "none") == "none" then table.remove(fields, i)
-    elseif d.kind == "hand" and f.id == "group2" and not require("functions/forge/forge_hands").GROUPS[(d.fields or {}).pattern] then table.remove(fields, i) end
+    elseif d.kind == "hand" and f.id == "group2" and not require("functions/forge/forge_hands").GROUPS[(d.fields or {}).pattern] then table.remove(fields, i)
+    elseif d.kind == "blind" and f.id == "showdown" and require("functions/forge/forge_parity").slot_of(d) then table.remove(fields, i) end
   end
   local pick_field
   if d.kind == "tarot" or d.kind == "spectral" then
@@ -1837,7 +1887,8 @@ end
 local function art_body()
   local st = B.state.art
   local d = draft()
-  local list = B.art_list(d.kind)
+  local XT = require("functions/forge/forge_extras")
+  local list = st.ink and XT.ink_list() or B.art_list(d.kind)
   local per_row, rows = B.art_grid()
   local per = per_row * rows
   local pages = math.max(1, math.ceil(#list / per))
@@ -1848,11 +1899,13 @@ local function art_body()
   local items = {}
   for i = (st.page - 1) * per + 1, math.min(#list, st.page * per) do
     local it = list[i]
-    local on = a.atlas == it.atlas and a.x == it.x and a.y == it.y
-    local spr = still(Sprite(0, 0, G.CARD_W * s2, G.CARD_H * s2, G.ASSET_ATLAS[it.atlas], {x = it.x, y = it.y}))
+    local on = not it.ink and a.atlas == it.atlas and a.x == it.x and a.y == it.y
+    local atlas = it.ink and (XT.ink_atlas(it, i - (st.page - 1) * per) or "Joker") or it.atlas
+    local spr = still(Sprite(0, 0, G.CARD_W * s2, G.CARD_H * s2, G.ASSET_ATLAS[atlas], {x = it.x or 0, y = it.y or 0}))
     items[#items + 1] = {n = G.UIT.C, config = {align = "cm", minw = tw, padding = 0.06, r = 0.1, colour = on and G.C.RED or UIK.C.section, button = "forge_b_art_choose", ref_table = {i = i}, hover = true, shadow = true, id = "forge_art_" .. i}, nodes = {obj(spr)}}
   end
-  local nodes = {title(mod_loc("PICK ITS ART"), UIK.W), UIK.grid(items, per_row, {w = UIK.W - 0.2, padding = 0.06})}
+  local nodes = {title(mod_loc(st.ink and "PICK INKJOKER ART" or "PICK ITS ART"), UIK.W), UIK.grid(items, per_row, {w = UIK.W - 0.2, padding = 0.06})}
+  if #items == 0 then nodes[2] = UIK.note({mod_loc("No InkJoker art found")}, {w = UIK.W - 0.4}) end
   if pages > 1 then
     nodes[#nodes + 1] = UIK.pager{prev = "forge_b_art_page", next = "forge_b_art_page", prev_ref = {d = -1}, next_ref = {d = 1}, text = string.format(mod_loc("Page %d of %d"), st.page, pages), w = UIK.W}
   end
@@ -1861,6 +1914,8 @@ end
 
 function B.pick(o)
   o.page = 1
+  if B.easy_simple_list then o = B.easy_simple_list(o) end
+  o.tools = #(o.options or {}) > 15 and B.pick_list_def ~= nil
   B.state.pick = o
   refresh()
 end
@@ -1889,6 +1944,14 @@ end
 
 local function pick_body()
   local p = B.state.pick
+  if p.tools then
+    local nodes = {title(p.title, UIK.W)}
+    if p.note then nodes[#nodes + 1] = UIK.note({p.note}, {w = 12, scale = 0.34}) end
+    nodes[#nodes + 1] = B.pick_search_row(p)
+    local list = UIBox{definition = B.pick_list_def(p), config = {offset = {x = 0, y = 0}}}
+    nodes[#nodes + 1] = {n = G.UIT.R, config = {align = "tm", func = "forge_b_pick_watch"}, nodes = {{n = G.UIT.O, config = {object = list, id = "forge_pick_list"}}}}
+    return {n = G.UIT.R, config = {align = "tm", minw = UIK.W, minh = UIK.H - 0.4, padding = 0}, nodes = {{n = G.UIT.C, config = {align = "tm", padding = 0.04}, nodes = nodes}}}
+  end
   local per_row = UIK.portrait() and 1 or 3
   local rows = UIK.portrait() and 12 or (touch() and (#p.options <= 18 and 6 or 5) or (#p.options <= 21 and 7 or 6))
   local per = per_row * rows
@@ -2215,7 +2278,7 @@ do
   Hooks.wrap("Controller", "update", function(orig) return function(self, ...)
     if self.text_input_hook == B.TEXT_HOOK and not B.text_active() then
 r 17 775 %20%20%20%20%20%20 -
-l 1068
+l 1088
       if UIK.touch() and love.keyboard and love.keyboard.setTextInput then pcall(love.keyboard.setTextInput, false) end
     end
     local r = Hooks.pack(orig(self, ...))
@@ -2734,12 +2797,14 @@ G.FUNCS.forge_b_kind = function(e)
   local k = ref(e).kind
   if not Cat.BY_ID[k] then return end
   B.state.start = k
+  B.state.start_q = ""
   B.state.page = 1
   refresh()
 end
 
 G.FUNCS.forge_b_page = function(e)
   B.state.page = (B.state.page or 1) + (ref(e).d or 0)
+  if B.start_redraw and B.start_redraw() then return end
   refresh()
 end
 
@@ -2778,7 +2843,13 @@ end
 G.FUNCS.forge_b_mode = function(e)
   local d = draft()
   local m = ref(e).mode
-  if not d or (m ~= "simple" and m ~= "advanced") or (d.kind == "joker" and m == "simple") then return end
+  if not d or (m ~= "simple" and m ~= "advanced") then return end
+  if d.kind == "joker" then
+    B.state.jview = m
+    B.state.typing = nil
+    Store.set_setting("joker_view", m)
+    return refresh()
+  end
   d.mode = m
   Store.set_setting("builder_mode2", m)
   if m == "simple" and d.kind == "joker" then B.state.rule_i = 1 end
@@ -2787,14 +2858,14 @@ end
 
 G.FUNCS.forge_b_sec = function(e)
   local s2 = ref(e).sec
-  if s2 ~= "rules" and s2 ~= "basics" and s2 ~= "vars" and s2 ~= "logic" and s2 ~= "looks" then return end
+  if s2 ~= "rules" and s2 ~= "basics" and s2 ~= "vars" and s2 ~= "logic" and s2 ~= "looks" and s2 ~= "try" then return end
   B.state.sec = s2
   refresh()
 end
 
 G.FUNCS.forge_b_pick_when = function()
   local r = rule()
-  B.pick{title = mod_loc("WHEN SHOULD IT WORK?"), options = when_options(), choose = function(v)
+  B.pick{title = mod_loc("WHEN SHOULD IT WORK?"), list = "when", options = when_options(), choose = function(v)
     r.when = v
     local fixed = R.clean_rule(r)
     if fixed then r.only, r.give, r.alt = fixed.only, fixed.give, fixed.alt end
@@ -2809,7 +2880,7 @@ G.FUNCS.forge_b_pick_only = function(e)
   local slot = ref(e).slot or (#r.only + 1)
   local cur = r.only[slot]
   local flip = advanced() and cur and cur.id ~= "chance" and cur.id ~= "every" and function() cur.neg = not cur.neg or nil end or nil
-  B.pick{title = mod_loc("ONLY IF"), options = only_options(r), flip = flip, flipped = cur and cur.neg, remove = cur and function()
+  B.pick{title = mod_loc("ONLY IF"), list = "only", options = only_options(r), flip = flip, flipped = cur and cur.neg, remove = cur and function()
     table.remove(r.only, slot)
     if #r.only == 0 then r.alt = nil end
   end or nil, choose = function(v)
@@ -2831,7 +2902,8 @@ end
 G.FUNCS.forge_b_pick_give = function(e)
   local r = rule()
   local slot = ref(e).slot or (#r.give + 1)
-  B.pick{title = mod_loc("WHAT DOES IT GIVE?"), options = give_options(r), remove = r.give[slot] and #r.give > 1 and function() table.remove(r.give, slot) end or nil, choose = function(v)
+  local list = give_options(r)
+  B.pick{title = mod_loc("WHAT DOES IT GIVE?"), list = "give", options = list, remove = r.give[slot] and #r.give > 1 and function() table.remove(r.give, slot) end or nil, choose = function(v)
     local g = B.default_give(v)
     r.give[slot] = g
     B.state.pick = nil
@@ -2844,7 +2916,7 @@ G.FUNCS.forge_b_pick_alt = function(e)
   local r = rule()
   r.alt = r.alt or {}
   local slot = ref(e).slot or (#r.alt + 1)
-  B.pick{title = mod_loc("OTHERWISE, WHAT DOES IT GIVE?"), options = give_options(r, true), remove = r.alt[slot] and function()
+  B.pick{title = mod_loc("OTHERWISE, WHAT DOES IT GIVE?"), list = "give", options = give_options(r, true), remove = r.alt[slot] and function()
     table.remove(r.alt, slot)
     if #r.alt == 0 then r.alt = nil end
   end or nil, choose = function(v)
@@ -2905,6 +2977,7 @@ G.FUNCS.forge_b_choose = function(e)
   local p = B.state.pick
   local i = ref(e).i
   if not (p and i and p.options[i]) then return end
+  if B.easy_more and B.easy_more(p, p.options[i].value) then return end
   play_sound("button", 1, 0.5)
   p.choose(p.options[i].value)
 end
@@ -2913,6 +2986,7 @@ G.FUNCS.forge_b_pick_page = function(e)
   local p = B.state.pick
   if not p then return end
   p.page = (p.page or 1) + (ref(e).d or 0)
+  if p.tools and B.pick_redraw then return B.pick_redraw() end
   refresh()
 end
 
@@ -3082,6 +3156,10 @@ G.FUNCS.forge_b_type = function(e)
   if not (r2.spec and type(r2.t) == "table" and r2.k) then return end
   B.state.typing = {t = r2.t, k = r2.k, spec = r2.spec, text = T.fmt_n(r2.t[r2.k])}
   refresh()
+  B.focus_type()
+end
+
+function B.focus_type()
   if G.F_MOBILE then return end
   G.E_MANAGER:add_event(Event({blockable = false, blocking = false, func = function()
     local inp = B.type_box and B.type_box.get_UIE_by_ID and B.type_box:get_UIE_by_ID("text_input")
@@ -3197,6 +3275,10 @@ end
 
 G.FUNCS.forge_b_art_choose = function(e)
   local d = draft()
+  if d and B.state.art and B.state.art.ink then
+    local XT = require("functions/forge/forge_extras")
+    return XT.ink_use(XT.ink_list()[ref(e).i or 0])
+  end
   local it = d and B.art_list(d.kind)[ref(e).i or 0]
   if not it then return end
   d.art = {atlas = it.atlas, x = it.x, y = it.y}
@@ -3248,7 +3330,8 @@ G.FUNCS.forge_b_art = function()
   end
   local look = nil
   if d.kind == "edition" then look = require("functions/forge/forge_shine").look_of(d.fields) or false end
-  PX.open_for({kind = "draft", art_kind = ak, family = B.PX_FAMILY[d.kind], edition = d.kind == "edition" and d.fields and d.fields.shader ~= "none" and d.fields.shader or nil, look = look})
+  PX.open_for({kind = "draft", art_kind = ak, family = B.PX_FAMILY[d.kind], no_soul = d.kind == "ctype" or nil,
+    edition = d.kind == "edition" and d.fields and d.fields.shader ~= "none" and d.fields.shader or nil, look = look})
 end
 
 G.FUNCS.forge_b_face = function(e)
@@ -3328,7 +3411,7 @@ G.FUNCS.forge_try_back = function(e)
     if love.timer.getTime() - left > 60 then return true end
     if not (G.STATE == G.STATES.MENU and G.STAGE == G.STAGES.MAIN_MENU and G.MAIN_MENU_UI) then return false end
 r 32 1825 %20%20%20%20 -
-l 183
+l 188
     B.edit(id)
     JokerForge.ui.open("builder")
     return true
@@ -3510,6 +3593,11 @@ if mod_loc_register then
 end
 
 require("functions/forge/forge_grow").builder(B)
+require("functions/forge/forge_extras").builder(B)
+
+B.easy_kit = {draft = draft, lang = lang, dvars = dvars, plain = plain, give_num = give_num, type_row = type_row, button = button, soft_set = soft_set, refresh = refresh,
+  give_name = function(id) return plain(mod_loc(GIVE_LABEL[id] or id)) end, only_name = function(id) return plain(mod_loc(ONLY_LABEL[id] or id)) end, tile = tile}
+require("functions/forge/forge_easy").builder(B)
 
 return B
 end

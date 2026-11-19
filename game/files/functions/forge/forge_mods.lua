@@ -10,7 +10,7 @@ M.IMPORT_DIR = "forge/import"
 M.INDEX = "forge/mods/index.json"
 M.EXT = ".forgemod"
 M.FORMAT = "forgemod"
-M.V = 16
+M.V = 17
 M.ART_SIZES = {["71x95"] = true, ["11x10"] = true}
 function M.art_size_ok(w, h) return w ~= nil and h ~= nil and M.ART_SIZES[w .. "x" .. h] == true end
 M.MAX_BYTES = 2 * 1024 * 1024
@@ -163,6 +163,7 @@ local function files_of(c)
   if c.art and c.art.file then out[#out + 1] = c.art.file end
   for _, r in ipairs({"J", "Q", "K"}) do if c.faces and c.faces[r] then out[#out + 1] = c.faces[r] end end
   require("functions/forge/forge_grow").files(c, out)
+  require("functions/forge/forge_extras").files(c, out)
   return out
 end
 
@@ -212,10 +213,22 @@ function M.pack(info, ids)
         if x.faces and x.faces[r] and not packed[x.faces[r]] then x.faces[r] = nil end
       end
       require("functions/forge/forge_grow").strip(x, packed)
+      require("functions/forge/forge_extras").strip(x, packed)
       if j then out.jokers[#out.jokers + 1] = x else out.creations[#out.creations + 1] = x end
     end
   end
   if #out.jokers + #out.creations == 0 then return nil, "empty" end
+  local Remix = require("functions/forge/forge_remix")
+  local all = {}
+  for _, c in ipairs(out.jokers) do all[#all + 1] = c end
+  for _, c in ipairs(out.creations) do all[#all + 1] = c end
+  out.remix = Remix.of_pack(all)
+  if out.remix then
+    local kept = {}
+    for _, r in ipairs(out.remix) do if r.id ~= out.id then kept[#kept + 1] = r end end
+    out.remix = #kept > 0 and kept or nil
+  end
+  require("functions/forge/forge_extras").pack_sounds(M, out)
   out.v = M.needs_v(out.jokers, out.creations)
   if next(out.files) == nil then out.files = nil end
   local ok, raw = pcall(json.encode, out)
@@ -239,6 +252,7 @@ function M.needs_v(jokers, creations)
   return v
 end
 require("functions/forge/forge_grow").mods(M)
+require("functions/forge/forge_extras").mods(M)
 
 function M.for_old_server(raw)
   if type(raw) ~= "string" then return nil end
@@ -264,6 +278,7 @@ function M.parse(raw)
     id = id, name = line(t.name, M.MAX_NAME), author = line(t.author, M.MAX_NAME), about = about_lines(t.about),
     version = math.max(1, math.min(9999, math.floor(tonumber(t.version) or 1))), made = tonumber(t.made) or 0,
     jokers = {}, creations = {}, files = {},
+    remix = require("functions/forge/forge_remix").clean(t.remix),
   }
   if mod.name == "" then mod.name = "Forge mod" end
   local nfiles = 0
@@ -279,6 +294,7 @@ function M.parse(raw)
       end
     end
   end
+  require("functions/forge/forge_extras").parse_sounds(M, t, mod)
   local function art(p)
     local b = base(p)
     if b and mod.files[b] then return M.art_path(id, b) end
@@ -301,6 +317,8 @@ function M.parse(raw)
       c.faces = faces
     end
     require("functions/forge/forge_grow").remap(c, art)
+    require("functions/forge/forge_extras").remap(c, art)
+    require("functions/forge/forge_extras").remap_sound(c, mod)
     local clean
     if joker then clean = Store.clean(c) else clean = Store.clean_item(c) end
     if not clean or seen[clean.id] then return end
@@ -346,6 +364,7 @@ local function remove_art(mod_id)
   for _, name in ipairs(f.getDirectoryItems("forge/art")) do
     if name:sub(1, #prefix) == prefix then pcall(f.remove, "forge/art/" .. name) end
   end
+  require("functions/forge/forge_extras").remove_sounds(mod_id)
 end
 
 function M.extract(mod, force)
@@ -356,6 +375,7 @@ function M.extract(mod, force)
     local p = M.art_path(mod.id, b)
     if force or not f.getInfo(p) then write(p, data) end
   end
+  require("functions/forge/forge_extras").extract(mod, force)
 end
 
 function M.badge(mod)
@@ -419,6 +439,7 @@ function M.load()
           mod.hash, mod.size = M.hash(raw), #raw
           M.extract(mod, false)
           mod.files = nil
+          mod.sounds = nil
           M.list[#M.list + 1] = mod
         end
       end

@@ -104,7 +104,7 @@ check("need: next look is 16", R.need_v(R.clean_rules({{when = "round_end", only
 check("need: plain stays old", R.need_v(R.clean_rules({{when = "hand_played", give = {{id = "mult", n = 4}}}})) < 16)
 check("need: looks alone are 16", Mods.needs_v({{id = "a", rules = {}, looks = {{atlas = "Joker", x = 1, y = 0}}}}, {}) == 16)
 check("need: plain joker old", Mods.needs_v({{id = "a", rules = {}}}, {}) < 16)
-check("format 16", Mods.V == 16 and Room.V == 16 and Grow.V == 16)
+check("format 16", Mods.V >= 16 and Room.V >= 16 and Grow.V == 16)
 
 local sc = Store.clean({id = "grow1", name = "Grower", art = {file = "forge/art/grow1.png"},
   looks = {{file = "forge/art/grow1_l2.png"}, {atlas = "Joker", x = 4, y = 2}, {file = "../evil.png"}, "junk", {atlas = "Joker", x = 500, y = -3}}, look_var = "v2"})
@@ -141,7 +141,7 @@ local m2 = raw2 and Mods.parse(raw2)
 check("mods: bad look file keeps its place", out2 and out2.files.gg1_l3 == nil and m2 and #m2.jokers[1].looks == 3 and m2.jokers[1].looks[3].atlas == "Joker")
 files["forge/art/gg1_l3.png"] = png("C")
 local old = json.decode(raw)
-old.v = 17
+old.v = 18
 check("mods: newer refused", select(2, Mods.parse(json.encode(old))) == "newer")
 check("mods: format 15 still loads", Mods.parse(json.encode({format = "forgemod", v = 15, id = "old15", name = "Old", jokers = {{id = "o1", name = "Old", rules = {{when = "hand_played", give = {{id = "mult", n = 4}}}}}}})) ~= nil)
 local oldc = json.decode(Mods.for_old_server(raw))
@@ -156,7 +156,7 @@ local rj = Store.get("mproom01")
 check("room: looks arrive", rj and rj.looks and #rj.looks == 3 and rj.looks[1].file == "forge/art/fm_mproom_r01L2.png" and files["forge/art/fm_mproom_r01L2.png"] == files["forge/art/gg1_l2.png"] and rj.looks[2].x == 2, rj and rj.looks and rj.looks[1].file)
 check("room: become renamed", rj and rj.rules[2].give[1].v == "j_forge_mproom02", rj and rj.rules[2].give[1].v)
 Room.leave()
-rt.room = 17
+rt.room = 18
 check("room: newer refused", select(2, Room.enter(json.encode(rt))) == "newer")
 
 local dup = Store.duplicate("gg1")

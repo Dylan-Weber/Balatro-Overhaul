@@ -1,0 +1,555 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 243
+local P = {}
+
+P.V = 17
+P.NEW = {chance = true, last_used = true, suit_random_all = true, rank_random_all = true, copy_joker = true, destroy_others = true, balance = true, erratic = true}
+P.TARGET = {joker_edition = true, copy_joker = true, last_used = true, suit_random_all = true, rank_random_all = true}
+P.FREE = {chance = true, destroy_others = true, destroy_random = true, money_zero = true, hand_size_minus = true}
+P.RUN_KINDS = {"deck", "challenge", "stake"}
+P.SLOTS = {"boss", "small", "big"}
+P.SLOT_NAME = {small = "Small", big = "Big"}
+P.RANKS = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}
+P.SUITS = {"Spades", "Hearts", "Diamonds", "Clubs"}
+
+local function ml(s) return mod_loc and mod_loc(s) or s end
+
+local function copy(x)
+  local c = {}
+  for k, v in pairs(x) do c[k] = v end
+  return c
+end
+
+local function add(list, x)
+  if not list then return end
+  for _, y in ipairs(list) do if y.id == x.id then return end end
+  list[#list + 1] = copy(x)
+end
+
+function P.cat(Cat, n)
+  local use = {
+    {id = "chance", label = "With a chance", num = n(2, 1000, 4), line = "{C:green}1 in %d{} chance for the next effects", simple = true, new = true, need = P.V},
+    {id = "last_used", label = "Make the last Tarot or Planet used", line = "Makes the last {C:tarot}Tarot{} or {C:planet}Planet{} card used this run", simple = true, new = true, need = P.V},
+    {id = "suit_random_all", label = "Hand to one random suit", line = "Turns every card in hand into one random {C:attention}suit{}", simple = true, new = true, need = P.V},
+    {id = "rank_random_all", label = "Hand to one random rank", line = "Turns every card in hand into one random {C:attention}rank{}", simple = true, new = true, need = P.V},
+    {id = "copy_joker", label = "Copy a random Joker", line = "Copies a random {C:attention}Joker{} (the copy is never {C:dark_edition}Negative{})", simple = true, new = true, need = P.V},
+    {id = "destroy_others", label = "Destroy the other Jokers", line = "Destroys every other {C:attention}Joker{}", simple = true, new = true, need = P.V},
+  }
+  for _, e in ipairs(use) do
+    add(Cat.EFFECTS.use, e)
+    add(Cat.EFFECTS.spectral, e)
+  end
+  local je = {id = "joker_edition", label = "Edition on a random Joker", v = "jedition", line = "Adds {C:dark_edition}%s{} to a random Joker", simple = true, new = true, need = P.V}
+  add(Cat.EFFECTS.use, je)
+  for _, e in ipairs(Cat.EFFECTS.spectral or {}) do if e.id == "joker_edition" then e.v = "jedition" end end
+  local run = {
+    {id = "balance", label = "Balance Chips and Mult", line = "Balances {C:chips}Chips{} and {C:mult}Mult{} on every played hand", run = true, new = true, need = P.V},
+  }
+  for _, k in ipairs(P.RUN_KINDS) do for _, e in ipairs(run) do add(Cat.EFFECTS[k], e) end end
+  add(Cat.EFFECTS.deck, {id = "erratic", label = "Random ranks and suits", line = "Every card in the deck has a random {C:attention}rank{} and {C:attention}suit{}",
+    simple = true, new = true, need = P.V})
+  Cat.OWN_WHAT.jedition = "edition"
+  if Cat.PLAIN then
+    Cat.PLAIN.boss = "Boss Blind"
+    Cat.PLAIN.small = "Small Blind"
+    Cat.PLAIN.big = "Big Blind"
+  end
+  local blind = Cat.BY_ID and Cat.BY_ID.blind
+  if blind and blind.fields then
+    local has = false
+    for _, f in ipairs(blind.fields) do if f.id == "shows_as" then has = true end end
+    if not has then table.insert(blind.fields, 1, {id = "shows_as", label = "Shows up as", type = "choice", options = P.SLOTS, def = "boss", what = "blindslot"}) end
+  end
+  Cat.extra_need = P.need
+  P.strings()
+end
+
+function P.values(Cat, base_only)
+  local out = {"random"}
+  for _, v in ipairs(Cat.values("shader", base_only)) do out[#out + 1] = v end
+  return out
+end
+
+function P.label(v)
+  if v == "random" then return ml("Foil, Holographic or Polychrome") end
+  return nil
+end
+
+function P.slot_of(c)
+  if type(c) ~= "table" or c.kind ~= "blind" or type(c.fields) ~= "table" then return nil end
+  local s = c.fields.shows_as
+  if s == "small" or s == "big" then return s end
+  return nil
+end
+
+function P.need(c)
+  if type(c) ~= "table" then return 1 end
+  local need = 1
+  if P.slot_of(c) then need = P.V end
+  for _, e in ipairs(type(c.effects) == "table" and c.effects or {}) do
+    if type(e) == "table" and (P.NEW[e.id] or (e.id == "joker_edition" and e.v == "random" and (c.kind == "tarot" or c.kind == "spectral"))) then need = P.V end
+  end
+  return need
+end
+
+local function jokers() return G.jokers and G.jokers.cards or {} end
+
+local function editionless()
+  local out = {}
+  for _, j in ipairs(jokers()) do if j.ability and j.ability.set == "Joker" and not j.edition then out[#out + 1] = j end end
+  return out
+end
+
+local function forge_item(key)
+  local p = key and G.P_CENTERS and G.P_CENTERS[key]
+  if not (p and p.forge_kind and p.forge_id) then return nil end
+  local Store = require("functions/forge/forge_store")
+  return Store.get_item(p.forge_id)
+end
+
+function P.makes_last(c)
+  for _, e in ipairs(type(c) == "table" and type(c.effects) == "table" and c.effects or {}) do
+    if type(e) == "table" and e.id == "last_used" then return true end
+  end
+  return false
+end
+
+function P.last_key()
+  local key = G.GAME and G.GAME.last_tarot_planet
+  if not (key and G.P_CENTERS[key]) or key == "c_fool" then return nil end
+  if P.makes_last(forge_item(key)) then return nil end
+  return key
+end
+
+function P.ready(e, card)
+  local id = e.id
+  if id == "joker_edition" then return #editionless() > 0 end
+  if id == "copy_joker" then
+    return #jokers() > 0 and G.jokers.config.card_limit > 1
+  end
+  if id == "last_used" then
+    local room = G.consumeables and (#G.consumeables.cards < G.consumeables.config.card_limit or (card and card.area == G.consumeables))
+    return room and P.last_key() ~= nil
+  end
+  if id == "suit_random_all" or id == "rank_random_all" then
+    local st = G.STATES
+    local ok = G.STATE == st.SELECTING_HAND or G.STATE == st.TAROT_PACK or G.STATE == st.SPECTRAL_PACK or G.STATE == st.PLANET_PACK or G.STATE == st.STANDARD_PACK or G.STATE == st.BUFFOON_PACK
+    return G.hand ~= nil and #G.hand.cards > 1 and ok
+  end
+  return true
+end
+
+function P.no_space(c)
+  for _, e in ipairs(type(c) == "table" and type(c.effects) == "table" and c.effects or {}) do
+    if type(e) == "table" and e.id == "copy_joker" then return G.jokers ~= nil and #G.jokers.cards >= G.jokers.config.card_limit end
+  end
+  return false
+end
+
+function P.fool_box(c)
+  local key = P.last_key()
+  local raw = G.GAME and G.GAME.last_tarot_planet
+  local shown = key or (raw and G.P_CENTERS[raw] and raw) or nil
+  local name = localize("k_none")
+  if shown then
+    local p = G.P_CENTERS[shown]
+    local ok, n = pcall(localize, {type = "name_text", key = shown, set = p.set})
+    if ok and type(n) == "string" and n ~= "" and n ~= "ERROR" then name = n
+    else name = require("functions/forge/forge_rules").card_label(shown) or name end
+  end
+  local colour = key and G.C.GREEN or G.C.RED
+  return {
+    {n = G.UIT.C, config = {align = "bm", padding = 0.02}, nodes = {
+      {n = G.UIT.C, config = {align = "m", colour = colour, r = 0.05, padding = 0.05}, nodes = {
+        {n = G.UIT.T, config = {text = " " .. name .. " ", colour = G.C.UI.TEXT_LIGHT, scale = 0.3, shadow = true}},
+      }},
+    }},
+  }, key and G.P_CENTERS[key] or nil
+end
+
+function P.can_use(c, card)
+  local list = type(c.effects) == "table" and c.effects or {}
+  local targets, other, ok = 0, 0, false
+  for _, e in ipairs(list) do
+    if type(e) == "table" then
+      if P.TARGET[e.id] then
+        targets = targets + 1
+        if P.ready(e, card) then ok = true end
+      elseif not P.FREE[e.id] then
+        other = other + 1
+      end
+    end
+  end
+  if targets == 0 or other > 0 then return true end
+  if not ok then return false end
+  for _, e in ipairs(list) do
+    if type(e) == "table" and (e.id == "copy_joker" or e.id == "last_used") and not P.ready(e, card) then return false end
+  end
+  return true
+end
+
+function P.roll(e, c, used)
+  local n = math.max(1, tonumber(e.n) or 4)
+  local p = (G.GAME and G.GAME.probabilities and G.GAME.probabilities.normal) or 1
+  if pseudorandom("forge_chance_" .. tostring(c.id)) < p / n then return true end
+  G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.4, func = function()
+    local pack = G.STATE == G.STATES.TAROT_PACK or G.STATE == G.STATES.SPECTRAL_PACK
+    attention_text({text = localize("k_nope_ex"), scale = 1.3, hold = 1.4, major = used, backdrop_colour = G.C.SECONDARY_SET.Tarot,
+      align = pack and "tm" or "cm", offset = {x = 0, y = pack and -0.2 or 0}, silent = true})
+    G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.06 * G.SETTINGS.GAMESPEED, blockable = false, blocking = false, func = function()
+      play_sound("tarot2", 0.76, 0.4)
+      return true
+    end}))
+    play_sound("tarot2", 1, 0.4)
+    used:juice_up(0.3, 0.5)
+    return true
+  end}))
+  delay(0.6)
+  return false
+end
+
+function P.random_edition(c)
+  return poll_edition("forge_wheel_" .. tostring(c.id), nil, true, true)
+end
+
+function P.pick_editionless(c)
+  local pool = editionless()
+  if #pool == 0 then return nil end
+  return (pseudorandom_element(pool, pseudoseed("forge_edition_" .. tostring(c.id))))
+end
+
+local function flip_hand(fn, used)
+  local cards = {}
+  for _, v in ipairs(G.hand and G.hand.cards or {}) do cards[#cards + 1] = v end
+  if #cards == 0 then return end
+  G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.4, func = function() play_sound("tarot1"); used:juice_up(0.3, 0.5); return true end}))
+  for i, v in ipairs(cards) do
+    local pct = 1.15 - (i - 0.999) / (#cards - 0.998) * 0.3
+    G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.15, func = function() v:flip(); play_sound("card1", pct); v:juice_up(0.3, 0.3); return true end}))
+  end
+  delay(0.2)
+  for _, v in ipairs(cards) do G.E_MANAGER:add_event(Event({func = function() fn(v); return true end})) end
+  for i, v in ipairs(cards) do
+    local pct = 0.85 + (i - 0.999) / (#cards - 0.998) * 0.3
+    G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.15, func = function() v:flip(); play_sound("tarot2", pct, 0.6); v:juice_up(0.3, 0.3); return true end}))
+  end
+  delay(0.5)
+end
+
+function P.use(e, c, used, ctx)
+  local R = require("functions/forge/forge_rules")
+  local id = e.id
+  if id == "last_used" then
+    local key = P.last_key()
+    if not key then return true end
+    G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.4, func = function()
+r 3 1375 %20%20%20%20%20%20 -
+l 3
+        play_sound("timpani")
+        local card = create_card("Tarot_Planet", G.consumeables, nil, nil, nil, nil, key, "fool")
+        card:add_to_deck()
+r 1 191 %20%20%20%20%20%20%20%20 -
+l 24
+        used:juice_up(0.3, 0.5)
+      end
+      return true
+    end}))
+    delay(0.6)
+    return true
+  end
+  if id == "suit_random_all" then
+    local suit = pseudorandom_element(P.SUITS, pseudoseed("forge_sigil_" .. tostring(c.id)))
+    flip_hand(function(v) R.change_card(v, {what = "suit", v = suit}) end, used)
+    return true
+  end
+  if id == "rank_random_all" then
+    local rank = pseudorandom_element(P.RANKS, pseudoseed("forge_ouija_" .. tostring(c.id)))
+    flip_hand(function(v) R.change_card(v, {what = "rank", v = rank}) end, used)
+    return true
+  end
+  if id == "copy_joker" then
+    local list = jokers()
+    if #list == 0 then return true end
+    local chosen = pseudorandom_element(list, pseudoseed("forge_ankh_" .. tostring(c.id)))
+    ctx.keep[chosen] = true
+    G.E_MANAGER:add_event(Event({trigger = "before", delay = 0.4, func = function()
+      local card = copy_card(chosen, nil, nil, nil, chosen.edition and chosen.edition.negative)
+r 3 1446 %20%20%20%20%20%20 -
+l 2
+      card:add_to_deck()
+      if card.edition and card.edition.negative then card:set_edition(nil, true) end
+r 3 1420 %20%20%20%20%20%20 -
+l 38
+      ctx.keep[card] = true
+      used:juice_up(0.3, 0.5)
+      return true
+    end}))
+    return true
+  end
+  if id == "destroy_others" then
+    G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.4, func = function()
+      local first
+      for _, v in ipairs(jokers()) do
+        if not ctx.keep[v] and not (v.ability and v.ability.eternal) and not v.getting_sliced then
+          v.getting_sliced = true
+          v:start_dissolve(nil, first)
+          first = true
+        end
+      end
+      used:juice_up(0.3, 0.5)
+      return true
+    end}))
+    delay(0.6)
+    return true
+  end
+  return false
+end
+
+function P.apply(e)
+  if e.id == "balance" then
+    if G.GAME then G.GAME.forge_balance = true end
+    return true
+  end
+  if e.id == "erratic" then return true end
+  return false
+end
+
+function P.balance(args)
+  local tot = (tonumber(args.chips) or 0) + (tonumber(args.mult) or 0)
+  args.chips = math.floor(tot / 2)
+  args.mult = math.floor(tot / 2)
+r 1 129 %20%20 -
+r 3 617 %20%20 -
+l 3
+    play_sound("gong", 0.94, 0.3)
+    play_sound("gong", 0.94 * 1.5, 0.2)
+    play_sound("tarot1", 1.5)
+r 1 137 %20%20%20%20 -
+r 1 138 %20%20%20%20 -
+l 2
+    attention_text({scale = 1.4, text = localize("k_balanced"), hold = 2, align = "cm", offset = {x = 0, y = -2.7}, major = G.play})
+    G.E_MANAGER:add_event(Event({trigger = "after", blockable = false, blocking = false, delay = 4.3, func = function()
+r 1 148 %20%20%20%20%20%20 -
+r 1 149 %20%20%20%20%20%20 -
+l 3
+      return true
+    end}))
+    G.E_MANAGER:add_event(Event({trigger = "after", blockable = false, blocking = false, no_delete = true, delay = 6.3, func = function()
+r 1 160 %20%20%20%20%20%20 -
+r 1 161 %20%20%20%20%20%20 -
+l 5
+      return true
+    end}))
+    return true
+  end}))
+  delay(0.6)
+r 1 170 %20%20 -
+l 82
+end
+
+local function eq(a, b)
+  local fa, fb = rawget(a, "forge_slot"), rawget(b, "forge_slot")
+  local sa = fa or rawget(a, "forge_vanilla_slot")
+  local sb = fb or rawget(b, "forge_vanilla_slot")
+  return sa ~= nil and sa == sb and ((fa == nil) ~= (fb == nil))
+end
+P.eq = eq
+
+function P.mark_blind(p, c)
+  local slot = P.slot_of(c)
+  p.forge_slot = slot
+  if not slot then return end
+  p.boss = nil
+  p.blind_types = {slot}
+  p.forge_min_ante = c.mode == "advanced" and math.max(1, math.floor(tonumber(c.fields.min_ante) or 1)) or 1
+  P.MT = P.MT or {__eq = eq}
+  if getmetatable(p) == nil then setmetatable(p, P.MT) end
+  P.link_eq()
+end
+
+
+
+function P.link_eq()
+  if not (G and G.P_BLINDS) then return end
+  P.MT = P.MT or {__eq = eq}
+  for slot, key in pairs({small = "bl_small", big = "bl_big"}) do
+    local b = G.P_BLINDS[key]
+    if b and (getmetatable(b) == nil or getmetatable(b) == P.MT) then
+      b.forge_vanilla_slot = slot
+      setmetatable(b, P.MT)
+    end
+  end
+  for _, p in pairs(G.P_BLINDS) do
+    if type(p) == "table" and rawget(p, "forge_slot") and (getmetatable(p) == nil or getmetatable(p) == P.MT) then setmetatable(p, P.MT) end
+  end
+end
+
+function P.pool(slot)
+  local out = {}
+  local ante = G.GAME and G.GAME.round_resets and G.GAME.round_resets.ante or 1
+  for key, p in pairs(G.P_BLINDS or {}) do
+    if type(p) == "table" and rawget(p, "forge_slot") == slot and not p.forge_gone then
+      local on = true
+      if type(p.in_pool) == "function" then on = p.in_pool() end
+      if on and ante >= (p.forge_min_ante or 1) then out[#out + 1] = key end
+    end
+  end
+  table.sort(out)
+  return out
+end
+
+function P.pick_slots()
+  local rr = G.GAME and G.GAME.round_resets
+  if not (rr and rr.blind_choices) then return end
+  local More = require("functions/forge/forge_kinds_more")
+  pcall(More.sync_tags_blinds)
+  for slot, name in pairs(P.SLOT_NAME) do
+    if not (rr.pvp_blind_choices and rr.pvp_blind_choices[name]) then
+      local cur = rr.blind_choices[name]
+      local plain = name == "Small" and "bl_small" or "bl_big"
+      local pool = P.pool(slot)
+      if #pool > 0 then
+        rr.blind_choices[name] = pseudorandom_element(pool, pseudoseed("forge_" .. slot .. "_" .. tostring(rr.ante or 1)))
+      elseif cur and G.P_BLINDS[cur] and rawget(G.P_BLINDS[cur], "forge_slot") then
+        rr.blind_choices[name] = plain
+      end
+    end
+  end
+end
+
+function P.redraw(name)
+  local key = string.lower(name)
+  local box = G.blind_select_opts and G.blind_select_opts[key]
+  if not (box and box.parent and create_UIBox_blind_choice) then return end
+  local par = box.parent
+  box:remove()
+  G.blind_select_opts[key] = UIBox{T = {par.T.x, 0, 0, 0}, definition = {n = G.UIT.ROOT, config = {align = "cm", colour = G.C.CLEAR}, nodes = {
+    UIBox_dyn_container({create_UIBox_blind_choice(name)}, false, get_blind_main_colour(name)),
+  }}, config = {align = "bmi", offset = {x = 0, y = 0}, major = par, xy_bond = "Weak"}}
+  par.config.object = G.blind_select_opts[key]
+r 32 2836 %20%20 -
+l 46
+  G.blind_select_opts[key].parent = par
+end
+
+function P.try_slot(c, key)
+  local slot = P.slot_of(c)
+  if not slot then return false end
+  local rr = G.GAME and G.GAME.round_resets
+  if not (rr and rr.blind_choices and G.P_BLINDS[key] and G.blind_select_opts) then return false end
+  local name = P.SLOT_NAME[slot]
+  rr.blind_choices[name] = key
+  pcall(P.redraw, name)
+  return true
+end
+
+function P.install()
+  if P.hooked then return end
+  local okh, Hooks = pcall(require, "overhaul.hooks")
+  if not (okh and Hooks) then return end
+  P.hooked = true
+  Hooks.wrap("Back", "trigger_effect", function(orig) return function(self, args, ...)
+    local nc, nm = orig(self, args, ...)
+    if type(args) == "table" and args.context == "final_scoring_step" and G.GAME and G.GAME.forge_balance and self == G.GAME.selected_back then
+      local a = {chips = nc or args.chips, mult = nm or args.mult}
+      local ok, c2, m2 = pcall(P.balance, a)
+      if ok then return c2, m2 end
+    end
+    return nc, nm
+  end end, {id = "forge_parity.balance"})
+  Hooks.wrap(_G, "generate_card_ui", function(orig) return function(center, full, vars, ctype, badges, hide, main_start, main_end, card, ...)
+    if type(center) == "table" and center.forge_kind and full == nil and main_end == nil and G.GAME then
+      local c = forge_item(center.key)
+      if c and P.makes_last(c) then
+        local ok, box, last = pcall(P.fool_box, c)
+        if ok then
+          local out = orig(center, full, vars, ctype, badges, hide, main_start, box, card, ...)
+          if last and type(out) == "table" then pcall(orig, last, out) end
+          return out
+        end
+      end
+    end
+    return orig(center, full, vars, ctype, badges, hide, main_start, main_end, card, ...)
+  end end, {id = "forge_parity.fool_box"})
+  Hooks.wrap("Card", "check_use", function(orig) return function(self, ...)
+    local center = self and self.config and self.config.center
+    local c = center and center.forge_kind and forge_item(center.key)
+    if c and P.no_space(c) then
+r 3 1584 %20%20%20%20%20%20 -
+l 72
+      return true
+    end
+    return orig(self, ...)
+  end end, {id = "forge_parity.check_use"})
+  Hooks.wrap("Blind", "get_type", function(orig) return function(self, ...)
+    local b = self and self.config and self.config.blind
+    local slot = type(b) == "table" and rawget(b, "forge_slot")
+    if slot then return P.SLOT_NAME[slot] end
+    return orig(self, ...)
+  end end, {id = "forge_parity.get_type"})
+  Hooks.wrap(_G, "reset_blinds", function(orig) return function(...)
+    local rr = G.GAME and G.GAME.round_resets
+    local fresh = not (rr and rr.blind_states) or rr.blind_states.Boss == "Defeated"
+    local r = {orig(...)}
+    if fresh then pcall(P.pick_slots) end
+    return unpack(r)
+  end end, {id = "forge_parity.reset_blinds"})
+  Hooks.wrap("Game", "start_run", function(orig) return function(self, args, ...)
+    local r = {orig(self, args, ...)}
+    if not (args and args.savetext) then
+      local ok, err = pcall(P.pick_slots)
+      if not ok then print("[FORGE] blind slots failed: " .. tostring(err)) end
+    end
+    pcall(P.link_eq)
+    return unpack(r)
+  end end, {id = "forge_parity.start_run"})
+end
+
+function P.strings()
+  if not mod_loc_register or P.registered then return end
+  P.registered = true
+  mod_loc_register{
+    fr = {
+      ["With a chance"] = "Avec une chance", ["{C:green}1 in %d{} chance for the next effects"] = "{C:green}1 chance sur %d{} pour les effets suivants",
+      ["Make the last Tarot or Planet used"] = "Créer le dernier Tarot ou Planète utilisé",
+      ["Makes the last {C:tarot}Tarot{} or {C:planet}Planet{} card used this run"] = "Crée la dernière carte de {C:tarot}Tarot{} ou {C:planet}Planète{} utilisée pendant la partie",
+      ["Hand to one random suit"] = "Main vers une couleur au hasard",
+      ["Turns every card in hand into one random {C:attention}suit{}"] = "Convertit toutes les cartes en main en une unique {C:attention}Couleur{} aléatoire",
+      ["Hand to one random rank"] = "Main vers une valeur au hasard",
+      ["Turns every card in hand into one random {C:attention}rank{}"] = "Convertit toutes les cartes en main en une unique {C:attention}Valeur{} aléatoire",
+      ["Copy a random Joker"] = "Copier un Joker au hasard",
+      ["Copies a random {C:attention}Joker{} (the copy is never {C:dark_edition}Negative{})"] = "Crée une copie d'un {C:attention}Joker{} aléatoire (sans {C:dark_edition}Négatif{})",
+      ["Destroy the other Jokers"] = "Détruire les autres Jokers", ["Destroys every other {C:attention}Joker{}"] = "Détruit tous les autres {C:attention}Jokers{}",
+      ["Foil, Holographic or Polychrome"] = "Brillante, Holographique ou Polychrome",
+      ["Balance Chips and Mult"] = "Équilibrer Jetons et Multi",
+      ["Balances {C:chips}Chips{} and {C:mult}Mult{} on every played hand"] = "Équilibre les {C:chips}Jetons{} et le {C:mult}Multi{} à chaque main jouée",
+      ["Random ranks and suits"] = "Valeurs et couleurs au hasard",
+      ["Every card in the deck has a random {C:attention}rank{} and {C:attention}suit{}"] = "Chaque carte du jeu a une {C:attention}valeur{} et une {C:attention}couleur{} au hasard",
+      ["Shows up as"] = "Apparaît comme",
+    },
+    es = {
+      ["With a chance"] = "Con una probabilidad", ["{C:green}1 in %d{} chance for the next effects"] = "{C:green}1 entre %d{} de probabilidad para los efectos siguientes",
+      ["Make the last Tarot or Planet used"] = "Crear el último Tarot o Planeta usado",
+      ["Makes the last {C:tarot}Tarot{} or {C:planet}Planet{} card used this run"] = "Genera la última carta de {C:tarot}tarot{} o de {C:planet}planeta{} usada en la partida",
+      ["Hand to one random suit"] = "Mano a un palo al azar",
+      ["Turns every card in hand into one random {C:attention}suit{}"] = "Convierte todas las cartas de tu mano en un solo {C:attention}palo{} al azar",
+      ["Hand to one random rank"] = "Mano a una categoría al azar",
+      ["Turns every card in hand into one random {C:attention}rank{}"] = "Convierte todas las cartas de tu mano en una sola {C:attention}categoría{} al azar",
+      ["Copy a random Joker"] = "Copiar un comodín al azar",
+      ["Copies a random {C:attention}Joker{} (the copy is never {C:dark_edition}Negative{})"] = "Crea una copia de un {C:attention}comodín{} aleatorio (sin {C:dark_edition}Negativa{})",
+      ["Destroy the other Jokers"] = "Destruir los demás comodines", ["Destroys every other {C:attention}Joker{}"] = "Destruye todos los demás {C:attention}comodines{}",
+      ["Foil, Holographic or Polychrome"] = "Laminada, Holográfica o Polícroma",
+      ["Balance Chips and Mult"] = "Equilibrar fichas y multi",
+      ["Balances {C:chips}Chips{} and {C:mult}Mult{} on every played hand"] = "Equilibra las {C:chips}fichas{} y el {C:mult}multi{} en cada mano jugada",
+      ["Random ranks and suits"] = "Categorías y palos al azar",
+      ["Every card in the deck has a random {C:attention}rank{} and {C:attention}suit{}"] = "Cada carta de la baraja tiene una {C:attention}categoría{} y un {C:attention}palo{} al azar",
+      ["Shows up as"] = "Aparece como",
+    },
+  }
+end
+
+return P
+end

@@ -44,6 +44,7 @@ local function files_of(c)
   if c.art and c.art.file then out[#out + 1] = {"art", c.art.file} end
   for _, r in ipairs({"J", "Q", "K"}) do if c.faces and c.faces[r] then out[#out + 1] = {r, c.faces[r]} end end
   require("functions/forge/forge_grow").room_files(c, out)
+  require("functions/forge/forge_extras").room_files(c, out)
   return out
 end
 
@@ -71,7 +72,7 @@ end
 function R.pack(max_bytes)
   max_bytes = tonumber(max_bytes) or R.MAX_BYTES
   local out = {format = Mods.FORMAT, v = Mods.V, room = R.V, id = R.ID, name = "Room", author = "", about = {}, version = 1, made = 0, jokers = {}, creations = {}}
-  local arts, map = {}, {}
+  local arts, map, snds = {}, {}, {}
   for i, s in ipairs(sources()) do
     if #out.jokers + #out.creations >= Mods.MAX_ITEMS then break end
     local x = Store.copy(s.c)
@@ -82,6 +83,8 @@ function R.pack(max_bytes)
     x.art = type(x.art) == "table" and x.art.file == nil and x.art or nil
     x.faces = nil
     require("functions/forge/forge_grow").room_strip(x)
+    require("functions/forge/forge_extras").room_strip(x)
+    snds[#snds + 1] = {x = x, c = s.c}
     for _, pair in ipairs(files_of(s.c)) do arts[#arts + 1] = {x = x, slot = pair[1], path = pair[2], key = "r" .. x.id .. pair[1]} end
     local list = s.joker and out.jokers or out.creations
     list[#list + 1] = x
@@ -109,7 +112,7 @@ function R.pack(max_bytes)
         files[a.key] = b
         size = size + more
         local p = "forge/art/" .. a.key .. ".png"
-        if a.slot == "art" then a.x.art = {file = p} elseif not require("functions/forge/forge_grow").room_put(a.x, a.slot, p) then a.x.faces = a.x.faces or {}; a.x.faces[a.slot] = p end
+        if a.slot == "art" then a.x.art = {file = p} elseif not (require("functions/forge/forge_extras").room_put(a.x, a.slot, p) or require("functions/forge/forge_grow").room_put(a.x, a.slot, p)) then a.x.faces = a.x.faces or {}; a.x.faces[a.slot] = p end
         kept = kept + 1
       else
         dropped = dropped + 1
@@ -117,6 +120,9 @@ function R.pack(max_bytes)
     end
   end
   if next(files) then out.files = files end
+  require("functions/forge/forge_extras").room_sounds(Mods, out, snds, size, max_bytes)
+  out.room = Mods.needs_v(out.jokers, out.creations)
+  out.v = out.room
   local final, raw = size_of(out)
   if not final then return nil, "encode" end
   if final > max_bytes then return nil, "too_big" end
@@ -130,6 +136,7 @@ local function remove_art()
   for _, name in ipairs(f.getDirectoryItems("forge/art")) do
     if name:sub(1, #prefix) == prefix then pcall(f.remove, "forge/art/" .. name) end
   end
+  require("functions/forge/forge_extras").remove_sounds(R.ID)
 end
 
 function R.refresh()

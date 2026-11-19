@@ -37,7 +37,7 @@ local M = require("functions/forge/forge_mods")
 local FL = require("functions/forge/forge_forcedlook")
 local D = require("functions/forge/forge_doc")
 
-check("module v16", FL.V == 16 and M.V == 16)
+check("module v16", FL.V == 16 and M.V >= 16)
 check("clean vanilla", FL.clean("e_polychrome") == "e_polychrome")
 check("clean own", FL.clean("forge_abc12") == "forge_abc12")
 check("clean mod", FL.clean("e_mymod_glitch") == "e_mymod_glitch")

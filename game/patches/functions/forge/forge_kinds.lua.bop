@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 493
+l 498
 local Store = require("functions/forge/forge_store")
 local Cat = require("functions/forge/forge_catalog")
 local D = require("functions/forge/forge_doc")
@@ -10,6 +10,7 @@ local R = require("functions/forge/forge_rules")
 local FJ = require("functions/forge/forge_joker")
 local More = require("functions/forge/forge_kinds_more")
 local Run = require("functions/forge/forge_run")
+local Parity = require("functions/forge/forge_parity")
 
 local K = {}
 K.SET = {tarot = "Tarot", planet = "Planet", spectral = "Spectral", voucher = "Voucher", deck = "Back", enhancement = "Enhanced", edition = "Edition", booster = "Booster"}
@@ -18,7 +19,7 @@ K.PREFIXES = {tarot = "c_forge_", planet = "c_forge_", spectral = "c_forge_", vo
 K.more = More
 K.run = Run
 K.types = require("functions/forge/forge_types")
-K.DECK_OWN = {dollars = true, hands = true, discards = true, hand_size = true, joker_slots = true, consumable_slots = true, no_faces = true, start_voucher = true, interest_cap = true, win_ante = true, remove_suit = true, add_suit = true, enhance_all = true, seal_all = true, edition_all = true, remove_rank = true, start_consumable = true}
+K.DECK_OWN = {dollars = true, hands = true, discards = true, hand_size = true, joker_slots = true, consumable_slots = true, no_faces = true, start_voucher = true, interest_cap = true, win_ante = true, remove_suit = true, add_suit = true, enhance_all = true, seal_all = true, edition_all = true, remove_rank = true, start_consumable = true, erratic = true}
 
 local function is_now(e) return e.when == nil or e.when == "now" end
 K.PREFIX = "c_forge_"
@@ -39,6 +40,7 @@ local function deck_config(c)
     if not is_now(e) then
     elseif k then cfg[k] = (cfg[k] or 0) + (tonumber(e.n) or 0)
     elseif e.id == "no_faces" then cfg.remove_faces = true
+    elseif e.id == "erratic" then cfg.randomize_rank_suit = true
     elseif e.id == "start_voucher" and G.P_CENTERS[e.v] and R.usable("voucher", e.v) and not (e.only and #e.only > 0) then
       cfg.vouchers = cfg.vouchers or {}
       cfg.vouchers[#cfg.vouchers + 1] = e.v
@@ -326,6 +328,7 @@ function K.can_use(card, any_state, skip_check)
   if not skip_check and ((G.play and #G.play.cards > 0) or G.CONTROLLER.locked or (G.GAME.STOP_USE and G.GAME.STOP_USE > 0)) then return false end
   if not (any_state or (G.STATE ~= G.STATES.HAND_PLAYED and G.STATE ~= G.STATES.DRAW_TO_HAND and G.STATE ~= G.STATES.PLAY_TAROT)) then return false end
   local sel = tonumber(fields(c).select) or 0
+  if K.CONS[c.kind] and not Parity.can_use(c, card) then return false end
   if c.kind == "planet" or sel == 0 then return true end
   local n = G.hand and #G.hand.highlighted or 0
   return n >= math.max(1, needs(c)) and n <= sel
@@ -381,9 +384,11 @@ end
 
 local RARITY_ROLL = {[1] = 0, [2] = 0.8, [3] = 0.99}
 
-local function effect(e, c, used, hl)
+local function effect(e, c, used, hl, ctx)
   local id = e.id
   local n = tonumber(e.n) or 1
+  ctx = ctx or {keep = {}}
+  if Parity.use(e, c, used, ctx) then return end
   if id == "enhance" and G.P_CENTERS[e.v] and R.usable("enhancement", e.v) then flip_all(hl, function(v) v:set_ability(G.P_CENTERS[e.v]) end)
   elseif id == "seal" then
     if not R.usable("seal", e.v) then return end
@@ -473,12 +478,12 @@ local function effect(e, c, used, hl)
     or (R.SELECT and R.SELECT.RUN[id]) or (R.STICKERS and R.STICKERS.RUN[id]) then
     G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.3, func = function() Run.apply(e); used:juice_up(0.3, 0.5); return true end}))
   elseif id == "joker_edition" then
-    local pool = {}
-    for _, j in ipairs(G.jokers and G.jokers.cards or {}) do if not j.edition then pool[#pool + 1] = j end end
-    local ed = R.edition_arg(e.v or "foil")
-    if #pool > 0 and ed then
-      local j = pseudorandom_element(pool, pseudoseed("forge_edition_" .. c.id))
-      G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.4, func = function() j:set_edition(ed); used:juice_up(0.3, 0.5); return true end}))
+    local ed = e.v == "random" and Parity.random_edition(c) or R.edition_arg(e.v or "foil")
+    local j = ed and Parity.pick_editionless(c)
+    if j then
+      ctx.keep[j] = true
+      G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.4, func = function() j:set_edition(ed, true); check_for_unlock({type = "have_edition"}); used:juice_up(0.3, 0.5); return true end}))
+      delay(0.6)
     end
   elseif id == "edition_joker" then
     local made = R.make_edition_joker(e.v or "foil", n, nil)
@@ -497,7 +502,7 @@ local function effect(e, c, used, hl)
         G.jokers:emplace(j)
         used:juice_up(0.3, 0.5)
 r 3 2539 %20%20%20%20%20%20%20%20 -
-l 65
+l 67
         return true
       end}))
     end
@@ -517,8 +522,10 @@ function K.use(card, area, copier)
     local levels = math.max(1, math.floor(tonumber(f.levels) or 1))
     if f.hand == "all" then level_every(used, levels) else level(used, f.hand or "Pair", levels, f, c) end
   end
+  local ctx = {keep = {}}
   for _, e in ipairs(c.effects or {}) do
-    local ok, err = pcall(effect, e, c, used, hl)
+    if e.id == "chance" and not Parity.roll(e, c, used) then break end
+    local ok, err = pcall(effect, e, c, used, hl, ctx)
     if not ok then log_once("use_" .. c.id .. "_" .. tostring(e.id), "effect " .. tostring(e.id) .. " of " .. c.id .. " failed: " .. tostring(err)) end
   end
   local okr, errr = pcall(require("functions/forge/forge_hostrules").use, c, used)
@@ -791,7 +798,7 @@ function K.install_hooks()
         if K.deck_starting then
           if G.GAME and G.GAME.used_vouchers then G.GAME.used_vouchers[cen.key] = true end
 r 3 617 %20%20%20%20%20%20%20%20%20%20 -
-l 122
+l 124
             if G.GAME and G.GAME.used_vouchers then G.GAME.used_vouchers[cen.key] = true end
             pcall(keep_card, nil, cen)
             local ok, err = pcall(K.apply_voucher, cen)
@@ -912,6 +919,8 @@ if mod_loc_register then
     es = {["Scores extra chips"] = "Anota fichas extra"},
   }
 end
+
+require("functions/forge/forge_extras").kinds(K)
 
 return K
 end

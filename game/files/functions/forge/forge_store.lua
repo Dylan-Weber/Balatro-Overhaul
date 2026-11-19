@@ -437,6 +437,8 @@ function S.count(kind)
 end
 
 require("functions/forge/forge_grow").store(S)
+require("functions/forge/forge_extras").store(S)
 require("functions/forge/forge_balance").store(S)
+require("functions/forge/forge_remix").store(S)
 
 return S

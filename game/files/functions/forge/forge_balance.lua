@@ -424,7 +424,7 @@ DO.discard_drawn = small_make(0.02)
 DO.next_blind = function(g, o, A, ctx) add_util(A, 1.5 * lg(1 / math.max(1e-6, amount(g, ctx, 1))) * 0.5, "blind_size", o, ctx) end
 DO.next_boss_off = function(g, o, A, ctx) add_util(A, 0.5, "boss", o, ctx) end
 DO.put_sticker = function(g, o, A, ctx) add_util(A, Bal.sticker_v(g.v), "stickers", o, ctx) end
-Bal.NEUTRAL = {var_add = true, var_set = true, reset_gains = true, var_pick = true, next_look = true, pack_card = true}
+Bal.NEUTRAL = {var_add = true, var_set = true, reset_gains = true, var_pick = true, next_look = true, pack_card = true, erratic = true}
 DO.become = function(g, o, A, ctx)
   local r = ({Common = 1, Uncommon = 2, Rare = 3, Legendary = 4})[g.v] or 3
   add_util(A, 0.5 * Bal.REF.joker[r], "become", nil, ctx)
@@ -455,7 +455,17 @@ local USE = {
   joker_slots_plus = function(e, o, A, ctx) add_res(A, "jslots", num(e.n, 1)) end,
   edition_joker = function(e, o, A, ctx) add_util(A, 0.6 * math.max(1, num(e.n, 1)), "edition", o, ctx) end,
   draw_cards = function(e, o, A, ctx) add_util(A, 0.02 * num(e.n, 1), "cards", o, ctx) end,
+  chance = function() end,
+  last_used = function(e, o, A, ctx) add_make(A, 0.35, o, ctx) end,
+  suit_random_all = function(e, o, A, ctx) add_util(A, 0.3, "cards", o, ctx) end,
+  rank_random_all = function(e, o, A, ctx) add_util(A, 0.3, "cards", o, ctx) end,
+  copy_joker = function(e, o, A, ctx) add_make(A, 1.1, o, ctx) end,
+  destroy_others = function(e, o, A, ctx) A.once = A.once - 0.8 end,
 }
+USE.joker_edition = function(e, o, A, ctx)
+  if e.v == "random" then return add_util(A, 0.5 * ED_J.foil + 0.35 * ED_J.holo + 0.15 * ED_J.polychrome, "edition", o, ctx) end
+  add_util(A, ED_J[ed_key(e.v)] or 0.6, "edition", o, ctx)
+end
 
 local TAG = {
   money_per_skip = function(e, o, A, ctx) add_money(A, num(e.n, 5) * 3, o, ctx) end,
@@ -480,6 +490,7 @@ local TAG = {
 }
 
 local RUN = {
+  balance = function(e, o, A, ctx) add_util(A, 2, "balance", o, ctx) end,
   free_pack = function(e, o, A, ctx) add_make(A, PACKV[e.v] or 0.5, o, ctx) end,
   give_pack = function(e, o, A, ctx) add_make(A, PACKV[e.v] or 0.5, o, ctx) end,
   hand_size = function(e, o, A, ctx) add_res(A, "hsize", num(e.n, 1)) end,
@@ -738,9 +749,21 @@ local function eval_rules(rules, A, ctx)
   end
 end
 
+local function scaled(A, p, fn)
+  if p >= 1 then return fn() end
+  local before = {}
+  for k, v in pairs(A) do if type(v) == "number" and k ~= "life" and k ~= "top_pp" then before[k] = v end end
+  fn()
+  for k, v in pairs(before) do A[k] = v + (A[k] - v) * p end
+end
+
 local function eval_effects(effects, map, A, ctx)
+  local chance = 1
   for _, e in ipairs(type(effects) == "table" and effects or {}) do
-    if type(e) == "table" then
+    if type(e) == "table" and e.id == "chance" then chance = chance / math.max(1, num(e.n, 4)) end
+    if type(e) == "table" and chance < 1 and e.id ~= "chance" then
+      scaled(A, chance, function() eval_effects({e}, map, A, ctx) end)
+    elseif type(e) == "table" then
       local f = map[e.id] or RUN[e.id] or DO[e.id]
       local o
       if e.when and e.when ~= "now" then
@@ -839,11 +862,13 @@ end
 
 local function blind(c, A, ctx)
   local f = type(c.fields) == "table" and c.fields or {}
+  local bs, br = 2, 5
+  if f.shows_as == "small" then bs, br = 1, 3 elseif f.shows_as == "big" then bs, br = 1.5, 4 end
   local size = math.max(0.0001, num(f.size, 2))
-  A.util = A.util + 0.5 * lg(2 / size) * (size < 1 and 3 or 1)
+  A.util = A.util + 0.5 * lg(bs / size) * (size < 1 and 3 or 1)
   local reward = num(f.reward, 5)
-  if reward ~= 5 then A.money = A.money + (reward - 5) / 3 end
-  if reward > 5 then note(A, money_pp((reward - 5) / 3), "money", round2((reward - 5) / 3), "round") end
+  if reward ~= br then A.money = A.money + (reward - br) / 3 end
+  if reward > br then note(A, money_pp((reward - br) / 3), "money", round2((reward - br) / 3), "round") end
 end
 
 function Bal.score(c)
@@ -1056,6 +1081,7 @@ Bal.TEXT = {
     boss = "beating Boss Blinds", stickers = "stickers", copy = "copying Jokers", rule = "its rule", chances = "better chances", rerolls = "free rerolls",
     shop = "shop perks", blind_size = "smaller blinds", ante = "ante changes", enhance = "enhancing cards", edition_fx = "editions",
     seal_fx = "seals", cards = "changing cards", perma = "permanent Chips", look = "card looks", boost = "boosting Jokers",
+    balance = "balancing Chips and Mult",
     become = "growing up", save = "saving the run", planet_fx = "hand levels", pack = "its pack contents", tags = "tags", effects = "its effects",
     f_hand = "every hand", f_often = "often", f_some = "sometimes", f_scored = "per scored card", f_held = "per held card", f_round = "each round",
     pack_up = "Balance: up to %s", pack_broken = "Broken: %s (progress off)",
@@ -1075,6 +1101,7 @@ Bal.TEXT = {
     boss = "battre les Blindes Boss", stickers = "les autocollants", copy = "copier des Jokers", rule = "sa règle", chances = "les chances", rerolls = "les relances gratuites",
     shop = "les avantages en boutique", blind_size = "les blindes plus petites", ante = "changer la mise de départ", enhance = "améliorer des cartes", edition_fx = "les éditions",
     seal_fx = "les sceaux", cards = "changer des cartes", perma = "les jetons permanents", look = "l'apparence des cartes", boost = "renforcer des Jokers",
+    balance = "équilibrer jetons et multi",
     become = "grandir", save = "sauver la partie", planet_fx = "les niveaux de main", pack = "le contenu du paquet", tags = "les badges", effects = "ses effets",
     f_hand = "à chaque main", f_often = "souvent", f_some = "parfois", f_scored = "par carte jouée", f_held = "par carte en main", f_round = "à chaque manche",
     pack_up = "Équilibre : jusqu'à %s", pack_broken = "Cassé : %s (pas de progression)",
@@ -1094,6 +1121,7 @@ Bal.TEXT = {
     boss = "vencer Ciegas jefe", stickers = "las pegatinas", copy = "copiar Jokers", rule = "su regla", chances = "las probabilidades", rerolls = "las tiradas gratis",
     shop = "las ventajas de tienda", blind_size = "las ciegas más pequeñas", ante = "cambiar la apuesta inicial", enhance = "mejorar cartas", edition_fx = "las ediciones",
     seal_fx = "los sellos", cards = "cambiar cartas", perma = "las fichas permanentes", look = "el aspecto de las cartas", boost = "potenciar Jokers",
+    balance = "equilibrar fichas y multi",
     become = "crecer", save = "salvar la partida", planet_fx = "los niveles de mano", pack = "el contenido del sobre", tags = "las etiquetas", effects = "sus efectos",
     f_hand = "en cada mano", f_often = "a menudo", f_some = "a veces", f_scored = "por carta jugada", f_held = "por carta en mano", f_round = "cada ronda",
     pack_up = "Equilibrio: hasta %s", pack_broken = "Roto: %s (sin progreso)",

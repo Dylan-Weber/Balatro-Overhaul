@@ -161,7 +161,7 @@ Run.each = each
 local function change_slots(area, n)
   if not area then return end
 r 3 617 %20%20 -
-l 61
+l 62
     area.config.card_limit = math.max(0, area.config.card_limit + n)
     return true
   end}))
@@ -204,6 +204,7 @@ function Run.apply(e, src)
     require("functions/forge/forge_startpack").queue(e.v)
     return
   end
+  if require("functions/forge/forge_parity").apply(e) then return end
   local n = tonumber(e.n) or 0
   local whole = math.floor(n)
   if id == "hand_size" or id == "hand_size_plus" then

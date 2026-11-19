@@ -509,7 +509,7 @@ local function register_strings()
       ["Discards cost money"] = "Les défausses coûtent de l'argent", ["Every discard costs {C:money}$%d{}"] = "Chaque défausse coûte {C:money}%d ${}",
       ["Chips capped by your money"] = "Jetons limités par votre argent", ["Base Chips can't go over your money"] = "Les Jetons de base ne dépassent pas votre argent",
       ["-1 hand size per $"] = "-1 taille de main par $", ["{C:attention}-1{} hand size for every {C:money}$%d{} you have"] = "{C:attention}-1{} taille de main pour chaque tranche de {C:money}%d ${}",
-      ["Small Blind"] = "Petite Blinde", ["Big Blind"] = "Grosse Blinde", ["Boss Blind"] = "Blinde de boss",
+      ["Small Blind"] = "Petite Blinde", ["Big Blind"] = "Grosse Blinde", ["Boss Blind"] = "Blinde Boss",
       ["Or start from a game challenge:"] = "Ou partez d'un défi du jeu :", ["In the Challenges list (Play > Challenges)"] = "Dans la liste des défis (Jouer > Défis)",
     },
     es = {

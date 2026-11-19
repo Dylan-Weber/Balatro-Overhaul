@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 128
+l 133
 local math = require("functions.pure_math")
 local P = require("functions/forge/forge_pixel")
 local Store = require("functions/forge/forge_store")
@@ -29,12 +29,12 @@ PX.EDITIONS = {"base", "foil", "holo", "polychrome", "negative"}
 PX.KINDS = {
   {key = "joker", label = "Joker", pool = "Joker", atlas = "Joker", soul = true},
   {key = "tarot", label = "Tarot", pool = "Tarot", atlas = "Tarot", soul = true},
-  {key = "planet", label = "Planet", pool = "Planet", atlas = "Tarot"},
+  {key = "planet", label = "Planet", pool = "Planet", atlas = "Tarot", soul = true},
   {key = "spectral", label = "Spectral", pool = "Spectral", atlas = "Tarot", soul = true},
-  {key = "voucher", label = "Voucher", pool = "Voucher", atlas = "Voucher"},
-  {key = "booster", label = "Booster", pool = "Booster", atlas = "Booster"},
+  {key = "voucher", label = "Voucher", pool = "Voucher", atlas = "Voucher", soul = true},
+  {key = "booster", label = "Booster", pool = "Booster", atlas = "Booster", soul = true},
   {key = "back", label = "Deck back", pool = "Back", atlas = "centers"},
-  {key = "enhancement", label = "Enhancement", pool = "Enhanced", atlas = "centers"},
+  {key = "enhancement", label = "Enhancement", pool = "Enhanced", atlas = "centers", soul = true},
   {key = "seal", label = "Seal", atlas = "centers", empty_blank = true},
   {key = "edition", label = "Edition", atlas = "Joker", empty_blank = true},
   {key = "skin", label = "Card skin", atlas = "cards_1"},
@@ -57,6 +57,11 @@ function PX.kind(key)
   key = key or PX.state.kind
   for _, k in ipairs(PX.KINDS) do if k.key == key then return k end end
   return PX.KINDS[1]
+end
+
+function PX.soul_ok()
+  local t = PX.state.target
+  return PX.kind().soul == true and not (t and t.no_soul)
 end
 
 local function kind_size(k)
@@ -386,7 +391,7 @@ function PX.load_target(target)
   end
   doc = doc or PX.blank_of(PX.state.kind)
   doc.layers[1].name = "art"
-  local soul = PX.kind().soul and read_png(paths.soul, w, h)
+  local soul = PX.soul_ok() and read_png(paths.soul, w, h)
   if soul then
     P.add_layer(doc, "soul")
     doc.layers[#doc.layers].px = soul.px
@@ -863,7 +868,7 @@ end
 
 function Canvas:move(dt)
 r 2 655 %20%20 -
-l 441
+l 446
   if PX.pad.on then
     local H = G.CONTROLLER and G.CONTROLLER.HID
     if H and (H.mouse or H.touch) and not H.controller then
@@ -1009,7 +1014,7 @@ local function action_of(t) return t:sub(1, 1) == "@" and t:sub(2) or nil end
 local function act_off(act)
   local d = PX.doc
   if not d then return true end
-  if act == "soul" then return not PX.kind().soul or P.count_role(d, "soul") > 0 end
+  if act == "soul" then return not PX.soul_ok() or P.count_role(d, "soul") > 0 end
   if act == "layer" then return P.count_role(d, "art") >= P.MAX_ART end
   if act == "paste" then return not PX.clip end
   if act == "deselect" then return not d.sel end
@@ -1031,8 +1036,13 @@ end
 
 function PX.group_tools()
   if not adv() then return PX.SIMPLE end
-  for _, g in ipairs(PX.GROUPS) do if g.key == PX.state.group then return g.tools end end
-  return PX.GROUPS[1].tools
+  local tools = PX.GROUPS[1].tools
+  for _, g in ipairs(PX.GROUPS) do if g.key == PX.state.group then tools = g.tools end end
+  local t = PX.state.target
+  if not (t and t.no_soul) then return tools end
+  local out = {}
+  for _, x in ipairs(tools) do if x ~= "@soul" then out[#out + 1] = x end end
+  return out
 end
 
 local GROUP_LABELS = {draw = "Draw", shape = "Shapes", select = "Select", edit = "Edit"}
@@ -1697,7 +1707,7 @@ local ACTS = {
   deselect = function() if PX.doc then P.select_none(PX.doc); UIK.refresh() end end,
   layer = function() edit(function(d) P.add_layer(d, "art") end); PX.state.panel = "layers"; UIK.refresh() end,
   soul = function()
-    if not PX.kind().soul then return end
+    if not PX.soul_ok() then return end
     edit(function(d) P.add_layer(d, "soul") end)
     PX.state.panel = "layers"
     UIK.refresh()

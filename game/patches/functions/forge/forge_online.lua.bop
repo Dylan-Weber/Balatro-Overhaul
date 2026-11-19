@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 516
+l 786
 local Mods = require("functions/forge/forge_mods")
 local json = require("bot.sim.json")
 
@@ -13,6 +13,8 @@ O.TIMEOUT = 12
 O.OWNERS = "forge/owners.json"
 O.MAX_KEYS = 8
 O.SETTINGS_FILES = {"settings.jkr", "modded_settings.jkr"}
+O.PLAYED = "forge/played.json"
+O.SORTS = {featured = "theme", best = "best", played = "played", all = "new"}
 O.state = O.state or {status = "idle", page = 1, tab = "all", data = nil, msg = nil, busy = {}}
 O.state.want = O.state.want or {}
 
@@ -153,6 +155,7 @@ function O.err_text(reason, why)
   if type(why) == "string" and O.WHY[why] then return mod_loc(O.WHY[why]) end
   if reason == "empty" or reason == "too_many" then return mod_loc(O.WHY[reason]) end
   if reason == "too_soon" then return mod_loc("Wait a few seconds before publishing again.") end
+  if reason == "theme_full" then return mod_loc("You already have 3 mods in this week's theme.") end
   if reason == "taken" then return mod_loc("Someone else already published a mod with this id.") end
   if reason == "too_many_mods" then return mod_loc("You already have 20 mods online.") end
   if reason == "too_big" then return mod_loc("It is too big to publish (512 KB at most).") end
@@ -161,6 +164,7 @@ function O.err_text(reason, why)
   if reason == "busy" then return mod_loc("The server is busy with this mod. Try again.") end
   if reason == "no_key" or reason == "bot" then return mod_loc("Your profile is not ready to publish yet. Open Multiplayer once, then try again.") end
   if reason == "gone" then return mod_loc("This mod is not online any more.") end
+  if reason == "not_played" then return mod_loc("Play a run with it first, then you can rate it.") end
   if reason == "not_yours" or reason == "own" then return mod_loc("You cannot do that with this mod.") end
   return mod_loc("Could not reach the server.")
 end
@@ -171,7 +175,8 @@ function O.browse(page)
   local token = {}
   S.token = token
   O.with_connection(function()
-    if not O.send({type = "forge_browse", page = S.page, mine = S.tab == "mine"}) then S.status = "offline"; refresh() end
+    if not O.send({type = "forge_browse", page = S.page, mine = S.tab == "mine", sort = O.SORTS[S.tab]}) then S.status = "offline"; refresh() end
+    pcall(O.flush_played)
   end, function()
     S.status = "offline"
     refresh()
@@ -185,6 +190,7 @@ function O.on_list(d)
   local S = O.state
   if type(d) ~= "table" then return end
   S.data = {mods = type(d.mods) == "table" and d.mods or {}, page = tonumber(d.page) or 1, pages = tonumber(d.pages) or 1, total = tonumber(d.total) or 0}
+  S.data.theme = type(d.theme) == "table" and d.theme or nil
   S.page = S.data.page
   S.status = d.error and "offline" or "ready"
   refresh()
@@ -217,6 +223,8 @@ function O.on_mod(d)
     if mod and want and want.edit then
       if play_sound then play_sound("card1", 1.1, 0.6) end
       return O.edit(mod.id, want.edit)
+    elseif mod and want and want.remix and not mod.mine then
+      return O.start_remix(mod.id)
     elseif mod then
       say(string.format(mod_loc("Installed %s. It is in Forged."), mod.name), G.C.GREEN)
       if play_sound then play_sound("card1", 1.1, 0.6) end
@@ -229,7 +237,8 @@ function O.on_mod(d)
   refresh()
 end
 
-function O.publish(mod_id)
+function O.publish(mod_id, opts)
+  opts = type(opts) == "table" and opts or {}
   local mod = Mods.get(mod_id)
   local MU = rawget(_G, "ForgeModsUI")
   local function tell(text, colour)
@@ -242,8 +251,9 @@ function O.publish(mod_id)
   if #raw > O.MAX_BYTES then return tell(O.err_text("too_big"), G.C.RED) end
   O.state.publishing = mod_id
   O.state.publish_raw, O.state.publish_retried = raw, false
+  O.state.publish_theme = opts.theme and true or nil
   O.with_connection(function()
-    if not O.send({type = "forge_publish", mod = raw}) then
+    if not O.send({type = "forge_publish", mod = raw, theme = opts.theme and true or nil}) then
       O.state.publishing = nil
       tell(O.err_text("unavailable"), G.C.RED)
     end
@@ -264,14 +274,17 @@ function O.on_published(d)
     local old = Mods.for_old_server(O.state.publish_raw)
     if old then
       O.state.publish_retried = true
-      if O.send({type = "forge_publish", mod = old}) then return end
+      if O.send({type = "forge_publish", mod = old, theme = O.state.publish_theme}) then return end
     end
   end
-  O.state.publishing, O.state.publish_raw = nil, nil
+  O.state.publishing, O.state.publish_raw, O.state.publish_theme = nil, nil, nil
   local mod = id and Mods.get(id)
   local MU = rawget(_G, "ForgeModsUI")
   local text, colour
-  if d.ok then
+  if d.ok and d.theme then
+    text, colour = string.format(mod_loc("%s is in this week's theme. Good luck!"), mod and mod.name or tostring(d.id)), G.C.GREEN
+    if play_sound then play_sound("card1", 1.1, 0.6) end
+  elseif d.ok then
     text, colour = string.format(mod_loc("%s is online. Anyone can get it in Browse online."), mod and mod.name or tostring(d.id)), G.C.GREEN
     if play_sound then play_sound("card1", 1.1, 0.6) end
   else
@@ -326,6 +339,132 @@ function O.on_unpublished(d)
   O.browse(O.state.page)
 end
 
+function O.rate(id, stars)
+  O.state.rating = id
+  O.with_connection(function()
+    if not O.send({type = "forge_rate", id = id, stars = stars}) then O.state.rating = nil; say(O.err_text("unavailable"), G.C.RED); refresh() end
+  end, function()
+    O.state.rating = nil
+    say(O.err_text("unavailable"), G.C.RED)
+    refresh()
+  end)
+  after(O.TIMEOUT, function()
+    if O.state.rating == id then O.state.rating = nil; say(O.err_text("unavailable"), G.C.RED); refresh() end
+  end)
+end
+
+function O.on_rated(d)
+  if type(d) ~= "table" then return end
+  O.state.rating = nil
+  if d.ok then
+    for _, m in ipairs(O.state.data and O.state.data.mods or {}) do
+      if m.id == d.id then m.my, m.rating, m.votes = tonumber(d.stars), tonumber(d.rating) or m.rating, tonumber(d.votes) or m.votes end
+    end
+    say(string.format(mod_loc("Thanks! You gave it %d out of 5."), tonumber(d.stars) or 0), G.C.GREEN)
+    if play_sound then play_sound("card1", 1.1, 0.6) end
+  elseif d.reason == "too_soon" then
+    say(mod_loc("Wait a moment before rating again."), G.C.RED)
+  else
+    say(O.err_text(d.reason), G.C.RED)
+  end
+  refresh()
+end
+
+local function read_played()
+  local f = sfs()
+  local raw = f and f.getInfo(O.PLAYED) and f.read(O.PLAYED)
+  local ok, t = pcall(json.decode, raw or "")
+  t = ok and type(t) == "table" and t or {}
+  t.sent = type(t.sent) == "table" and t.sent or {}
+  t.pending = type(t.pending) == "table" and t.pending or {}
+  return t
+end
+
+local function write_played(t)
+  local f = sfs()
+  local ok, raw = pcall(json.encode, t)
+  if ok and f then
+    if not f.getInfo("forge") then pcall(f.createDirectory, "forge") end
+    pcall(f.write, O.PLAYED, raw)
+  end
+end
+
+function O.note_run()
+  local t = read_played()
+  local any = false
+  for _, m in ipairs(Mods.list or {}) do
+    if m.on and not m.mine and Mods.clean_id(m.id) and not t.sent[m.id] and not t.pending[m.id] then
+      t.pending[m.id] = true
+      any = true
+    end
+  end
+  if any then write_played(t) end
+  if next(t.pending) ~= nil and O.connected() then O.flush_played(t) end
+end
+
+function O.flush_played(t)
+  t = t or read_played()
+  local ids = {}
+  for id in pairs(t.pending) do
+    if Mods.clean_id(id) and #ids < 8 then ids[#ids + 1] = id end
+  end
+  if #ids == 0 then return end
+  table.sort(ids)
+  O.state.played_ids = ids
+  O.send({type = "forge_played", ids = ids})
+end
+
+function O.on_counted(d)
+  if type(d) ~= "table" or not d.ok then return end
+  local ids = O.state.played_ids
+  O.state.played_ids = nil
+  if not ids then return end
+  local t = read_played()
+  local done = {}
+  for _, id in ipairs(ids) do t.pending[id] = nil; t.sent[id] = true; done[id] = true end
+  write_played(t)
+  local any = false
+  for _, m in ipairs(O.state.data and O.state.data.mods or {}) do
+    if done[m.id] and not m.mine and not m.played then
+      m.played = true
+      if (tonumber(d.counted) or 0) >= #ids then m.plays = (tonumber(m.plays) or 0) + 1 end
+      any = true
+    end
+  end
+  if any then
+    local msg = O.state.msg
+    if msg and msg.text == O.err_text("not_played") then O.state.msg = nil end
+    refresh()
+  end
+end
+
+function O.start_remix(id)
+  if not require("functions/forge/forge_remix").start(id) then
+    say(mod_loc("Could not remix it."), G.C.RED)
+    refresh()
+  end
+end
+
+function O.remix(id, version)
+  local mod = Mods.get(id)
+  if mod and mod.mine then return end
+  if mod and (tonumber(mod.version) or 1) >= (tonumber(version) or 1) then return O.start_remix(id) end
+  O.state.want[id] = {remix = true}
+  O.state.msg = nil
+  O.get(id)
+end
+
+function O.install_hooks()
+  if O.hooked then return end
+  O.hooked = true
+  local Hooks = require("overhaul.hooks")
+  Hooks.wrap("Game", "start_run", function(orig) return function(self, ...)
+    local r = orig(self, ...)
+    pcall(O.note_run)
+    return r
+  end end, {id = "forge_online.start_run"})
+end
+
 function O.register_events()
   if O.events_done then return end
   local E = rawget(_G, "bom_events")
@@ -336,6 +475,8 @@ function O.register_events()
   E.register("forge_published", O.on_published)
   E.register("forge_reported", O.on_reported)
   E.register("forge_unpublished", O.on_unpublished)
+  E.register("forge_rated", O.on_rated)
+  E.register("forge_counted", O.on_counted)
 end
 
 local function summary_text(m)
@@ -358,43 +499,111 @@ local function row_button(label, func, ref, colour, disabled, w)
   return UIK.button{label = label, button = func, ref_table = ref, colour = colour, w = w, h = btn_h(), scale = fit_scale(label, w, BTN_SCALE), col = true, disabled = disabled}
 end
 
-local function pair_w(a, b)
-  local need = math.max(UIK.text_w(a, BTN_SCALE), UIK.text_w(b, BTN_SCALE)) + 0.25
-  return math.min(math.max(BTN_W, need), 2.6)
+local function gap(w) return {n = G.UIT.C, config = {align = "cm", minw = w or 0.15}, nodes = {}} end
+
+local ROW_LABELS = {"Update", "Remove", "Get", "Installed", "Yours", "Remix", "Report", "Rate", "Play to rate", "Getting..."}
+
+local function row_btn_w()
+  local need = 0
+  for _, l in ipairs(ROW_LABELS) do need = math.max(need, UIK.text_w(mod_loc(l), BTN_SCALE)) end
+  return math.min(math.max(BTN_W, need + 0.3), touch() and 2.9 or 2.6)
 end
 
-local function gap(w) return {n = G.UIT.C, config = {align = "cm", minw = w or 0.15}, nodes = {}} end
+local function decimal(x)
+  local s = string.format("%.1f", tonumber(x) or 0)
+  local lang = G.SETTINGS and G.SETTINGS.language or ""
+  if lang:sub(1, 2) == "fr" or lang:sub(1, 2) == "es" then s = s:gsub("%.", ",") end
+  return s
+end
+
+function O.stats_parts(m)
+  local downloads = tonumber(m.downloads) or 0
+  local votes = tonumber(m.votes) or 0
+  local plays = tonumber(m.plays) or 0
+  local parts = {string.format(downloads == 1 and mod_loc("%d download") or mod_loc("%d downloads"), downloads)}
+  if m.votes ~= nil then
+    parts[#parts + 1] = votes > 0 and string.format(mod_loc("rated %s/5 (%d)"), decimal(m.rating), votes) or mod_loc("not rated yet")
+    parts[#parts + 1] = string.format(plays == 1 and mod_loc("%d player") or mod_loc("%d players"), plays)
+  end
+  local rx = tonumber(m.remixes) or 0
+  if rx > 0 then parts[#parts + 1] = string.format(rx == 1 and mod_loc("%d remix") or mod_loc("%d remixes"), rx) end
+  return parts
+end
+
+function O.stats_text(m) return table.concat(O.stats_parts(m), "   ") end
+
+function O.stats_lines(parts, width, scale)
+  local sep = "   "
+  local all = table.concat(parts, sep)
+  if #parts < 2 or UIK.text_w(all, scale) <= width then return {all} end
+  local tight = table.concat(parts, "  ")
+  if UIK.text_w(tight, scale) <= width then return {tight} end
+  local best, best_w
+  for k = 1, #parts - 1 do
+    local a, b = table.concat(parts, sep, 1, k), table.concat(parts, sep, k + 1)
+    local w = math.max(UIK.text_w(a, scale), UIK.text_w(b, scale))
+    if not best_w or w < best_w then best, best_w = {a, b}, w end
+  end
+  return best
+end
 
 local function row(m, rw)
   local local_mod = Mods.get(m.id)
   local ver = tonumber(m.version) or 1
   local main
-  local bw = m.mine and pair_w(mod_loc("Update"), mod_loc("Remove")) or BTN_W
+  local bw = row_btn_w()
+  if port() then bw = math.max(bw, math.min(3.6, (rw - 0.5) / 2)) end
   if O.state.busy[m.id] then
     main = row_button(mod_loc("Getting..."), nil, nil, G.C.GREEN, true, bw)
   elseif m.mine then
     main = row_button(mod_loc("Update"), "forge_online_update", {id = m.id, version = ver}, G.C.ORANGE, nil, bw)
   elseif local_mod and local_mod.mine then
-    main = row_button(mod_loc("Yours"), nil, nil, G.C.GREEN, true)
+    main = row_button(mod_loc("Yours"), nil, nil, G.C.GREEN, true, bw)
   elseif local_mod and local_mod.version >= ver then
-    main = row_button(mod_loc("Installed"), nil, nil, G.C.GREEN, true)
+    main = row_button(mod_loc("Installed"), nil, nil, G.C.GREEN, true, bw)
   elseif local_mod then
-    main = row_button(mod_loc("Update"), "forge_online_get", {id = m.id}, G.C.ORANGE)
+    main = row_button(mod_loc("Update"), "forge_online_get", {id = m.id}, G.C.ORANGE, nil, bw)
   else
-    main = row_button(mod_loc("Get"), "forge_online_get", {id = m.id}, G.C.GREEN)
+    main = row_button(mod_loc("Get"), "forge_online_get", {id = m.id}, G.C.GREEN, nil, bw)
   end
   local second = m.mine and row_button(mod_loc("Remove"), "forge_online_remove", {id = m.id, name = m.name}, G.C.RED, nil, bw)
-    or row_button(mod_loc("Report"), "forge_online_report", {id = m.id, name = m.name}, G.C.RED)
+    or row_button(mod_loc("Report"), "forge_online_report", {id = m.id, name = m.name}, G.C.RED, nil, bw)
+  local rate, remix
+  if not m.mine then
+    local my = tonumber(m.my)
+    if O.state.rating == m.id then
+      rate = row_button(mod_loc("Sending..."), nil, nil, G.C.GOLD, true, bw)
+    elseif m.played then
+      rate = row_button(my and string.format(mod_loc("Rated %d/5"), my) or mod_loc("Rate"), "forge_online_rate", {id = m.id, name = m.name, my = my}, G.C.GOLD, nil, bw)
+    else
+      local label = mod_loc("Play to rate")
+      rate = UIK.button{label = label, button = "forge_online_rate_locked", ref_table = {id = m.id, locked = true}, colour = UIK.C.inactive, text_colour = UIK.C.inactive_text,
+        w = bw, h = btn_h(), scale = fit_scale(label, bw, BTN_SCALE), col = true, id = "forge_rate_locked_" .. m.id}
+    end
+    if not (local_mod and local_mod.mine) then
+      remix = row_button(mod_loc("Remix"), "forge_online_remix", {id = m.id, version = ver}, G.C.PURPLE, O.state.busy[m.id] and true or nil, bw)
+    end
+  end
+  local btns = {main}
+  if remix then btns[#btns + 1] = remix end
+  if rate then btns[#btns + 1] = rate end
+  btns[#btns + 1] = second
+  local grid = {}
+  for i = 1, #btns, 2 do
+    grid[#grid + 1] = {n = G.UIT.R, config = {align = "cr", padding = 0.03}, nodes = {btns[i], btns[i + 1] and gap(0.12) or nil, btns[i + 1]}}
+  end
+  local gw = 2 * bw + 0.12
   local t = touch()
   local p = port()
   local ls = t and 0.38 or 0.34
-  local iw = p and rw - 0.3 or rw - 2 * bw - 0.7
-  local downloads = tonumber(m.downloads) or 0
+  local iw = p and rw - 0.3 or rw - gw - 0.75
   local head = {
     {n = G.UIT.T, config = {text = tostring(m.name), scale = t and 0.55 or 0.5, colour = G.C.WHITE, shadow = true}},
     {n = G.UIT.T, config = {text = "  v" .. ver, scale = ls, colour = G.C.GOLD, shadow = true}},
     m.mine and {n = G.UIT.T, config = {text = "  " .. mod_loc("YOURS"), scale = ls, colour = G.C.GREEN, shadow = true}} or nil,
   }
+  local pill = tonumber(m.featured) and string.format(mod_loc("#%d LAST WEEK"), tonumber(m.featured)) or nil
+  if pill then head[#head + 1] = {n = G.UIT.T, config = {text = "  " .. pill, scale = ls, colour = G.C.GOLD, shadow = true}} end
   local blv = local_mod and require("functions/forge/forge_balance").worst(Mods.all_of(local_mod))
   if blv then
     head[#head + 1] = {n = G.UIT.C, config = {minw = 0.15}, nodes = {}}
@@ -429,42 +638,96 @@ local function row(m, rw)
     if cur ~= "" then put(cur, colour) end
   end
   local by = m.author ~= "" and (mod_loc("by") .. " " .. tostring(m.author)) or ""
-  local dl = string.format(downloads == 1 and mod_loc("%d download") or mod_loc("%d downloads"), downloads)
+  local function parts_lines(parts)
+    for _, l in ipairs(O.stats_lines(parts, iw - 0.1, ls)) do add(l, nil, 1) end
+  end
   local sum = summary_text(m)
+  local credit = require("functions/forge/forge_remix").credit_text(m.remix)
   if p then
-    add(by ~= "" and (by .. "   " .. dl) or dl)
-    add(sum)
+    if by ~= "" then add(by, nil, 1) end
+    parts_lines(O.stats_parts(m))
+    if credit then add(credit, G.C.GOLD, 1) end
+    add(sum, nil, 1)
   else
-    local hw = UIK.text_w(tostring(m.name), t and 0.55 or 0.5) + UIK.text_w("  v" .. ver .. (m.mine and ("  " .. mod_loc("YOURS")) or "") .. "   " .. dl, ls)
-    if blv then hw = hw + UIK.text_w(require("functions/forge/forge_balance").t(blv), ls) + 0.45 end
-    if hw <= iw - 0.1 then
-      head[#head + 1] = {n = G.UIT.T, config = {text = "   " .. dl, scale = ls, colour = UIK.C.muted, shadow = true}}
-      add((by ~= "" and (by .. "   ") or "") .. sum, nil, 1)
-    else
-      add((by ~= "" and (by .. "   ") or "") .. dl, nil, 1)
-      add(sum, nil, 1)
-    end
+    parts_lines(O.stats_parts(m))
+    add((by ~= "" and (by .. "   ") or "") .. sum, nil, 1)
+    if credit then add(credit, G.C.GOLD, 1) end
   end
   local about = type(m.about) == "table" and m.about[1]
-  if type(about) == "string" and about ~= "" and (p or #info < 3) then add(about, UIK.C.muted, p and 2 or 1) end
+  if type(about) == "string" and about ~= "" and #info < (p and 5 or 3) then add(about, UIK.C.muted, p and 2 or 1) end
   local text_col = {n = G.UIT.C, config = {align = "cl", minw = iw, maxw = iw}, nodes = info}
+  local grid_col = {n = G.UIT.C, config = {align = "cr", minw = gw}, nodes = grid}
   if p then
     return {n = G.UIT.R, config = {align = "cm", padding = 0.05}, nodes = {
       {n = G.UIT.C, config = {align = "cm", r = 0.1, colour = G.C.BLACK, emboss = 0.05, padding = 0.12, minw = rw}, nodes = {
         {n = G.UIT.R, config = {align = "cl"}, nodes = {text_col}},
-        {n = G.UIT.R, config = {align = "cr", padding = 0.03}, nodes = {main, gap(0.15), second}},
+        {n = G.UIT.R, config = {align = "cr", padding = 0.03}, nodes = {grid_col}},
       }},
     }}
   end
   return {n = G.UIT.R, config = {align = "cm", padding = 0.05}, nodes = {
     {n = G.UIT.R, config = {align = "cm", r = 0.1, colour = G.C.BLACK, emboss = 0.05, padding = 0.1, minw = rw, minh = t and 1.2 or 1.05}, nodes = {
-      text_col,
-      gap(),
-      main,
-      gap(),
-      second,
+      text_col, gap(), grid_col,
     }},
   }}
+end
+
+O.THEMES = {
+  hearts = "Hearts only", money = "Money makers", faces = "Face cards", grow = "Jokers that grow", bosses = "Boss Blinds", retrigger = "Retriggers",
+  suits = "New suits", decks = "Decks and Challenges", luck = "Risk and luck", consumables = "Tarots and Spectrals", fusions = "Fusions", art = "Best art",
+}
+
+function O.theme_label(th)
+  if type(th) ~= "table" then return "" end
+  local en = O.THEMES[th.key]
+  if en then return mod_loc(en) end
+  return tostring(th.title or th.key or "")
+end
+
+function O.left_text(left)
+  left = tonumber(left) or 0
+  local days = math.floor(left / 86400)
+  if days >= 2 then return string.format(mod_loc("%d days left"), days) end
+  if days == 1 then return mod_loc("1 day left") end
+  local hours = math.max(1, math.ceil(left / 3600))
+  return string.format(hours == 1 and mod_loc("%d hour left") or mod_loc("%d hours left"), hours)
+end
+
+local function theme_banner(rw)
+  local S = O.state
+  local th = S.data and S.data.theme
+  local t = touch()
+  local p = port()
+  local bw = t and 3.3 or 3.1
+  local label = mod_loc("ENTER A MOD")
+  local btn = UIK.button{label = label, button = "forge_online_enter", colour = UIK.C.ok, w = bw, h = btn_h(), scale = fit_scale(label, bw, t and 0.48 or 0.45), col = true,
+    id = "forge_online_enter", disabled = th == nil}
+  local tw = p and rw - 0.3 or rw - bw - 0.45
+  local function line(text, scale, colour)
+    return {n = G.UIT.R, config = {align = "cm", padding = 0.01}, nodes = {{n = G.UIT.T, config = {text = text, scale = scale, colour = colour, shadow = true, maxw = tw - 0.1}}}}
+  end
+  local texts = {line(mod_loc("THEME OF THE WEEK"), t and 0.36 or 0.33, UIK.C.muted)}
+  if th then
+    texts[#texts + 1] = line(O.theme_label(th), t and 0.62 or 0.58, G.C.GOLD)
+    local sub = O.left_text(th.left)
+    if type(th.last) == "table" then sub = sub .. "   " .. string.format(mod_loc("Last week: %s"), O.theme_label(th.last)) end
+    texts[#texts + 1] = line(sub, t and 0.34 or 0.31, G.C.UI.TEXT_LIGHT)
+  else
+    texts[#texts + 1] = line(S.status == "loading" and mod_loc("Loading...") or "-", t and 0.62 or 0.58, G.C.GOLD)
+    texts[#texts + 1] = line(" ", t and 0.34 or 0.31, G.C.UI.TEXT_LIGHT)
+  end
+  texts[#texts + 1] = line(mod_loc("The best rated entries are featured here next week."), t and 0.32 or 0.3, UIK.C.muted)
+  local col = {n = G.UIT.C, config = {align = "cm", minw = tw}, nodes = texts}
+  local inner
+  if p then
+    inner = {n = G.UIT.C, config = {align = "cm", r = 0.1, colour = G.C.BLACK, emboss = 0.05, padding = 0.1, minw = rw}, nodes = {
+      {n = G.UIT.R, config = {align = "cm"}, nodes = {col}},
+      {n = G.UIT.R, config = {align = "cm", padding = 0.04}, nodes = {btn}},
+    }}
+  else
+    inner = {n = G.UIT.R, config = {align = "cm", r = 0.1, colour = G.C.BLACK, emboss = 0.05, padding = 0.1, minw = rw}, nodes = {col, gap(0.2), btn}}
+  end
+  return {n = G.UIT.R, config = {align = "cm", padding = 0.05}, nodes = {inner}}
 end
 
 function O.body()
@@ -482,13 +745,20 @@ function O.body()
   nodes[#nodes + 1] = {n = G.UIT.R, config = {align = "cm", minw = w, minh = 0.42, padding = 0}, nodes = {
     m and {n = G.UIT.T, config = {text = m.text, scale = touch() and 0.4 or 0.36, colour = m.colour or G.C.UI.TEXT_LIGHT, shadow = true, maxw = w - 0.6}} or nil,
   }}
-  local list_h = port() and 4 * ((touch() and 2.3 or 2.1) + 0.1) or 4 * ((touch() and 1.2 or 1.05) + 0.3)
+  local featured = S.tab == "featured"
+  local per = featured and 3 or 4
+  local list_h = port() and per * ((touch() and 2.3 or 2.1) + 0.1) or per * ((touch() and 1.2 or 1.05) + 0.3)
+  if featured then nodes[#nodes + 1] = theme_banner(rw) end
   local rows = {}
   local center_text
   if S.status == "loading" and not S.data then
     center_text = mod_loc("Loading...")
   elseif S.status == "offline" and not S.data then
     center_text = mod_loc("Could not reach the server.")
+  elseif featured and S.data and not S.data.theme then
+    center_text = mod_loc("The weekly theme is not on this server yet.")
+  elseif featured and S.data and #S.data.mods == 0 then
+    center_text = mod_loc("Nothing has entered this week's theme yet. Be the first!")
   elseif S.data and #S.data.mods == 0 then
     center_text = S.tab == "mine" and mod_loc("You have not published anything yet. Press Publish on one of yours in Forged.") or mod_loc("Nobody has published a mod yet.")
   end
@@ -520,12 +790,15 @@ end
 
 function O.show()
 r 32 1381 %20%20 -
-l 218
+l 453
   G.FUNCS.overlay_menu{definition = UIK.window{
     id = "forge_online",
     title = mod_loc("FORGED ONLINE"),
     tabs = {
-      {key = "all", label = mod_loc("All mods"), build = O.body},
+      {key = "featured", label = mod_loc("Featured"), build = O.body},
+      {key = "best", label = mod_loc("Best rated"), build = O.body},
+      {key = "played", label = mod_loc("Most played"), build = O.body},
+      {key = "all", label = mod_loc("Newest"), build = O.body},
       {key = "mine", label = mod_loc("Published by me"), build = O.body},
     },
     tab = O.state.tab,
@@ -534,7 +807,7 @@ l 218
   }}
 end
 
-G.FUNCS.forge_online_open = function(e) O.open("all") end
+G.FUNCS.forge_online_open = function(e) O.open("featured") end
 
 G.FUNCS.forge_online_back = function(e)
   O.state.msg = nil
@@ -608,6 +881,138 @@ end
 G.FUNCS.forge_mods_publish = function(e)
   local id = e and e.config and e.config.ref_table and e.config.ref_table.id
   if id then O.publish(id) end
+end
+
+G.FUNCS.forge_online_rate_locked = function(e)
+  say(mod_loc("Play a run with it first, then you can rate it."), G.C.UI.TEXT_LIGHT)
+  refresh()
+end
+
+G.FUNCS.forge_online_remix = function(e)
+  local ref = e and e.config and e.config.ref_table
+  if ref and ref.id and not O.state.busy[ref.id] then O.remix(ref.id, ref.version) end
+end
+
+G.FUNCS.forge_online_rate = function(e)
+  local ref = e and e.config and e.config.ref_table
+  if not (ref and ref.id) or O.state.rating then return end
+  if ref.locked then return G.FUNCS.forge_online_rate_locked(e) end
+  O.state.rating_pick = {id = ref.id, name = ref.name}
+  local t = touch()
+  local bw = port() and 0.95 or (t and 1.25 or 1.15)
+  local nodes = {}
+  for i = 1, 5 do
+    if i > 1 then nodes[#nodes + 1] = gap(port() and 0.12 or 0.18) end
+    nodes[#nodes + 1] = UIK.button{label = tostring(i), button = "forge_online_rate_go", ref_table = {stars = i}, colour = ref.my == i and UIK.C.ok or G.C.GOLD,
+      w = bw, h = t and 0.95 or 0.8, scale = t and 0.62 or 0.58, col = true, id = "forge_rate_" .. i}
+  end
+  G.FUNCS.overlay_menu{definition = UIK.window{
+    id = "forge_rate", compact = true, w = 9.6,
+    title = mod_loc("RATE THIS MOD"),
+    tabs = {{key = "a", label = "", build = function()
+      return UIK.stack({
+        {n = G.UIT.R, config = {align = "cm", padding = 0.06}, nodes = {UIK.text(tostring(ref.name or ""), {scale = 0.48})}},
+        UIK.note({mod_loc("How much do you like it?"), mod_loc("1 is not for me, 5 is great.")}, {w = 9.2}),
+        {n = G.UIT.R, config = {align = "cm", padding = 0.08, portrait_keep = true}, nodes = nodes},
+        ref.my and UIK.note({string.format(mod_loc("You gave it %d. Pick again to change it."), ref.my)}, {w = 9.2}) or nil,
+      }, {w = 9.2})
+    end}},
+    back_func = "forge_online_rate_back", back_inline = false,
+  }}
+end
+
+G.FUNCS.forge_online_rate_go = function(e)
+  local r = O.state.rating_pick
+  local stars = e and e.config and e.config.ref_table and e.config.ref_table.stars
+  O.state.rating_pick = nil
+  O.show()
+  if r and stars then O.rate(r.id, stars) end
+  refresh()
+end
+
+G.FUNCS.forge_online_rate_back = function(e)
+  O.state.rating_pick = nil
+  O.show()
+end
+
+O.ENTER_PER = 6
+
+local function my_mods()
+  local out = {}
+  for _, m in ipairs(Mods.list or {}) do if m.mine then out[#out + 1] = m end end
+  return out
+end
+
+function O.enter_body()
+  local S = O.state
+  local list = my_mods()
+  local t = touch()
+  local bw = t and 4.4 or 4.2
+  local w = port() and UIK.W - 0.3 or 9.2
+  local th = S.data and S.data.theme
+  local rows = {
+    {n = G.UIT.R, config = {align = "cm", padding = 0.06}, nodes = {UIK.text(O.theme_label(th), {scale = 0.55, colour = G.C.GOLD})}},
+  }
+  if #list == 0 then
+    rows[#rows + 1] = UIK.note({mod_loc("You have no mods yet."), mod_loc("Make creations in The Forge, then press EXPORT A MOD.")}, {w = w})
+    return UIK.stack(rows, {w = w})
+  end
+  rows[#rows + 1] = UIK.note({mod_loc("Pick one of your mods. It goes online and enters the theme.")}, {w = w})
+  local pages = math.max(1, math.ceil(#list / O.ENTER_PER))
+  S.enter_page = math.min(math.max(1, S.enter_page or 1), pages)
+  local first = (S.enter_page - 1) * O.ENTER_PER
+  local cols = port() and 1 or 2
+  local cur = {}
+  for i = first + 1, math.min(first + O.ENTER_PER, #list) do
+    local m = list[i]
+    if #cur > 0 then cur[#cur + 1] = gap(0.2) end
+    cur[#cur + 1] = UIK.button{label = m.name, button = "forge_online_enter_go", ref_table = {id = m.id}, colour = UIK.C.accent, w = bw,
+      scale = fit_scale(m.name, bw, t and 0.46 or 0.42), col = true, id = "forge_enter_" .. m.id}
+    if #cur >= 2 * cols - 1 then
+      rows[#rows + 1] = {n = G.UIT.R, config = {align = "cm", padding = 0.06}, nodes = cur}
+      cur = {}
+    end
+  end
+  if #cur > 0 then rows[#rows + 1] = {n = G.UIT.R, config = {align = "cm", padding = 0.06}, nodes = cur} end
+  if pages > 1 then
+    rows[#rows + 1] = {n = G.UIT.R, config = {align = "cm", padding = 0.04}, nodes = {
+      UIK.pager{prev = "forge_online_enter_page", next = "forge_online_enter_page", prev_ref = {d = -1}, next_ref = {d = 1},
+        text = string.format(mod_loc("Page %d of %d"), S.enter_page, pages), w = w},
+    }}
+  end
+  return UIK.stack(rows, {w = w})
+end
+
+G.FUNCS.forge_online_enter = function(e)
+  O.state.enter_page = 1
+  G.FUNCS.overlay_menu{definition = UIK.window{
+    id = "forge_enter", compact = true, w = 9.6,
+    title = mod_loc("ENTER THIS WEEK'S THEME"),
+    tabs = {{key = "a", label = "", build = O.enter_body}},
+    back_func = "forge_online_enter_back", back_inline = false,
+  }}
+end
+
+G.FUNCS.forge_online_enter_page = function(e)
+  local d = e and e.config and e.config.ref_table and e.config.ref_table.d or 1
+  local pages = math.max(1, math.ceil(#my_mods() / O.ENTER_PER))
+  O.state.enter_page = ((O.state.enter_page or 1) - 1 + d) % pages + 1
+  UIK.refresh()
+end
+
+G.FUNCS.forge_online_enter_go = function(e)
+  local id = e and e.config and e.config.ref_table and e.config.ref_table.id
+  if not id then return end
+  O.state.tab = "featured"
+  O.show()
+  O.publish(id, {theme = true})
+  local mod = Mods.get(id)
+  say(string.format(mod_loc("Publishing %s..."), mod and mod.name or id), G.C.UI.TEXT_LIGHT)
+  refresh()
+end
+
+G.FUNCS.forge_online_enter_back = function(e)
+  O.show()
 end
 
 O.REASONS = {
@@ -693,6 +1098,56 @@ local function register_strings()
       ["Rude or hateful"] = "Insultant ou haineux", ["Stolen work"] = "Travail volé", ["Something else"] = "Autre chose",
       ["Remove"] = "Retirer", ["REMOVE IT FROM ONLINE?"] = "LE RETIRER DU MODE EN LIGNE ?",
       ["Players who got it keep it."] = "Les joueurs qui l'ont le gardent.", ["Your copy stays in Forged."] = "Votre copie reste dans Forgés.",
+      ["You already have 3 mods in this week's theme."] = "Vous avez déjà 3 mods dans le thème de la semaine.",
+      ["%s is in this week's theme. Good luck!"] = "%s participe au thème de la semaine. Bonne chance !",
+      ["Thanks! You gave it %d out of 5."] = "Merci ! Vous lui avez donné %d sur 5.",
+      ["Wait a moment before rating again."] = "Attendez un instant avant de noter à nouveau.",
+      ["Play to rate"] = "Jouez d'abord",
+      ["Play a run with it first, then you can rate it."] = "Jouez d'abord une partie avec, ensuite vous pourrez le noter.",
+      ["rated %s/5 (%d)"] = "noté %s/5 (%d)",
+      ["not rated yet"] = "pas encore noté",
+      ["%d player"] = "%d joueur",
+      ["%d players"] = "%d joueurs",
+      ["%d remix"] = "%d remix",
+      ["%d remixes"] = "%d remix",
+      ["Sending..."] = "Envoi...",
+      ["Rated %d/5"] = "Noté %d/5",
+      ["Rate"] = "Noter",
+      ["#%d LAST WEEK"] = "N°%d LA SEMAINE DERNIÈRE",
+      ["Hearts only"] = "Que des Cœurs",
+      ["Money makers"] = "Faiseurs d'argent",
+      ["Face cards"] = "Figures",
+      ["Jokers that grow"] = "Jokers qui évoluent",
+      ["Boss Blinds"] = "Boss Blindes",
+      ["Retriggers"] = "Redéclenchements",
+      ["New suits"] = "Nouvelles enseignes",
+      ["Decks and Challenges"] = "Jeux et Défis",
+      ["Risk and luck"] = "Risque et chance",
+      ["Tarots and Spectrals"] = "Tarots et Spectrales",
+      ["Fusions"] = "Fusions",
+      ["Best art"] = "Plus beaux dessins",
+      ["%d days left"] = "Encore %d jours",
+      ["1 day left"] = "Encore 1 jour",
+      ["%d hour left"] = "Encore %d heure",
+      ["%d hours left"] = "Encore %d heures",
+      ["ENTER A MOD"] = "PARTICIPER",
+      ["THEME OF THE WEEK"] = "THÈME DE LA SEMAINE",
+      ["Last week: %s"] = "Semaine dernière : %s",
+      ["The best rated entries are featured here next week."] = "Les mieux notés sont mis en avant ici la semaine prochaine.",
+      ["The weekly theme is not on this server yet."] = "Le thème de la semaine n'est pas encore sur ce serveur.",
+      ["Nothing has entered this week's theme yet. Be the first!"] = "Personne ne participe encore au thème de la semaine. Soyez le premier !",
+      ["Featured"] = "À la une",
+      ["Best rated"] = "Mieux notés",
+      ["Most played"] = "Plus joués",
+      ["Newest"] = "Nouveautés",
+      ["RATE THIS MOD"] = "NOTER CE MOD",
+      ["How much do you like it?"] = "Il vous plaît comment ?",
+      ["1 is not for me, 5 is great."] = "1 : pas pour moi, 5 : génial.",
+      ["You gave it %d. Pick again to change it."] = "Vous lui avez donné %d. Choisissez encore pour changer.",
+      ["You have no mods yet."] = "Vous n'avez pas encore de mod.",
+      ["Make creations in The Forge, then press EXPORT A MOD."] = "Créez dans La Forge, puis appuyez sur EXPORTER UN MOD.",
+      ["Pick one of your mods. It goes online and enters the theme."] = "Choisissez un de vos mods. Il est mis en ligne et participe au thème.",
+      ["ENTER THIS WEEK'S THEME"] = "PARTICIPER AU THÈME DE LA SEMAINE",
     },
     es = {
       ["FORGED ONLINE"] = "FORJADOS EN LÍNEA", ["All mods"] = "Todos los mods", ["Published by me"] = "Publicados por mí", ["REFRESH"] = "ACTUALIZAR",
@@ -730,6 +1185,56 @@ local function register_strings()
       ["Rude or hateful"] = "Ofensivo o de odio", ["Stolen work"] = "Trabajo robado", ["Something else"] = "Otra cosa",
       ["Remove"] = "Retirar", ["REMOVE IT FROM ONLINE?"] = "¿QUITARLO DE LÍNEA?",
       ["Players who got it keep it."] = "Quien lo tiene lo conserva.", ["Your copy stays in Forged."] = "Tu copia se queda en Forjados.",
+      ["You already have 3 mods in this week's theme."] = "Ya tienes 3 mods en el tema de la semana.",
+      ["%s is in this week's theme. Good luck!"] = "%s participa en el tema de la semana. ¡Suerte!",
+      ["Thanks! You gave it %d out of 5."] = "¡Gracias! Le diste %d de 5.",
+      ["Wait a moment before rating again."] = "Espera un momento antes de volver a valorar.",
+      ["Play to rate"] = "Juega primero",
+      ["Play a run with it first, then you can rate it."] = "Juega primero una partida con él y luego podrás valorarlo.",
+      ["rated %s/5 (%d)"] = "valorado %s/5 (%d)",
+      ["not rated yet"] = "sin valorar aún",
+      ["%d player"] = "%d jugador",
+      ["%d players"] = "%d jugadores",
+      ["%d remix"] = "%d remix",
+      ["%d remixes"] = "%d remixes",
+      ["Sending..."] = "Enviando...",
+      ["Rated %d/5"] = "Valorado %d/5",
+      ["Rate"] = "Valorar",
+      ["#%d LAST WEEK"] = "N.º %d LA SEMANA PASADA",
+      ["Hearts only"] = "Solo Corazones",
+      ["Money makers"] = "Fábricas de dinero",
+      ["Face cards"] = "Figuras",
+      ["Jokers that grow"] = "Comodines que evolucionan",
+      ["Boss Blinds"] = "Ciegas jefe",
+      ["Retriggers"] = "Reactivaciones",
+      ["New suits"] = "Palos nuevos",
+      ["Decks and Challenges"] = "Barajas y Desafíos",
+      ["Risk and luck"] = "Riesgo y suerte",
+      ["Tarots and Spectrals"] = "Tarots y Espectrales",
+      ["Fusions"] = "Fusiones",
+      ["Best art"] = "Mejores dibujos",
+      ["%d days left"] = "Quedan %d días",
+      ["1 day left"] = "Queda 1 día",
+      ["%d hour left"] = "Queda %d hora",
+      ["%d hours left"] = "Quedan %d horas",
+      ["ENTER A MOD"] = "PARTICIPAR",
+      ["THEME OF THE WEEK"] = "TEMA DE LA SEMANA",
+      ["Last week: %s"] = "Semana pasada: %s",
+      ["The best rated entries are featured here next week."] = "Los mejor valorados se destacan aquí la semana que viene.",
+      ["The weekly theme is not on this server yet."] = "El tema de la semana aún no está en este servidor.",
+      ["Nothing has entered this week's theme yet. Be the first!"] = "Nadie participa aún en el tema de la semana. ¡Sé el primero!",
+      ["Featured"] = "Destacados",
+      ["Best rated"] = "Mejor valorados",
+      ["Most played"] = "Más jugados",
+      ["Newest"] = "Novedades",
+      ["RATE THIS MOD"] = "VALORAR ESTE MOD",
+      ["How much do you like it?"] = "¿Cuánto te gusta?",
+      ["1 is not for me, 5 is great."] = "1: no es para mí, 5: genial.",
+      ["You gave it %d. Pick again to change it."] = "Le diste %d. Elige otra vez para cambiarlo.",
+      ["You have no mods yet."] = "Aún no tienes mods.",
+      ["Make creations in The Forge, then press EXPORT A MOD."] = "Crea en La Forja y pulsa EXPORTAR UN MOD.",
+      ["Pick one of your mods. It goes online and enters the theme."] = "Elige uno de tus mods. Se publica y participa en el tema.",
+      ["ENTER THIS WEEK'S THEME"] = "PARTICIPAR EN EL TEMA DE LA SEMANA",
     },
   }
 end

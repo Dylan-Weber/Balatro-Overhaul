@@ -112,7 +112,7 @@ check("need: plain rules unchanged", R.need_v(R.clean_rules({{when = "hand_playe
 check("need: alt nv counts", R.need_v({{when = "hand_played", only = {{id = "first_hand"}}, give = {{id = "mult", n = 1}}, alt = {{id = "mult", n = 1, nv = 1}}}}) == 14)
 check("need: mods count jokers", Mods.needs_v({{id = "j", rules = {c1}, vars = VARS}}, {}) == 14)
 check("need: host kinds count", Cat.need_v({kind = "enhancement", fields = {}, effects = {}, rules = {{when = "card_scored", give = {{id = "mult", n = 2, nv = 1}}}}, vars = {{name = "c"}}}) == 14)
-check("format: mods and rooms read 16", Mods.V == 16 and Room.V == 16)
+check("format: mods and rooms read 16", Mods.V >= 16 and Room.V >= 16)
 
 local function jcard(vals)
   return {ability = {extra = {chips = 0, mult = 0, xmult = 1, vars = vals}}, config = {center = {key = "j_forge_v"}}, T = {}, juice_up = function() end}
@@ -264,7 +264,7 @@ check("share: joker keeps nv", mj and mj.rules[1].give[1].nv == 1 and mj.rules[1
 local me = mod and mod.creations[1]
 check("share: host rule keeps nv", me and me.rules and me.rules[1].give[1].nv == 1)
 local t15 = json.decode(raw0)
-t15.v = 17
+t15.v = 18
 check("share: newer refused", select(2, Mods.parse(json.encode(t15))) == "newer")
 local old = json.decode(Mods.for_old_server(raw0))
 check("share: old server copy asks for 14", old.v == 1 and old.need == 14)
@@ -292,7 +292,7 @@ Store.put({id = "rv2", name = "Room Plain", rarity = 1, cost = 4, enabled = true
 local praw = Room.pack()
 check("room: plain rooms stay old", praw and json.decode(praw).room < 14)
 local rt2 = rt and json.decode(rraw)
-if rt2 then rt2.room = 17 end
+if rt2 then rt2.room = 18 end
 check("room: newer room refused", rt2 and select(2, Room.enter(json.encode(rt2))) == "newer")
 
 print(string.format("forge var numbers: %d checks, %d failed", total, fails))

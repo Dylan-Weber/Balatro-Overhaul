@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 459
+l 478
 local Store = require("functions/forge/forge_store")
 local Mods = require("functions/forge/forge_mods")
 
@@ -123,6 +123,8 @@ local function mod_row(mod, rw)
     if cur ~= "" then put(cur, colour) end
   end
   if mod.author ~= "" then add(mod_loc("by") .. " " .. mod.author) end
+  local credit = require("functions/forge/forge_remix").credit_text(mod.remix)
+  if credit then add(credit, G.C.GOLD) end
   add(Mods.summary(mod))
   if mod.about[1] then add(mod.about[1], G.C.UI.TEXT_INACTIVE) end
   local state = {on = mod.on}
@@ -134,6 +136,7 @@ local function mod_row(mod, rw)
   local btns = {}
   if mod.mine then btns[#btns + 1] = row_button(mod_loc("Edit"), "forge_mods_edit", mod.id, G.C.BLUE) end
   if mod.mine and online then btns[#btns + 1] = row_button(mod_loc("Publish"), "forge_mods_publish", mod.id, G.C.GREEN) end
+  if not mod.mine then btns[#btns + 1] = row_button(mod_loc("Remix"), "forge_mods_remix", mod.id, G.C.PURPLE) end
   btns[#btns + 1] = row_button(mod_loc("Share"), "forge_mods_share", mod.id, G.C.ORANGE)
   btns[#btns + 1] = row_button(mod_loc("Delete"), "forge_mods_delete", mod.id, G.C.RED)
   local card = {n = G.UIT.C, config = {align = "cm", minw = pw}, nodes = {preview(first, ps)}}
@@ -422,7 +425,19 @@ function MU.about_body()
     input(mod_loc("About it (two short lines)"), "a1", 40, 9),
     input("", "a2", 40, 9),
     UIK.note({mod_loc("Players see these in Mods, Forged.")}, {w = w}),
+    MU.credit_note(st, w),
   }}}}
+end
+
+function MU.credit_note(st, w)
+  local Remix = require("functions/forge/forge_remix")
+  local picked = {}
+  for _, c in ipairs(own_list()) do if st and st.pick[c.id] then picked[#picked + 1] = c end end
+  local text = Remix.credit_text(Remix.of_pack(picked))
+  if not text then return nil end
+  local lines = {text, mod_loc("The credit to the original stays with it.")}
+  if st.remix then table.insert(lines, 1, mod_loc("Its cards are now in your Forge. Change what you like, then export.")) end
+  return {n = G.UIT.R, config = {align = "cm", padding = 0.04}, nodes = {UIK.note(lines, {w = w, colour = G.C.GOLD})}}
 end
 
 local function export_body(build)
@@ -445,7 +460,11 @@ function MU.open_export(mod_id, from, opts)
   local mod = mod_id and Mods.get(mod_id)
   local st = {mod_id = mod and mod.id or nil, version = math.max(mod and mod.version or 0, tonumber(opts.version) or 0), from = from or "forge", pick = {}, info = {}}
   st.publish = opts.publish and mod and true or nil
-  if mod then
+  if type(opts.pick) == "table" then
+    for _, id in ipairs(opts.pick) do st.pick[id] = true end
+    st.info = {name = tostring(opts.name or ""), author = default_author(), a1 = "", a2 = ""}
+    st.remix = opts.remix and true or nil
+  elseif mod then
     for _, c in ipairs(Mods.all_of(mod)) do
       if Mods.own_joker(c.src) or Mods.own_item(c.src) then st.pick[c.src] = true end
     end
@@ -456,7 +475,7 @@ function MU.open_export(mod_id, from, opts)
   end
   MU.export = st
   UIK._pages.forge_export_pick = 1
-  MU.show_export((mod and not st.publish) and "about" or "what")
+  MU.show_export(((mod and not st.publish) or st.remix) and "about" or "what")
 end
 
 function MU.show_export(tab)

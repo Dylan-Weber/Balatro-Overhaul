@@ -305,7 +305,7 @@ function T.open_collection(e)
   if not (set and G.P_CENTER_POOLS[set]) then return end
   local More = require("functions/forge/forge_kinds_more")
 r 32 1381 %20%20 -
-l 32
+l 33
   G.FUNCS.overlay_menu{definition = More.paged{items = T.live_cards(set), cols = 5, rows = 2, no_tip = true, make = function(v, area)
     return Card(area.T.x + area.T.w / 2, area.T.y, G.CARD_W, G.CARD_H, G.P_CARDS.empty, v)
   end}}
@@ -315,6 +315,7 @@ function T.install_hooks()
   if T.hooked then return end
   T.hooked = true
   pcall(require("functions/forge/forge_startpack").install)
+  pcall(require("functions/forge/forge_parity").install)
   pcall(require("functions/forge/forge_typerules").install)
   pcall(require("functions/forge/forge_moments").install)
   pcall(require("functions/forge/forge_moredos").install)

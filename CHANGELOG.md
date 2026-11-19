@@ -2,6 +2,33 @@
 
 Changelog for the updates, first being the latest changes. 
 
+## 2.1.3
+
+*Overhaul 2.1.3, 2026-11-19. An easier Forge, animated Jokers with souls and sounds, the last vanilla cards rebuilt exactly, and Forged online with a weekly theme, ratings and remixes.*
+
+### The Forge: easier to use
+- **Simple view.** Jokers read as one sentence. Tap any coloured part to change it.
+- **Shorter lists.** Pickers show the common options first, with More... for the rest. Long lists have search and groups.
+- **Start from any game card.** Every kind can start from a vanilla card, and it keeps its real effect.
+- **Sample hand.** A new tab shows what your Joker scores, without starting a run.
+- **Clear limits.** Numbers that can't go lower now tell you why.
+
+### The Forge: art and sound
+- **Animated Jokers.** A Joker's looks can play as an animation, from 1 to 12 frames per second.
+- **Floating soul.** Jokers, Tarots, Planets, Spectrals, Vouchers, Boosters and Enhancements can have a soul that floats like on Legendary Jokers.
+- **Sounds.** Every card kind that does something can play a sound when it does, a game sound or your own short .ogg, .wav or .mp3.
+
+### The Forge: vanilla cards
+- **The last ones.** The Fool, The Wheel of Fortune, Sigil, Ouija, Ankh, Hex, the Plasma and Erratic Decks, and the Small and Big Blind can now be built exactly.
+- **New effects.** "With a chance", "Make the last Tarot or Planet used", "Hand to one random suit", "Hand to one random rank", "Copy a random Joker", "Destroy the other Jokers", "Edition on a random Joker", "Balance Chips and Mult" and "Random ranks and suits".
+
+### Forged online
+- **Weekly theme.** Featured is the first tab. A new theme every week, enter up to 3 of your mods, and last week's three best rated lead the list.
+- **Ratings.** Rate a mod from 1 to 5 once you've played a run with it. One rating per player, never your own mod.
+- **Most played.** New tabs for Best rated and Most played, and each mod shows how many players ran it.
+- **Remix.** Press Remix on a mod, online or downloaded, to get its cards in your Forge as your own version. The credit to the original stays with it.
+- Creations that use the new features need Overhaul 2.1.3 or later.
+
 ## 2.1.2
 
 *Overhaul 2.1.2, 2026-11-19. The Forge can now make your own suits, poker hands, card types, rarities, stickers, challenges and fusions, every creation can be used by your other creations, play solo while the ranked queue searches, Classic Layout on phones, and fixes for 14 crash reports.*

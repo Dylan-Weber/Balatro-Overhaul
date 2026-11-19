@@ -71,7 +71,7 @@ check("need: enhancement own edition 13", Cat.need_v({kind = "enhancement", fiel
 check("need: joker with it is 13", Mods.needs_v({joker({always_ed = "foil"})}, {}) == 13)
 check("need: joker without it stays old", Mods.needs_v({joker()}, {}) < 13)
 check("need: joker none stays old", Mods.needs_v({joker({always_ed = "none"})}, {}) < 13)
-check("need: format is 16, always stays 13", Mods.V == 16 and A.V == 13)
+check("need: format is 16, always stays 13", Mods.V >= 16 and A.V == 13)
 
 check("store: joker keeps it", Store.clean(joker({always_ed = "negative"})).always_ed == "negative")
 check("store: own edition kept", Store.clean(joker({always_ed = "forge_d2"})).always_ed == "forge_d2")
@@ -87,12 +87,12 @@ check("share: joker edition renamed with the mod", mod and ed and mod.jokers[1].
 check("share: tarot keeps Negative", tar and tar.fields.always_ed == "negative")
 check("share: spectral keeps the mod's own edition", spe and ed and spe.fields.always_ed == "forge_" .. ed.id, spe and spe.fields.always_ed)
 local t14 = json.decode(raw)
-t14.v = 17
+t14.v = 18
 check("share: newer refused", select(2, Mods.parse(json.encode(t14))) == "newer")
 local old = json.decode(Mods.for_old_server(raw))
 check("share: old server copy asks for 13", old.v == 1 and old.need == 13)
 local Room = require("functions/forge/forge_room")
-check("room: version follows mods", Room.V == 16)
+check("room: version follows mods", Room.V >= 16)
 
 local base_text = {"{C:mult}+4{} Mult"}
 local jl = A.with_line(joker({always_ed = "foil"}), base_text, "en")

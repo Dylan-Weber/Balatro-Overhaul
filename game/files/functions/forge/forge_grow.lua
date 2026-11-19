@@ -725,17 +725,37 @@ function Grow.builder(B)
     nodes[#nodes + 1] = K.step_title(2, ml("WHEN DOES IT CHANGE?"), w)
     local opts = {}
     for _, i in ipairs(B.num_vars()) do opts[#opts + 1] = "v" .. i end
+    opts[#opts + 1] = "anim"
     if d.look_var and not member(opts, d.look_var) then d.look_var = nil end
     local f = {id = "look_var", top = true, none = true, options = opts}
     local label = ml("The Next look effect")
-    if d.look_var then
+    if d.look_var == "anim" then
+      label = ml("Animation")
+    elseif d.look_var then
       local v = (d.vars or {})[tonumber(d.look_var:sub(2))]
       label = string.format(ml("Variable: %s"), v and v.name or "?")
     end
     local fw = math.min(w, touch and 6.4 or 5.6)
     local _, ch, cw = B.cell_dims(fw)
     cw = math.min(fw - 0.1, math.max(cw, UIK.text_w(label, (touch and 0.4 or 0.36) * 1.15) + 2 * (touch and 0.6 or 0.5) + 0.5))
-    nodes[#nodes + 1] = K.hrow({B.cell(ml("Look follows"), B.flat_cycle(f, label, cw, ch), fw)}, w, 0.2)
+    local follow = B.cell(ml("Look follows"), B.flat_cycle(f, label, cw, ch), fw)
+    if d.look_var == "anim" then
+      local X = require("functions/forge/forge_extras")
+      local fps = X.clean_anim(d.anim_fps) or X.FPS_DEF
+      d.anim_fps = fps
+      local sp = {id = "anim_fps", top = true, options = X.FPS}
+      local two = w >= fw * 2 + 0.3
+      local speed = B.cell(ml("Speed"), B.flat_cycle(sp, string.format(ml("%d per second"), fps), cw, ch), fw)
+      if two then
+        nodes[#nodes + 1] = K.hrow({follow, speed}, w, 0.2)
+      else
+        nodes[#nodes + 1] = K.hrow({follow}, w, 0.2)
+        nodes[#nodes + 1] = K.hrow({speed}, w, 0.2)
+      end
+      nodes[#nodes + 1] = UIK.note({ml("The looks play one after another, like a flipbook.")}, {w = w - 0.2, scale = touch and 0.38 or 0.32})
+      return nodes
+    end
+    nodes[#nodes + 1] = K.hrow({follow}, w, 0.2)
     local why = d.look_var and "The look follows the variable: 0 is the first look, 1 the second..." or "A rule with the Next look effect moves it to its next look."
     nodes[#nodes + 1] = UIK.note({ml(why)}, {w = w - 0.2, scale = touch and 0.38 or 0.32})
     return nodes

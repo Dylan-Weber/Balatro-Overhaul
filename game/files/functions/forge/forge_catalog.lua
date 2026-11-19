@@ -665,6 +665,7 @@ function Cat.need_v(c)
   if R.host_of(c.kind) ~= "joker" and type(c.rules) == "table" and #c.rules > 0 then need = math.max(need, 8, R.need_v(c.rules, c.vars)) end
   local XM = package.loaded["functions/forge/forge_moredos"]
   if XM then need = math.max(need, XM.host_need(c, R.host_of(c.kind))) end
+  if Cat.extra_need then need = math.max(need, Cat.extra_need(c)) end
   return need
 end
 
@@ -720,6 +721,7 @@ function Cat.values(what, base_only)
     return with_own(out, what, base_only)
   end
   if what == "bossblind" then return with_own(Cat.values("boss"), what, base_only) end
+  if what == "jedition" then return require("functions/forge/forge_parity").values(Cat, base_only) end
   if what == "tag" then
     local out = {R.TAG_RANDOM}
     for _, v in ipairs(base_only and R.TAGS or R.tags()) do out[#out + 1] = v end
@@ -807,6 +809,8 @@ local PLAIN = {now = "Right away", shop = "At the next shop", round = "At the ne
   Arcana = "Arcana", Celestial = "Celestial", Spectral = "Spectral", Standard = "Standard", Buffoon = "Buffoon", Forge = "Forge creations", Chosen = "Chosen cards",
   Tarot = "Tarot", Planet = "Planet", Joker = "Joker", Red = "Red", Blue = "Blue", Green = "Green", Purple = "Purple", Orange = "Orange", Gold = "Gold", Black = "Black", White = "White", Padlock = "Padlock", Hourglass = "Hourglass", Coin = "Coin"}
 
+Cat.PLAIN = PLAIN
+
 local function game_name(set, key)
   local d = G and G.localization and G.localization.descriptions
   local t = d and d[set] and d[set][key]
@@ -817,6 +821,15 @@ end
 function Cat.value_label(what, v)
   local T = require("functions/forge/forge_text")
   if v == nil then return "" end
+  if what == "blindslot" then
+    if v == "small" or v == "big" then return game_name("Blind", "bl_" .. v) or mod_loc(PLAIN[v]) end
+    return mod_loc("Boss Blind")
+  end
+  if what == "jedition" then
+    local l = require("functions/forge/forge_parity").label(v)
+    if l then return l end
+    what = "shader"
+  end
   if what == "pack_edition" then
     if v == "none" then return mod_loc("As usual") end
     what = "shader"
@@ -1307,5 +1320,6 @@ R.SELECT.cat(Cat, n, run)
 require("functions/forge/forge_stickerrules").cat(Cat, n, run)
 require("functions/forge/forge_chdeck").cat(Cat, n)
 require("functions/forge/forge_startpack").cat(Cat)
+require("functions/forge/forge_parity").cat(Cat, n)
 
 return Cat
