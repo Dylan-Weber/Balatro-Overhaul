@@ -38,7 +38,7 @@ Changelog for the updates, first being the latest changes.
 - Creations that use the new features need Overhaul 2.1.2 or later.
 
 ### Multiplayer
-- **Play while you wait.** While the ranked queue searches you can continue or start a solo run, and the queue keeps going in the menus, the Training Grounds, replays and while watching a match. When an opponent is found you pick Join or Wait. Idea, bug report and the ranked queue timer by OkiMaSha, thanks a lot!
+- **Play while you wait.** While the ranked queue searches you can continue or start a solo run, and the queue keeps going in the menus, the Training Grounds, replays and while watching a match. When an opponent is found you pick Join or Wait. Idea and bug report by OkiMaSha, thanks a lot!
 - **New main menu.** PLAY, MODS and SINGLEPLAYER are the big buttons, RANKED is inside PLAY, and THE CASINO is on the multiplayer menu.
 - **Fixes.** Opening a lobby no longer deletes your single-player Continue (reported by OkiMaSha), and PLAY and MODS have the same text size as in the normal menu.
 

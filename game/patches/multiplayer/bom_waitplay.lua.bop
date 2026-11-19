@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 356
+l 351
 local W = {}
 
 W.S = W.S or {ctx = nil, me = nil, away = false, prompt = nil, others = {}, note = nil, note_until = 0, stash = {}, sent_at = 0}
@@ -12,9 +12,6 @@ W.RETRY_FOR = 180
 W.RETRY_GAP = 3
 W.NOTE_HOLD = 8
 W.HELD_MAX = 200
-W.FOUND_DELAY = 10
-W.CONFIRM_HOLD = 4
-W.CORNER = {queue = true, folded = true, confirm = true}
 
 local S = W.S
 
@@ -281,7 +278,6 @@ end
 
 function W.join()
     if not S.ctx then return end
-    S.go_at = nil
     W.set_me("lobby")
     S.prompt = nil
     if W.watching() then
@@ -304,7 +300,6 @@ end
 
 function W.wait()
     if not S.ctx then return end
-    S.go_at = nil
     S.prompt = nil
     W.set_me("wait")
     W.refresh_box(true)
@@ -374,7 +369,7 @@ end
 function W.new_run()
     if not W.ranked_open() and W.lobby_open() then W.go_solo() end
 r 32 1825 %20%20%20%20 -
-l 783
+l 699
     local PM = rawget(_G, "PlayMenu")
     if PM and PM.sel then PM.sel.mode = "new_run" end
     G.FUNCS.setup_run({config = {id = "bo_wp_new_run"}})
@@ -426,11 +421,7 @@ function W.box_kind()
         return "room"
     end
     if S.ctx then return nil end
-    if W.searching() and not W.ranked_open() then
-        if S.confirm_until and now() < S.confirm_until then return "confirm" end
-        if G.SETTINGS and G.SETTINGS.bo_queue_folded then return "folded" end
-        return "queue"
-    end
+    if W.searching() and not W.ranked_open() then return "queue" end
     return nil
 end
 
@@ -440,17 +431,13 @@ end
 
 local function texts(kind)
     local note = live_note()
-    if kind == "queue" or kind == "folded" then
+    if kind == "queue" then
         local u = U()
         local since = u and u.Q and u.Q.since or now()
-        if kind == "folded" then return "", clock(now() - since) end
         return L("RANKED QUEUE"), note or (L("Searching for an opponent") .. "  " .. clock(now() - since))
     end
-    if kind == "confirm" then return L("RANKED QUEUE"), L("Leave the queue?") end
     if kind == "prompt" then
-        local detail = note or S.prompt.detail
-        if S.go_at then detail = tostring(detail) .. "  " .. string.format(L("Lobby in %d"), math.max(0, math.ceil(S.go_at - now()))) end
-        return S.prompt.title, detail
+        return S.prompt.title, note or S.prompt.detail
     end
     if S.ctx == "ranked" then return L("OPPONENT FOUND"), note or ranked_detail() end
     local code = bom_match.get_state().room_code
@@ -480,9 +467,7 @@ local function tw(s, sc)
 end
 
 local function buttons_for(kind)
-    if kind == "queue" then return {{"<", "bo_wp_fold", G.C.UI.BACKGROUND_INACTIVE, "bo_wp_fold", true}, {L("CANCEL"), "bo_wp_cancel", G.C.RED, "bo_wp_cancel"}} end
-    if kind == "folded" then return {{">", "bo_wp_fold", G.C.UI.BACKGROUND_INACTIVE, "bo_wp_fold", true}} end
-    if kind == "confirm" then return {{L("YES"), "bo_wp_cancel_yes", G.C.RED, "bo_wp_cancel_yes"}, {L("NO"), "bo_wp_cancel_no", G.C.UI.BACKGROUND_INACTIVE, "bo_wp_cancel_no"}} end
+    if kind == "queue" then return {{L("CANCEL"), "bo_wp_cancel", G.C.RED, "bo_wp_cancel"}} end
     if kind == "prompt" then return {{L("JOIN"), "bo_wp_join", G.C.GREEN, "bo_wp_join"}, {L("WAIT"), "bo_wp_wait", G.C.ORANGE, "bo_wp_wait"}} end
     return {{L("JOIN"), "bo_wp_join", G.C.GREEN, "bo_wp_join"}}
 end
@@ -567,19 +552,8 @@ function W.box_def(kind)
     local btns = {}
     for i, b in ipairs(buttons_for(kind)) do
         if i > 1 then btns[#btns + 1] = {n = G.UIT.C, config = {minw = d.gap}} end
-        local w = b[5] and d.bh or math.max(d.bw, tw(b[1], d.bs) + 0.4)
+        local w = math.max(d.bw, tw(b[1], d.bs) + 0.4)
         btns[#btns + 1] = UIBox_button({label = {b[1]}, button = b[2], colour = b[3], id = b[4], minw = w, minh = d.bh, scale = d.bs, col = true})
-    end
-    if kind == "folded" then
-        local detail_node = {n = G.UIT.T, config = {ref_table = W.view, ref_value = "detail", scale = d.detail, colour = G.C.GOLD, shadow = true}}
-        return {n = G.UIT.ROOT, config = {align = "cm", colour = G.C.CLEAR, padding = 0}, nodes = {
-            {n = G.UIT.C, config = {align = "cm", padding = d.pad, r = 0.1, colour = G.C.BLACK, emboss = 0.05, id = "bo_wp_panel"}, nodes = {
-                {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = btns},
-                {n = G.UIT.C, config = {minw = d.gap}},
-                {n = G.UIT.C, config = {align = "cm", minw = tw("88:88", d.detail) + 0.05, padding = 0}, nodes = {detail_node}},
-                {n = G.UIT.C, config = {minw = d.gap}},
-            }},
-        }}
     end
     local title_node = {n = G.UIT.T, config = {ref_table = W.view, ref_value = "title", scale = d.title, colour = kind == "prompt" and G.C.GOLD or G.C.UI.TEXT_LIGHT, shadow = true}}
     local detail_node = {n = G.UIT.T, config = {ref_table = W.view, ref_value = "detail", scale = d.detail, colour = kind == "queue" and G.C.GOLD or G.C.UI.TEXT_LIGHT, shadow = true}}
@@ -659,34 +633,7 @@ function W.corner_rect()
     return {x = r.x / k - G.ROOM.T.x, y = r.y / k - G.ROOM.T.y, w = r.w / k, h = r.h / k}
 end
 
-function W.version_rect()
-    local CL = rawget(_G, "CORNER_LABELS")
-    local r = CL and CL.version_rect
-    if not (r and G.STAGE ~= G.STAGES.RUN and G.ROOM and G.TILESCALE and G.TILESIZE) then return nil end
-    local k = G.TILESCALE * G.TILESIZE
-    return {x = r.x / k - G.ROOM.T.x, y = r.y / k - G.ROOM.T.y, w = r.w / k, h = r.h / k}
-end
-
-function W.corner_place(w, h)
-    local sx, sy, sw = visible()
-    local right = sx + sw - 0.12
-    local CL = rawget(_G, "CORNER_LABELS")
-    local r = CL and CL.version_rect
-    if G.STAGE ~= G.STAGES.RUN and r and G.ROOM and G.TILESCALE and G.TILESIZE then
-        local k = G.TILESCALE * G.TILESIZE
-        local rx, ry, rh = r.x / k - G.ROOM.T.x, r.y / k - G.ROOM.T.y, r.h / k
-        local x = rx - w - 0.1
-        if x >= sx + 0.1 then return x, math.max(sy + 0.05, ry + rh / 2 - h / 2) end
-        return right - w, ry + rh + 0.08
-    end
-    local y = sy + 0.08
-    local CR = W.corner_rect()
-    if CR and hits(right - w, y, w, h, CR) then y = CR.y + CR.h + 0.08 end
-    return right - w, y
-end
-
 function W.place(w, h)
-    if W.CORNER[W.box_kind_now or ""] and not (UIK and UIK.portrait and UIK.portrait()) then return W.corner_place(w, h) end
     if W.tight then
         local r = W.tight
         return r.x + (r.w - w) / 2, r.y + (r.h - h) / 2
@@ -694,17 +641,11 @@ function W.place(w, h)
     local sx, sy, sw = visible()
     local cx = sx + sw / 2 - w / 2
     local CR = W.corner_rect()
-    local VR = W.version_rect()
     if W.overlay_up() then
         if CR and hits(cx, sy + 0.05, w, h, CR) then return cx, CR.y + CR.h + 0.08 end
-        if VR and hits(cx, sy + 0.05, w, h, VR) then return cx, VR.y + VR.h + 0.08 end
         return cx, sy + 0.05
     end
-    if G.STAGE ~= G.STAGES.RUN then
-        local y = sy + (touch() and 0.24 or 0.3)
-        if VR and hits(cx, y, w, h, VR) then y = VR.y + VR.h + 0.08 end
-        return cx, y
-    end
+    if G.STAGE ~= G.STAGES.RUN then return cx, sy + (touch() and 0.24 or 0.3) end
     local H = G.HUD and G.HUD.T
     local wide_hud = H and H.w >= sw * 0.6
     local function xfor(y)
@@ -764,8 +705,7 @@ end
 
 local function sig(kind)
     local title, detail = texts(kind)
-    if (kind == "queue" or kind == "folded") and not live_note() then detail = "" end
-    if kind == "prompt" and S.prompt then detail = tostring(S.prompt.detail) .. tostring(S.go_at ~= nil) end
+    if kind == "queue" and not live_note() then detail = "" end
     return table.concat({kind, title, detail, tostring(touch()), tostring(G.LANG and G.LANG.key), tostring(UIK and UIK.portrait and UIK.portrait()), tostring(G.STAGE), tostring(W.tight ~= nil),
         tostring(W.overlay_up())}, "|")
 end
@@ -774,8 +714,7 @@ function W.refresh_box(force)
     if not (G and G.ROOM_ATTACH and UIBox) then return end
     local kind = W.box_kind()
     if not kind then W.remove_box() return end
-    W.box_kind_now = kind
-    W.tight = not W.CORNER[kind] and W.tight_rect() or nil
+    W.tight = W.tight_rect()
     set_view(kind)
     local s = sig(kind)
     if not force and alive(W.box) and W.box_sig == s then
@@ -840,10 +779,7 @@ local function on_room_ready(d)
         S.found_name = name
         G.E_MANAGER:add_event(Event({trigger = "immediate", blocking = false, blockable = false, pause_force = true, no_delete = true, func = function()
             W.show_prompt(L("OPPONENT FOUND"), W.detail_for((W.watching() and S.found_name) or opp_name() or S.found_name, nil))
-            if W.solo_run() or W.watching() then
-                W.set_me("solo")
-                S.go_at = now() + W.FOUND_DELAY
-            end
+            if W.solo_run() or W.watching() then W.set_me("solo") end
             return true
         end}))
     end
@@ -1022,24 +958,7 @@ function W.register_events()
 end
 
 function W.register_funcs()
-    G.FUNCS.bo_wp_cancel = function()
-        S.confirm_until = now() + W.CONFIRM_HOLD
-        W.refresh_box(true)
-    end
-    G.FUNCS.bo_wp_cancel_yes = function()
-        S.confirm_until = nil
-        W.cancel_queue()
-    end
-    G.FUNCS.bo_wp_cancel_no = function()
-        S.confirm_until = nil
-        W.refresh_box(true)
-    end
-    G.FUNCS.bo_wp_fold = function()
-        S.confirm_until = nil
-        G.SETTINGS.bo_queue_folded = not G.SETTINGS.bo_queue_folded or nil
-        if G.save_settings then pcall(G.save_settings, G) end
-        W.refresh_box(true)
-    end
+    G.FUNCS.bo_wp_cancel = function() W.cancel_queue() end
     G.FUNCS.bo_wp_join = function() W.join() end
     G.FUNCS.bo_wp_wait = function() W.wait() end
     G.FUNCS.bo_wp_continue = function() W.continue_run() end
@@ -1077,12 +996,6 @@ function W.update()
         end)
     end
     if S.note and now() >= S.note_until then S.note = nil end
-    if S.confirm_until and now() >= S.confirm_until then S.confirm_until = nil end
-    if S.go_at and not (S.ctx and S.away and S.prompt) then S.go_at = nil end
-    if S.go_at and now() >= S.go_at then
-        S.go_at = nil
-        pcall(W.join)
-    end
     W.refresh_box()
     if alive(W.box) and W.box_kind_now then
         set_view(W.box_kind_now)
@@ -1130,7 +1043,6 @@ function W.register_strings()
             ["The lobby was closed."] = "Le salon a été fermé.", ["%s left the lobby"] = "%s a quitté le salon",
             ["PLAYING SOLO"] = "JOUE EN SOLO", ["JOINS LATER"] = "VIENDRA PLUS TARD", ["Playing solo"] = "Joue en solo", ["Joins later"] = "Viendra plus tard",
             ["Your opponent"] = "Votre adversaire",
-            ["Leave the queue?"] = "Quitter la file ?", ["YES"] = "OUI", ["NO"] = "NON", ["Lobby in %d"] = "Salon dans %d",
         },
         es = {
             ["RANKED QUEUE"] = "COLA CLASIFICATORIA", ["OPPONENT FOUND"] = "RIVAL ENCONTRADO", ["JOIN"] = "UNIRSE", ["WAIT"] = "ESPERAR",
@@ -1143,7 +1055,6 @@ function W.register_strings()
             ["The lobby was closed."] = "La sala se cerró.", ["%s left the lobby"] = "%s salió de la sala",
             ["PLAYING SOLO"] = "JUEGA EN SOLITARIO", ["JOINS LATER"] = "SE UNIRÁ LUEGO", ["Playing solo"] = "Juega en solitario", ["Joins later"] = "Se unirá luego",
             ["Your opponent"] = "Tu rival",
-            ["Leave the queue?"] = "¿Salir de la cola?", ["YES"] = "SÍ", ["NO"] = "NO", ["Lobby in %d"] = "Sala en %d",
         },
     }
 end

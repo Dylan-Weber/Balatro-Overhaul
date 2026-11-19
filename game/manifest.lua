@@ -4,8 +4,8 @@ return {
       file = "files/CHANGELOG.md",
       kind = "own",
       path = "CHANGELOG.md",
-      sha256 = "d2894148d6c35f042af9e72ce72984018033ec6a32f98ad609f8e2b3162ea160",
-      size = 204399,
+      sha256 = "693bd9b360f5b781ccd2dbd1bd82f1bf9383950947a9f255b979d74f3a4ce66f",
+      size = 202721,
     },
     {
       file = "files/GPL-3.0.txt",
@@ -977,8 +977,8 @@ return {
       kind = "patch",
       patch = "patches/functions/release_info.lua.bop",
       path = "functions/release_info.lua",
-      sha256 = "f89c05488a9b9aef66152c88944487acb74083c9788e0e9cdafaae4fb3218185",
-      size = 61960,
+      sha256 = "828cc976cceff6e8969ecba2d564f611461464810c83ffd6ce15125603424557",
+      size = 61645,
     },
     {
       kind = "patch",
@@ -2720,8 +2720,8 @@ return {
       kind = "patch",
       patch = "patches/multiplayer/bom_waitplay.lua.bop",
       path = "multiplayer/bom_waitplay.lua",
-      sha256 = "f363c9d73bf069355815b402d1d06e126f30692cb952c94926a3e414423a2502",
-      size = 43811,
+      sha256 = "a90f76330bfbaacef18ec2095e61e80a67d598d35eb5bc93a39b89b2d0f5017c",
+      size = 39340,
     },
     {
       kind = "patch",
@@ -3000,7 +3000,7 @@ return {
       file = "files/overhaul/version.lua",
       kind = "own",
       path = "overhaul/version.lua",
-      sha256 = "43a7797c40dac19d9fe49f9b0e56a286079a26257fc23627bb143aa8ee7c4cb7",
+      sha256 = "273ffc200e141449a209124f88444f4b7bb93a684f3ec46a8b6a3a07d627a46b",
       size = 148,
     },
     {
@@ -6449,7 +6449,7 @@ return {
   game_version = "1.0.1o-FULL",
   name = "Balatro Overhaul",
   overhaul_name = "2.1.2",
-  overhaul_version = "75",
+  overhaul_version = "76",
   vanilla = {
     {
       lines = "lines/1.txt",
