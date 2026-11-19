@@ -705,7 +705,7 @@ target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)(?<post>[\t ]*local blind_col = get_blind_main_colour\(type\)\n)'''
 position = "at"
 payload = '''
-${pre}  if PHONE_TEXT and PHONE_TEXT.on() and text_table then text_table = PHONE_TEXT.blind_text(text_table, run_info, blind_choice) end
+${pre}  if PHONE_TEXT and PHONE_TEXT.on() and text_table and not (CLASSIC_LAYOUT and CLASSIC_LAYOUT.on()) then text_table = PHONE_TEXT.blind_text(text_table, run_info, blind_choice) end
 ${post}'''
 times = 1
 
@@ -2486,7 +2486,7 @@ position = "at"
 payload = '''
 ${pre}      {n=G.UIT.C, config={align = "cm", padding = 0.05, colour = G.C.L_BLACK,r = 0.1, minw = port and 0.75 or 0.9}, nodes={
 e 30 3069 %20%20%20%20%20%20%20%20 - =72,+%6C%61%6E%67%20%3D%20%47%2E%4C%41%4E%47%55%41%47%45%53%5B%27%65%6E%2D%75%73%27%5D%2C%20,=37
-l 76
+l 77
 ${post}'''
 optional = true
 
@@ -2511,6 +2511,7 @@ function ui_numbers_en(node)
 end
 
 local function hands_wide()
+  if CLASSIC_LAYOUT and CLASSIC_LAYOUT.on() then return false end
   return rawget(_G, 'UIK') ~= nil and UIK.wide_phone and UIK.wide_phone() or false
 end
 
@@ -4203,8 +4204,16 @@ l 2
                       {n=G.UIT.T, config={text = 'Jupiterian Soul  -  Developer', scale = text_scale*0.5, colour = G.C.UI.TEXT_LIGHT, shadow = true}},
                     }},
 r 30 629 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 27
+l 2
                       {n=G.UIT.T, config={text = 'JohnG210  -  ' .. mod_loc('iOS port'), scale = text_scale*0.5, colour = G.C.UI.TEXT_LIGHT, shadow = true}},
+                    }},
+r 30 629 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 2
+                      {n=G.UIT.T, config={text = 'OkiMaSha  -  ' .. mod_loc('Play while you wait'), scale = text_scale*0.5, colour = G.C.UI.TEXT_LIGHT, shadow = true}},
+                    }},
+r 30 629 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 27
+                      {n=G.UIT.T, config={text = 'GrantDPowell  -  ' .. mod_loc('Play while you wait'), scale = text_scale*0.5, colour = G.C.UI.TEXT_LIGHT, shadow = true}},
                     }},
                   }},
                   {n=G.UIT.R, config={align = "cm", padding = 0.1, outline_colour = G.C.JOKER_GREY, r = 0.1, outline = 1}, nodes={
@@ -4651,7 +4660,7 @@ r 30 2219 %20%20 -
 l 1
 
 r 30 6210 %20%20 -
-l 131
+l 132
   local _mods_on = G.FUNCS.mods_button and true or false
   local _modded_game = _mods_on and MODLOADER and MODLOADER.modded and true or false
   local _show_mode = _modded_game or (_mods_on and MODS_INSTALLED and MODS_INSTALLED())
@@ -4700,9 +4709,10 @@ l 131
   local _big_nodes
   if _mp then
     _big_nodes = {}
-    for _, v in ipairs(_mpm.big_specs()) do
-      _big_nodes[#_big_nodes + 1] = v.mods and _mpm.mods_button(_big_w, _big_h, _big_text)
-        or UIBox_button{id = v.id, button = v.button, colour = G.C.BLUE, minw = _big_w, minh = _big_h, label = {v.label}, scale = _big_text, col = true}
+    local _big_specs = _mpm.big_specs()
+    for _, v in ipairs(_big_specs) do
+      _big_nodes[#_big_nodes + 1] = v.mods and _mpm.mods_button(_big_w, _big_h, _mpm.big_scale(_big_w, _big_text, {v}))
+        or UIBox_button{id = v.id, button = v.button, colour = v.colour or G.C.BLUE, minw = _big_w, minh = _big_h, label = {v.label}, scale = _big_text, col = true}
     end
   end
   local _panel_w = 2*_side_w + 3*_big_w + 6*0.22*k

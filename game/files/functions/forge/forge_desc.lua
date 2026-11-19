@@ -44,7 +44,12 @@ function DE.parse(line)
         cur = nil
       else
         local c = inner:match("^C:([%w_]+)$")
-        if not c then simple = false; c = inner:match("C:([%w_]+)") end
+        if not c then
+          simple = false
+          c = inner:match("C:([%w_]+)")
+          local bg = inner:match("X:([%w_]+)")
+          if bg and (not c or c == "white") then c = bg end
+        end
         cur = c
       end
       i = j + 1
@@ -157,6 +162,8 @@ function DE.to_chars(lines)
       if j then
         local inner = s:sub(i + 1, j - 1)
         cur = inner ~= "" and inner:match("C:([%w_]+)") or nil
+        local bg = inner:match("X:([%w_]+)")
+        if bg and (not cur or cur == "white") then cur = bg end
         i = j + 1
       else
         local ch = s:match("^[%z\1-\127\194-\244][\128-\191]*", i)

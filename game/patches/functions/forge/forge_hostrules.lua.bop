@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 470
+l 500
 local R = require("functions/forge/forge_rules")
 local Store = require("functions/forge/forge_store")
 local Cat = require("functions/forge/forge_catalog")
@@ -35,11 +35,11 @@ function H.extra_values(kind)
   if R.host_of(kind) == "joker" then return out end
   local seen = {}
   for _, e in ipairs(Cat.effects_for(kind) or {}) do
-    if e.run and not seen[e.id] and not R.SCORE_GIVE[e.id] then seen[e.id] = true; out[#out + 1] = e end
+    if e.run and not seen[e.id] and not R.SCORE_GIVE[e.id] and not (R.EXP_IDS and R.EXP_IDS[e.id]) then seen[e.id] = true; out[#out + 1] = e end
   end
   for _, list in ipairs({Cat.RUN, Cat.EFFECTS.voucher, Cat.EFFECTS.deck}) do
     for _, e in ipairs(list) do
-      if e.run and not seen[e.id] and not (e.id == "chips" or e.id == "mult" or e.id == "xmult") then seen[e.id] = true; out[#out + 1] = e end
+      if e.run and not seen[e.id] and not (e.id == "chips" or e.id == "mult" or e.id == "xmult") and not (R.EXP_IDS and R.EXP_IDS[e.id]) then seen[e.id] = true; out[#out + 1] = e end
     end
   end
   return out
@@ -193,10 +193,23 @@ local function merge(ret, r, held)
     ret.x_mult = base * r.x_mult
   end
   if r.x_chips and r.x_chips ~= 1 then put_xchips(ret, r.x_chips) end
+  local exp = r.forge_emult or r.forge_echips
   if type(r.extra) == "table" and r.extra.func then
     ret.extra = ret.extra or {}
     local before, f = ret.extra.func, r.extra.func
     ret.extra.func = function() if before then before() end f() end
+    if exp and ret.extra.message == nil then ret.extra.message, ret.extra.colour = r.extra.message, r.extra.colour end
+  end
+  if exp then
+    ret.forge_exp = true
+    if type(r.func) == "function" then
+      local before, f = ret.func, r.func
+      ret.func = function() if before then before() end f() end
+    end
+    for _, k in ipairs({"e_mult", "e_chips"}) do
+      local v = tonumber(r[k])
+      if v and v ~= 1 then ret[k] = (tonumber(ret[k]) or 1) * v end
+    end
   end
   if r.dollars and r.dollars ~= 0 then
     ret.p_dollars = (ret.p_dollars or 0) + r.dollars
@@ -248,12 +261,17 @@ function H.eval_card(card, context, ret)
     local Run = package.loaded["functions/forge/forge_run"]
     local okx, nx = pcall(function() return Run and Run.card_bonus and Run.card_bonus(card, "xchips") end)
     if okx and nx and nx ~= 1 then put_xchips(ret, nx, card) end
+    for _, id in ipairs(R.EXP and R.EXP.ORDER or {}) do
+      local oke, ne = pcall(function() return Run and Run.card_bonus and Run.card_bonus(card, id) end)
+      if oke and ne and ne ~= 1 then merge(ret, R.EXP.card_step(id, ne, card), false) end
+    end
     for _, it in ipairs(H.run_items()) do
       local rctx = card_ctx(card, context)
       rctx.forge_self = nil
       for _ = 1, it.times do merge(ret, run_rules(card, rctx, it, "run", H.game_state(it.key)), false) end
     end
   end
+  if R.EXP and R.EXP.fold_x then R.EXP.fold_x(ret, card) end
   return ret
 end
 
@@ -301,6 +319,9 @@ end
 local WHEN_CTX = {
   blind_selected = {setting_blind = true}, discard = {discard = true}, round_end = {end_of_round = true},
   reroll = {reroll_shop = true}, shop_enter = {forge_when = "shop_enter"}, ante_up = {forge_when = "ante_up"}, now = {forge_when = "now"},
+  money_earned = {forge_when = "money_earned"}, money_spent = {forge_when = "money_spent"}, card_drawn = {forge_when = "card_drawn"},
+  joker_sold = {forge_when = "joker_sold"}, joker_added = {forge_when = "joker_added"}, tag_added = {forge_when = "tag_added"},
+  boss_beaten = {forge_when = "boss_beaten"},
 }
 
 local function host_card(it)
@@ -317,9 +338,14 @@ function H.fire(when, base)
     local ctx = {}
     for k, v in pairs(base or {}) do ctx[k] = v end
     for k, v in pairs(proto) do ctx[k] = v end
-    ctx.other_card = nil
+    if when ~= "card_drawn" then ctx.other_card = nil end
     for _ = 1, it.times do run_rules(host_card(it), ctx, it, "run", H.game_state(it.key)) end
   end
+end
+
+function H.fire_item(c, key, ctx)
+  if not has_rules(c) then return end
+  run_rules(host_card({c = c}), ctx, {c = c, key = "r_" .. key}, "run", H.game_state("r_" .. key))
 end
 
 function H.now(c, key)
@@ -339,6 +365,10 @@ function H.score(chips, mult)
         if r.mult_mod then mult = mult + r.mult_mod; changed = true end
         if r.Xchip_mod then chips = chips * r.Xchip_mod; changed = true end
         if r.Xmult_mod then mult = mult * r.Xmult_mod; changed = true end
+        if R.EXP then
+          local c2, m2, ch = R.EXP.apply(chips, mult, r)
+          if ch then chips, mult, changed = c2, m2, true end
+        end
       end
     end
   end

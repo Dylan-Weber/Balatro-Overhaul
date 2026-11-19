@@ -1,0 +1,193 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 69
+local X = {}
+
+X.V = 16
+X.NEW = {before_discard = true, cancel_discard = true, discard_drawn = true}
+X.WHEN_TEXT = {en = "Before a discard", fr = "Avant une défausse", es = "Antes de un descarte"}
+X.GIVE_TEXT = {
+  en = {cancel_discard = "cancel the discard", discard_drawn = "discard the card"},
+  fr = {cancel_discard = "annule la défausse", discard_drawn = "défausse la carte"},
+  es = {cancel_discard = "cancela el descarte", discard_drawn = "descarta la carta"},
+}
+X.cancel = false
+X.ONLY = {cards_played = true, hands_left = true, discards_left = true, first_hand = true, last_hand = true, discard_any = true, discard_all = true}
+X.CARD_IF = {discard_any = true, discard_all = true}
+X.IF_LABEL = {discard_any = "Any discarded card is", discard_all = "All discarded cards are"}
+X.IF_TEXT = {
+  en = {discard_any = "the discard includes {C:attention}%s{}", discard_all = "the discard is only {C:attention}%s{}"},
+  fr = {discard_any = "la défausse contient des {C:attention}%s{}", discard_all = "la défausse n'a que des {C:attention}%s{}"},
+  es = {discard_any = "el descarte incluye {C:attention}%s{}", discard_all = "el descarte solo tiene {C:attention}%s{}"},
+}
+
+local function ml(s) return mod_loc and mod_loc(s) or s end
+
+local function add(list, v)
+  for _, x in ipairs(list) do if x == v then return end end
+  list[#list + 1] = v
+end
+
+function X.discard_match(o, context, R)
+  local fh = type(context) == "table" and type(context.full_hand) == "table" and context.full_hand or {}
+  if #fh == 0 then return false end
+  local hits = 0
+  for _, c in ipairs(fh) do if R.card_match(c, o.v) then hits = hits + 1 end end
+  if o.id == "discard_all" then return hits == #fh end
+  return hits > 0
+end
+
+local function lang_now()
+  local l = G and G.SETTINGS and G.SETTINGS.language or "en"
+  l = tostring(l):sub(1, 2)
+  return (l == "fr" or l == "es") and l or "en"
+end
+
+function X.rules(R)
+  add(R.WHEN, "before_discard")
+  add(R.JOKER_WHEN, "before_discard")
+  add(R.HOST_WHEN.run, "before_discard")
+  for _, id in ipairs({"cancel_discard", "discard_drawn"}) do
+    add(R.GIVE, id)
+    R.HOST_GIVE[id] = {joker = true, run = true}
+    R.DEFAULT_GIVE[id] = function() return {id = id} end
+    R.CLEAN_GIVE[id] = function(e) e.n, e.v = nil, nil end
+    R.TEXT_GIVE[id] = function(g, s, lang) return (X.GIVE_TEXT[lang] or X.GIVE_TEXT.en)[id] end
+  end
+  R.GIVE_WHEN.cancel_discard = {before_discard = true}
+  R.GIVE_WHEN.discard_drawn = {card_drawn = true}
+  R.LABEL_GIVE = R.LABEL_GIVE or {}
+  R.LABEL_GIVE.cancel_discard = "Cancel the discard"
+  R.LABEL_GIVE.discard_drawn = "Discard the card"
+  R.HOST_GIVE.draw = R.HOST_GIVE.draw or {}
+  R.HOST_GIVE.draw.joker, R.HOST_GIVE.draw.card, R.HOST_GIVE.draw.run = true, true, true
+  R.DOS.cancel_discard = function(g, card, src, context)
+    if not (context and context.forge_when == "before_discard") then return end
+    X.cancel = true
+    R.status(src, ml("Cancelled!"), G.C.RED)
+  end
+  R.DOS.discard_drawn = function(g, card, src, context, other)
+    local c = other or (context and context.other_card)
+    if R.dry or not (c and G.hand and c.area == G.hand) or c.forge_tossed then return end
+    c.forge_tossed = true
+r 3 617 %20%20%20%20 -
+l 116
+      c.forge_tossed = nil
+      local move = rawget(_G, "draw_card")
+      if move and c.area == G.hand and G.discard then move(G.hand, G.discard, 100, "down", false, c) end
+      return true
+    end}))
+    R.status(src, ml("Tossed!"), G.C.RED)
+  end
+  for id in pairs(X.CARD_IF) do
+    add(R.ONLY, id)
+    R.ONLY_WHEN[id] = {before_discard = true, discard = true}
+    R.DEFAULT_ONLY[id] = function() return {id = id, v = "face"} end
+    R.CLEAN_ONLY[id] = function(c)
+      if R.CLEAN_ONLY.discarded then R.CLEAN_ONLY.discarded(c) end
+      c.op, c.n = nil, nil
+    end
+    R.CHECKS[id] = function(o, context) return X.discard_match(o, context, R) end
+    R.LABEL_ONLY = R.LABEL_ONLY or {}
+    R.LABEL_ONLY[id] = X.IF_LABEL[id]
+    R.TEXT_ONLY = R.TEXT_ONLY or {}
+    R.TEXT_ONLY[id] = function(o, s, lang)
+      local l = X.IF_TEXT[lang] and lang or "en"
+      return string.format(X.IF_TEXT[l][id], R.match_label(o.v, l, true))
+    end
+    R.VALUES_ONLY = R.VALUES_ONLY or {}
+    R.VALUES_ONLY[id] = function()
+      local out, l = {}, lang_now()
+      for _, v in ipairs(R.filter_values("discarded")) do
+        local label = R.match_label(v, l, true):gsub("{[^}]*}", "")
+        out[#out + 1] = {label = label:sub(1, 1):upper() .. label:sub(2), value = v}
+      end
+      return out
+    end
+  end
+  local base_only = R.allowed_only
+  R.allowed_only = function(when, only, host, ...)
+    if when == "before_discard" and X.ONLY[only] then
+      local ho = R.HOST_ONLY[only]
+      return not (ho and not ho[host or "joker"])
+    end
+    return base_only(when, only, host, ...)
+  end
+  local base_need = R.need_v
+  R.need_v = function(rules, vars)
+    local need = base_need(rules, vars)
+    for _, r in ipairs(type(rules) == "table" and rules or {}) do
+      if type(r) == "table" and X.NEW[r.when] then need = math.max(need, X.V) end
+      for _, o in ipairs(type(r) == "table" and type(r.only) == "table" and r.only or {}) do
+        if type(o) == "table" and X.CARD_IF[o.id] then need = math.max(need, X.V) end
+      end
+      for _, k in ipairs({"give", "alt"}) do
+        for _, g in ipairs(type(r) == "table" and type(r[k]) == "table" and r[k] or {}) do
+          if type(g) == "table" and X.NEW[g.id] then need = math.max(need, X.V) end
+        end
+      end
+    end
+    return need
+  end
+  local T = require("functions/forge/forge_text")
+  if T.W then
+    for lang, s in pairs(X.WHEN_TEXT) do if T.W[lang] then T.W[lang].before_discard = s end end
+  end
+  if T.RUN_WHEN then T.RUN_WHEN.before_discard = X.WHEN_TEXT.en end
+end
+
+function X.host_need(c, host)
+  if host == "joker" or type(c) ~= "table" or type(c.rules) ~= "table" then return 1 end
+  for _, r in ipairs(c.rules) do
+    for _, k in ipairs({"give", "alt"}) do
+      for _, g in ipairs(type(r) == "table" and type(r[k]) == "table" and r[k] or {}) do
+        if type(g) == "table" and g.id == "draw" then return X.V end
+      end
+    end
+  end
+  return 1
+end
+
+function X.discard(orig, e, hook, ...)
+  if hook or X.busy or not (G and G.hand and G.hand.highlighted and #G.hand.highlighted > 0) or G.STATE ~= G.STATES.SELECTING_HAND then
+    return orig(e, hook, ...)
+  end
+  X.cancel = false
+  X.busy = true
+  local M = require("functions/forge/forge_moments")
+  local ok, err = pcall(M.fire, "before_discard", {full_hand = G.hand.highlighted, forge_amount = #G.hand.highlighted})
+  X.busy = false
+  if not ok then print("[FORGE] before discard failed: " .. tostring(err)) end
+  if X.cancel then
+    X.cancel = false
+    return
+  end
+  return orig(e, hook, ...)
+end
+
+function X.install()
+  if X.hooked then return end
+  local okh, Hooks = pcall(require, "overhaul.hooks")
+  if not (okh and Hooks) then return end
+  X.hooked = true
+  Hooks.wrap("G.FUNCS", "discard_cards_from_highlighted", function(orig) return function(e, hook, ...)
+    return X.discard(orig, e, hook, ...)
+  end end, {id = "forge_moredos.discard"})
+end
+
+local function register_strings()
+  if not mod_loc_register then return end
+  mod_loc_register{
+    fr = {["Cancel the discard"] = "Annuler la défausse", ["Discard the card"] = "Défausser la carte", ["Cancelled!"] = "Annulée !", ["Tossed!"] = "Jetée !",
+      ["Before a discard"] = "Avant une défausse", ["Any discarded card is"] = "Une carte défaussée est", ["All discarded cards are"] = "Toutes les cartes défaussées sont"},
+    es = {["Cancel the discard"] = "Cancelar el descarte", ["Discard the card"] = "Descartar la carta", ["Cancelled!"] = "¡Cancelado!", ["Tossed!"] = "¡Tirada!",
+      ["Before a discard"] = "Antes de un descarte", ["Any discarded card is"] = "Alguna carta descartada es", ["All discarded cards are"] = "Todas las cartas descartadas son"},
+  }
+end
+
+register_strings()
+
+return X
+end

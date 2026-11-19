@@ -74,6 +74,7 @@ export interface Seat {
   raceCleared?: number;
   raceAt?: number;
   lostBlinds?: string[];
+  wait?: string | null;
 }
 
 export interface Party {
@@ -188,7 +189,7 @@ export function roomPayload(p: Party): Msg {
     code: p.code, id: p.id, visibility: p.visibility, hostId: p.hostId, phase: p.phase, maxPlayers: PARTY_MAX,
     kind: cfg.kind, teams: cfg.kind === 'teams' ? teamCount(seatList(p).length, cfg.teamSize) : 0,
     players: seatList(p).map(([pid, s]) => ({
-      ...seatFields(p, pid, s), pid, name: s.name, ready: s.ready, team: s.team, connected: live(s.ws), held: s.holdDeadline !== null, bot: isBotWs(s.ws),
+      ...seatFields(p, pid, s), pid, name: s.name, ready: s.ready, team: s.team, connected: live(s.ws), held: s.holdDeadline !== null, bot: isBotWs(s.ws), wait: s.wait ?? null,
       secondsLeft: s.holdDeadline !== null ? Math.max(0, Math.ceil((s.holdDeadline - now) / 1000)) : null,
     })),
   };
@@ -734,6 +735,15 @@ function handleKick(ws: WS, msg: Msg): void {
   handleLeave(tws, 'forfeit');
 }
 
+function handleWaitStatus(p: Party, pid: number, msg: Msg): void {
+  if (p.phase !== 'lobby') return;
+  const s = p.seats[pid];
+  if (!s) return;
+  s.wait = typeof msg.status === 'string' ? msg.status : null;
+  for (const [i, o] of seatList(p)) if (i !== pid) send(o, { type: 'wait_status', pid, name: s.name, status: s.wait, party: true });
+  broadcastRoom(p);
+}
+
 function handleReady(ws: WS, msg: Msg): void {
   const p = partyForSocket(ws);
   if (!p || p.phase !== 'lobby') return;
@@ -827,7 +837,7 @@ export function startMatch(p: Party, seed: string | null): void {
   p.teamLives = {};
   p.raidLives = cfg.raidLives;
   for (const [, s] of seatList(p)) {
-    Object.assign(s, { lives: cfg.lives, alive: true, score: null, finished: false, readyBlind: false, ante: 1, blind: 'S', placement: null, endReason: null, result: null, snapshot: null, ready: false, ended: false, done: false, freeDrop: true, solo: false, live: null, board: null, spectating: null, best: 0, lostBlinds: [] });
+    Object.assign(s, { lives: cfg.lives, alive: true, score: null, finished: false, readyBlind: false, ante: 1, blind: 'S', placement: null, endReason: null, result: null, snapshot: null, ready: false, ended: false, done: false, freeDrop: true, solo: false, live: null, board: null, spectating: null, best: 0, lostBlinds: [], wait: null });
     if (cfg.kind === 'teams') p.teamLives[s.team] = cfg.lives;
     if (cfg.kind !== 'teams') s.team = 0;
   }
@@ -1282,7 +1292,7 @@ function handleReturnToLobby(p: Party, pid: number): void {
   p.pvpAnte = null;
   for (const [i, s] of seatList(p)) {
     if (!live(s.ws)) { p.seats[i] = null; continue; }
-    Object.assign(s, { ready: false, alive: true, placement: null, endReason: null, result: null, score: null, finished: false });
+    Object.assign(s, { ready: false, wait: null, alive: true, placement: null, endReason: null, result: null, score: null, finished: false });
     s.ended = false;
   }
   for (const [i, s] of seatList(p)) {
@@ -1465,6 +1475,7 @@ export function handlePartyMessage(ws: WS, msg: Msg): boolean {
       return true;
     }
     case 'leave_lobby': handleLeave(ws, 'leave'); return true;
+    case 'wait_status': handleWaitStatus(p, pid, msg); return true;
     case 'return_to_menu': handleLeave(ws, 'menu'); return true;
     case 'leave_match': handleLeave(ws, 'forfeit'); return true;
     case 'return_to_lobby': handleReturnToLobby(p, pid); return true;

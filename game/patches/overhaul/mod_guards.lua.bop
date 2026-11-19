@@ -1,0 +1,297 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 135
+local M = {}
+
+local function global(name) return rawget(_G, name) end
+
+local PROGRESS_PARTS = {"discovered", "deck_stakes", "joker_stickers", "challenges"}
+
+function M.complete_progress(progress)
+    if type(progress) ~= "table" then return progress end
+    local missing = false
+    for _, k in ipairs(PROGRESS_PARTS) do
+        local v = progress[k]
+        if type(v) ~= "table" or type(v.tally) ~= "number" or type(v.of) ~= "number" then missing = true end
+    end
+    if not missing then return progress end
+    local copy = {}
+    for k, v in pairs(progress) do copy[k] = v end
+    for _, k in ipairs(PROGRESS_PARTS) do
+        local v = copy[k]
+        if type(v) ~= "table" or type(v.tally) ~= "number" or type(v.of) ~= "number" then
+            copy[k] = {tally = type(v) == "table" and tonumber(v.tally) or 0, of = type(v) == "table" and tonumber(v.of) or 1}
+        end
+    end
+    return copy
+end
+
+function M.buy_card(e)
+    local c = type(e) == "table" and type(e.config) == "table" and e.config.ref_table
+    if type(c) == "table" and type(c.is) == "function" and global("Card") and c:is(global("Card")) then return c end
+end
+
+function M.buy_blocked(c)
+    return c.bo_buy_queued == true or c.REMOVED == true or c.area == nil
+end
+
+function M.rankless_areas(list)
+    if type(list) ~= "table" then return nil end
+    for _, v in pairs(list) do
+        if type(v) ~= "table" or type(v.set_ranks) ~= "function" then
+            local kept = {}
+            for _, a in pairs(list) do
+                if type(a) == "table" and type(a.set_ranks) == "function" then kept[#kept + 1] = a end
+            end
+            return kept
+        end
+    end
+    return nil
+end
+
+function M.text_ready(t)
+    local s = type(t) == "table" and t.strings
+    if type(s) ~= "table" then return false end
+    if type(s[t.focused_string]) == "table" then return true end
+    if type(s[1]) == "table" then
+        t.focused_string = 1
+        return true
+    end
+    return false
+end
+
+function M.areas_torn_down()
+    if M.deleting_run then return true end
+    for _, k in ipairs({"play", "hand", "deck", "discard"}) do
+        local a = G[k]
+        if type(a) == "table" and a.cards == nil then return true end
+    end
+    return false
+end
+
+function M.fake_element(e)
+    if type(e) == "table" and e.UIBox == nil then e.UIBox = {states = {}} end
+    return e
+end
+
+function M.state_atlas(g)
+    if type(g) ~= "table" or type(g.ANIMATION_ATLAS) ~= "table" then return false end
+    local cur = rawget(g, "STATE_ATLAS")
+    if cur ~= nil and cur ~= M.state_alias then return false end
+    g.STATE_ATLAS = g.ANIMATION_ATLAS
+    M.state_alias = g.ANIMATION_ATLAS
+    return true
+end
+
+function M.pool_known(pool, centers)
+    if type(pool) ~= "table" or type(centers) ~= "table" then return pool end
+    local kept = {}
+    for _, v in ipairs(pool) do
+        if type(v) == "table" and centers[v.key] then kept[#kept + 1] = v end
+    end
+    if #kept == 0 then return pool end
+    return kept
+end
+
+function M.clamp_args(a, b, c)
+    return type(a) == "number" and type(b) == "number" and type(c) == "number" and b > c
+end
+
+function M.install(Hooks)
+    if G and G.UIDEF and G.UIDEF.profile_option then
+        Hooks.wrap(G.UIDEF, "profile_option", function(orig) return function(key, ...)
+            local current = G.SETTINGS and G.SETTINGS.profile
+            local own = rawget(G, "load_profile")
+            G.load_profile = function(self, p, info_only, ...)
+                local fn = own or Game.load_profile
+                if info_only == nil then info_only = true end
+                return fn(self, p, info_only, ...)
+            end
+            local r = Hooks.pack(orig(key, ...))
+            G.load_profile = own
+            if current ~= nil and G.SETTINGS.profile ~= current and G.PROFILES and G.PROFILES[current] then
+                G.SETTINGS.profile = current
+            end
+            return Hooks.unpack(r)
+        end end, {id = "overhaul.mod_guards.profile_option"})
+    end
+
+    if global("create_progress_box") then
+        Hooks.wrap("_G", "create_progress_box", function(orig) return function(progress, ...)
+            if progress == nil and G.PROFILES and G.SETTINGS and G.PROFILES[G.SETTINGS.profile] then
+                progress = G.PROFILES[G.SETTINGS.profile].progress
+            end
+            return orig(M.complete_progress(progress), ...)
+        end end, {id = "overhaul.mod_guards.progress_box"})
+    end
+
+    if G and G.FUNCS and G.FUNCS.buy_from_shop then
+        Hooks.wrap(G.FUNCS, "buy_from_shop", function(orig) return function(e, ...)
+            local c = M.buy_card(e)
+            if not c then return orig(e, ...) end
+            if M.buy_blocked(c) then
+                if type(e) == "table" then e.disable_button = nil end
+                return false
+            end
+            local r = Hooks.pack(orig(e, ...))
+            if r[1] ~= false and not c.REMOVED then
+                c.bo_buy_queued = true
+r 3 617 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
+l 154
+                    c.bo_buy_queued = nil
+                    return true
+                end}))
+            end
+            return Hooks.unpack(r)
+        end end, {id = "overhaul.mod_guards.buy_once"})
+    end
+
+    local Controller = global("Controller")
+    if Controller and Controller.set_HID_flags then
+        Hooks.wrap(Controller, "set_HID_flags", function(orig) return function(self, ...)
+            local list = G.I and G.I.CARDAREA
+            local kept = M.rankless_areas(list)
+            if not kept then return orig(self, ...) end
+            G.I.CARDAREA = kept
+            local r = Hooks.pack(orig(self, ...))
+            if G.I.CARDAREA == kept then G.I.CARDAREA = list end
+            return Hooks.unpack(r)
+        end end, {id = "overhaul.mod_guards.hid_ranks"})
+    end
+
+    if DynaText and DynaText.draw then
+        Hooks.wrap(DynaText, "draw", function(orig) return function(self, ...)
+            if not (self.config and self.config.text_effect) and not M.text_ready(self) then return end
+            return orig(self, ...)
+        end end, {id = "overhaul.mod_guards.text_draw"})
+        for _, key in ipairs({"align_letters", "pop_in"}) do
+            if DynaText[key] then
+                Hooks.wrap(DynaText, key, function(orig) return function(self, ...)
+                    if not M.text_ready(self) then return end
+                    return orig(self, ...)
+                end end, {id = "overhaul.mod_guards.text_" .. key})
+            end
+        end
+    end
+
+    local CardArea = global("CardArea")
+    if CardArea and CardArea.parse_highlighted then
+        Hooks.wrap(CardArea, "parse_highlighted", function(orig) return function(self, ...)
+            if self == G.hand and M.areas_torn_down() then return end
+            return orig(self, ...)
+        end end, {id = "overhaul.mod_guards.parse_teardown"})
+    end
+
+    local base_hud = global("create_UIBox_HUD")
+    if base_hud then
+        Hooks.wrap("_G", "create_UIBox_HUD", function(orig) return function(...)
+            if orig == base_hud then return orig(...) end
+            local r = Hooks.pack(pcall(orig, ...))
+            if r[1] then return unpack(r, 2, r.n) end
+            print("[mod_guards] a mod's HUD hook failed, using the HUD without it: " .. tostring(r[2]))
+            return base_hud(...)
+        end end, {id = "overhaul.mod_guards.hud"})
+    end
+    if G and G.FUNCS then
+        for _, key in ipairs({"can_buy", "can_buy_and_use"}) do
+            if G.FUNCS[key] then
+                Hooks.wrap(G.FUNCS, key, function(orig) return function(e, ...)
+                    return orig(M.fake_element(e), ...)
+                end end, {id = "overhaul.mod_guards.fake_" .. key})
+            end
+        end
+    end
+
+    Hooks.wrap("Game", "delete_run", function(orig) return function(...)
+        M.deleting_run = true
+        local r = Hooks.pack(orig(...))
+        M.deleting_run = nil
+        return Hooks.unpack(r)
+    end end, {id = "overhaul.mod_guards.delete_run"})
+
+    Hooks.wrap("Game", "set_globals", function(orig) return function(self, ...)
+        local r = Hooks.pack(orig(self, ...))
+        pcall(M.state_atlas, self)
+        return Hooks.unpack(r)
+    end end, {id = "overhaul.mod_guards.state_atlas"})
+    pcall(M.state_atlas, G)
+
+    Hooks.wrap("Controller", "L_cursor_press", function(orig) return function(self, ...)
+        local r = Hooks.pack(orig(self, ...))
+        local d = type(self) == "table" and self.cursor_down
+        if type(d) == "table" and d.uptime == nil and G and G.TIMERS then d.uptime = G.TIMERS.UPTIME end
+        return Hooks.unpack(r)
+    end end, {id = "overhaul.mod_guards.press_uptime"})
+
+    Hooks.wrap("Controller", "L_cursor_release", function(orig) return function(self, ...)
+        local r = Hooks.pack(orig(self, ...))
+        local u = type(self) == "table" and self.cursor_up
+        if type(u) == "table" and u.uptime == nil and G and G.TIMERS then u.uptime = G.TIMERS.UPTIME end
+        return Hooks.unpack(r)
+    end end, {id = "overhaul.mod_guards.release_uptime"})
+
+    Hooks.wrap("_G", "pseudorandom_element", function(orig) return function(t, seed, ...)
+        local ps = global("pseudoseed")
+        if type(seed) == "string" and tonumber(seed) == nil and ps then seed = ps(seed) end
+        return orig(t, seed, ...)
+    end end, {id = "overhaul.mod_guards.element_string_seed"})
+
+    Hooks.wrap(math, "clamp", function(orig) return function(a, b, c, ...)
+        if M.clamp_args(a, b, c) then return math.min(math.max(a, b), c) end
+        return orig(a, b, c, ...)
+    end end, {id = "overhaul.mod_guards.clamp_order"})
+
+    Hooks.wrap("_G", "reset_castle_card", function(orig) return function(...)
+        local PB, C = global("PB_UTIL"), global("Card")
+        if type(PB) == "table" and PB.is_suit == nil and type(C) == "table" and type(C.is_suit_shade) == "function" then
+            PB.is_suit = function(card, shade)
+                return type(card) == "table" and type(card.is_suit_shade) == "function" and card:is_suit_shade(shade) or false
+            end
+        end
+        return orig(...)
+    end end, {id = "overhaul.mod_guards.pb_is_suit"})
+
+    Hooks.wrap("SMODS", "create_poll_pool", function(orig) return function(labels, args, ...)
+        local r = Hooks.pack(orig(labels, args, ...))
+        if type(args) == "table" and args.append == "misprintta" and G and G.P_CENTERS then
+            r[1] = M.pool_known(r[1], G.P_CENTERS)
+        end
+        return Hooks.unpack(r)
+    end end, {id = "overhaul.mod_guards.aij_misprint_pool"})
+
+    Hooks.wrap("All_in_Jest", "create_astral_pin", function(orig) return function(card, ...)
+        local h = type(card) == "table" and type(card.ability) == "table" and type(card.ability.consumeable) == "table" and card.ability.consumeable.hand
+        if h ~= nil and G and G.GAME then
+            G.GAME.Astral_pins = G.GAME.Astral_pins or {}
+            G.GAME.Astral_pins[h] = G.GAME.Astral_pins[h] or {}
+        end
+        return orig(card, ...)
+    end end, {id = "overhaul.mod_guards.aij_astral_pins"})
+
+    Hooks.wrap("G.P_CENTERS.e_aij_misprint", "on_remove", function(orig) return function(card, ...)
+        if rawget(_G, "_front") ~= nil or not (type(card) == "table" and type(card.config) == "table" and card.config.card) then return orig(card, ...) end
+        rawset(_G, "_front", card.config.card)
+        local r = Hooks.pack(pcall(orig, card, ...))
+        rawset(_G, "_front", nil)
+        if not r[1] then error(r[2], 0) end
+        return unpack(r, 2, r.n)
+    end end, {id = "overhaul.mod_guards.aij_misprint_front"})
+
+    Hooks.wrap("Malverk", "set_defaults", function(orig) return function(...)
+        local packs = global("TexturePacks")
+        if type(packs) == "table" and packs.default == nil then return end
+        return orig(...)
+    end end, {id = "overhaul.mod_guards.malverk_defaults"})
+
+    Hooks.wrap("SMODS", "blueprint_effect", function(orig) return function(card, ...)
+        local r = Hooks.pack(orig(card, ...))
+        local k = type(card) == "table" and card.config and card.config.center and card.config.center.key
+        if k == "j_roff_getchips" and type(r[1]) == "table" and r[1].chip_mod == nil then r[1].chip_mod = 0 end
+        return Hooks.unpack(r)
+    end end, {id = "overhaul.mod_guards.roffle_getchips"})
+end
+
+return M
+end

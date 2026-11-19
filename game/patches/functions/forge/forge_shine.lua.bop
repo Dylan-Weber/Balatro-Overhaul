@@ -140,7 +140,7 @@ MY_HIGHP_OR_MEDIUMP vec3 fe_rgb(MY_HIGHP_OR_MEDIUMP vec3 c)
     return vec3(fe_hue(p, q, c.x + 1./3.), fe_hue(p, q, c.x), fe_hue(p, q, c.x - 1./3.));
 }
 r 34 18 - -
-l 164
+l 168
 {
     MY_HIGHP_OR_MEDIUMP vec4 o = fe_base_effect(colour, texture, texture_coords, screen_coords);
     if (fe_tint.a > 0.5) {
@@ -274,12 +274,15 @@ function FS.draw(card)
 end
 
 function FS.install()
+  local FL = require("functions/forge/forge_forcedlook")
+  pcall(FL.install)
   if FS.installed then return end
   local Hooks = package.loaded["overhaul.hooks"] or require("overhaul.hooks")
   local S = rawget(_G, "SMODS")
   if not (Hooks and S and S.DrawSteps and S.DrawSteps.edition) then return end
   FS.installed = true
   Hooks.wrap("SMODS.DrawSteps.edition", "func", function(orig) return function(self, layer, ...)
+    if FL.of(self) then FL.draw_safe(self, layer) end
     if FS.owns(self) then
       local ok, err = pcall(FS.draw, self)
       if not ok then print("[forge_shine] draw: " .. tostring(err)) end
@@ -303,6 +306,7 @@ end
 if mod_loc_register then mod_loc_register(LOC) end
 
 _G.ForgeShine = FS
+require("functions/forge/forge_forcedlook")
 
 return FS
 end

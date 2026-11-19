@@ -522,7 +522,7 @@ l 7
     }},
     uses_picker() and {n=G.UIT.R, config={align = "cm", padding = 0.08}, nodes={
 r 30 629 %20%20%20%20%20%20 -
-l 334
+l 411
         {n=G.UIT.C, config={minw = 0.26 * (port() and 0.27 or 0.32), padding = 0}, nodes={}},
         {n=G.UIT.T, config={text = mod_loc("Your game folder is in the file picker under Balatro Overhaul"), scale = port() and 0.34 or 0.37, colour = G.C.UI.TEXT_LIGHT, maxw = ROW_W}},
       }},
@@ -541,6 +541,9 @@ function zip_strings()
       ["Turn on"] = "Activer",
       ["This mod was added by hand. It can change your game and your saves. Only turn it on if you trust where it came from."] = "Ce mod a été ajouté à la main. Il peut modifier votre jeu et vos sauvegardes. Ne l'activez que si vous faites confiance à sa source.",
       ["Add a mod from a zip"] = "Ajouter un mod depuis un zip",
+      ["Search your zips"] = "Chercher dans vos zips", ["Browse..."] = "Parcourir...", ["No zip matches your search."] = "Aucun zip ne correspond à votre recherche.",
+      ["You can also drop a zip on the game window."] = "Vous pouvez aussi déposer un zip sur la fenêtre du jeu.",
+      ["No file chooser on this computer."] = "Pas de sélecteur de fichiers sur cet ordinateur.", ["Pick a mod zip"] = "Choisir un zip de mod",
       ["ADD A MOD FROM A ZIP"] = "AJOUTER UN MOD DEPUIS UN ZIP",
       ["Mod zips found in your Downloads folder."] = "Zips de mods trouvés dans vos Téléchargements.",
       ["Nothing is installed until you pick one."] = "Rien n'est installé tant que vous n'en choisissez pas un.",
@@ -584,6 +587,9 @@ function zip_strings()
       ["Turn on"] = "Activar",
       ["This mod was added by hand. It can change your game and your saves. Only turn it on if you trust where it came from."] = "Este mod se añadió a mano. Puede cambiar tu juego y tus partidas. Actívalo solo si confías en su origen.",
       ["Add a mod from a zip"] = "Añadir un mod desde un zip",
+      ["Search your zips"] = "Buscar en tus zips", ["Browse..."] = "Examinar...", ["No zip matches your search."] = "Ningún zip coincide con tu búsqueda.",
+      ["You can also drop a zip on the game window."] = "También puedes soltar un zip en la ventana del juego.",
+      ["No file chooser on this computer."] = "No hay selector de archivos en este ordenador.", ["Pick a mod zip"] = "Elegir un zip de mod",
       ["Save mods as a zip"] = "Guardar los mods en zip",
       ["ADD A MOD FROM A ZIP"] = "AÑADIR UN MOD DESDE UN ZIP",
       ["Mod zips found in your Downloads folder."] = "Zips de mods encontrados en tus Descargas.",
@@ -680,18 +686,43 @@ local function zip_row(c, w)
   }}
 end
 
-local function zips_window()
-  zip_strings()
+local function zip_matches(c, q)
+  if q == "" then return true end
+  local hay = (zip_title(c) .. " " .. tostring(c.name or "")):lower()
+  for word in q:gmatch("%S+") do
+    if not hay:find(word, 1, true) then return false end
+  end
+  return true
+end
+
+local function zip_filtered(Z)
+  local q = tostring(G.MODS_MENU.zip_query or ""):lower()
+  if q == "" then return Z.list end
+  local out = {}
+  for _, c in ipairs(Z.list) do if zip_matches(c, q) then out[#out + 1] = c end end
+  return out
+end
+
+local function zip_browse_ok()
+  if uses_picker() then return false end
+  local ok, P = pcall(require, "functions/file_picker")
+  return ok and type(P) == "table" and P.browse_available and P.browse_available() or false
+end
+
+local function zip_list_def(w)
   local Z = G.MODS_MENU.zips or {list = {}, info = {readable = false}}
-  local w = port() and 7.5 or 9.4
-  local list = Z.list
+  local list = zip_filtered(Z)
   local pages = math.max(1, math.ceil(#list / ZIPS_PAGE_SIZE))
   Z.page = math.min(math.max(1, Z.page or 1), pages)
   local rows = {}
   local picked = uses_picker()
-  if #list == 0 and not picked then
+  if #Z.list == 0 and not picked then
     rows[1] = {n=G.UIT.R, config={align = "cm", padding = 0.3}, nodes={
       {n=G.UIT.T, config={text = mod_loc(Z.info.readable and "No mod zip found in your Downloads folder." or "The game can't read your Downloads folder here."), scale = 0.4, colour = G.C.UI.TEXT_INACTIVE, maxw = w}},
+    }}
+  elseif #list == 0 and #Z.list > 0 then
+    rows[1] = {n=G.UIT.R, config={align = "cm", padding = 0.3}, nodes={
+      {n=G.UIT.T, config={text = mod_loc("No zip matches your search."), scale = 0.4, colour = G.C.UI.TEXT_INACTIVE, maxw = w}},
     }}
   elseif #list > 0 then
     local first = (Z.page - 1) * ZIPS_PAGE_SIZE
@@ -699,27 +730,73 @@ local function zips_window()
   end
   local page_options = {}
   for i = 1, pages do page_options[i] = localize('k_page') .. ' ' .. i .. '/' .. pages end
+  return {n=G.UIT.ROOT, config={align = "cm", colour = G.C.CLEAR, padding = 0}, nodes={
+    {n=G.UIT.R, config={align = "tm", minw = w + 0.2, minh = ZIPS_PAGE_SIZE * 1.1}, nodes={
+      {n=G.UIT.C, config={align = "tm"}, nodes=rows},
+    }},
+    pages > 1 and {n=G.UIT.R, config={align = "cm", padding = 0.05}, nodes={
+      create_option_cycle({
+        options = page_options, w = 3.5, h = UIK.touch() and 0.68 or 0.35, scale = UIK.touch() and 0.85 or 0.8, cycle_shoulders = true,
+        opt_callback = 'mods_menu_zip_page', current_option = Z.page,
+        colour = G.C.RED, no_pips = true, focus_args = {snap_to = true},
+      }),
+    }} or {n=G.UIT.R, config={align = "cm", minh = UIK.touch() and 0.78 or 0.45}, nodes={}},
+  }}
+end
+
+local function zip_list_redraw()
+  local holder = G.OVERLAY_MENU and G.OVERLAY_MENU:get_UIE_by_ID("zip_list")
+  if not (holder and holder.config and holder.config.object) then return end
+  local w = holder.config.zip_w or 9.4
+  holder.config.object:remove()
+  holder.config.object = UIBox{definition = zip_list_def(w), config = {offset = {x = 0, y = 0}, parent = holder, type = "cm"}}
+  holder.UIBox:recalculate()
+end
+
+G.FUNCS.mods_zip_watch = function(e)
+  local q = tostring(G.MODS_MENU.zip_query or "")
+  if q == G.MODS_MENU.zip_last_q then return end
+  G.MODS_MENU.zip_last_q = q
+  if G.MODS_MENU.zips then G.MODS_MENU.zips.page = 1 end
+  zip_list_redraw()
+end
+
+local function zips_window()
+  zip_strings()
+  local w = port() and 7.5 or 9.4
+  local picked = uses_picker()
+  local Z = G.MODS_MENU.zips or {list = {}, info = {readable = false}}
+  G.MODS_MENU.zip_query = G.MODS_MENU.zip_query or ""
+  G.MODS_MENU.zip_last_q = G.MODS_MENU.zip_query
   local function line(s, colour, scale)
     return {n=G.UIT.R, config={align = "cm", padding = 0.02}, nodes={{n=G.UIT.T, config={text = s, scale = scale or 0.34, colour = colour or G.C.UI.TEXT_LIGHT, maxw = w}}}}
+  end
+  local list_box = UIBox{definition = zip_list_def(w), config = {offset = {x = 0, y = 0}}}
+  local tools
+  local browse = zip_browse_ok()
+  if not picked then
+    local bw = browse and 2.3 or 0
+    local iw = w - bw - (browse and 0.25 or 0)
+    local input = create_text_input({ref_table = G.MODS_MENU, ref_value = 'zip_query', max_length = 30, w = iw, h = UIK.touch() and 0.66 or 0.52,
+      text_scale = UIK.touch() and 0.42 or 0.38, prompt_text = mod_loc("Search your zips"), extended_corpus = true, keyboard_offset = UIK.touch() and 2.4 or 3})
+    tools = {n=G.UIT.R, config={align = "cm", padding = 0.06}, nodes={
+      {n=G.UIT.C, config={align = "cm"}, nodes={input}},
+      browse and {n=G.UIT.C, config={align = "cm", minw = 0.25}, nodes={}} or nil,
+      browse and UIBox_button({button = 'mods_menu_zip_browse', label = {mod_loc("Browse...")}, colour = G.C.BLUE, minw = bw, minh = UIK.touch() and 0.66 or 0.52, scale = 0.4, col = true}) or nil,
+    }}
   end
   return create_UIBox_generic_options({
     back_func = 'mods_menu_back',
     contents = {
       {n=G.UIT.R, config={align = "cm", padding = 0.08}, nodes={{n=G.UIT.T, config={text = mod_loc("ADD A MOD FROM A ZIP"), scale = 0.55, colour = G.C.GOLD, shadow = true, maxw = w}}}},
       line(mod_loc(picked and "The zip you picked." or "Mod zips found in your Downloads folder.")),
-      line(mod_loc("Nothing is installed until you pick one.")),
-      line(mod_loc("Your files are never moved or deleted.")),
+      line(mod_loc("Nothing is installed until you pick one.") .. " " .. mod_loc("Your files are never moved or deleted.")),
+      (not picked and not UIK.touch()) and line(mod_loc("You can also drop a zip on the game window."), G.C.UI.TEXT_LIGHT, 0.3) or nil,
       Z.message and line(Z.message, Z.message_bad and G.C.RED or G.C.GREEN, 0.38) or nil,
-      {n=G.UIT.R, config={align = "tm", minw = w + 0.2, minh = ZIPS_PAGE_SIZE * 1.1}, nodes={
-        {n=G.UIT.C, config={align = "tm"}, nodes=rows},
+      tools,
+      {n=G.UIT.R, config={align = "tm", func = 'mods_zip_watch', minh = list_box.T.h}, nodes={
+        {n=G.UIT.O, config={id = "zip_list", zip_w = w, object = list_box}},
       }},
-      pages > 1 and {n=G.UIT.R, config={align = "cm", padding = 0.05}, nodes={
-        create_option_cycle({
-          options = page_options, w = 3.5, h = UIK.touch() and 0.68 or 0.35, scale = UIK.touch() and 0.85 or 0.8, cycle_shoulders = true,
-          opt_callback = 'mods_menu_zip_page', current_option = Z.page,
-          colour = G.C.RED, no_pips = true, focus_args = {snap_to = true},
-        }),
-      }} or nil,
     },
   })
 end
@@ -858,7 +935,7 @@ G.FUNCS.mods_menu_export = function(e)
   local chan = love.thread.getChannel(chan_name)
   local shown = love.timer.getTime()
 r 1 112 %20%20 -
-l 80
+l 127
     blocking = false, blockable = false, no_delete = true, pause_force = true, timer = 'REAL',
     func = function()
       local terr = th:getError()
@@ -893,7 +970,54 @@ l 80
 end
 
 G.FUNCS.mods_menu_zips = function(e)
+  G.MODS_MENU.zip_query = ""
   if uses_picker() then zips_pick() else zips_scan() end
+end
+
+G.FUNCS.mods_menu_zip_browse = function(e)
+  local L = loader()
+  local ok, P = pcall(require, "functions/file_picker")
+  local dir = L and L.pick_dir and L.pick_dir(true)
+  if not (ok and type(P) == "table" and dir and P.browse("zip", dir, 0, function(res)
+    G.MODS_MENU.zip_query = ""
+    zips_picked(res)
+  end, mod_loc("Pick a mod zip"))) then
+    zips_scan(mod_loc("No file chooser on this computer."), true)
+  end
+end
+
+local function zip_dropped(file)
+  local name = file and file.getFilename and file:getFilename() or ""
+  if not name:lower():match("%.zip$") then return false end
+  if not (G.STAGE == G.STAGES.MAIN_MENU and not uses_picker()) then return false end
+  local L = loader()
+  if not (L and L.pick_dir) then return false end
+  local base = name:gsub("\\", "/"):match("([^/]+)$") or "dropped.zip"
+  local ok = pcall(function() file:open("r") end)
+  local data = ok and file:read() or nil
+  pcall(function() file:close() end)
+  if not data then return false end
+  local dir = L.pick_dir(true)
+  if not love.filesystem.write("overhaul_picked/" .. base, data) then return false end
+  local okr, roots = pcall(function() return require("modloader.installer").zip_roots(dir .. "/" .. base) end)
+  if not (okr and type(roots) == "table" and #roots > 0) then
+    love.filesystem.remove("overhaul_picked/" .. base)
+    return false
+  end
+  zip_strings()
+  G.MODS_MENU.zip_query = ""
+  zips_picked({status = "ok", added = {base}, wrong = {}, failed = {}, big = {}, same = {}})
+  return true
+end
+
+if not G.MODS_MENU.zip_drop_hooked then
+  G.MODS_MENU.zip_drop_hooked = true
+  local orig = love.filedropped
+  love.filedropped = function(file, ...)
+    local ok, used = pcall(zip_dropped, file)
+    if ok and used then return end
+    if orig then return orig(file, ...) end
+  end
 end
 
 G.FUNCS.mods_menu_zip_page = function(args)

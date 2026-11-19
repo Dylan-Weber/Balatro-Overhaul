@@ -73,7 +73,7 @@ G.FUNCS.start_overhaul_showcase = function(e)
     G.SETTINGS.overhaul_tips_off = nil
 
 r 17 214 %20%20%20%20 -
-l 48
+l 54
         local _close = G.FUNCS.overlay_menu_back_button or G.FUNCS.exit_overlay_menu
         if _close then pcall(_close) end
     end
@@ -109,6 +109,12 @@ end
 G.FUNCS.skip_overhaul_tutorial = function(e)
     skip_overhaul()
     refresh_tutorial_ui()
+end
+
+G.FUNCS.reset_profile_icon_pos = function(e)
+    local reset = rawget(_G, 'reset_icon_frame_pos')
+    if reset then reset() end
+    play_sound('button')
 end
 
 G.FUNCS.skip_tutorial = function(e)

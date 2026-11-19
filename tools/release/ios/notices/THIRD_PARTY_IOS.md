@@ -1,4 +1,4 @@
-# Third-party notices — iOS build of Balatro Overhaul
+# Third-party notices: iOS build of Balatro Overhaul
 
 These libraries are statically linked into the `love` executable of this
 app. They come from LOVE's prebuilt iOS dependencies, the
@@ -19,7 +19,7 @@ tag 11.5). The licences of LOVE itself and of the libraries LOVE bundles
 | LuaJIT (Lua.xcframework) | 2.1.1700008891 (v2.1 branch, built by luajit-iOS.sh) | MIT |
 | FreeType | as shipped in the 11.5 apple-libraries zip | FreeType License (see LICENSE-LOVE.txt) |
 
-## libmpg123 (LGPL-2.1) — not included
+## libmpg123 (LGPL-2.1): not included
 
 LICENSE-LOVE.txt lists libmpg123 because LOVE uses it on some platforms.
 This iOS build does not contain it: the LOVE 11.5 iOS project builds
@@ -37,7 +37,7 @@ Upstream text (SDL2-LICENSE.txt):
 
 ```
 Copyright (C) 1997-2023 Sam Lantinga <slouken@libsdl.org>
-
+  
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
 arising from the use of this software.
@@ -45,11 +45,11 @@ arising from the use of this software.
 Permission is granted to anyone to use this software for any purpose,
 including commercial applications, and to alter it and redistribute it
 freely, subject to the following restrictions:
-
+  
 1. The origin of this software must not be misrepresented; you must not
    claim that you wrote the original software. If you use this software
    in a product, an acknowledgment in the product documentation would be
-   appreciated but is not required.
+   appreciated but is not required. 
 2. Altered source versions must be plainly marked as such, and must not be
    misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.

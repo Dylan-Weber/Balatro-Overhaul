@@ -7,12 +7,13 @@ export const FORGE_MAX_PER_OWNER = 20;
 export const FORGE_HIDE_AT = 3;
 export const FORGE_PUBLISH_GAP_MS = 20_000;
 export const FORGE_MAX_V = 99;
+export const FORGE_MAX_ALT_KEYS = 8;
 
 const ID_RE = /^[a-z0-9]{4,8}$/;
 const PKEY_RE = /^[A-Za-z0-9]{24}$/;
 const FILE_KEY_RE = /^[A-Za-z0-9_]{1,40}$/;
 const B64_RE = /^[A-Za-z0-9+/]*={0,2}$/;
-const KINDS = new Set(['joker', 'tarot', 'planet', 'spectral', 'voucher', 'enhancement', 'seal', 'edition', 'tag', 'blind', 'stake', 'deck', 'booster', 'collab']);
+const KINDS = new Set(['joker', 'tarot', 'planet', 'spectral', 'voucher', 'enhancement', 'seal', 'edition', 'tag', 'blind', 'stake', 'deck', 'booster', 'collab', 'suit', 'hand', 'ctype', 'challenge', 'rarity', 'sticker', 'fusion']);
 const REASONS = new Set(['broken', 'rude', 'stolen', 'other']);
 
 export interface ForgeEntry {
@@ -128,6 +129,7 @@ export function validateForge(msg: Record<string, unknown>): string | null {
     if (typeof msg.id !== 'string' || !ID_RE.test(msg.id)) return `${t}: invalid id`;
   }
   if (t === 'forge_report' && (typeof msg.reason !== 'string' || !REASONS.has(msg.reason))) return 'forge_report: invalid reason';
+  if (msg.keys !== undefined && (!Array.isArray(msg.keys) || msg.keys.length > FORGE_MAX_ALT_KEYS || !msg.keys.every(k => typeof k === 'string' && PKEY_RE.test(k)))) return `${t}: invalid keys`;
   return null;
 }
 
@@ -192,6 +194,21 @@ export interface ForgeDeps {
 export type PublishOut = { ok: true; id: string; version: number; updated: boolean } | { ok: false; reason: string; why?: string };
 export interface ListOut { mods: ForgeRow[]; page: number; pages: number; total: number }
 
+export function altKeys(msg: Record<string, unknown>, pkey: string | undefined): string[] {
+  if (!Array.isArray(msg.keys)) return [];
+  const out: string[] = [];
+  for (const k of msg.keys) {
+    if (typeof k === 'string' && PKEY_RE.test(k) && k !== pkey && !out.includes(k)) out.push(k);
+    if (out.length >= FORGE_MAX_ALT_KEYS) break;
+  }
+  return out;
+}
+
+export function ownsEntry(e: { owner: string }, pkey: string | undefined, alts: string[] = []): boolean {
+  if (!pkey || !PKEY_RE.test(pkey)) return false;
+  return e.owner === pkey || alts.includes(e.owner);
+}
+
 export class ForgeBoard {
   private ready: Promise<void> | null = null;
   private lastPublish = new Map<string, number>();
@@ -205,7 +222,7 @@ export class ForgeBoard {
     return this.ready;
   }
 
-  async publish(pkey: string | undefined, raw: string, bot = false): Promise<PublishOut> {
+  async publish(pkey: string | undefined, raw: string, bot = false, alts: string[] = []): Promise<PublishOut> {
     if (bot) return { ok: false, reason: 'bot' };
     if (!pkey || !PKEY_RE.test(pkey)) return { ok: false, reason: 'no_key' };
     const c = checkMod(raw);
@@ -217,9 +234,9 @@ export class ForgeBoard {
     this.busy.add(c.id);
     try {
       const old = await this.store.get(c.id);
-      if (old && old.owner !== pkey) return { ok: false, reason: 'taken' };
+      if (old && !ownsEntry(old, pkey, alts)) return { ok: false, reason: 'taken' };
       if (!old) {
-        const mine = (await this.store.list()).filter(e => e.owner === pkey).length;
+        const mine = (await this.store.list()).filter(e => ownsEntry(e, pkey, alts)).length;
         if (mine >= FORGE_MAX_PER_OWNER) return { ok: false, reason: 'too_many_mods' };
       }
       const t = this.now();
@@ -230,47 +247,49 @@ export class ForgeBoard {
       };
       await this.store.put(e);
       this.lastPublish.set(pkey, t);
-      this.deps.log?.('INFO', 'FORGE', `${old ? 'updated' : 'published'} ${e.id} "${e.name}" ${e.size} bytes`);
+      this.deps.log?.('INFO', 'FORGE', `${old ? 'updated' : 'published'} ${e.id} "${e.name}" ${e.size} bytes${old && old.owner !== pkey ? ' (owner key moved)' : ''}`);
       return { ok: true, id: e.id, version: e.version, updated: old !== null };
     } finally {
       this.busy.delete(c.id);
     }
   }
 
-  async browse(pkey: string | undefined, page = 1, q = '', mineOnly = false): Promise<ListOut> {
+  async browse(pkey: string | undefined, page = 1, q = '', mineOnly = false, alts: string[] = []): Promise<ListOut> {
     await this.ensure();
     const query = q.trim().toLowerCase();
-    let list = (await this.store.list()).filter(e => (!e.hidden || (pkey && e.owner === pkey)));
-    if (mineOnly) list = list.filter(e => pkey && e.owner === pkey);
+    let list = (await this.store.list()).filter(e => (!e.hidden || ownsEntry(e, pkey, alts)));
+    if (mineOnly) list = list.filter(e => ownsEntry(e, pkey, alts));
     if (query) list = list.filter(e => e.name.toLowerCase().includes(query) || e.author.toLowerCase().includes(query));
     list.sort((a, b) => b.updated - a.updated || (a.id < b.id ? -1 : 1));
     const pages = Math.max(1, Math.ceil(list.length / FORGE_PER_PAGE));
     const p = Math.min(Math.max(1, page), pages);
     const mods = list.slice((p - 1) * FORGE_PER_PAGE, p * FORGE_PER_PAGE).map(e => {
       const r: ForgeRow = { id: e.id, name: e.name, author: e.author, about: e.about, version: e.version, summary: e.summary, size: e.size, downloads: e.downloads, updated: e.updated };
-      if (pkey && e.owner === pkey) r.mine = true;
+      if (ownsEntry(e, pkey, alts)) r.mine = true;
       return r;
     });
     return { mods, page: p, pages, total: list.length };
   }
 
-  async get(pkey: string | undefined, id: string): Promise<{ ok: true; id: string; mod: string } | { ok: false; reason: string }> {
+  async get(pkey: string | undefined, id: string, alts: string[] = []): Promise<{ ok: true; id: string; mod: string; mine?: boolean } | { ok: false; reason: string }> {
     await this.ensure();
     const e = await this.store.get(id);
-    if (!e || (e.hidden && e.owner !== pkey)) return { ok: false, reason: 'gone' };
-    if (e.owner !== pkey) {
+    const mine = e !== null && ownsEntry(e, pkey, alts);
+    if (!e || (e.hidden && !mine)) return { ok: false, reason: 'gone' };
+    if (!mine) {
       e.downloads += 1;
       await this.store.put(e);
+      return { ok: true, id: e.id, mod: e.raw };
     }
-    return { ok: true, id: e.id, mod: e.raw };
+    return { ok: true, id: e.id, mod: e.raw, mine: true };
   }
 
-  async report(pkey: string | undefined, id: string, reason: string): Promise<{ ok: boolean; reason?: string }> {
+  async report(pkey: string | undefined, id: string, reason: string, alts: string[] = []): Promise<{ ok: boolean; reason?: string }> {
     if (!pkey || !PKEY_RE.test(pkey)) return { ok: false, reason: 'no_key' };
     await this.ensure();
     const e = await this.store.get(id);
     if (!e) return { ok: false, reason: 'gone' };
-    if (e.owner === pkey) return { ok: false, reason: 'own' };
+    if (ownsEntry(e, pkey, alts)) return { ok: false, reason: 'own' };
     if (e.reports.includes(pkey)) return { ok: true };
     e.reports.push(pkey);
     if (e.reports.length >= FORGE_HIDE_AT) e.hidden = true;
@@ -279,12 +298,12 @@ export class ForgeBoard {
     return { ok: true };
   }
 
-  async unpublish(pkey: string | undefined, id: string): Promise<{ ok: boolean; reason?: string }> {
+  async unpublish(pkey: string | undefined, id: string, alts: string[] = []): Promise<{ ok: boolean; reason?: string }> {
     if (!pkey || !PKEY_RE.test(pkey)) return { ok: false, reason: 'no_key' };
     await this.ensure();
     const e = await this.store.get(id);
     if (!e) return { ok: false, reason: 'gone' };
-    if (e.owner !== pkey) return { ok: false, reason: 'not_yours' };
+    if (!ownsEntry(e, pkey, alts)) return { ok: false, reason: 'not_yours' };
     await this.store.remove(id);
     return { ok: true };
   }
@@ -302,31 +321,36 @@ export interface ForgeHandlerDeps<W> {
 export function forgeHandlers<W>(d: ForgeHandlerDeps<W>): Record<string, (ws: W, msg: Record<string, unknown>) => void> {
   return {
     forge_publish: (ws, msg) => {
-      forgeBoard.publish(d.keyOf(ws, msg), String(msg.mod), d.isBot(ws))
+      const k = d.keyOf(ws, msg);
+      forgeBoard.publish(k, String(msg.mod), d.isBot(ws), altKeys(msg, k))
         .then(r => d.send(ws, { type: 'forge_published', ...r }))
         .catch(() => d.send(ws, { type: 'forge_published', ok: false, reason: 'unavailable' }));
     },
     forge_browse: (ws, msg) => {
       const page = typeof msg.page === 'number' ? msg.page : 1;
-      forgeBoard.browse(d.keyOf(ws, msg), page, typeof msg.q === 'string' ? msg.q : '', msg.mine === true)
+      const k = d.keyOf(ws, msg);
+      forgeBoard.browse(k, page, typeof msg.q === 'string' ? msg.q : '', msg.mine === true, altKeys(msg, k))
         .then(r => d.send(ws, { type: 'forge_list', ...r }))
         .catch(() => d.send(ws, { type: 'forge_list', mods: [], page: 1, pages: 1, total: 0, error: 'unavailable' }));
     },
     forge_get: (ws, msg) => {
       const id = String(msg.id);
-      forgeBoard.get(d.keyOf(ws, msg), id)
+      const k = d.keyOf(ws, msg);
+      forgeBoard.get(k, id, altKeys(msg, k))
         .then(r => d.send(ws, { type: 'forge_mod', ...r, id }))
         .catch(() => d.send(ws, { type: 'forge_mod', ok: false, id, reason: 'unavailable' }));
     },
     forge_report: (ws, msg) => {
       const id = String(msg.id);
-      forgeBoard.report(d.keyOf(ws, msg), id, String(msg.reason))
+      const k = d.keyOf(ws, msg);
+      forgeBoard.report(k, id, String(msg.reason), altKeys(msg, k))
         .then(r => d.send(ws, { type: 'forge_reported', id, ...r }))
         .catch(() => d.send(ws, { type: 'forge_reported', id, ok: false, reason: 'unavailable' }));
     },
     forge_unpublish: (ws, msg) => {
       const id = String(msg.id);
-      forgeBoard.unpublish(d.keyOf(ws, msg), id)
+      const k = d.keyOf(ws, msg);
+      forgeBoard.unpublish(k, id, altKeys(msg, k))
         .then(r => d.send(ws, { type: 'forge_unpublished', id, ...r }))
         .catch(() => d.send(ws, { type: 'forge_unpublished', id, ok: false, reason: 'unavailable' }));
     },

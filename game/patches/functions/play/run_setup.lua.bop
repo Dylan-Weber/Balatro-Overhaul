@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 569
+l 574
 RunSetup = RunSetup or {}
 local RS = RunSetup
 
@@ -77,7 +77,12 @@ function RS.all_decks()
 end
 
 local function deck_art(c, w, open)
-  if open then return lib().coated(lib().deck_sprite(c, w)) end
+  if open then
+    local s = lib().deck_sprite(c, w)
+    local FL = rawget(_G, 'ForgeForcedLook')
+    if FL and c.forge_look then FL.tag(s, c.forge_look) end
+    return lib().coated(s)
+  end
   local s = Sprite(0, 0, w, w * G.CARD_H / G.CARD_W, G.ASSET_ATLAS.centers, {x = 4, y = 0})
   s.states.drag.can = false
   return s

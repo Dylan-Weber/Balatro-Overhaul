@@ -91,7 +91,7 @@ R.DOS.lose_money({n = 3})
 check("lose $3", G.GAME.dollars == 7)
 G.GAME.dollars = 2
 R.DOS.lose_money({n = 3})
-check("lose $3 from $2 stops at 0", G.GAME.dollars == 0)
+check("lose $3 from $2 goes to -1 like Rental", G.GAME.dollars == -1)
 G.GAME.current_round.hands_left = 3
 R.DOS.lose_hands({n = 5})
 check("lose hands leaves 1", log.hands == -2)

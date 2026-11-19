@@ -202,7 +202,7 @@ function RI.card_node(key, w)
   local card = Card(0, 0, w, h, G.P_CARDS.empty, center, {bypass_discovery_center = true, bypass_discovery_ui = true, bypass_lock = true})
 r 5 220 %20%20 -
 r 5 219 %20%20 -
-l 318
+l 319
   area:emplace(card)
   return {n = G.UIT.O, config = {object = area}}
 end
@@ -227,6 +227,7 @@ RI.LICENCES = {
   {"Cryptid", "Some of the Deck Creator's random-value logic follows Cryptid, by MathIsFun_ and the Cryptid team.", "GNU GPL 3.0"},
   {"Balatro Multiplayer", "Based on Balatro Multiplayer by Virtualized and the BMP team: the multiplayer in this mod builds on their work. Thank you.", "GNU GPL 3.0"},
   {"iPhone and iPad", "The iPhone and iPad version was made by JohnG210. Thank you!", "GNU GPL 3.0"},
+  {"Play while you wait", "Playing solo while you wait for a multiplayer match was OkiMaSha's idea, and he found the bug that deleted the solo Continue. GrantDPowell helped build it for the ranked queue. Thank you both!", "GNU GPL 3.0"},
   {"Fonts", "m6x11plus by Daniel Linssen, Noto Sans and Go Noto (SIL Open Font Licence). They come from your copy of Balatro.", "From your copy"},
   {"Music and sounds", "Balatro's soundtrack by LouisF and its sounds come from your copy of Balatro. The public release ships no one else's music.", "From your copy"},
   {"Balatro Overhaul", "Code, art and texts made for this mod. Free software: you may use, study, change and share it under the GPL, keeping the credits.", "GNU GPL 3.0"},
@@ -761,7 +762,7 @@ function RI.open_whats_new(from)
   RI._wn_from = from
   UIK._pages.whats_new = 1
 r 32 1381 %20%20 -
-l 308
+l 314
   G.FUNCS.overlay_menu{definition = RI.whats_new_def(e)}
   return true
 end
@@ -1041,6 +1042,9 @@ mod_loc_register{
     ["Special thanks"] = "Remerciements",
     ["iPhone and iPad"] = "iPhone et iPad",
     ["The iPhone and iPad version was made by JohnG210. Thank you!"] = "La version iPhone et iPad a été faite par JohnG210. Merci !",
+    ["Play while you wait"] = "Jouer en attendant",
+    ["Playing solo while you wait for a multiplayer match was OkiMaSha's idea, and he found the bug that deleted the solo Continue. GrantDPowell helped build it for the ranked queue. Thank you both!"] =
+      "Jouer en solo en attendant une partie multijoueur est une idée d'OkiMaSha, et c'est lui qui a trouvé le bug qui supprimait la partie solo à continuer. GrantDPowell a aidé à le construire pour la file classée. Merci à vous deux !",
   },
   es = {
     ["A free fan mod for Balatro: online multiplayer, new modes, quests, achievements, The Casino, the Forge and lots of quality of life."] = "Un mod gratuito hecho por fans para Balatro: multijugador en línea, modos nuevos, misiones, logros, el Casino, la Forja y muchas mejoras de comodidad.",
@@ -1066,6 +1070,9 @@ mod_loc_register{
     ["Special thanks"] = "Agradecimientos especiales",
     ["iPhone and iPad"] = "iPhone y iPad",
     ["The iPhone and iPad version was made by JohnG210. Thank you!"] = "La versión para iPhone y iPad la hizo JohnG210. ¡Gracias!",
+    ["Play while you wait"] = "Jugar mientras esperas",
+    ["Playing solo while you wait for a multiplayer match was OkiMaSha's idea, and he found the bug that deleted the solo Continue. GrantDPowell helped build it for the ranked queue. Thank you both!"] =
+      "Jugar en solitario mientras esperas una partida multijugador fue idea de OkiMaSha, y él encontró el error que borraba la partida en solitario para continuar. GrantDPowell ayudó a construirlo para la cola clasificatoria. ¡Gracias a los dos!",
   },
 }
 

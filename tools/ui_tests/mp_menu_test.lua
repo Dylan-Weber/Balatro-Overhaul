@@ -58,7 +58,7 @@ local sent = {}
 local listeners = {}
 bom_events = {register = function(t, fn) listeners[t] = listeners[t] or {}; table.insert(listeners[t], fn); return true end}
 bom_core = {is_connected = function() return true end, send = function(m) sent[#sent + 1] = m; return true end, connect = function(fn) fn() end,
-    player_key = function() return string.rep("a", 24) end, mods_field = function() return {} end, disconnect = function() sent[#sent + 1] = {type = "disconnect"} end}
+    player_key = function() return string.rep("a", 24) end, mods_field = function() return {} end, deck_filter_field = function() return nil end, disconnect = function() sent[#sent + 1] = {type = "disconnect"} end}
 bom_room = {my_profile_name = function() return G.PROFILES[1].name end, is_default_name = function(n) return n == "" or n:match("^P%d*$") ~= nil end,
     game_version = function() return "test" end, version_text = function(v) return tostring(v) end, held_for = function() return nil end}
 bom_match = {get_phase = function() return 0 end, PHASE = {NONE = 0}}
@@ -115,8 +115,26 @@ G.FUNCS.mpm_enter()
 check("enter turns MP mode on", mpm_menu.is_active())
 local left, right, big = mpm_menu.left_specs(), mpm_menu.right_specs("quit"), mpm_menu.big_specs()
 check("left column", #left == 3 and left[1].label == "PROFILE" and left[2].id == "collection_button" and left[3].button == "mpm_open_friends")
-check("right column", #right == 3 and right[1].button == "mpm_exit" and right[2].button == "options" and right[3].button == "quit")
-check("big buttons", big[1].id == "main_menu_play" and big[2].mods and big[3].button == "mp_open_ranked")
+check("right column", #right == 3 and right[1].button == "mpm_open_casino" and right[1].label == "THE CASINO" and right[2].button == "options" and right[3].button == "quit")
+check("big buttons", big[1].id == "main_menu_play" and big[2].mods and big[3].id == "mpm_single_button" and big[3].button == "mpm_exit")
+G.casino_opened = nil
+G.FUNCS.open_tavern_hub = function() G.casino_opened = true; G.OVERLAY_MENU = {} end
+G.FUNCS.start_run = function() G.run_started = true end
+G.FUNCS.mpm_open_casino()
+check("casino button opens the Casino", G.casino_opened == true and mpm_menu.casino == true)
+G.FUNCS.start_run(nil, {})
+check("casino run starts when nothing waits", G.run_started == true)
+G.run_started = nil
+bom_waitplay = {blocks_single = function() return true end, searching = function() return true end, note = function(t) G.casino_note = t end}
+G.FUNCS.start_run(nil, {})
+check("casino run blocked while searching", G.run_started == nil and G.casino_note ~= nil, G.casino_note)
+G.FUNCS.start_run(nil, {mp_start = true})
+check("match start still goes through", G.run_started == true)
+G.run_started = nil
+check("singleplayer tile greyed while searching", mpm_menu.big_specs()[3].button == "nil")
+bom_waitplay = nil
+mpm_menu.casino = nil
+G.OVERLAY_MENU = nil
 local mods_btn = mpm_menu.mods_button(4.14, 1.75, 1.0)
 check("mods button has BETA sticker", find(mods_btn, function(n) return n.config and n.config.text == "BETA" end) ~= nil)
 check("mods button opens MP mods", find(mods_btn, function(n) return n.config and n.config.button == "mpm_open_mods" end) ~= nil)
@@ -131,6 +149,7 @@ G.FUNCS.open_multiplayer_menu()
 local w = last_window()
 check("open_multiplayer_menu opens PLAY", w and w.id == "mpm_play")
 build_all(w, "play")
+check("PLAY screen has RANKED entry", find(w.tabs[1].build(), function(n) return n.config and n.config.button == "mp_open_ranked" end) ~= nil)
 local daily_req = 0
 for _, m in ipairs(sent) do if m.type == "daily_get" then daily_req = daily_req + 1 end end
 check("daily and weekly requested", daily_req == 2, daily_req)

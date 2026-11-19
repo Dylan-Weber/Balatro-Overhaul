@@ -226,6 +226,7 @@ interface Room {
   pvpEndsAt?: number | null;
   pvpMsLeft?: number | null;
   moved?: boolean[];
+  waitStatus?: [string | null, string | null];
 }
 
 interface AnteClock {
@@ -519,6 +520,7 @@ function resultFor(winner: number | null, pid: number): 'win' | 'lose' | 'draw' 
 function detachSeat(room: Room, pid: number): BunWS | null {
   const s = room.sockets[pid] ?? null;
   if (pid < room.sockets.length) room.sockets[pid] = null;
+  if (room.waitStatus && pid < 2) room.waitStatus[pid] = null;
   if (s) {
     if (s.data.roomCode === room.code) s.data.roomCode = null;
     if (s.readyState === WS_OPEN) s.unsubscribe(room.code);
@@ -1230,7 +1232,7 @@ const L1_TYPES = ['match_history', 'contest', 'act', 'replay_get', 'replay_hide'
 const L5_TYPES = ['menu_info', 'name_check'];
 
 const ALLOWED_TYPES = new Set([
-  'create_room', 'join_room', 'find_match', 'cancel_search',
+  'create_room', 'join_room', 'find_match', 'cancel_search', 'wait_status',
   'room_joined', 'ready_state',
   'match_settings', 'match_start', 'player_name', 'client_hello',
   'blind_entered', 'blind_finished', 'game_over', 'match_finished',
@@ -1511,6 +1513,7 @@ function validateMessage(msg: Record<string, unknown>, byteLength: number): stri
   if (!msg || typeof msg !== 'object')         return 'not an object';
   if (typeof msg.type !== 'string')            return 'missing type';
   if (!ALLOWED_TYPES.has(msg.type as string))  return `unknown type: ${msg.type}`;
+  if (msg.type === 'wait_status' && !validWaitStatus(msg.status)) return 'wait_status: invalid status';
 
   const partyErr = validateParty(msg);
   if (partyErr) return partyErr;
@@ -1925,6 +1928,8 @@ function handleJoinRoom(ws: BunWS, msg: Record<string, unknown>): void {
   const base = { code: c, id: room.id, visibility: room.visibility, version: room.gameVersion, rejoined: rejoin, players: roomRoster(room), forge: forgeMods(room.mods) };
   if (room.sockets[0]) sendTo(room.sockets[0], { type: 'room_ready', ...base, host: true,  playerId: 0, token: room.tokens[0], oppBot: isBot(ws) });
   sendTo(ws, { type: 'room_ready', ...base, host: false, playerId: 1, token: room.tokens[1], settings: room.settings, hostName: room.playerNames[0] });
+  const hostWait = room.waitStatus?.[0];
+  if (hostWait) sendTo(ws, { type: 'wait_status', pid: 0, name: room.playerNames[0], status: hostWait });
   log('INFO', 'ROOM', `Joined ${c}${rejoin ? ' (back to held seat)' : ''}`);
 }
 
@@ -1937,7 +1942,7 @@ function handleFindMatch(ws: BunWS, msg: Record<string, unknown>): void {
   const qMods = sentOrPlain(ws, msg);
   if (!rankedQ && blockedMods(qMods).length > 0) { sendTo(ws, { type: 'room_error', reason: 'mods_private_only', mods: blockedMods(qMods) }); return; }
   ws.data.rankedQueue = rankedQ;
-  queue = queue.filter(s => s.readyState === WS_OPEN && s !== ws);
+  queue = queue.filter(s => s.readyState === WS_OPEN && s !== ws && !(rankedQ && ws.data.pkey && s.data.pkey === ws.data.pkey));
   const fp = ws.data.modsFpPlain ?? '';
   const ver = ws.data.gameVersion ?? '';
   const idx = queue.findIndex(s => (s.data.rankedQueue === true) === rankedQ && (rankedQ ? s.data.pkey !== ws.data.pkey : (s.data.modsFpPlain ?? '') === fp) && (s.data.gameVersion ?? '') === ver);
@@ -2030,6 +2035,25 @@ function handlePing(ws: BunWS, msg: Record<string, unknown>): void {
   sendTo(ws, { type: 'pong', room: !!getRoomForSocket(ws) || !!partyForSocket(ws as never) });
 }
 
+export const WAIT_STATUSES = ['solo', 'wait', 'lobby'];
+
+export function validWaitStatus(v: unknown): boolean {
+  return v === null || (typeof v === 'string' && WAIT_STATUSES.includes(v));
+}
+
+function handleWaitStatus(ws: BunWS, msg: Record<string, unknown>): void {
+  const room = getRoomForSocket(ws);
+  if (!room || inMatch(room)) return;
+  const pid = getPlayerId(room, ws);
+  if (pid < 0 || pid > 1) return;
+  const status = typeof msg.status === 'string' ? msg.status : null;
+  if (!room.waitStatus) room.waitStatus = [null, null];
+  room.waitStatus[pid] = status;
+  touchRoom(room);
+  const opp = getOpponentSocket(room, ws);
+  if (opp && opp.readyState === WS_OPEN) sendTo(opp, { type: 'wait_status', pid, name: room.playerNames[pid], status });
+}
+
 function handleCancelSearch(ws: BunWS): void {
   queue = queue.filter(s => s !== ws);
   sendTo(ws, { type: 'search_cancelled' });
@@ -2056,6 +2080,7 @@ function handleMatchStart(ws: BunWS, msg: Record<string, unknown>, _raw: string 
   const room = getRoomForSocket(ws);
   if (!room || room.sockets.length !== 2 || !seatSocket(room, 0) || !seatSocket(room, 1)) return;
   if (getPlayerId(room, ws) !== 0) return;
+  room.waitStatus = undefined;
 
   cancelDraft(room);
   cancelPick(room);
@@ -2142,6 +2167,13 @@ function handlePlayerDeck(ws: BunWS, msg: Record<string, unknown>): void {
   room.decks[pid] = msg.deck as string;
   const opp = getOpponentSocket(room, ws);
   if (opp) sendTo(opp, { type: 'opponent_deck', deck: msg.deck, pid });
+}
+
+function helloFromSocial(ws: BunWS, msg: Record<string, unknown>): void {
+  if (!ws.data.gameVersion && typeof msg.version === 'string' && VERSION_RE.test(msg.version)) ws.data.gameVersion = msg.version;
+  if (ws.data.name || ws.data.shownName) return;
+  const name = cleanName(msg.name);
+  if (name && name.length <= 32) ws.data.shownName = name;
 }
 
 function handleClientHello(ws: BunWS, msg: Record<string, unknown>): void {
@@ -3001,7 +3033,11 @@ function dispatchMessage(ws: BunWS, msg: Record<string, unknown>, str: string): 
   if (msg.type === 'remove_bot') { handleRemoveBot(ws, msg); return; }
   const rankedHandler = RANKED_HANDLERS[msg.type as string];
   if (rankedHandler) { rankedHandler(ws, msg, str); return; }
-  if (SOCIAL_TYPES.includes(msg.type as string)) { if (!isBot(ws) || msg.type === 'social_emote') social.handle(ws, msg); return; }
+  if (SOCIAL_TYPES.includes(msg.type as string)) {
+    if (msg.type === 'social_hello' && !isBot(ws)) helloFromSocial(ws, msg);
+    if (!isBot(ws) || msg.type === 'social_emote') social.handle(ws, msg);
+    return;
+  }
   if (handlePartyMessage(ws as never, msg)) return;
   if (msg.type === 'spec_board' || msg.type === 'spectate') { handleDuelSpectate(ws, msg); return; }
   if (msg.type === 'live_stat') return;
@@ -3622,6 +3658,7 @@ const HANDLERS: Record<string, Handler> = {
   find_match:      (ws, msg)     => handleFindMatch(ws, msg),
   list_rooms:      (ws, msg)     => handleListRooms(ws, msg),
   cancel_search:   (ws)          => handleCancelSearch(ws),
+  wait_status:     (ws, msg)     => handleWaitStatus(ws, msg),
   room_joined:     handleRoomJoined,
   ready_state:     handleReadyState,
   match_settings:  handleMatchSettings,
@@ -4101,7 +4138,7 @@ function raceProgress(room: Room, pid: number, msg: Record<string, unknown>): bo
   return true;
 }
 
-export const ROOM_JSON = ['lastPickPool', 'botJokerPool', 'lastPick', 'code', 'match', 'settings', 'gameHistory', 'lastActivity', 'rematchVotes', 'inLobby',
+export const ROOM_JSON = ['lastPickPool', 'waitStatus', 'botJokerPool', 'lastPick', 'code', 'match', 'settings', 'gameHistory', 'lastActivity', 'rematchVotes', 'inLobby',
   'playerNames', 'tokens', 'holdDeadline', 'dropReason', 'pvpPaused', 'snapshots', 'locations', 'decks', 'quick', 'endData', 'id', 'visibility', 'mods',
   'modsFp', 'gameVersion', 'createdAt', 'rankedSeats', 'ranked', 'rankedSeed', 'specBoards', 'specWatch', 'pvpMsLeft', 'moved'] as const;
 export const ROOM_SPECIAL = ['sockets', 'pvpTimer', 'holdTimer', 'rankedTo', 'anteClock', 'draft', 'pick', 'pvpEndsAt'] as const;

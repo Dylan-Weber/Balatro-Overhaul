@@ -129,7 +129,7 @@ local function build_shared()
         if type(t) == 'table' then
             SHARED[t] = true
 r 13 154 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 156
+l 165
                 if type(v) == 'table' then SHARED[v] = true end
             end
         end
@@ -192,10 +192,14 @@ local function fx_add(real, r, depth)
     if c and c ~= 0 then f.chips = f.chips + c; hit = true end
     local m = num(r.mult) or num(r.mult_mod) or num(r.h_mult)
     if m and m ~= 0 then f.mult = f.mult + m; hit = true end
-    local x = num(r.x_mult) or num(r.Xmult_mod) or num(r.xmult) or num(r.Xmult) or num(r.x_mult_mod)
+    local x = num(r.forge_xmult) or num(r.x_mult) or num(r.Xmult_mod) or num(r.xmult) or num(r.Xmult) or num(r.x_mult_mod)
     if x and x ~= 1 then f.xmult = f.xmult * x; hit = true end
-    local xc = num(r.x_chips) or num(r.Xchip_mod) or num(r.xchips) or num(r.Xchips)
+    local xc = num(r.forge_xchips) or num(r.x_chips) or num(r.Xchip_mod) or num(r.xchips) or num(r.Xchips)
     if xc and xc ~= 1 then f.xchips = (f.xchips or 1) * xc; hit = true end
+    local ec = num(r.forge_echips) or num(r.e_chips) or num(r.echips) or num(r.Echip_mod)
+    if ec and ec ~= 1 then f.echips = (f.echips or 1) * ec; hit = true end
+    local em = num(r.forge_emult) or num(r.e_mult) or num(r.emult) or num(r.Emult_mod)
+    if em and em ~= 1 then f.emult = (f.emult or 1) * em; hit = true end
     local d = num(r.dollars) or num(r.p_dollars)
     if d and d ~= 0 then f.dollars = f.dollars + d; hit = true end
     local rp = num(r.repetitions)
@@ -265,6 +269,11 @@ local function wrap_fx(p, real)
         local res = pack_all(base(self, ctx, ...))
         local r = res[1]
         if SB.fx and type(r) == 'table' and type(ctx) == 'table' and not ctx.blueprint then
+            if type(r.forge_applied) == 'table' then
+                for _, d in ipairs(r.forge_applied) do
+                    if type(d) == 'table' then pcall(fx_add, real, d, 0) end
+                end
+            end
             pcall(fx_add, real, r, 0)
         end
         return unpack(res, 1, res.n)

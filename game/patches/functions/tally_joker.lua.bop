@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 241
+l 265
 TALLY = TALLY or {}
 local T = TALLY
 
@@ -16,10 +16,16 @@ mod_loc_register{
     fr = {
         ["Tally Joker"] = "Tally Joker",
         ["A line under each Joker with its numbers"] = "Une ligne sous chaque Joker avec ses valeurs",
+        ["Tally Joker: Advanced"] = "Tally Joker : avancé",
+        ["Says how each Joker gets its number"] = "Dit comment chaque Joker obtient sa valeur",
+        ["Turn on Tally Joker first"] = "Activez d'abord Tally Joker",
     },
     es = {
         ["Tally Joker"] = "Tally Joker",
         ["A line under each Joker with its numbers"] = "Una línea bajo cada comodín con sus valores",
+        ["Tally Joker: Advanced"] = "Tally Joker: avanzado",
+        ["Says how each Joker gets its number"] = "Dice cómo consigue cada comodín su valor",
+        ["Turn on Tally Joker first"] = "Activa primero Tally Joker",
     },
 }
 
@@ -32,6 +38,10 @@ end
 
 function T.enabled()
     return G and G.SETTINGS and G.SETTINGS.tally_joker ~= false
+end
+
+function T.advanced()
+    return T.enabled() and G.SETTINGS.tally_advanced == true or false
 end
 
 local function in_run()
@@ -63,7 +73,7 @@ function T.now_word()
         local d = G.localization.descriptions.Joker.j_ride_the_bus
         for _, line in ipairs(d.text or {}) do
             local w = line:match('{C:inactive}%(([^{]+){')
-            if w and trim(w) ~= '' then word = trim(w) break end
+            if w and trim(w) ~= '' then word = trim((trim(w):gsub('%s*:$', ''))) break end
         end
     end)
     if not ok then word = false end
@@ -160,7 +170,7 @@ local function strip_word(g, word)
     local first = g[1]
     local t = first.text:gsub('^%s+', '')
     if t:sub(1, #word) ~= word then return nil end
-    local out = {{text = t:sub(#word + 1), colour = first.colour, bg = first.bg}}
+    local out = {{text = (t:sub(#word + 1):gsub('^%s*:', '')), colour = first.colour, bg = first.bg}}
     for i = 2, #g do out[#out + 1] = g[i] end
     return out
 end
@@ -169,7 +179,7 @@ local function pieces_of(g)
     local out = {}
     for _, s in ipairs(g) do
         local t = trim(s.text)
-        if t ~= '' and t ~= ',' then
+        if t ~= '' and t ~= ',' and t ~= ':' then
             local last = out[#out]
             if last and not s.bg and not last.bg and same_colour(last.colour, s.colour) then
                 last.text = last.text .. ' ' .. t
@@ -181,19 +191,33 @@ local function pieces_of(g)
     return out
 end
 
+local UNIT_COLOURS = {'CHIPS', 'MULT', 'MONEY'}
+
+local function unit_word(segs, i)
+    local nx = segs[i + 1]
+    if not nx or nx.paren or nx.bg or nx.text:find('%d') then return nil end
+    local w = nx.text:match('^%s+([^%s%p]+)')
+    if not w or #w > 10 then return nil end
+    return w
+end
+
 local function base_pieces(segs)
     local out, depth = {}, 0
-    for _, s in ipairs(split_parens(segs)) do
+    local list = split_parens(segs)
+    for i, s in ipairs(list) do
         if s.paren then
             depth = math.max(0, depth + (s.paren == '(' and 1 or -1))
         elseif depth == 0 and s.text:find('%d') and (s.bg or not (is_inactive(s.colour) or same_colour(s.colour, G.C.GREEN))) then
             local t = trim(s.text)
             local col = s.bg or s.colour
+            local unit = false
+            for _, k in ipairs(UNIT_COLOURS) do if same_colour(col, G.C[k]) then unit = true end end
+            local w = unit and unit_word(list, i)
             local last = out[#out]
-            if last and same_colour(last.colour, col) then
+            if last and same_colour(last.colour, col) and not last.unit and not w then
                 last.text = last.text .. ', ' .. t
             else
-                out[#out + 1] = {text = t, colour = col}
+                out[#out + 1] = {text = w and (t .. ' ' .. w) or t, colour = col, unit = w and true or nil}
             end
         end
     end
@@ -245,7 +269,7 @@ local function remove_new(r, n0, m0)
         local o = type(c) == 'table' and rawget(c, 'object')
         if o and fresh[o] and o.remove then pcall(o.remove, o); fresh[o] = nil end
 r 13 131 %20%20%20%20%20%20%20%20 -
-l 351
+l 1068
             if type(v) == 'table' and k ~= 'object' and not (getmetatable(v) and v.is) then walk(v, d + 1) end
         end
     end
@@ -258,7 +282,19 @@ end
 function T.describe(card)
     local list, mlist = G.I and G.I.NODE, G.I and G.I.MOVEABLE
     local n0, m0 = list and #list or 0, mlist and #mlist or 0
+    local gcu = rawget(_G, 'generate_card_ui')
+    local captured
+    if type(gcu) == 'function' then
+        rawset(_G, 'generate_card_ui', function(center, full, sv, ...)
+            if captured == nil and full == nil then captured = type(sv) == 'table' and sv or false end
+            return gcu(center, full, sv, ...)
+        end)
+    end
+    T.describing = true
     local ok, r = pcall(card.generate_UIBox_ability_table, card)
+    T.describing = false
+    if type(gcu) == 'function' then rawset(_G, 'generate_card_ui', gcu) end
+    T.last_vars = captured or nil
     if ok and type(r) == 'table' then pcall(remove_new, r, n0, m0) end
     if not ok then
         log_once('d_' .. tostring(card.config and card.config.center and card.config.center.key), r)
@@ -270,9 +306,24 @@ function T.describe(card)
     return segs
 end
 
+function T.retrigger_label(segs, base)
+    local first = segs[1] and trim(segs[1].text) or ''
+    local W = T.TEXT and T.TEXT.WORDS and (T.TEXT.WORDS[T.lang()] or T.TEXT.WORDS.en) or {}
+    local verb = W.retrigger and trim((W.retrigger:gsub('%%s', ''))) or 'Retrigger'
+    if first:lower():sub(1, #verb) ~= verb:lower() then return end
+    for _, p in ipairs(base) do
+        if not p.unit and p.text:match('^%d+$') then
+            p.text = string.format(W.retrigger or 'Retrigger %s', p.text)
+            p.colour = G.C.FILTER
+            return
+        end
+    end
+end
+
 function T.read(card)
     local segs = T.describe(card)
-    if not segs then return {now = {}, count = {}, chance = {}, base = {}} end
+    local vars = T.last_vars
+    if not segs then return {now = {}, count = {}, chance = {}, base = {}, segs = {}} end
     local groups = groups_of(segs)
     local word = T.now_word()
     local center = card.config and card.config.center or {}
@@ -304,9 +355,10 @@ function T.read(card)
         else
             base = base_pieces(segs)
             if #base == 0 then base = tag_pieces(segs) end
+            T.retrigger_label(segs, base)
         end
     end
-    return {now = now, count = count, chance = chance_pieces(segs), base = base}
+    return {now = now, count = count, chance = chance_pieces(segs), base = base, segs = segs, vars = vars}
 end
 
 local function num(v)
@@ -356,43 +408,65 @@ function T.share(card)
     local out = {}
     local function plus(v) return (num(v) or 0) < 0 and fmt(v) or ('+' .. fmt(v)) end
     local c0, c1 = lo.chips or 0, hi.chips or 0
-    if (num(c0) or 0) ~= 0 or (num(c1) or 0) ~= 0 then out[#out + 1] = {text = span(c0, c1, plus, 0), colour = G.C.CHIPS} end
+    if (num(c0) or 0) ~= 0 or (num(c1) or 0) ~= 0 then out[#out + 1] = {text = span(c0, c1, plus, 0), colour = G.C.CHIPS, unit = 'chips'} end
     local m0, m1 = lo.mult or 0, hi.mult or 0
-    if (num(m0) or 0) ~= 0 or (num(m1) or 0) ~= 0 then out[#out + 1] = {text = span(m0, m1, plus, 0), colour = G.C.MULT} end
+    if (num(m0) or 0) ~= 0 or (num(m1) or 0) ~= 0 then out[#out + 1] = {text = span(m0, m1, plus, 0), colour = G.C.MULT, unit = 'mult'} end
     local xc0, xc1 = lo.xchips or 1, hi.xchips or 1
     if (num(xc0) or 1) ~= 1 or (num(xc1) or 1) ~= 1 then
-        out[#out + 1] = {text = span(xc0, xc1, function(v) return 'X' .. fmt(v) end, 1), colour = G.C.WHITE, bg = G.C.CHIPS}
+        out[#out + 1] = {text = span(xc0, xc1, function(v) return 'X' .. fmt(v) end, 1), colour = G.C.WHITE, bg = G.C.CHIPS, unit = 'chips'}
     end
     local x0, x1 = lo.xmult or 1, hi.xmult or 1
     if (num(x0) or 1) ~= 1 or (num(x1) or 1) ~= 1 then
-        out[#out + 1] = {text = span(x0, x1, function(v) return 'X' .. fmt(v) end, 1), colour = G.C.WHITE, bg = G.C.MULT}
+        out[#out + 1] = {text = span(x0, x1, function(v) return 'X' .. fmt(v) end, 1), colour = G.C.WHITE, bg = G.C.MULT, unit = 'mult'}
+    end
+    for _, k in ipairs({'echips', 'emult'}) do
+        local e0, e1 = lo[k] or 1, hi[k] or 1
+        if (num(e0) or 1) ~= 1 or (num(e1) or 1) ~= 1 then
+            out[#out + 1] = {text = span(e0, e1, function(v) return '^' .. fmt(v) end, 1), colour = G.C.WHITE, bg = G.C[k] or G.C.DARK_EDITION, unit = k == 'echips' and 'chips' or 'mult'}
+        end
     end
     local d0, d1 = lo.dollars or 0, hi.dollars or 0
     if (num(d0) or 0) ~= 0 or (num(d1) or 0) ~= 0 then
         out[#out + 1] = {text = span(d0, d1, function(v) return ((num(v) or 0) < 0 and '-$' or '$') .. fmt(math.abs(num(v) or 0)) end, 0), colour = G.C.MONEY}
     end
     local r = math.max(num(lo.reps) or 0, num(hi.reps) or 0)
-    if r > 0 then out[#out + 1] = {text = localize('k_again_ex') .. ' x' .. fmt(r), colour = G.C.FILTER} end
+    if r > 0 then
+        local W = T.TEXT and T.TEXT.WORDS and (T.TEXT.WORDS[T.lang()] or T.TEXT.WORDS.en) or {}
+        out[#out + 1] = {text = string.format(W.retrigger or (localize('k_again_ex') .. ' x%s'), fmt(r)), colour = G.C.FILTER}
+    end
     return out
 end
 
-function T.pieces(card)
-    local info = T.cache_info(card)
-    local out = {}
-    local share = T.share(card)
-    if share and #share > 0 then
-        for _, p in ipairs(share) do out[#out + 1] = p end
-    else
-        for _, p in ipairs(#info.now > 0 and info.now or info.base) do
-            out[#out + 1] = share and {text = p.text, colour = G.C.UI.TEXT_INACTIVE, dim = true} or p
+function T.boosted(card, pieces)
+    local B = package.loaded['functions/forge/forge_boost']
+    if not (B and B.tag) then return pieces end
+    local ok, r = pcall(B.tag, card, pieces)
+    return ok and type(r) == 'table' and r or pieces
+end
+
+local function neutral(t)
+    t = trim(tostring(t or '')):gsub('%s', '')
+    return t == '+0' or t == '-0' or t == '$0' or t == '+$0' or t == 'X1' or t == 'x1' or t == '^1'
+end
+
+function T.drop_zero(list)
+    local groups = {}
+    for _, p in ipairs(list or {}) do
+        local t = type(p) == 'table' and type(p.text) == 'string' and p.text or ''
+        if t:find('%d') or #groups == 0 then
+            groups[#groups + 1] = {zero = neutral(t), p}
+        else
+            local g = groups[#groups]
+            g[#g + 1] = p
         end
     end
-    for _, p in ipairs(info.count) do out[#out + 1] = {text = p.text, colour = p.colour, bg = p.bg, second = true} end
-    if #info.chance > 0 then
-        local t = {}
-        for i, p in ipairs(info.chance) do t[i] = p.text end
-        out[#out + 1] = {text = table.concat(t, ', '), colour = G.C.GREEN, chance = true}
-    end
+    if #groups < 2 then return list end
+    local keep = {}
+    for _, g in ipairs(groups) do if not g.zero then keep[#keep + 1] = g end end
+    if #keep == #groups then return list end
+    if #keep == 0 then keep[1] = groups[1] end
+    local out = {}
+    for _, g in ipairs(keep) do for _, p in ipairs(g) do out[#out + 1] = p end end
     return out
 end
 
@@ -411,13 +485,9 @@ local function sig(pieces)
         local c = p.colour or {}
         local b = p.bg or {}
         t[i] = p.text .. '|' .. tostring(c[1]) .. tostring(c[2]) .. tostring(c[3]) .. '|' .. tostring(b[1]) .. tostring(b[2])
+            .. '|' .. tostring(p.row) .. tostring(p.gap) .. string.format('%.3f', p.s or 0)
     end
     return table.concat(t, '#')
-end
-
-local function light(c)
-    if is_inactive(c) then return G.C.UI.TEXT_LIGHT end
-    return c
 end
 
 local function text_w(text, s)
@@ -426,60 +496,653 @@ local function text_w(text, s)
     return f.FONT:getWidth(text) * (f.squish or 1) * s * (f.FONTSCALE or 1) / G.TILESIZE
 end
 
-local function row_nodes(list, k, s)
-    local nodes, w = {}, 0
-    for i, p in ipairs(list) do
-        if i > 1 then
-            nodes[#nodes + 1] = {n = G.UIT.B, config = {w = 0.14 * k, h = 0.1}}
-            w = w + 0.14 * k
-        end
-        local col = p.dim and p.colour or p.bg or light(p.colour)
-        nodes[#nodes + 1] = {n = G.UIT.C, config = {align = 'cm'}, nodes = {
-            {n = G.UIT.T, config = {text = p.text, colour = col, scale = s}},
-        }}
-        w = w + text_w(p.text, s)
-    end
-    return nodes, w
-end
-
 function T.room(card)
     local cw = card.T and card.T.w or G.CARD_W
     local room = cw
     local list = card.area and card.area.cards or {}
     for i, c in ipairs(list) do
         if c == card then
-            for _, o in ipairs({list[i - 1], list[i + 1]}) do
+            for _, j in ipairs({i - 1, i + 1}) do
+                local o = list[j]
                 if o and o.T then room = math.min(room, math.abs(o.T.x - card.T.x)) end
             end
         end
     end
-    return room * 0.9
+    return room - T.PILL_GAP * (card.T and card.T.w or G.CARD_W) / G.CARD_W
 end
 
-function T.definition(card, pieces)
-    local cw = card.T and card.T.w or G.CARD_W
-    local k = cw / G.CARD_W
-    local s = T.SCALE * k
-    local room = T.room(card)
-    local nodes, w = row_nodes(pieces, k, s)
-    local rows
-    if w + 0.1 * k > room then
-        local main, chance = {}, {}
-        for _, p in ipairs(pieces) do
-            if p.chance or p.second then chance[#chance + 1] = p else main[#main + 1] = p end
+T.ADV_SCALE = 0.32
+T.PILL_GAP = 0.16
+T.ADV_ROWS = 2
+T.MIN_SCALE = 0.3
+T.PAD = 0.05
+T.COPY = {j_blueprint = 'right', j_brainstorm = 'first'}
+
+local tx_ok, TX = pcall(require, 'functions/tally_text')
+T.TEXT = tx_ok and type(TX) == 'table' and TX or nil
+
+function T.lang()
+    local l = tostring(G and G.SETTINGS and G.SETTINGS.language or 'en-us'):sub(1, 2)
+    if T.TEXT and T.TEXT[l] then return l end
+    return 'other'
+end
+
+local function words(lang)
+    local W = T.TEXT and T.TEXT.WORDS or {}
+    return W[lang] or W.en or {}
+end
+
+local function vtext(v)
+    if v == nil then return nil end
+    if type(v) == 'number' or num(v) and type(v) ~= 'string' then return fmt(v) end
+    local s = tostring(v)
+    if s == '' or s == 'nil' then return nil end
+    return s
+end
+
+function T.fill(tpl, vars, lang, live)
+    if type(tpl) == 'table' then
+        for _, alt in ipairs(tpl) do
+            local r = T.fill(alt, vars, lang, live)
+            if r then return r end
         end
-        if #main > 0 and #chance > 0 then
-            rows = {}
-            for _, list in ipairs({main, chance}) do
-                rows[#rows + 1] = {n = G.UIT.R, config = {align = 'cm', maxw = room - 0.1 * k}, nodes = (row_nodes(list, k, s))}
+        return nil
+    end
+    if type(tpl) ~= 'string' then return nil end
+    vars = type(vars) == 'table' and vars or {}
+    local W = words(lang)
+    local missing = false
+    local s = tpl:gsub('#P(%d+),(%d+)#', function(a, b)
+        local n = num(vars[tonumber(a)]) or 1
+        local d = vtext(vars[tonumber(b)])
+        if not d then missing = true return '' end
+        local base = '{C:green}' .. string.format(W.chance or '%s in %s', '1', d) .. '{}'
+        if math.abs(n - 1) < 1e-9 then return base end
+        if num(d) and n >= num(d) then return string.format(W.always or '%s', base) end
+        return string.format(W.oops or '%s (%s)', base, '{C:green}' .. string.format(W.chance or '%s in %s', fmt(n), d) .. '{}')
+    end)
+    s = s:gsub('#(%d+)#', function(i)
+        local v = vtext(vars[tonumber(i)])
+        if not v then missing = true return '' end
+        return v
+    end)
+    s = s:gsub('#(%a[%w_]*)#', function(name)
+        local v = type(live) == 'table' and vtext(live[name]) or nil
+        if not v then missing = true return '' end
+        return v
+    end)
+    if missing then return nil end
+    return s
+end
+
+local function colour_of(name)
+    name = trim(name):lower()
+    local lc = rawget(_G, 'loc_colour')
+    if type(lc) == 'function' then
+        local ok, c = pcall(lc, name)
+        if ok and type(c) == 'table' then return c end
+    end
+    local map = {mult = 'MULT', chips = 'CHIPS', money = 'MONEY', attention = 'FILTER', green = 'GREEN', red = 'RED', blue = 'BLUE', white = 'WHITE', inactive = 'UI_INACTIVE'}
+    local k = map[name]
+    if k == 'UI_INACTIVE' then return G.C.UI and G.C.UI.TEXT_INACTIVE end
+    return k and G.C[k] or nil
+end
+
+function T.parse(s, vars)
+    local out, col, bg = {}, nil, nil
+    local i = 1
+    while i <= #s do
+        local a, b, tag = s:find('{([^}]*)}', i)
+        local text = s:sub(i, (a or (#s + 1)) - 1)
+        if text ~= '' then out[#out + 1] = {text = text, colour = col, bg = bg} end
+        if not a then break end
+        col, bg = nil, nil
+        for part in tag:gmatch('[^,]+') do
+            local k, v = part:match('^%s*(%a+):(.+)$')
+            if k == 'C' then col = colour_of(v)
+            elseif k == 'X' then bg = colour_of(v)
+            elseif k == 'V' then
+                local cs = type(vars) == 'table' and vars.colours
+                col = type(cs) == 'table' and cs[tonumber(v) or 0] or col
+            end
+        end
+        i = b + 1
+    end
+    return out
+end
+
+local function name_of(c)
+    local cen = c and c.config and c.config.center or {}
+    local ok, n = pcall(rawget(_G, 'localize'), {type = 'name_text', set = 'Joker', key = cen.key})
+    if ok and type(n) == 'string' and n ~= '' and n ~= 'ERROR' and not n:find(':', 1, true) then return n end
+    return tostring(cen.name or cen.key or '?')
+end
+T.name_of = name_of
+
+local function forge_mods()
+    return package.loaded['functions/forge/forge_power3'], package.loaded['functions/forge/forge_text'],
+        package.loaded['functions/forge/forge_rules'], package.loaded['functions/forge/forge_grow']
+end
+
+function T.forge_item(card)
+    local P = forge_mods()
+    if not (P and P.is_forge and P.item) then return nil end
+    local ok, is = pcall(P.is_forge, card)
+    if not (ok and is) then return nil end
+    local ok2, c = pcall(P.item, card)
+    if not (ok2 and type(c) == 'table') then return nil end
+    return c
+end
+
+local GROW = {become = true, next_look = true}
+
+function T.do_first(sen)
+    local depth, at = 0, nil
+    for i = 1, #sen do
+        local ch = sen:sub(i, i)
+        if ch == '{' then depth = depth + 1
+        elseif ch == '}' then depth = math.max(0, depth - 1)
+        elseif ch == ':' and depth == 0 and sen:sub(i + 1, i + 1) == ' ' then at = i break end
+    end
+    if not at then return sen end
+    local cond = trim(sen:sub(1, at - 1))
+    local gives = trim(sen:sub(at + 1))
+    if cond == '' or gives == '' then return sen end
+    local first = cond:match('^({[^}]*})') or ''
+    local rest = cond:sub(#first + 1)
+    return gives .. ', ' .. first .. rest:sub(1, 1):lower() .. rest:sub(2)
+end
+
+local function cap(str)
+    local first = str:match('^({[^}]*})') or ''
+    local rest = str:sub(#first + 1)
+    return first .. rest:sub(1, 1):upper() .. rest:sub(2)
+end
+
+function T.forge_markup(card, c, lang, W)
+    local _, FT, R, Grow = forge_mods()
+    if not FT then return nil end
+    local rules = {}
+    for _, r in ipairs(type(c.rules) == 'table' and c.rules or {}) do
+        if type(r) == 'table' and type(r.give) == 'table' and #r.give > 0 then rules[#rules + 1] = r end
+    end
+    if #rules == 0 then return false end
+    local flang = (lang == 'fr' or lang == 'es') and lang or 'en'
+    local x = card.ability and type(card.ability.extra) == 'table' and card.ability.extra or {}
+    local vars = FT.vars(card, c.vars, x, c.rules) or {}
+    local idx = {}
+    for i, r in ipairs(c.rules) do idx[r] = i end
+    local out = {}
+    for _, rule in ipairs(rules) do
+        local grow, every, handc
+        for _, g in ipairs(rule.give) do if GROW[g.id] then grow = grow or g end end
+        for _, o in ipairs(rule.only or {}) do
+            if o.id == 'every' then every = o elseif o.id == 'hand' and not o.neg then handc = o end
+        end
+        local line
+        if grow and every and R and R.every_left then
+            local n = math.max(1, math.floor(tonumber(every.n) or 5))
+            local left = R.every_left(every, x, idx[rule] or 1)
+            local done = math.max(0, math.min(n, n - left))
+            local unit = handc and FT.hand_name and FT.hand_name(handc.v) or (W.units and W.units[rule.when]) or W.times or ''
+            local what = Grow and Grow.text and Grow.text(grow, flang) or ''
+            line = '{C:attention}' .. done .. '/' .. n .. '{} ' .. unit .. ', ' .. (W.then_ or '') .. ' ' .. what
+        else
+            local ok, sen = pcall(FT.sentence, rule, flang, c.vars)
+            line = ok and type(sen) == 'string' and T.do_first(sen) or nil
+        end
+        if line and line ~= '' then out[#out + 1] = cap(line) end
+    end
+    local cen = card.config and card.config.center
+    if Grow and Grow.stage_count and Grow.stage_count(cen) > 1 then
+        out[#out + 1] = string.format(W.look or '%s/%s', Grow.stage_of(card, cen), Grow.stage_count(cen))
+    end
+    local B = package.loaded['functions/forge/forge_boost']
+    if B and B.info and B.targets then
+        local ok, info = pcall(B.info, c)
+        if ok and info then
+            local names, seen = {}, {}
+            for _, list in ipairs({info.retrigger, info.double}) do
+                for _, e in ipairs(list) do
+                    for _, j in ipairs(B.targets(card, e.v)) do
+                        if not seen[j] then seen[j] = true names[#names + 1] = name_of(j) end
+                    end
+                end
+            end
+            out[#out + 1] = #names > 0 and string.format(W.on or '%s', table.concat(names, ', ')) or W.none
+        end
+    end
+    if #out == 0 then return false end
+    local function sub(str) return (str:gsub('#(%d+)#', function(i) return vtext(vars[tonumber(i)]) or '0' end)) end
+    return sub(table.concat(out, '; ')), sub(out[1])
+end
+
+local function readable(c)
+    if c == nil or is_inactive(c) then return G.C.UI.TEXT_LIGHT end
+    if G.C.UI.TEXT_DARK and same_colour(c, G.C.UI.TEXT_DARK) then return G.C.UI.TEXT_LIGHT end
+    local l = 0.3 * (c[1] or 1) + 0.59 * (c[2] or 1) + 0.11 * (c[3] or 1)
+    if l < 0.3 then return G.C.UI.TEXT_LIGHT end
+    return c
+end
+
+function T.words(segs)
+    local out, open = {}, false
+    local split = {}
+    for _, s in ipairs(segs) do
+        local text = s.text or ''
+        local pos = 1
+        while true do
+            local a = text:find('\n', pos, true)
+            split[#split + 1] = {text = text:sub(pos, (a or (#text + 1)) - 1), colour = s.colour, bg = s.bg, dim = s.dim}
+            if not a then break end
+            split[#split + 1] = {brk = true}
+            pos = a + 1
+        end
+    end
+    for _, s in ipairs(split) do
+        if s.brk then
+            out[#out + 1] = {brk = true}
+            open = false
+        end
+        local text = s.text or ''
+        local pos = 1
+        while pos <= #text do
+            local a, b = text:find('%s+', pos)
+            local chunk = text:sub(pos, (a or (#text + 1)) - 1)
+            if chunk ~= '' then
+                local part = {text = chunk, colour = s.colour, bg = s.bg, dim = s.dim}
+                if open and out[#out] then
+                    local w = out[#out]
+                    w[#w + 1] = part
+                else
+                    out[#out + 1] = {part}
+                end
+                open = true
+            end
+            if not a then break end
+            open = false
+            pos = b + 1
+        end
+    end
+    return out
+end
+
+T.text_w = text_w
+
+local function word_w(w, s)
+    local n = 0
+    for _, p in ipairs(w) do n = n + text_w(p.text, s) end
+    return n
+end
+
+function T.wrap(ws, s, maxw)
+    local gap = math.max(text_w(' ', s), 0.04)
+    local rows, cur, cw, widest = {}, {}, 0, 0
+    local function push()
+        if #cur > 0 then
+            rows[#rows + 1] = cur
+            widest = math.max(widest, cw)
+        end
+        cur, cw = {}, 0
+    end
+    for _, w in ipairs(ws) do
+        if w.brk then
+            push()
+        else
+            local ww = word_w(w, s)
+            if #cur > 0 and cw + gap + ww > maxw then push() end
+            cw = cw + (#cur > 0 and gap or 0) + ww
+            cur[#cur + 1] = w
+        end
+    end
+    push()
+    return rows, widest
+end
+
+local function flat(rows, s, dim)
+    local out = {}
+    for ri, r in ipairs(rows) do
+        for wi, w in ipairs(r) do
+            for pi, p in ipairs(w) do
+                local col = (dim or p.dim) and G.C.UI.TEXT_INACTIVE or readable(p.bg or p.colour)
+                out[#out + 1] = {text = p.text, colour = col, row = ri, gap = wi > 1 and pi == 1, s = s}
             end
         end
     end
-    if not rows then
-        rows = {{n = G.UIT.R, config = {align = 'cm', maxw = room - 0.1 * k}, nodes = nodes}}
+    return out
+end
+T.flat = flat
+
+local function counter_limit()
+    if G.STATE ~= G.STATES.BLIND_SELECT then return nil end
+    local bs = G.blind_select
+    local y = bs and bs.T and bs.T.y
+    if bs and bs.states and bs.states.visible == false then return nil end
+    return y
+end
+
+function T.max_rows(card, s, k)
+    local st = T.cards[card] or {}
+    T.cards[card] = st
+    local rows, fit = T.rows_fit(card, s, k)
+    st.fit = fit
+    return rows
+end
+
+function T.area_top(area)
+    local d = area and area.T
+    if not d then return nil end
+    local list = area.cards or {}
+    if area == G.consumeables and #list == 0 then return nil end
+    local top = d.y
+    for _, x in ipairs({list[1], list[#list]}) do
+        if x and x.T and x.T.y < top then top = x.T.y end
+        if x and x.VT and x.VT.y < top then top = x.VT.y end
     end
+    return top
+end
+
+function T.rows_fit(card, s, k)
+    local c = card.T
+    local f = G.LANG and G.LANG.font
+    if not (c and f and f.FONT) then return T.ADV_ROWS, 1 end
+    local row_h = math.max(f.FONT:getHeight() * s * (f.FONTSCALE or 1) * (f.TEXT_HEIGHT_SCALE or 1) / G.TILESIZE, 0.01)
+    local avail
+    for _, area in ipairs({G.deck or false, G.consumeables or false}) do
+        local d = area and area.T
+        local top = T.area_top(area)
+        local inset = c.w * 0.1
+        if d and top and not (d.x >= c.x + c.w - inset or d.x + d.w <= c.x + inset or top < c.y) then
+            local a = top - (c.y + c.h) - 0.14 * k
+            if area == G.deck then a = a + c.h * T.LIFT_MAX end
+            avail = avail and math.min(avail, a) or a
+        end
+    end
+    local lim = counter_limit()
+    if lim and lim > c.y + c.h then
+        local a = lim - (c.y + c.h) - 0.14 * k
+        avail = avail and math.min(avail, a) or a
+    end
+    if not avail then return T.ADV_ROWS, 1 end
+    local rows = math.min(T.ADV_ROWS, math.max(1, math.floor(avail / row_h)))
+    if rows < T.ADV_ROWS and avail >= T.ADV_ROWS * row_h * T.SHRINK then return T.ADV_ROWS, avail / (T.ADV_ROWS * row_h) end
+    if rows == 1 and avail < row_h then return rows, math.max(0.5, avail / row_h) end
+    return rows, 1
+end
+
+function T.phone_scale(s, popup)
+    local PT = rawget(_G, 'PHONE_TEXT')
+    if not (PT and PT.on and PT.k and PT.on()) then return s end
+    local ok, k
+    if popup then
+        ok, k = pcall(PT.k, s, nil, PT.floor_px(PT.POPUP_FLOOR), PT.POPUP_MAX_K)
+    else
+        ok, k = pcall(PT.k, s)
+    end
+    return ok and type(k) == 'number' and s * k or s
+end
+
+function T.adv_rows(pieces, s, maxw)
+    local gap = math.max(text_w(' ', s), 0.04)
+    local rows, idx = {}, {}
+    for _, p in ipairs(pieces) do
+        local r = idx[p.row]
+        if not r then
+            r = {}
+            idx[p.row] = r
+            rows[#rows + 1] = {n = G.UIT.R, config = {align = 'cm', maxw = maxw}, nodes = r}
+        end
+        if p.gap and #r > 0 then r[#r + 1] = {n = G.UIT.B, config = {w = gap, h = 0.1}} end
+        r[#r + 1] = {n = G.UIT.T, config = {text = p.text, colour = p.colour, scale = s, pt_k = 1}}
+    end
+    return rows
+end
+
+function T.copy_target(card)
+    local center = card.config and card.config.center or {}
+    local how = T.COPY[center.key]
+    if not how and type(center.tally_copy) == 'function' then
+        local ok, t = pcall(center.tally_copy, center, card)
+        return true, ok and type(t) == 'table' and t ~= card and t or nil
+    end
+    if not how then return false end
+    local list = G.jokers and G.jokers.cards or {}
+    local target
+    if how == 'right' then
+        for i, c in ipairs(list) do if c == card then target = list[i + 1] break end end
+    else
+        target = list[1]
+    end
+    if target == card then target = nil end
+    return true, target
+end
+
+function T.incompat_segs()
+    local lang = T.lang()
+    local t = lang ~= 'other' and words(lang).incompat or nil
+    if not t then
+        local ok, l = pcall(rawget(_G, 'localize'), 'k_incompatible')
+        t = ok and type(l) == 'string' and l ~= '' and l ~= 'k_incompatible' and l or 'Incompatible'
+        t = t:sub(1, 1):upper() .. t:sub(2)
+    end
+    return {{text = t, colour = G.C.RED}}
+end
+
+local function hand_low()
+    if not (G.hand and G.hand.cards and #G.hand.cards > 0) then return nil end
+    local low
+    for _, c in ipairs(G.hand.cards) do
+        if c.base and c.base.id and not (c.ability and c.ability.effect == 'Stone Card') and (not low or c.base.id <= low.base.id) then low = c end
+    end
+    return low
+end
+
+T.LIVE = {
+    j_banner = function(_, v)
+        local r = G.GAME and G.GAME.current_round or {}
+        return {total = (num(v[1]) or 0) * (r.discards_left or 0)}
+    end,
+    j_delayed_grat = function(_, v)
+        local r = G.GAME and G.GAME.current_round or {}
+        return {total = (r.discards_used or 0) > 0 and 0 or (num(v[1]) or 0) * (r.discards_left or 0)}
+    end,
+    j_loyalty_card = function(card)
+        return {left = card.ability and card.ability.loyalty_remaining}
+    end,
+    j_raised_fist = function()
+        local low = hand_low()
+        if not low or low.debuff then return {} end
+        return {fist = 2 * (low.base.nominal or 0)}
+    end,
+}
+
+function T.info_segs(info)
+    local out = {}
+    local function add(p)
+        if #out > 0 and out[#out].text ~= '\n' then out[#out + 1] = {text = ' '} end
+        out[#out + 1] = {text = p.text, colour = p.colour, bg = p.bg}
+    end
+    for _, p in ipairs(T.drop_zero(#info.now > 0 and info.now or info.base)) do add(p) end
+    local second = {}
+    for _, p in ipairs(info.count or {}) do second[#second + 1] = p end
+    if #(info.chance or {}) > 0 then
+        local t = {}
+        for i, p in ipairs(info.chance) do t[i] = p.text end
+        second[#second + 1] = {text = table.concat(t, ', '), colour = G.C.GREEN}
+    end
+    if #second > 0 then
+        if #out > 0 then out[#out + 1] = {text = '\n'} end
+        for _, p in ipairs(second) do add(p) end
+    end
+    return out
+end
+
+local GAINS = {gain_chips = {'+', 'CHIPS'}, gain_mult = {'+', 'MULT'}, gain_xmult = {'+X', 'MULT'}}
+
+function T.forge_how(c, W)
+    for _, r in ipairs(type(c.rules) == 'table' and c.rules or {}) do
+        for _, g in ipairs(type(r) == 'table' and type(r.give) == 'table' and r.give or {}) do
+            local kind = GAINS[g.id]
+            local unit = W.one and W.one[r.when]
+            if kind and unit and num(g.n) then
+                return {{text = kind[1] .. fmt(num(g.n)), colour = G.C[kind[2]]}, {text = '/' .. unit}}
+            end
+        end
+    end
+    return nil
+end
+
+function T.candidates(card, info, adv, depth)
+    depth = depth or 0
+    local center = card.config and card.config.center or {}
+    local key = center.key
+    local is_copy, target = T.copy_target(card)
+    if is_copy then
+        local tc = target and target.config and target.config.center
+        if depth < 6 and tc and tc.blueprint_compat then
+            return T.candidates(target, T.cache_info(target), adv, depth + 1)
+        end
+        return {{segs = T.incompat_segs(), base = T.SCALE}}
+    end
+    local lang = T.lang()
+    local W = words(lang)
+    local list = {}
+    local c = T.forge_item(card)
+    if c then
+        if adv then
+            local m, first = T.forge_markup(card, c, lang, W)
+            if m == false then return {} end
+            if m then list[#list + 1] = {segs = T.parse(m, nil), base = T.ADV_SCALE} end
+            if first and first ~= m then list[#list + 1] = {segs = T.parse(first, nil), base = T.ADV_SCALE} end
+            local how = T.forge_how(c, W)
+            if how then
+                local segs = T.boosted(card, T.info_segs(info))
+                segs[#segs + 1] = {text = '\n'}
+                for _, sg in ipairs(how) do segs[#segs + 1] = sg end
+                list[#list + 1] = {segs = segs, base = T.ADV_SCALE}
+            end
+        end
+        list[#list + 1] = {segs = T.boosted(card, T.info_segs(info)), base = T.SCALE}
+        return list
+    end
+    local entry = not center.mod and T.TEXT and T.TEXT[lang] and T.TEXT[lang][key]
+    if type(entry) == 'table' then
+        local vars = type(info.vars) == 'table' and info.vars or {}
+        local live
+        if T.LIVE[key] then
+            local ok, r = pcall(T.LIVE[key], card, vars)
+            live = ok and r or nil
+        end
+        local n = T.fill(entry[1], vars, lang, live)
+        local a = adv and T.fill(entry[2], vars, lang, live) or nil
+        if adv and a == '' then return {} end
+        if a then list[#list + 1] = {segs = T.boosted(card, T.parse(a, vars)), base = T.ADV_SCALE} end
+        if n == '' and not adv then return {} end
+        if n and n ~= '' then list[#list + 1] = {segs = T.boosted(card, T.parse(n, vars)), base = T.SCALE} end
+        if #list > 0 then return list end
+    end
+    list[#list + 1] = {segs = T.boosted(card, T.info_segs(info)), base = T.SCALE}
+    return list
+end
+
+function T.label_text(card, adv)
+    local info = T.cache_info(card)
+    local list = T.candidates(card, info, adv == nil and T.advanced() or adv, 0)
+    local first = list[1]
+    if not first then return '' end
+    local t = {}
+    for _, s in ipairs(first.segs) do t[#t + 1] = s.text end
+    return trim((table.concat(t):gsub('%s*\n%s*', ' / ')))
+end
+
+function T.share_segs(share)
+    local lang = T.lang()
+    local W = words(lang)
+    local out = {}
+    for _, p in ipairs(share) do
+        if #out > 0 then out[#out + 1] = {text = ' '} end
+        out[#out + 1] = {text = p.text, colour = p.colour, bg = p.bg}
+        local unit = p.unit and W[p.unit]
+        if unit then out[#out + 1] = {text = ' ' .. unit} end
+    end
+    return out
+end
+
+function T.fit(card, ws, base)
+    if #ws == 0 then return nil end
+    local k = (card.T and card.T.w or G.CARD_W) / G.CARD_W
+    local s0 = T.phone_scale(base * k)
+    local maxw = T.room(card) - 2 * T.PAD * k
+    local nrows = T.max_rows(card, s0, k)
+    local fitk = (T.cards[card] or {}).fit or 1
+    if base ~= T.SCALE then
+        if fitk < 1 and s0 * fitk < T.MIN_SCALE * k * 0.8 then return nil end
+    else
+        fitk = 1
+    end
+    local smin = math.min(s0, T.MIN_SCALE * k) * fitk
+    local s = s0 * fitk
+    local brk = false
+    for _, w in ipairs(ws) do if w.brk then brk = true break end end
+    if base == T.SCALE and not brk then
+        local s1 = s
+        local floor1 = math.max(smin, s0 * fitk * 0.85)
+        for _ = 1, 10 do
+            local rows, widest = T.wrap(ws, s1, maxw)
+            if #rows == 1 and widest <= maxw + 1e-6 then return rows, s1 end
+            if s1 <= floor1 + 1e-6 then break end
+            s1 = math.max(floor1, s1 * 0.96)
+        end
+    end
+    for _ = 1, 40 do
+        local rows, widest = T.wrap(ws, s, maxw)
+        if #rows <= nrows and widest <= maxw + 1e-6 then return rows, s end
+        if s <= smin + 1e-6 then return nil end
+        s = math.max(smin, s * 0.96)
+    end
+    return nil
+end
+
+function T.pieces(card)
+    local info = T.cache_info(card)
+    local adv = T.advanced()
+    local cands = T.candidates(card, info, adv, 0)
+    if not adv then
+        local share = T.share(card)
+        if share and #share > 0 then
+            table.insert(cands, 1, {segs = T.share_segs(share), base = T.SCALE})
+        elseif share then
+            for _, c in ipairs(cands) do c.dim = true end
+        end
+    end
+    for _, c in ipairs(cands) do
+        local ws = T.words(c.segs)
+        local tries = {ws}
+        local joined, first, brk = {}, {}, false
+        for _, w in ipairs(ws) do
+            if w.brk then brk = true elseif not brk then first[#first + 1] = w end
+            if not w.brk then joined[#joined + 1] = w end
+        end
+        if brk and c.base == T.SCALE then tries[2] = joined tries[3] = first end
+        for _, t in ipairs(tries) do
+            local rows, s = T.fit(card, t, c.base)
+            if rows then return flat(rows, s, c.dim) end
+        end
+    end
+    local last = cands[#cands]
+    local ws = last and T.words(last.segs) or {}
+    if ws[1] and not ws[1].brk then
+        local rows, s = T.fit(card, {ws[1]}, last.base)
+        if rows then return flat(rows, s, last.dim) end
+    end
+    return {}
+end
+
+function T.definition(card, pieces)
+    local k = (card.T and card.T.w or G.CARD_W) / G.CARD_W
+    local s = pieces[1] and pieces[1].s or T.SCALE * k
     return {n = G.UIT.ROOT, config = {align = 'cm', colour = G.C.CLEAR, padding = 0}, nodes = {
-        {n = G.UIT.C, config = {align = 'cm', colour = {0, 0, 0, 0.62}, r = 0.025 * k, res = 0.15, padding = 0.05 * k}, nodes = rows},
+        {n = G.UIT.C, config = {align = 'cm', colour = {0, 0, 0, 0.62}, r = 0.025 * k, res = 0.15, padding = T.PAD * k}, nodes = T.adv_rows(pieces, s, T.room(card) - 2 * T.PAD * k)},
     }}
 end
 
@@ -512,6 +1175,66 @@ function T.show(card, pieces)
     st.box.attention_text = true
 end
 
+T.LIFT_GAP = 0.06
+T.LIFT_MAX = 0.15
+T.SHRINK = 0.75
+
+function T.lift(card, box)
+    local c, b = card.T, box.T
+    local off = box.alignment and box.alignment.offset
+    if not (c and b and off) then return end
+    local k = (c.w or G.CARD_W) / G.CARD_W
+    local base = -0.1 * k
+    local want = base
+    for _, area in ipairs({G.deck or false, G.consumeables or false}) do
+        local d = area and area.T
+        local top = T.area_top(area)
+        if d and top and not (d.x >= b.x + b.w or d.x + d.w <= b.x) and top >= c.y + c.h * 0.5 then
+            local over = c.y + c.h + base + b.h - (top - T.LIFT_GAP * k)
+            if over > 0 then want = math.min(want, base - over) end
+        end
+    end
+    want = math.max(want, base - T.LIFT_MAX * c.h)
+    if math.abs(off.y - want) > 1e-3 then
+        off.y = want
+        if box.config and box.config.offset then box.config.offset.y = want end
+    end
+end
+
+function T.counter_top(on)
+    local a = G.jokers and G.jokers.children and G.jokers.children.area_uibox
+    local row = a and a.UIRoot and a.UIRoot.children and a.UIRoot.children[2]
+    if not row or not row.children then return end
+    for i = 2, 4 do
+        local n = row.children[i]
+        if n and n.config then
+            if on then
+                if not n.config.tally_colour then n.config.tally_colour = n.config.colour or G.C.WHITE end
+                n.config.colour = G.C.CLEAR
+            elseif n.config.tally_colour then
+                n.config.colour = n.config.tally_colour
+                n.config.tally_colour = nil
+            end
+        end
+    end
+    if on and not (T.top_box and not T.top_box.REMOVED) then
+        local function t(c) return {n = G.UIT.T, config = c} end
+        T.top_box = UIBox{
+            definition = {n = G.UIT.ROOT, config = {align = 'cm', colour = G.C.CLEAR}, nodes = {
+                {n = G.UIT.R, config = {align = 'cm', padding = 0.03, no_fill = true}, nodes = {
+                    t{ref_table = G.jokers.config, ref_value = 'card_count', scale = 0.3, colour = G.C.WHITE},
+                    t{text = '/', scale = 0.3, colour = G.C.WHITE},
+                    t{ref_table = G.jokers.config, ref_value = 'card_limit', scale = 0.3, colour = G.C.WHITE},
+                }},
+            }},
+            config = {align = 'cr', offset = {x = 0.1, y = 0}, major = G.jokers, bond = 'Weak', can_collide = false},
+        }
+    elseif not on and T.top_box then
+        T.top_box:remove()
+        T.top_box = nil
+    end
+end
+
 function T.fit_counter(on)
     local a = G.jokers and G.jokers.children and G.jokers.children.area_uibox
     local row = a and a.UIRoot and a.UIRoot.children and a.UIRoot.children[2]
@@ -519,19 +1242,27 @@ function T.fit_counter(on)
     local txt = row and row.children and row.children[2]
     if not (b and b.config and txt and txt.T) then return end
     local want = 0.1
+    local top = false
     local first = on and G.jokers.cards[1]
     local st = first and T.cards[first]
     local box = st and st.box
     if box and box.states.visible and not box.REMOVED then
         local pad = row.config.padding or 0
         local bottom = box.T.y + box.T.h
-        want = math.max(0.1, 2 * (bottom + 0.04 + txt.T.h / 2 - row.T.y - pad))
+        local h = txt.T.h
+        local limit = counter_limit()
+        if limit and bottom + 0.04 + h + 0.12 > limit then
+            top = true
+        else
+            want = math.max(0.1, 2 * (bottom + 0.04 + h / 2 - row.T.y - pad))
+        end
     end
     if math.abs((b.config.h or 0) - want) > 0.02 then
         b.config.h = want
         a:recalculate()
     end
     a.states.collide.can = want <= 0.1
+    if top ~= (T.top_box ~= nil) then pcall(T.counter_top, top) end
 end
 
 local function hidden(card)
@@ -552,6 +1283,13 @@ function T.update()
     local dirty = fx_key ~= T.fx_key
     T.fx_key = fx_key
     local list = G.jokers.cards
+    local order = {}
+    for i, card in ipairs(list) do order[i] = tostring(card) end
+    order = table.concat(order, ',') .. tostring(T.advanced()) .. tostring(G.SETTINGS.language)
+    if order ~= T.order then
+        T.order = order
+        T.refresh_all()
+    end
     local here = {}
     for _, card in ipairs(list) do here[card] = true end
     for card in pairs(T.cards) do
@@ -564,7 +1302,10 @@ function T.update()
         local card = list[i]
         local st = T.cards[card] or {}
         T.cards[card] = st
-        if st.box then st.box.states.visible = not hidden(card) end
+        if st.box then
+            st.box.states.visible = not hidden(card)
+            pcall(T.lift, card, st.box)
+        end
         if hidden(card) then
             pcall(T.drop, card)
         else

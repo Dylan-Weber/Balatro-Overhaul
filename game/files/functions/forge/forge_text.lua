@@ -48,7 +48,7 @@ local S = {
     first_hand = "it is the {C:attention}first hand{} of the round", last_hand = "it is the {C:attention}last hand{} of the round",
     ante = "the ante is %s {C:attention}%d{}", jokers = "you have %s {C:attention}%d{} jokers", boss = "the blind is a {C:attention}Boss Blind{}",
     chance = "with a {C:green}#1# in %d{} chance",
-    chips = "{C:chips}+%s{} Chips", mult = "{C:mult}+%s{} Mult", xmult = "{X:mult,C:white} X%s {} Mult", money_give = "earn {C:money}$%s{}",
+    chips = "{C:chips}+%s{} Chips", mult = "{C:mult}+%s{} Mult", xmult = "{X:mult,C:white} X%s {} Mult", money_give = "earn {C:money}$%s{}", money_lose = "{C:red}-$%s{}",
     retrigger1 = "retrigger the card", retrigger = "retrigger the card {C:attention}%s{} times",
     gain_chips = "this joker gains {C:chips}+%s{} Chips", gain_mult = "this joker gains {C:mult}+%s{} Mult", gain_xmult = "this joker gains {X:mult,C:white} X%s {} Mult",
     create = "create a {C:%s}%s{} card", create_joker = "create a {C:attention}Joker{}", make_card = "create {C:attention}%s{}", room = "{C:inactive}(Must have room){}",
@@ -81,7 +81,7 @@ local S = {
     first_hand = "c'est la {C:attention}première main{} de la manche", last_hand = "c'est la {C:attention}dernière main{} de la manche",
     ante = "la mise est %s {C:attention}%d{}", jokers = "vous avez %s {C:attention}%d{} jokers", boss = "c'est une {C:attention}blinde de boss{}",
     chance = "avec {C:green}#1# chance sur %d{}",
-    chips = "{C:chips}+%s{} jetons", mult = "{C:mult}+%s{} Multi", xmult = "{X:mult,C:white} X%s {} Multi", money_give = "gagnez {C:money}%s ${}",
+    chips = "{C:chips}+%s{} jetons", mult = "{C:mult}+%s{} Multi", xmult = "{X:mult,C:white} X%s {} Multi", money_give = "gagnez {C:money}%s ${}", money_lose = "{C:red}-%s ${}",
     retrigger1 = "la carte se redéclenche", retrigger = "la carte se redéclenche {C:attention}%s{} fois",
     gain_chips = "ce joker gagne {C:chips}+%s{} jetons", gain_mult = "ce joker gagne {C:mult}+%s{} Multi", gain_xmult = "ce joker gagne {X:mult,C:white} X%s {} Multi",
     create = "crée une carte {C:%s}%s{}", create_joker = "crée un {C:attention}Joker{}", make_card = "crée {C:attention}%s{}", room = "{C:inactive}(Doit avoir de la place){}",
@@ -112,7 +112,7 @@ local S = {
     first_hand = "es la {C:attention}primera mano{} de la ronda", last_hand = "es la {C:attention}última mano{} de la ronda",
     ante = "la apuesta es %s {C:attention}%d{}", jokers = "tienes %s {C:attention}%d{} jokers", boss = "la ciega es un {C:attention}jefe{}",
     chance = "con {C:green}#1# probabilidad entre %d{}",
-    chips = "{C:chips}+%s{} fichas", mult = "{C:mult}+%s{} multi", xmult = "{X:mult,C:white} X%s {} multi", money_give = "gana {C:money}$%s{}",
+    chips = "{C:chips}+%s{} fichas", mult = "{C:mult}+%s{} multi", xmult = "{X:mult,C:white} X%s {} multi", money_give = "gana {C:money}$%s{}", money_lose = "{C:red}-$%s{}",
     retrigger1 = "la carta se reactiva", retrigger = "la carta se reactiva {C:attention}%s{} veces",
     gain_chips = "este joker gana {C:chips}+%s{} fichas", gain_mult = "este joker gana {C:mult}+%s{} multi", gain_xmult = "este joker gana {X:mult,C:white} X%s {} multi",
     create = "crea una carta de {C:%s}%s{}", create_joker = "crea un {C:attention}joker{}", make_card = "crea {C:attention}%s{}", room = "{C:inactive}(Debe haber espacio){}",
@@ -139,6 +139,7 @@ T.HW = {
 }
 T.RUN_WHEN = {discard = "When you discard", shop_enter = "When you enter the shop", ante_up = "When a new ante starts"}
 T.NOW_WHEN = {voucher = "When bought", deck = "At the start of the run", stake = "At the start of the run"}
+T.KIND_WHEN_TEXT = {hand = {hand_played = "When this hand is played", card_scored = "When one of its cards scores"}}
 T.W = W
 
 local SUIT_COLOUR = {Hearts = "hearts", Diamonds = "diamonds", Spades = "spades", Clubs = "clubs"}
@@ -160,10 +161,14 @@ local function game_loc(fn, fallback)
 end
 
 function T.suit_name(v, plural)
+  local R = package.loaded["functions/forge/forge_rules"]
+  if R and R.own_id and R.own_id("suit", v) then return R.own_label("suit", v) end
   return game_loc(function() return localize(v, plural and "suits_plural" or "suits_singular") end, (plural and EN_SUITS or EN_SUIT)[v] or tostring(v))
 end
 
 function T.hand_name(v)
+  local R = package.loaded["functions/forge/forge_rules"]
+  if R and R.own_id and R.own_id("hand", v) then return R.own_label("hand", v) end
   return game_loc(function() return localize(v, "poker_hands") end, tostring(v))
 end
 
@@ -195,6 +200,8 @@ function T.edition_name(v)
   if own then return own end
   return game_loc(function() return localize{type = "name_text", set = "Edition", key = "e_" .. v} end, EN_ED[v] or tostring(v))
 end
+
+T.BOSS_IS = {en = "the Boss Blind is {C:attention}%s{}", fr = "la Blinde de boss est {C:attention}%s{}", es = "la ciega jefe es {C:attention}%s{}"}
 
 function T.blind_name(v)
   if not BLIND_KEY[v] then return EN_BLIND[v] or tostring(v) end
@@ -273,6 +280,11 @@ function T.only_text(o, lang, vars)
   if id == "first_hand" or id == "last_hand" or id == "boss" then return s[id] end
   if id == "blind" then
     if o.v == "Boss" then return s.boss end
+    local Rl = package.loaded["functions/forge/forge_rules"]
+    if Rl and Rl.boss_key_ok and Rl.boss_key_ok(o.v) then
+      local Cat = package.loaded["functions/forge/forge_catalog"]
+      return string.format(T.BOSS_IS[lang] or T.BOSS_IS.en, Cat and Cat.value_label("bossblind", o.v) or tostring(o.v))
+    end
     return string.format(s.blind, T.blind_name(o.v))
   end
   if s[id] then return string.format(s[id], s[o.op or "at_least"] or s.at_least, tonumber(o.n) or 0) end
@@ -329,7 +341,10 @@ give_base = function(g, lang, vars, when)
   end
   if id == "var_set" then return string.format(s.var_set, var_name(vars, g.var), n) end
   if id == "var_chips" or id == "var_mult" then return string.format(s[id], n, var_name(vars, g.var)) end
-  if id == "money" then return string.format(s.money_give, n) end
+  if id == "money" then
+    if (tonumber(g.n) or 0) < 0 then return string.format(s.money_lose, T.fmt_n(-g.n)) end
+    return string.format(s.money_give, n)
+  end
   if id == "retrigger" then return (tonumber(g.n) or 1) <= 1 and s.retrigger1 or string.format(s.retrigger, n) end
   if id == "create" then
     if g.v == "Joker" then return s.create_joker end
@@ -362,6 +377,8 @@ function T.when_text(when, lang, kind)
   kind = kind or T.cur_kind
   local R = package.loaded["functions/forge/forge_rules"]
   local host = kind and R and R.host_of(kind) or "joker"
+  local kw = kind and T.KIND_WHEN_TEXT[kind]
+  if kw and kw[when] then return mod_loc and mod_loc(kw[when]) or kw[when] end
   if host == "card" or host == "use" then
     local hw = (T.HW[lang] or T.HW.en)[host]
     if hw and hw[when] then return hw[when] end

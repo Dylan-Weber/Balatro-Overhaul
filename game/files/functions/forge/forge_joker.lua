@@ -118,10 +118,11 @@ function FJ.center_for(c, index)
   end
   center.order = FJ.ORDER + (index or 1)
   center.name = "Forge " .. c.id
-  center.rarity = c.rarity
+  center.rarity = require("functions/forge/forge_rarities").of_joker(c) or c.rarity
   center.cost = c.cost
   center.forge_id = c.id
   center.forge_start_ed = require("functions/forge/forge_always").value(c)
+  center.forge_look = c.look
   center.forge_on = c.enabled
   center.mod = c.forge_mod or FJ.MOD
   center.forge_mod_badge = c.mod_id and ("forge_mod_" .. c.mod_id) or nil
@@ -176,6 +177,8 @@ function FJ.allowed_here()
 end
 
 function FJ.sync_pools()
+  local Ra = package.loaded["functions/forge/forge_rarities"]
+  if Ra and Ra.swapping then return end
   if not (G and G.P_CENTERS and G.P_CENTER_POOLS and G.P_CENTER_POOLS.Joker and G.P_JOKER_RARITY_POOLS) then return end
   local here = FJ.allowed_here()
   local touched = {}
@@ -194,9 +197,8 @@ function FJ.sync_pools()
           table.remove(pool, i)
         end
       end
-      for r = 1, 4 do
-        local pool = G.P_JOKER_RARITY_POOLS[r]
-        if pool and r ~= center.rarity then
+      for r, pool in pairs(G.P_JOKER_RARITY_POOLS) do
+        if type(pool) == "table" and r ~= center.rarity then
           local i = pool_has(pool, center)
           if i then table.remove(pool, i) end
         end
@@ -230,7 +232,7 @@ FJ.load_art = load_art
 function FJ.lines_for(c)
   if FJ.text_for then
     local ok, lines = pcall(FJ.text_for, c, FJ.lang())
-    if ok and type(lines) == "table" and #lines > 0 then return lines end
+    if ok and type(lines) == "table" then return lines end
     if not ok then log_once("text_" .. c.id, "text failed for " .. c.id .. ": " .. tostring(lines)) end
   end
   return {mod_loc and mod_loc("Does nothing yet") or "Does nothing yet"}
@@ -258,6 +260,7 @@ end
 
 function FJ.register_all()
   if not (G and G.P_CENTERS) then return end
+  pcall(require("functions/forge/forge_rarities").register)
   badge_colours()
   local live = {}
   for i, c in ipairs(Store.live_jokers()) do
@@ -272,6 +275,7 @@ function FJ.register_all()
 end
 
 function FJ.refresh(id)
+  pcall(require("functions/forge/forge_rarities").register)
   local list = Store.live_jokers()
   for i, c in ipairs(list) do
     if c.id == id then
@@ -320,8 +324,16 @@ function FJ.install_hooks()
       if center and center.forge then
         if self.debuff or center.forge_lost then return nil end
         local c = Store.get(center.forge_id)
-        if not (c and c.rules and #c.rules > 0) then return nil end
-        local ok, r = pcall(Rules.calculate, self, context, c.rules, c.vars)
+        local rules = c and c.rules
+        local extra = c and require("functions/forge/forge_rarityrules").extra_rules(c)
+        if extra then
+          local all = {}
+          for _, x in ipairs(rules or {}) do all[#all + 1] = x end
+          for _, x in ipairs(Rules.clean_rules(extra)) do all[#all + 1] = x end
+          rules = all
+        end
+        if not (rules and #rules > 0) then return nil end
+        local ok, r = pcall(Rules.calculate, self, context, rules, c.vars)
         if ok then return r end
         log_once("calc_" .. tostring(center.forge_id), "joker " .. tostring(center.key) .. " failed: " .. tostring(r))
         return nil
@@ -379,5 +391,7 @@ function FJ.install_hooks()
   if G and G.P_CENTERS and next(G.P_CENTERS) then pcall(FJ.register_all) end
   pcall(function() require("functions/forge/forge_power3").install() end)
 end
+
+require("functions/forge/forge_grow").joker(FJ)
 
 return FJ

@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 452
+l 459
 local Store = require("functions/forge/forge_store")
 local Mods = require("functions/forge/forge_mods")
 
@@ -96,6 +96,11 @@ local function mod_row(mod, rw)
     {n = G.UIT.T, config = {text = "  v" .. tostring(mod.version), scale = ls, colour = G.C.GOLD, shadow = true}},
   }
   if mod.mine then head[#head + 1] = {n = G.UIT.T, config = {text = "  " .. mod_loc("YOURS"), scale = ls, colour = G.C.GREEN, shadow = true}} end
+  local blv = require("functions/forge/forge_balance").worst(Mods.all_of(mod))
+  if blv then
+    head[#head + 1] = {n = G.UIT.C, config = {minw = 0.15}, nodes = {}}
+    head[#head + 1] = require("functions/forge/forge_balance").pill(blv, {scale = ls})
+  end
   local info = {{n = G.UIT.R, config = {align = "cl", padding = 0.02, maxw = iw}, nodes = head}}
   local function put(text, colour)
     info[#info + 1] = {n = G.UIT.R, config = {align = "cl", padding = 0.02}, nodes = {
@@ -435,9 +440,11 @@ local function export_body(build)
   end
 end
 
-function MU.open_export(mod_id, from)
+function MU.open_export(mod_id, from, opts)
+  opts = type(opts) == "table" and opts or {}
   local mod = mod_id and Mods.get(mod_id)
-  local st = {mod_id = mod and mod.id or nil, version = mod and mod.version or 0, from = from or "forge", pick = {}, info = {}}
+  local st = {mod_id = mod and mod.id or nil, version = math.max(mod and mod.version or 0, tonumber(opts.version) or 0), from = from or "forge", pick = {}, info = {}}
+  st.publish = opts.publish and mod and true or nil
   if mod then
     for _, c in ipairs(Mods.all_of(mod)) do
       if Mods.own_joker(c.src) or Mods.own_item(c.src) then st.pick[c.src] = true end
@@ -449,14 +456,14 @@ function MU.open_export(mod_id, from)
   end
   MU.export = st
   UIK._pages.forge_export_pick = 1
-  MU.show_export(mod and "about" or "what")
+  MU.show_export((mod and not st.publish) and "about" or "what")
 end
 
 function MU.show_export(tab)
   local st = MU.export
   if not st then return end
 r 32 1381 %20%20 -
-l 203
+l 216
   G.FUNCS.overlay_menu{definition = UIK.window{
     id = "forge_export",
     title = st.mod_id and mod_loc("EDIT THIS MOD") or mod_loc("EXPORT A MOD"),
@@ -466,12 +473,15 @@ l 203
     },
     tab = tab,
     back_func = "forge_export_back", back_inline = true,
-    footer = {UIK.button{label = mod_loc("EXPORT"), button = "forge_export_go", colour = UIK.C.ok, id = "forge_export_go"}},
+    footer = {UIK.button{label = st.publish and mod_loc("UPDATE ONLINE") or mod_loc("EXPORT"), button = "forge_export_go", colour = UIK.C.ok, id = "forge_export_go",
+      scale = st.publish and fit_scale(mod_loc("UPDATE ONLINE"), touch() and 3.0 or 2.85, touch() and 0.5 or 0.47) or nil}},
   }}
 end
 
 local function back_to(from)
   if from == "mods" then return reopen_mods() end
+  local O = rawget(_G, "ForgeOnline")
+  if from == "online" and O and O.open then return O.open("mine") end
   local UI = rawget(_G, "JokerForge") and JokerForge.ui
   if UI and UI.reopen then UI.reopen("my") else G.FUNCS.exit_overlay_menu() end
 end
@@ -508,6 +518,14 @@ G.FUNCS.forge_export_go = function(e)
   end
   st.err = nil
   play_sound("card1", 1.1, 0.6)
+  local O = rawget(_G, "ForgeOnline")
+  if st.publish and O and O.open and O.publish then
+    MU.export = nil
+    O.open("mine")
+    O.publish(mod.id)
+    O.state.msg = {text = string.format(mod_loc("Publishing %s..."), mod.name), colour = G.C.UI.TEXT_LIGHT}
+    return UIK.refresh()
+  end
   MU.show_done(mod, path, st.from)
 end
 
@@ -617,6 +635,7 @@ local function register_strings()
       ["There is nothing in it."] = "Il est vide.", ["It is too big (2 MB at most)."] = "Il est trop gros (2 Mo au plus).",
       ["This is not a Forge mod file."] = "Ce n'est pas un fichier de mod de La Forge.", ["It was made with a newer game. Update first."] = "Il vient d'une version plus récente du jeu. Mettez à jour d'abord.",
       ["Could not read the file."] = "Impossible de lire le fichier.", ["Could not save the file."] = "Impossible d'enregistrer le fichier.",
+      ["UPDATE ONLINE"] = "METTRE À JOUR EN LIGNE",
       ["EXPORT A MOD"] = "EXPORTER UN MOD", ["EDIT THIS MOD"] = "MODIFIER CE MOD", ["EXPORT"] = "EXPORTER", ["Details"] = "Détails",
       ["Make something in the Builder first."] = "Créez d'abord quelque chose dans le Créateur.",
       ["Name"] = "Nom", ["Author"] = "Auteur", ["About it (two short lines)"] = "Description (deux lignes courtes)",
@@ -645,6 +664,7 @@ local function register_strings()
       ["There is nothing in it."] = "Está vacío.", ["It is too big (2 MB at most)."] = "Es demasiado grande (2 MB como máximo).",
       ["This is not a Forge mod file."] = "No es un archivo de mod de La Forja.", ["It was made with a newer game. Update first."] = "Viene de una versión más nueva del juego. Actualiza primero.",
       ["Could not read the file."] = "No se pudo leer el archivo.", ["Could not save the file."] = "No se pudo guardar el archivo.",
+      ["UPDATE ONLINE"] = "ACTUALIZAR EN LÍNEA",
       ["EXPORT A MOD"] = "EXPORTAR UN MOD", ["EDIT THIS MOD"] = "EDITAR ESTE MOD", ["EXPORT"] = "EXPORTAR", ["Details"] = "Detalles",
       ["Make something in the Builder first."] = "Crea algo primero en el Creador.",
       ["Name"] = "Nombre", ["Author"] = "Autor", ["About it (two short lines)"] = "Descripción (dos líneas cortas)",

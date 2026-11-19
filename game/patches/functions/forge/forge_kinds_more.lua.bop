@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 453
+l 572
 local Store = require("functions/forge/forge_store")
 local Cat = require("functions/forge/forge_catalog")
 local D = require("functions/forge/forge_doc")
@@ -53,7 +53,7 @@ end
 
 local function lines_of(c)
   local ok, lines = pcall(D.lines, c, FJ.lang())
-  if not ok or type(lines) ~= "table" or #lines == 0 then
+  if not ok or type(lines) ~= "table" then
     log_once("text_" .. tostring(c.id), "text failed for " .. tostring(c.id) .. ": " .. tostring(lines))
     lines = {mod_loc("Does nothing yet")}
   end
@@ -96,6 +96,7 @@ local function register_seal(c, i)
   p.order = M.SEAL_ORDER + i
   p.forge_kind = "seal"
   p.forge_id = c.id
+  p.forge_look = c.look
   p.forge_on = c.enabled
   G.P_SEALS[key] = p
   local ok, err = pcall(seal_sprite, c)
@@ -166,6 +167,13 @@ function M.pick_key(list)
   return pseudorandom_element(from, pseudoseed("forge_pick_pack"))
 end
 
+function M.type_pack_art(tc)
+  local a = type(tc) == "table" and type(tc.art) == "table" and tc.art
+  if not (a and a.file) then return nil end
+  local atlas = FJ.load_art(tc)
+  return atlas ~= "Joker" and atlas or nil
+end
+
 function M.booster_center(c, center)
   local f = fields(c)
   local pack = M.PACK_SAMPLE[f.pack] and f.pack or "Arcana"
@@ -173,6 +181,12 @@ function M.booster_center(c, center)
   local picked = Cat.chosen_pack(c) and Cat.pack_cards(c) or nil
   if picked then pack = M.pick_look(picked) end
   center.forge_pick = picked
+  local tid = R.own_id("ctype", f.pack)
+  local ty = tid and require("functions/forge/forge_types").by_id[tid]
+  center.forge_type_pack = ty and ty.set or nil
+  center.group_key = ty and ("k_forge_tpack_" .. c.id) or nil
+  local dict = ty and G.localization and G.localization.misc and G.localization.misc.dictionary
+  if dict then dict[center.group_key] = c.name ~= "" and c.name or ty.c.name end
   center.forge_edition = require("functions/forge/forge_editions").pack_edition(c)
   center.set = "Booster"
   center.kind = picked and "Chosen" or pack
@@ -185,6 +199,8 @@ function M.booster_center(c, center)
   if not (c.art and (c.art.file or c.art.atlas)) then
     local sample = G.P_CENTERS["p_" .. M.PACK_SAMPLE[pack] .. "_" .. string.lower(size) .. "_1"] or G.P_CENTERS.p_arcana_normal_1
     center.atlas, center.pos = sample.atlas or "Booster", sample.pos
+    local ta = ty and M.type_pack_art(ty.c)
+    if ta then center.atlas, center.pos = ta, {x = 0, y = 0} end
   end
 end
 
@@ -205,6 +221,12 @@ function M.register_all()
   M.sync_pools()
   local ok, err = pcall(M.register_collabs)
   if not ok then log_once("collabs", "collabs failed: " .. tostring(err)) end
+  local oks, errs = pcall(require("functions/forge/forge_suits").register)
+  if not oks then log_once("suits", "suits failed: " .. tostring(errs)) end
+  local okk, errk = pcall(require("functions/forge/forge_suitskins").sync)
+  if not okk then log_once("suitskins", "suit skins failed: " .. tostring(errk)) end
+  local okh, errh = pcall(require("functions/forge/forge_hands").register)
+  if not okh then log_once("hands", "hands failed: " .. tostring(errh)) end
 end
 
 function M.refresh(id)
@@ -220,11 +242,19 @@ function M.refresh(id)
   M.sync_pools()
   local ok, err = pcall(M.register_collabs)
   if not ok then log_once("collabs", "collabs failed: " .. tostring(err)) end
+  local oks, errs = pcall(require("functions/forge/forge_suits").register)
+  if not oks then log_once("suits", "suits failed: " .. tostring(errs)) end
+  local okk, errk = pcall(require("functions/forge/forge_suitskins").sync)
+  if not okk then log_once("suitskins", "suit skins failed: " .. tostring(errk)) end
+  local okh, errh = pcall(require("functions/forge/forge_hands").register)
+  if not okh then log_once("hands", "hands failed: " .. tostring(errh)) end
 end
 
 function M.inject_loc()
   if not (G and G.localization and G.localization.descriptions) then return end
   pcall(M.collab_names)
+  pcall(require("functions/forge/forge_suits").inject_loc)
+  pcall(require("functions/forge/forge_hands").inject_loc)
   local d = G.localization.descriptions
   local labels = G.localization.misc and G.localization.misc.labels
   d.Other = d.Other or {}
@@ -331,6 +361,92 @@ function M.small_art(c, name, w, h)
   return nil
 end
 
+function M.blind_anim(c)
+  local a = c.art or {}
+  if not (G and G.ANIMATION_ATLAS and G.ASSET_ATLAS and a.file and love.filesystem.getInfo(a.file)) then return nil end
+  local ok, data = pcall(love.image.newImageData, a.file)
+  if not (ok and data and data:getWidth() == 34 and data:getHeight() == 34) then return nil end
+  local base = G.ANIMATION_ATLAS.blind_chips
+  local frames = base and base.frames or 21
+  local strip = love.image.newImageData(34 * frames, 34)
+  for i = 0, frames - 1 do strip:paste(data, i * 34, 0, 0, 0, 34, 34) end
+  local name = "forge_bl_" .. c.id
+  local atlas = FJ.atlas_from_data(name, strip, 34, 34)
+  if not atlas then return nil end
+  G.ASSET_ATLAS[name] = nil
+  FJ.atlas_cache[name] = nil
+  atlas.frames, atlas.type, atlas.forge_blind = frames, "animation_atli", true
+  G.ANIMATION_ATLAS[name] = atlas
+  return atlas
+end
+
+function M.stake_atlas(id)
+  local c = id and Store.get_item(id)
+  if not (c and c.kind == "stake" and G and G.ASSET_ATLAS) then return nil end
+  local a = c.art or {}
+  local info = a.file and love.filesystem.getInfo(a.file)
+  if not info then return nil end
+  local name = "forge_stake_" .. c.id
+  local stamp = a.file .. ":" .. tostring(info.modtime) .. ":" .. tostring(info.size) .. ":" .. tostring(G.SETTINGS and G.SETTINGS.GRAPHICS and G.SETTINGS.GRAPHICS.texture_scaling)
+  M.stake_arts = M.stake_arts or {}
+  local hit = M.stake_arts[c.id]
+  if not (hit and hit.stamp == stamp and G.ASSET_ATLAS[name]) then
+    hit = {stamp = stamp, ok = M.small_art(c, name, 29, 29) ~= nil}
+    M.stake_arts[c.id] = hit
+  end
+  return hit.ok and G.ASSET_ATLAS[name] or nil
+end
+
+function M.install_art_hooks()
+  Hooks.wrap("AnimatedSprite", "set_sprite_pos", function(orig) return function(self, pos, ...)
+    local A = G.ANIMATION_ATLAS
+    local want = type(pos) == "table" and pos.forge_atlas
+    if A and want and A[want] then
+      self.atlas = A[want]
+    elseif A and not want and not self.forge_keep and type(self.atlas) == "table" and self.atlas.forge_blind and A.blind_chips then
+      self.atlas = A.blind_chips
+    end
+    return orig(self, pos, ...)
+  end end, {id = "forge.blind_art"})
+  Hooks.wrap("AnimatedSprite", "reset", function(orig) return function(self, ...)
+    self.forge_keep = true
+    local r = Hooks.pack(pcall(orig, self, ...))
+    self.forge_keep = nil
+    if not r[1] then error(r[2], 0) end
+    return unpack(r, 2, r.n)
+  end end, {id = "forge.blind_art_reset"})
+  Hooks.wrap(_G, "get_stake_sprite", function(orig) return function(_stake, _scale, ...)
+    local r = Hooks.pack(orig(_stake, _scale, ...))
+    local spr, g = r[1], G.GAME
+    if type(spr) == "table" and g and g.forge_stake and G.STAGE == G.STAGES.RUN and _stake == (g.stake or 1) then
+      local ok, atlas = pcall(M.stake_atlas, g.forge_stake)
+      if ok and atlas then
+        spr.atlas = atlas
+        spr:set_sprite_pos({x = 0, y = 0})
+      end
+    end
+    return Hooks.unpack(r)
+  end end, {id = "forge.stake_art"})
+end
+
+function M.install_desc_hooks()
+  Hooks.wrap("G.UIDEF", "card_h_popup", function(orig) return function(card, ...)
+    local center = type(card) == "table" and card.config and card.config.center
+    local was = M.popup_forge
+    M.popup_forge = type(center) == "table" and center.forge_id ~= nil or nil
+    local r = Hooks.pack(pcall(orig, card, ...))
+    M.popup_forge = was
+    if not r[1] then error(r[2], 0) end
+    return unpack(r, 2, r.n)
+  end end, {id = "forge.popup_mark"})
+  Hooks.wrap(_G, "desc_from_rows", function(orig) return function(desc_nodes, empty, ...)
+    if M.popup_forge and not empty and type(desc_nodes) == "table" and #desc_nodes == 0 then
+      return {n = G.UIT.R, config = {align = "cm"}, nodes = {}}
+    end
+    return orig(desc_nodes, empty, ...)
+  end end, {id = "forge.no_empty_desc"})
+end
+
 local function register_tag(c, i)
   local key = M.tag_key(c)
   local p = G.P_TAGS[key] or {set = "Tag", discovered = true, unlocked = true, alerted = true, key = key}
@@ -344,6 +460,7 @@ local function register_tag(c, i)
   p.forge_kind = "tag"
   p.forge_id = c.id
   p.forge_copy = sum(c, "double") > 0 or nil
+  p.forge_look = c.look
   p.min_ante = nil
   G.P_TAGS[key] = p
 end
@@ -373,14 +490,16 @@ local function register_blind(c, i)
   p.dollars = math.floor(tonumber(f.reward) or 5)
   p.mult = tonumber(f.size) or 2
   p.debuff = debuff
-  p.pos = (a.atlas == "blind_chips" and {x = 0, y = a.y or 0}) or (from and from.pos) or G.P_BLINDS.bl_wall.pos
-  p.atlas = nil
+  local anim = M.blind_anim(c)
+  p.pos = (anim and {x = 0, y = 0, forge_atlas = anim.name}) or (a.atlas == "blind_chips" and {x = 0, y = a.y or 0}) or (from and from.pos) or G.P_BLINDS.bl_wall.pos
+  p.atlas = anim and anim.name or nil
   local adv = c.mode == "advanced"
   p.boss = {min = adv and math.max(1, math.floor(tonumber(f.min_ante) or 1)) or 1, max = 10, showdown = adv and f.showdown and true or nil}
   p.blind_types = {"boss"}
   p.boss_colour = (adv and G.C[f.colour or ""]) or (from and from.boss_colour) or G.C[f.colour or ""] or G.C.RED
   p.forge_kind = "blind"
   p.forge_id = c.id
+  p.forge_look = c.look
   G.P_BLINDS[key] = p
 end
 
@@ -447,7 +566,7 @@ end
 
 local function tag_joker(rarity, area)
   local r = tonumber(rarity) or 1
-  return create_card("Joker", area, r == 4, M.RARITY_ROLL[r], nil, nil, nil, "forge_tag")
+  return create_card("Joker", area, r == 4, R.own_id("rarity", rarity) and rarity or M.RARITY_ROLL[r], nil, nil, nil, "forge_tag")
 end
 
 local function open_pack(key)
@@ -458,8 +577,10 @@ local function open_pack(key)
   card.from_tag = true
 r 9 216 %20%20 -
 r 3 1446 %20%20 -
-l 33
+l 37
 end
+
+function M.open_pack(key) return open_pack(key) end
 
 local function pack_key(v)
   if R.own_id("pack", v) then
@@ -473,6 +594,8 @@ local function pack_key(v)
   end
   return M.MEGA[v] or M.MEGA.Arcana
 end
+
+M.pack_key = pack_key
 
 local function level_hand(tag, hand, n)
   if not (G.GAME.hands[hand]) then return end
@@ -493,13 +616,16 @@ function M.tag_apply(tag, ctx, p)
   if t == "shop_final_pass" and not (G.shop and G.shop_jokers) then return nil end
   local lock = tag.ID
 r 9 133 %20%20 -
-l 11
+l 14
   local card = nil
   local later = {}
   for _, e in ipairs(c.effects or {}) do
     local n = tonumber(e.n) or 1
     local id = e.id
-    if id == "money" then later[#later + 1] = function() ease_dollars(n) end
+    if id == "money" then later[#later + 1] = function()
+      local m = R.money_cut(n)
+      if m ~= 0 then ease_dollars(m) end
+    end
     elseif id == "money_per_skip" then later[#later + 1] = function() ease_dollars(n * (G.GAME.skips or 0)) end
     elseif id == "free_joker" then
       if t == "store_joker_create" and ctx.area and not card then
@@ -540,7 +666,7 @@ l 2
     elseif id == "coupon" then
 r 9 451 %20%20%20%20%20%20 -
 r 9 449 %20%20%20%20%20%20%20%20 -
-l 41
+l 45
         later[#later + 1] = function()
           for _, v in pairs(G.shop_jokers.cards) do v.ability.couponed = true; v:set_cost() end
           for _, v in pairs(G.shop_booster.cards) do v.ability.couponed = true; v:set_cost() end
@@ -569,6 +695,10 @@ l 41
         G.GAME.used_vouchers[key] = true
         later[#later + 1] = function() Card.apply_to_run(nil, G.P_CENTERS[key]) end
       end
+    elseif R.SELECT and R.SELECT.RUN[id] then
+      later[#later + 1] = function() R.SELECT.apply(e) end
+    elseif R.STICKERS and R.STICKERS.RUN[id] then
+      later[#later + 1] = function() R.STICKERS.apply(e) end
     elseif id == "hands_next" then
       G.GAME.round_bonus = G.GAME.round_bonus or {next_hands = 0, discards = 0}
       G.GAME.round_bonus.next_hands = (G.GAME.round_bonus.next_hands or 0) + math.floor(n)
@@ -583,7 +713,7 @@ l 41
       if not ok then log_once("tag_" .. c.id, "tag effect failed: " .. tostring(err)) end
     end
 r 9 143 %20%20%20%20 -
-l 143
+l 145
     return true
   end)
   tag.triggered = true
@@ -624,6 +754,7 @@ function M.blind_set(blind)
     ease_hands_played(-blind.hands_sub)
   end
   if flags.hand_size_minus then G.hand:change_size(-math.floor(tonumber(flags.hand_size_minus) or 1)) end
+  if flags.select_cap and R.SELECT then R.SELECT.cap(flags.select_cap) end
 end
 
 function M.blind_restore(blind, disabling)
@@ -637,6 +768,7 @@ function M.blind_restore(blind, disabling)
       for _, v in ipairs(G.hand.cards) do if v.facing == "back" then v:flip() end end
     end
   end
+  if flags.select_cap and R.SELECT then R.SELECT.uncap() end
   if flags.hand_size_minus then
     local n = math.floor(tonumber(flags.hand_size_minus) or 1)
     G.hand:change_size(n)
@@ -879,14 +1011,28 @@ end
 
 G.FUNCS.forge_collection_blind_page = function(args)
 r 32 603 %20%20 -
-l 25
+l 53
   M.blind_page = args.cycle_config.current_option
   M.blind_keep = true
   G.FUNCS.overlay_menu{definition = create_UIBox_your_collection_blinds(M.blind_exit)}
 end
 
+function M.stake_chain(c)
+  local out, seen = {}, {}
+  local cur = c
+  while cur and cur.kind == "stake" and not seen[cur.id] and #out < 8 do
+    seen[cur.id] = true
+    table.insert(out, 1, cur)
+    local bid = R.own_id("stake", fields(cur).base)
+    local b = bid and Store.get_item(bid)
+    cur = b and b.enabled ~= false and b or nil
+  end
+  return out
+end
+
 function M.stake_base(c)
-  local f = fields(c)
+  local chain = M.stake_chain(c)
+  local f = fields(chain[1] or c)
   for i, k in ipairs(Cat.STAKES) do if k == f.base then return i end end
   return 1
 end
@@ -900,13 +1046,27 @@ end
 M.STAKE_OWN = {blind_scaling = true, discards_minus = true, hands_minus = true, no_interest = true, small_no_reward = true, prices_plus = true, eternal = true, perishable = true, rental = true, win_ante = true}
 
 function M.apply_stake(id)
-  local c = Store.get_item(id)
-  if not (c and c.kind == "stake" and G.GAME) then return false end
+  local top = Store.get_item(id)
+  if not (top and top.kind == "stake" and G.GAME) then return false end
+  local chain = M.stake_chain(top)
+  local bases = {}
+  for i = 1, #chain - 1 do
+    M.apply_one_stake(chain[i])
+    bases[#bases + 1] = chain[i].id
+  end
+  M.apply_one_stake(top)
+  G.GAME.forge_stake_bases = #bases > 0 and bases or nil
+  G.GAME.forge_stake = top.id
+  G.GAME.forge_stake_name = top.name
+  return true
+end
+
+function M.apply_one_stake(c)
   local g = G.GAME
   local sp, mods = g.starting_params, g.modifiers
   local Run = require("functions/forge/forge_run")
 r 3 617 %20%20 -
-l 133
+l 144
     Run.apply_now(c, {key = "stake_forge_" .. c.id, skip = M.STAKE_OWN})
     return true
   end}))
@@ -924,9 +1084,6 @@ l 133
     elseif k == "rental" then mods.enable_rentals_in_shop = true
     elseif k == "win_ante" then g.win_ante = math.max(1, math.floor(n)) end
   end
-  g.forge_stake = c.id
-  g.forge_stake_name = c.name
-  return true
 end
 
 M.FACES = {{"J", "Jack", 0}, {"Q", "Queen", 1}, {"K", "King", 2}}
@@ -974,16 +1131,30 @@ local function collab_unlocked()
   end
 end
 
+function M.collab_suit(c)
+  local suit = fields(c).suit
+  local R = require("functions/forge/forge_rules")
+  local id = R.own_id("suit", suit)
+  if id then
+    local s = require("functions/forge/forge_suits").of_id(id)
+    return s and s.key or nil
+  end
+  return suit
+end
+
 function M.register_collabs()
   if not (G and G.COLLABS and G.COLLABS.options and G.ASSET_ATLAS and G.P_CARDS) then return end
   collab_unlocked()
   local want = {}
+  local FL = require("functions/forge/forge_forcedlook")
+  for k in pairs(FL.SKIN) do FL.SKIN[k] = nil end
   for _, c in ipairs(Store.live_items()) do
-    if c.kind == "collab" and c.enabled then
-      local suit = fields(c).suit
+    if c.kind == "collab" and c.enabled and not c.unset then
+      local suit = M.collab_suit(c)
       if G.COLLABS.options[suit] then
         local key = M.collab_key(c)
         want[key] = {c = c, suit = suit}
+        FL.SKIN[key] = FL.clean(c.look)
         for opt = 1, 2 do
           local ok, err = pcall(function()
             local img = love.image.newImageData(213, 95)
@@ -1157,7 +1328,7 @@ l 19
   local options = {}
   for i = 1, pages do options[i] = localize("k_page") .. " " .. i .. "/" .. pages end
   local touch = (G and G.F_MOBILE) or rawget(_G, "_IS_DESKTOP") == false
-  return create_UIBox_generic_options({infotip = not touch and localize("ml_edition_seal_enhancement_explanation") or nil, back_func = o.back or "your_collection", snap_back = true, contents = {
+  return create_UIBox_generic_options({infotip = not touch and not o.no_tip and localize("ml_edition_seal_enhancement_explanation") or nil, back_func = o.back or "your_collection", snap_back = true, contents = {
     {n = G.UIT.R, config = {align = "cm", minw = 2.5, padding = 0.1, r = 0.1, colour = G.C.BLACK, emboss = 0.05}, nodes = rows},
     {n = G.UIT.R, config = {align = "cm"}, nodes = {
       create_option_cycle({options = options, w = 4.5, cycle_shoulders = true, opt_callback = "forge_collection_page", focus_args = {snap_to = true, nav = "wide"}, current_option = 1, colour = G.C.RED, no_pips = true}),
@@ -1378,7 +1549,7 @@ l 74
     local r, r2 = orig(self, context)
     if context and context.first_hand_drawn and not self.debuff and self.ability and self.ability.name == "Certificate" then
 r 3 617 %20%20%20%20%20%20 -
-l 155
+l 157
         local c = G.playing_cards and G.playing_cards[#G.playing_cards]
         local pick = c and c.area == G.hand and M.roll_seal("certsl_forge")
         if pick then c:set_seal(pick, true) end
@@ -1527,6 +1698,8 @@ l 155
   end
   M.install_tags_blinds()
   M.install_stakes()
+  M.install_art_hooks()
+  M.install_desc_hooks()
   collection_hook("create_UIBox_your_collection_seals", function() return forge_count(G.P_CENTER_POOLS.Seal) > 0 end, M.collection_seals)
   collection_hook("create_UIBox_your_collection_enhancements", function() return forge_count(G.P_CENTER_POOLS.Enhanced) > 0 end, M.collection_enhancements)
   collection_hook("create_UIBox_your_collection_editions", function() return forge_count(G.P_CENTER_POOLS.Edition) > 0 end, M.collection_editions)

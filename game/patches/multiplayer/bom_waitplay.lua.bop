@@ -1,0 +1,1161 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 356
+local W = {}
+
+W.S = W.S or {ctx = nil, me = nil, away = false, prompt = nil, others = {}, note = nil, note_until = 0, stash = {}, sent_at = 0}
+W.view = W.view or {title = "", detail = "", detail2 = ""}
+W.KEEPALIVE = 300
+W.RETRY_FOR = 180
+W.RETRY_GAP = 3
+W.NOTE_HOLD = 8
+W.HELD_MAX = 200
+W.FOUND_DELAY = 10
+W.CONFIRM_HOLD = 4
+W.CORNER = {queue = true, folded = true, confirm = true}
+
+local S = W.S
+
+local function L(s) return mod_loc and mod_loc(s) or s end
+local function now() return love.timer.getTime() end
+local function touch() return UIK and UIK.touch and UIK.touch() end
+local function alive(o) return o and not o.REMOVED end
+local function U() return rawget(_G, "bom_ranked_ui") end
+local function PB() return rawget(_G, "bom_playback") end
+
+local function clock(sec)
+    sec = math.max(0, math.floor(sec or 0))
+    return string.format("%d:%02d", math.floor(sec / 60), sec % 60)
+end
+W.clock = clock
+
+function W.searching()
+    local u = U()
+    return u and u.searching and u.searching() or false
+end
+
+local function phase()
+    local ok, p = pcall(function() return bom_match.get_phase() end)
+    return ok and p or "none"
+end
+
+local function in_lobby_phase()
+    return phase() == "lobby"
+end
+
+function W.watching()
+    local P = PB()
+    return P and P.active and P.active() or false
+end
+
+function W.practising()
+    local B = rawget(_G, "BO_PRACTICE")
+    return B and B.active and B.active() or false
+end
+
+function W.keeps_queue()
+    return W.blocks_single()
+end
+
+function W.solo_run()
+    return G and G.STAGES and G.STAGE == G.STAGES.RUN and not W.mp_run and not (G.GAME and G.GAME.multiplayer) or false
+end
+
+function W.lobby_open()
+    if not (G and G.OVERLAY_MENU) then return false end
+    if G.BOM_LOBBY_OVERLAY and G.OVERLAY_MENU == G.BOM_LOBBY_OVERLAY then return true end
+    local P = rawget(_G, "bom_party")
+    if P and P._box and G.OVERLAY_MENU == P._box and UIK and UIK._win and UIK._win.id == "party" then return true end
+    return false
+end
+
+function W.ranked_open()
+    local u = U()
+    return u and u.ranked_open and u.ranked_open() or false
+end
+
+function W.blocks_single()
+    return W.searching() or S.ctx ~= nil
+end
+
+function W.has_save()
+    if not (G and G.SETTINGS and G.FUNCS and G.FUNCS.can_continue) then return false end
+    local ok, yes = pcall(G.FUNCS.can_continue, {config = {func = true}})
+    return ok and yes and true or false
+end
+
+function W.flush_save()
+    if W.mp_run or not (G and G.GAME) or G.GAME.multiplayer then return false end
+    local FH = G.FILE_HANDLER
+    if not (FH and FH.run and G.ARGS and G.ARGS.save_run and G.SAVE_MANAGER and G.SAVE_MANAGER.channel) then return false end
+    G.SAVE_MANAGER.channel:push({type = "save_run", save_table = G.ARGS.save_run, profile_num = G.SETTINGS.profile})
+    FH.run = nil
+    G.SAVED_GAME = nil
+    return true
+end
+
+function W.install_save_rules()
+    if W._save_rules then return end
+    W._save_rules = true
+    if Game and Game.start_run then
+        local start_run = Game.start_run
+        Game.start_run = function(self, args, ...)
+            local mp = type(args) == "table" and args.mp_start and true or false
+            if mp and not W.mp_run then pcall(W.flush_save) end
+            if not mp then pcall(W.keep_bits) end
+            W.mp_run = mp
+            local r = start_run(self, args, ...)
+            if not mp then pcall(W.on_solo_start) end
+            return r
+        end
+    end
+    local save_run_ref = rawget(_G, "save_run")
+    if type(save_run_ref) == "function" then
+        _G.save_run = function(...)
+            local r = save_run_ref(...)
+            if W.mp_run and G and G.FILE_HANDLER then G.FILE_HANDLER.run = nil end
+            return r
+        end
+    end
+    local remove_ref = rawget(_G, "remove_save")
+    if type(remove_ref) == "function" then
+        _G.remove_save = function(...)
+            if W.mp_run then
+                if G and G.FILE_HANDLER then G.FILE_HANDLER.run = nil end
+                return
+            end
+            return remove_ref(...)
+        end
+    end
+end
+
+local function send(msg)
+    pcall(function()
+        if bom_core and bom_core.is_connected and bom_core.is_connected() then bom_core.send(msg) end
+    end)
+end
+
+function W.set_me(status)
+    S.me = status
+    S.sent_at = now()
+    send({type = "wait_status", status = status})
+end
+
+function W.note(text)
+    S.note = text
+    S.note_until = now() + W.NOTE_HOLD
+end
+
+local function party_room()
+    local P = rawget(_G, "bom_party")
+    return P and P.S and P.S.room or nil
+end
+
+local function in_party()
+    local P = rawget(_G, "bom_party")
+    return P and P.active and P.active() or false
+end
+
+local function opp_name()
+    if S.held then return S.found_name end
+    local st = bom_match and bom_match.get_state and bom_match.get_state()
+    local n = st and st.opp_name
+    if st and st.waiting_guest then return nil end
+    if n and n ~= "" and n ~= "Opponent" then return n end
+    return nil
+end
+
+function W.other_status(pid)
+    local o = S.others[pid or "opp"]
+    return o and o.status or nil
+end
+
+function W.status_label(status, upper)
+    if status == "solo" then return L(upper and "PLAYING SOLO" or "Playing solo") end
+    if status == "wait" then return L(upper and "JOINS LATER" or "Joins later") end
+    return nil
+end
+
+function W.opp_status_label(upper)
+    if not S.ctx or S.ctx == "party" then return nil end
+    local o
+    for _, v in pairs(S.others) do o = v end
+    return o and W.status_label(o.status, upper) or nil
+end
+
+function W.party_status(p)
+    if type(p) ~= "table" then return nil end
+    if p.pid == (rawget(_G, "bom_party") and bom_party.S.me) then return nil end
+    return W.status_label(p.wait, false)
+end
+
+local function stash_game_bits(before)
+    if not (G and G.GAME) then return end
+    for k, v in pairs(G.GAME) do
+        if type(k) == "string" and (k:sub(1, 3) == "mp_" or k:sub(1, 4) == "bom_") and before[k] ~= v then
+            S.stash[k] = v
+            G.GAME[k] = before[k]
+        end
+    end
+end
+
+local function game_bits()
+    local t = {}
+    if G and G.GAME then
+        for k, v in pairs(G.GAME) do
+            if type(k) == "string" and (k:sub(1, 3) == "mp_" or k:sub(1, 4) == "bom_") then t[k] = v end
+        end
+    end
+    return t
+end
+
+function W.wrap_dispatch()
+    if W._dispatch or not (bom_events and bom_events.dispatch) then return end
+    W._dispatch = true
+    local dispatch = bom_events.dispatch
+    bom_events.dispatch = function(data, ...)
+        local guard = W.solo_run() and (S.ctx ~= nil or W.searching())
+        local before = guard and game_bits() or nil
+        local r = dispatch(data, ...)
+        if before then pcall(stash_game_bits, before) end
+        return r
+    end
+end
+
+function W.keep_bits()
+    if not S.ctx or W.solo_run() or not (G and G.STAGE == G.STAGES.MAIN_MENU) then return end
+    for k, v in pairs(game_bits()) do
+        if S.stash[k] == nil then S.stash[k] = v end
+    end
+end
+
+local function apply_stash()
+    if not (G and G.GAME) then return end
+    for k, v in pairs(S.stash) do G.GAME[k] = v end
+    S.stash = {}
+end
+
+function W.reset_ctx()
+    S.ctx, S.me, S.away, S.prompt, S.others = nil, nil, false, nil, {}
+    S.held, S.opp_pid = nil, nil
+    S.stash = {}
+    S.pending_open = nil
+end
+
+function W.wrap_lobby_views()
+    if W._views then return end
+    W._views = true
+    local function guard(tbl, name)
+        local f = tbl and tbl[name]
+        if type(f) ~= "function" then return end
+        tbl[name] = function(...)
+            if S.ctx and S.away then return end
+            return f(...)
+        end
+    end
+    guard(bom_ui, "show_lobby")
+    guard(bom_ui, "show_quick_match_lobby")
+    guard(rawget(_G, "bom_party"), "show_lobby")
+end
+
+function W.open_lobby()
+    local m = rawget(_G, "mpm_menu")
+    if m then m.casino = nil end
+    S.away = false
+    S.prompt = nil
+    apply_stash()
+    if G.OVERLAY_MENU then pcall(G.FUNCS.exit_overlay_menu) end
+    if S.ctx == "party" then
+        pcall(bom_party.show_lobby)
+    elseif S.ctx == "ranked" then
+        if G.GAME then G.GAME.bom_quick_match = true end
+        pcall(bom_ui.show_quick_match_lobby)
+    else
+        if G.GAME then G.GAME.bom_quick_match = nil end
+        pcall(bom_ui.show_lobby)
+    end
+    W.remove_box()
+end
+
+function W.join()
+    if not S.ctx then return end
+    S.go_at = nil
+    W.set_me("lobby")
+    S.prompt = nil
+    if W.watching() then
+        S.pending_open = true
+        S.away = true
+        W.remove_box()
+        pcall(PB().leave)
+        return
+    end
+    if W.solo_run() then
+        pcall(W.flush_save)
+        S.pending_open = true
+        S.away = true
+        W.remove_box()
+        G.FUNCS.go_to_menu()
+        return
+    end
+    W.open_lobby()
+end
+
+function W.wait()
+    if not S.ctx then return end
+    S.go_at = nil
+    S.prompt = nil
+    W.set_me("wait")
+    W.refresh_box(true)
+end
+
+function W.cancel_queue()
+    local u = U()
+    if u and u.queue_cancel then u.queue_cancel() end
+    W.refresh_box(true)
+end
+
+function W.unready()
+    if S.ctx == "party" then
+        local P = rawget(_G, "bom_party")
+        local room = party_room()
+        for _, p in ipairs(room and room.players or {}) do
+            if p.pid == (P and P.S.me) and p.ready then send({type = "party_ready", ready = false}) end
+        end
+        return
+    end
+    local st = bom_match.get_state()
+    if st and st.my_ready then bom_match.set_ready(false) end
+end
+
+local function lobby_kind()
+    if in_party() then return "party" end
+    local st = bom_match.get_state()
+    if (st and st.ranked == true) or (G.GAME and G.GAME.bom_quick_match) then return "ranked" end
+    return "room"
+end
+
+function W.ensure_ctx()
+    if S.ctx or not in_lobby_phase() then return end
+    S.ctx, S.away = lobby_kind(), false
+end
+
+function W.go_solo()
+    if not in_lobby_phase() then return false end
+    W.ensure_ctx()
+    S.away = true
+    S.prompt = nil
+    pcall(W.unready)
+    S.stash = game_bits()
+    return true
+end
+
+function W.on_solo_start()
+    if S.ctx and S.away and S.me ~= "wait" then W.set_me("solo") end
+end
+
+function W.continue_run()
+    local u = U()
+    local from_ranked = W.ranked_open()
+    if not from_ranked and W.lobby_open() then W.go_solo() end
+r 32 1825 %20%20%20%20 -
+l 1
+    if G.FUNCS.bo_play_continue then return G.FUNCS.bo_play_continue() end
+r 30 5962 %20%20%20%20 -
+l 9
+        local raw = get_compressed(G.SETTINGS.profile .. "/save.jkr")
+        if raw then G.SAVED_GAME = STR_UNPACK(raw) end
+    end
+    if G.SAVED_GAME then G.FUNCS.start_run(nil, {savetext = copy_table(G.SAVED_GAME)}) end
+    return u
+end
+
+function W.new_run()
+    if not W.ranked_open() and W.lobby_open() then W.go_solo() end
+r 32 1825 %20%20%20%20 -
+l 783
+    local PM = rawget(_G, "PlayMenu")
+    if PM and PM.sel then PM.sel.mode = "new_run" end
+    G.FUNCS.setup_run({config = {id = "bo_wp_new_run"}})
+end
+
+local function room_counts()
+    local room = party_room()
+    local n, ready = 0, 0
+    for _, p in ipairs(room and room.players or {}) do
+        if not p.left then
+            n = n + 1
+            if p.ready or p.pid == room.hostId then ready = ready + 1 end
+        end
+    end
+    return n, ready
+end
+
+local function lobby_detail()
+    if S.ctx == "party" then
+        local n, ready = room_counts()
+        if n <= 1 then return L("Waiting for players") end
+        return string.format(L("%d of %d players ready"), ready, n)
+    end
+    local st = bom_match.get_state()
+    local name = opp_name()
+    if not name then return L("Waiting for players") end
+    if st.opp_ready then return string.format(L("%s is ready"), name) end
+    return W.detail_for(name, W.other_status(st.is_host and 1 or 0))
+end
+
+function W.detail_for(name, status)
+    if not name then return L("Waiting for players") end
+    if status == "solo" then return string.format(L("%s is playing solo while waiting"), name) end
+    if status == "wait" then return string.format(L("%s chose Wait and keeps playing"), name) end
+    if status == "lobby" then return string.format(L("%s is in the lobby"), name) end
+    return string.format(L("Your opponent: %s"), name)
+end
+
+local function ranked_detail()
+    local st = bom_match.get_state()
+    local pid = S.held and S.opp_pid or (st.is_host and 1 or 0)
+    return W.detail_for(opp_name() or S.found_name, W.other_status(pid))
+end
+
+function W.box_kind()
+    if S.pending_open then return nil end
+    if S.ctx and S.away then
+        if S.prompt then return "prompt" end
+        return "room"
+    end
+    if S.ctx then return nil end
+    if W.searching() and not W.ranked_open() then
+        if S.confirm_until and now() < S.confirm_until then return "confirm" end
+        if G.SETTINGS and G.SETTINGS.bo_queue_folded then return "folded" end
+        return "queue"
+    end
+    return nil
+end
+
+local function live_note()
+    return S.note and now() < S.note_until and S.note or nil
+end
+
+local function texts(kind)
+    local note = live_note()
+    if kind == "queue" or kind == "folded" then
+        local u = U()
+        local since = u and u.Q and u.Q.since or now()
+        if kind == "folded" then return "", clock(now() - since) end
+        return L("RANKED QUEUE"), note or (L("Searching for an opponent") .. "  " .. clock(now() - since))
+    end
+    if kind == "confirm" then return L("RANKED QUEUE"), L("Leave the queue?") end
+    if kind == "prompt" then
+        local detail = note or S.prompt.detail
+        if S.go_at then detail = tostring(detail) .. "  " .. string.format(L("Lobby in %d"), math.max(0, math.ceil(S.go_at - now()))) end
+        return S.prompt.title, detail
+    end
+    if S.ctx == "ranked" then return L("OPPONENT FOUND"), note or ranked_detail() end
+    local code = bom_match.get_state().room_code
+    if S.ctx == "party" then code = (rawget(_G, "bom_party") and bom_party.S.code) or code end
+    return L("LOBBY") .. (code and ("  " .. tostring(code)) or ""), note or lobby_detail()
+end
+
+local function dims()
+    local t = touch()
+    local k = W.box_k or 1
+    local por = UIK and UIK.portrait and UIK.portrait()
+    return {
+        title = (t and 0.36 or 0.3) * k,
+        detail = (t and 0.32 or 0.28) * k,
+        bh = (t and (por and 0.72 or 0.5) or 0.4) * k,
+        bs = (t and (por and 0.36 or 0.32) or 0.27) * k,
+        bw = (t and 1.6 or 1.3) * k,
+        gap = (t and 0.12 or 0.1) * k,
+        pad = (t and 0.07 or 0.06) * k,
+    }
+end
+W.dims = dims
+
+local function tw(s, sc)
+    if UIK and UIK.text_w then return UIK.text_w(s, sc) end
+    return #s * sc * 0.3
+end
+
+local function buttons_for(kind)
+    if kind == "queue" then return {{"<", "bo_wp_fold", G.C.UI.BACKGROUND_INACTIVE, "bo_wp_fold", true}, {L("CANCEL"), "bo_wp_cancel", G.C.RED, "bo_wp_cancel"}} end
+    if kind == "folded" then return {{">", "bo_wp_fold", G.C.UI.BACKGROUND_INACTIVE, "bo_wp_fold", true}} end
+    if kind == "confirm" then return {{L("YES"), "bo_wp_cancel_yes", G.C.RED, "bo_wp_cancel_yes"}, {L("NO"), "bo_wp_cancel_no", G.C.UI.BACKGROUND_INACTIVE, "bo_wp_cancel_no"}} end
+    if kind == "prompt" then return {{L("JOIN"), "bo_wp_join", G.C.GREEN, "bo_wp_join"}, {L("WAIT"), "bo_wp_wait", G.C.ORANGE, "bo_wp_wait"}} end
+    return {{L("JOIN"), "bo_wp_join", G.C.GREEN, "bo_wp_join"}}
+end
+
+local function pin(box)
+    box.created_on_pause = true
+    local function each(n)
+        if not n then return end
+        n.created_on_pause = true
+        if n.config and n.config.object then n.config.object.created_on_pause = true end
+        for _, ch in pairs(n.children or {}) do if type(ch) == "table" then each(ch) end end
+    end
+    each(box.UIRoot)
+end
+
+local function fit(str, sc, mw)
+    local w = tw(str, sc)
+    if w > mw and w > 0 then return sc * mw / w end
+    return sc
+end
+
+local function wrap2(str, sc, mw)
+    if tw(str, sc) <= mw then return str, "" end
+    local best, bw = nil, nil
+    local pos = 0
+    while true do
+        pos = str:find(" ", pos + 1, true)
+        if not pos then break end
+        local a, b = str:sub(1, pos - 1), str:sub(pos + 1):gsub("^%s+", "")
+        local m = math.max(tw(a, sc), tw(b, sc))
+        if not bw or m < bw then best, bw = {a, b}, m end
+    end
+    if not best then return str, "" end
+    return best[1], best[2]
+end
+
+local visible
+
+local function shop_strip()
+    if not (touch() and G.STATE == G.STATES.SHOP and G.shop and G.shop.T) then return nil end
+    local C, D = G.consumeables and G.consumeables.T, G.deck and G.deck.T
+    if not (C and D) then return nil end
+    local sx, _, sw = visible()
+    local x0, x1 = G.shop.T.x + G.shop.T.w + 0.5, sx + sw - 0.5
+    local y0, y1 = C.y + C.h + 0.5, D.y - 0.1
+    if x1 - x0 < 2 or y1 - y0 < 2 then return nil end
+    return {x = x0, y = y0, w = x1 - x0, h = y1 - y0, fit = 0.75}
+end
+
+function W.overlay_up()
+    return G and G.OVERLAY_MENU and not G.OVERLAY_MENU.REMOVED and true or false
+end
+
+function W.tight_rect()
+    if W.overlay_up() then return nil end
+    if G.STAGE ~= G.STAGES.RUN then return nil end
+    if not (UIK and UIK.portrait and UIK.portrait()) then return shop_strip() end
+    local C, D = G.consumeables and G.consumeables.T, G.deck and G.deck.T
+    if not (C and D) then return nil end
+    local x0, x1 = C.x + C.w + 0.1, D.x - 0.1
+    if x1 - x0 < 2 then return nil end
+    return {x = x0, y = math.min(C.y, D.y), w = x1 - x0, h = math.min(C.h, D.h)}
+end
+
+local function set_view(kind)
+    local title, detail = texts(kind)
+    W.view.title, W.view.detail, W.view.detail2 = title, detail, ""
+    if W.tight then
+        local d = dims()
+        local mw = (W.tight.w - d.pad * 3) * (W.tight.fit or 1)
+        W.view.detail, W.view.detail2 = wrap2(detail, d.detail, mw)
+    end
+end
+
+function W.box_def(kind)
+    local d = dims()
+    local title, detail = texts(kind)
+    set_view(kind)
+    local wide = detail
+    if kind == "queue" then wide = L("Searching for an opponent") .. "  88:88" end
+    local dw = math.max(tw(wide, d.detail), tw(detail, d.detail)) + 0.05
+    local btns = {}
+    for i, b in ipairs(buttons_for(kind)) do
+        if i > 1 then btns[#btns + 1] = {n = G.UIT.C, config = {minw = d.gap}} end
+        local w = b[5] and d.bh or math.max(d.bw, tw(b[1], d.bs) + 0.4)
+        btns[#btns + 1] = UIBox_button({label = {b[1]}, button = b[2], colour = b[3], id = b[4], minw = w, minh = d.bh, scale = d.bs, col = true})
+    end
+    if kind == "folded" then
+        local detail_node = {n = G.UIT.T, config = {ref_table = W.view, ref_value = "detail", scale = d.detail, colour = G.C.GOLD, shadow = true}}
+        return {n = G.UIT.ROOT, config = {align = "cm", colour = G.C.CLEAR, padding = 0}, nodes = {
+            {n = G.UIT.C, config = {align = "cm", padding = d.pad, r = 0.1, colour = G.C.BLACK, emboss = 0.05, id = "bo_wp_panel"}, nodes = {
+                {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = btns},
+                {n = G.UIT.C, config = {minw = d.gap}},
+                {n = G.UIT.C, config = {align = "cm", minw = tw("88:88", d.detail) + 0.05, padding = 0}, nodes = {detail_node}},
+                {n = G.UIT.C, config = {minw = d.gap}},
+            }},
+        }}
+    end
+    local title_node = {n = G.UIT.T, config = {ref_table = W.view, ref_value = "title", scale = d.title, colour = kind == "prompt" and G.C.GOLD or G.C.UI.TEXT_LIGHT, shadow = true}}
+    local detail_node = {n = G.UIT.T, config = {ref_table = W.view, ref_value = "detail", scale = d.detail, colour = kind == "queue" and G.C.GOLD or G.C.UI.TEXT_LIGHT, shadow = true}}
+    local cfg = {align = "cm", padding = d.pad, r = 0.1, colour = G.C.BLACK, emboss = 0.05,
+        outline = kind == "prompt" and 1.2 or nil, outline_colour = kind == "prompt" and G.C.GOLD or nil, id = "bo_wp_panel"}
+    local panel
+    if W.tight then
+        local mw = (W.tight.w - d.pad * 3) * (W.tight.fit or 1)
+        local nb = #buttons_for(kind)
+        btns = {}
+        for i, b in ipairs(buttons_for(kind)) do
+            if i > 1 then btns[#btns + 1] = {n = G.UIT.C, config = {minw = d.gap}} end
+            local w = nb > 1 and (mw - d.gap) / 2 or math.min(mw, math.max(d.bw, tw(b[1], d.bs) + 0.4))
+            btns[#btns + 1] = UIBox_button({label = {b[1]}, button = b[2], colour = b[3], id = b[4], minw = w, minh = d.bh, scale = math.min(d.bs, fit(b[1], d.bs, w - 0.2)), col = true})
+        end
+        local ds = fit(W.view.detail, d.detail, mw)
+        local d2 = fit(W.view.detail2 ~= "" and W.view.detail2 or " ", d.detail, mw)
+        ds = math.min(ds, d2)
+        title_node.config.scale = math.min(d.title, fit(W.view.title, d.title, mw))
+        detail_node.config.scale = ds
+        local rows = {
+            {n = G.UIT.R, config = {align = "cm", padding = 0.02}, nodes = {title_node}},
+            {n = G.UIT.R, config = {align = "cm", padding = 0.01}, nodes = {detail_node}},
+        }
+        if W.view.detail2 ~= "" then
+            rows[#rows + 1] = {n = G.UIT.R, config = {align = "cm", padding = 0.01}, nodes = {
+                {n = G.UIT.T, config = {ref_table = W.view, ref_value = "detail2", scale = ds, colour = kind == "queue" and G.C.GOLD or G.C.UI.TEXT_LIGHT, shadow = true}}}}
+        end
+        rows[#rows + 1] = {n = G.UIT.R, config = {align = "cm", padding = 0.05}, nodes = btns}
+        cfg.padding = d.pad
+        panel = {n = G.UIT.C, config = cfg, nodes = rows}
+    elseif W.stacked() then
+        cfg.padding = d.pad * 1.5
+        panel = {n = G.UIT.C, config = cfg, nodes = {
+            {n = G.UIT.R, config = {align = "cm", padding = 0.02}, nodes = {title_node}},
+            {n = G.UIT.R, config = {align = "cm", padding = 0.02, minw = dw}, nodes = {detail_node}},
+            {n = G.UIT.R, config = {align = "cm", padding = 0.06}, nodes = btns},
+        }}
+    else
+        panel = {n = G.UIT.C, config = cfg, nodes = {
+            {n = G.UIT.C, config = {minw = d.gap}},
+            {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {title_node}},
+            {n = G.UIT.C, config = {minw = d.gap * 2}},
+            {n = G.UIT.C, config = {align = "cm", minw = dw, padding = 0}, nodes = {detail_node}},
+            {n = G.UIT.C, config = {minw = d.gap * 2}},
+            {n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = btns},
+        }}
+    end
+    return {n = G.UIT.ROOT, config = {align = "cm", colour = G.C.CLEAR, padding = 0}, nodes = {panel}}
+end
+
+function W.remove_box()
+    if W.box then pcall(function() W.box:remove() end) end
+    W.box, W.box_sig = nil, nil
+end
+
+function visible()
+    if UIK and UIK.portrait and UIK.portrait() and G.STAGE == G.STAGES.RUN and G.ROOM and G.ROOM_ATTACH then
+        local R, A = G.ROOM.T, G.ROOM_ATTACH.T
+        return -(R.x or 0), -(R.y or 0), A.w + 2 * (R.x or 0), A.h + 2 * (R.y or 0)
+    end
+    local E = rawget(_G, "bom_emotes")
+    if E and E.screen_box then return E.screen_box() end
+    local R = G.ROOM and G.ROOM.T or {x = 0, y = 0, w = 20, h = 11.5}
+    return -(R.x or 0), -(R.y or 0), R.w, R.h
+end
+
+local function hits(ax, ay, aw, ah, T)
+    return T and ax < T.x + T.w and T.x < ax + aw and ay < T.y + T.h and T.y < ay + ah
+end
+
+function W.corner_rect()
+    local CL = rawget(_G, "CORNER_LABELS")
+    local r = CL and CL.modded_rect
+    if not (r and G.ROOM and G.TILESCALE and G.TILESIZE and now() - (r.at or 0) < 1) then return nil end
+    local k = G.TILESCALE * G.TILESIZE
+    return {x = r.x / k - G.ROOM.T.x, y = r.y / k - G.ROOM.T.y, w = r.w / k, h = r.h / k}
+end
+
+function W.version_rect()
+    local CL = rawget(_G, "CORNER_LABELS")
+    local r = CL and CL.version_rect
+    if not (r and G.STAGE ~= G.STAGES.RUN and G.ROOM and G.TILESCALE and G.TILESIZE) then return nil end
+    local k = G.TILESCALE * G.TILESIZE
+    return {x = r.x / k - G.ROOM.T.x, y = r.y / k - G.ROOM.T.y, w = r.w / k, h = r.h / k}
+end
+
+function W.corner_place(w, h)
+    local sx, sy, sw = visible()
+    local right = sx + sw - 0.12
+    local CL = rawget(_G, "CORNER_LABELS")
+    local r = CL and CL.version_rect
+    if G.STAGE ~= G.STAGES.RUN and r and G.ROOM and G.TILESCALE and G.TILESIZE then
+        local k = G.TILESCALE * G.TILESIZE
+        local rx, ry, rh = r.x / k - G.ROOM.T.x, r.y / k - G.ROOM.T.y, r.h / k
+        local x = rx - w - 0.1
+        if x >= sx + 0.1 then return x, math.max(sy + 0.05, ry + rh / 2 - h / 2) end
+        return right - w, ry + rh + 0.08
+    end
+    local y = sy + 0.08
+    local CR = W.corner_rect()
+    if CR and hits(right - w, y, w, h, CR) then y = CR.y + CR.h + 0.08 end
+    return right - w, y
+end
+
+function W.place(w, h)
+    if W.CORNER[W.box_kind_now or ""] and not (UIK and UIK.portrait and UIK.portrait()) then return W.corner_place(w, h) end
+    if W.tight then
+        local r = W.tight
+        return r.x + (r.w - w) / 2, r.y + (r.h - h) / 2
+    end
+    local sx, sy, sw = visible()
+    local cx = sx + sw / 2 - w / 2
+    local CR = W.corner_rect()
+    local VR = W.version_rect()
+    if W.overlay_up() then
+        if CR and hits(cx, sy + 0.05, w, h, CR) then return cx, CR.y + CR.h + 0.08 end
+        if VR and hits(cx, sy + 0.05, w, h, VR) then return cx, VR.y + VR.h + 0.08 end
+        return cx, sy + 0.05
+    end
+    if G.STAGE ~= G.STAGES.RUN then
+        local y = sy + (touch() and 0.24 or 0.3)
+        if VR and hits(cx, y, w, h, VR) then y = VR.y + VR.h + 0.08 end
+        return cx, y
+    end
+    local H = G.HUD and G.HUD.T
+    local wide_hud = H and H.w >= sw * 0.6
+    local function xfor(y)
+        if H and not wide_hud and hits(cx, y, w, h, {x = H.x, y = H.y, w = H.w + 0.15, h = H.h}) then
+            local left = H.x + H.w + 0.15
+            return left + math.max(0, (sx + sw - left - w) / 2)
+        end
+        return cx
+    end
+    local B = G.blind_select and G.blind_select.T
+    local function free(x, y)
+        if wide_hud and hits(x, y, w, h, H) then return false end
+        if CR and hits(x, y, w, h, CR) then return false end
+        if B and hits(x, y, w, h, B) then return false end
+        for _, A in ipairs({G.jokers or false, G.consumeables or false, G.deck or false, G.hand or false}) do
+            if A and A.T and hits(x, y, w, h, A.T) then return false end
+        end
+        return true
+    end
+    local J, C = G.jokers and G.jokers.T, G.consumeables and G.consumeables.T
+    local ys = {sy + 0.08}
+    if J then ys[#ys + 1] = J.y + J.h + 0.5 end
+    if C then ys[#ys + 1] = C.y + C.h + 0.5 end
+    for _, y in ipairs(ys) do
+        local x = xfor(y)
+        if free(x, y) then return x, y end
+    end
+    local y = ys[2] or ys[1]
+    if B and hits(xfor(y), y, w, h, B) then y = math.max(ys[1], B.y - h - 0.1) end
+    return xfor(y), y
+end
+
+function W.box_y()
+    local _, sy = visible()
+    return sy + (touch() and 0.24 or 0.3)
+end
+
+function W.stacked()
+    return W.stack == true
+end
+
+local function place_box()
+    if not alive(W.box) then return end
+    local A = G.ROOM_ATTACH.T
+    local x, y = W.place(W.box.T.w, W.box.T.h)
+    local off = W.box.alignment.offset
+    local ox, oy = x - A.x, y - A.y
+    if math.abs((off.x or 0) - ox) > 0.01 or math.abs((off.y or 0) - oy) > 0.01 then
+        off.x, off.y = ox, oy
+        W.box:align_to_major()
+    end
+    local P = G.play
+    local hidden = false
+    if not W.overlay_up() and P and P.T and P.cards and #P.cards > 0 then hidden = hits(x, y, W.box.T.w, W.box.T.h, P.T) end
+    W.box.states.visible = not hidden
+end
+
+local function sig(kind)
+    local title, detail = texts(kind)
+    if (kind == "queue" or kind == "folded") and not live_note() then detail = "" end
+    if kind == "prompt" and S.prompt then detail = tostring(S.prompt.detail) .. tostring(S.go_at ~= nil) end
+    return table.concat({kind, title, detail, tostring(touch()), tostring(G.LANG and G.LANG.key), tostring(UIK and UIK.portrait and UIK.portrait()), tostring(G.STAGE), tostring(W.tight ~= nil),
+        tostring(W.overlay_up())}, "|")
+end
+
+function W.refresh_box(force)
+    if not (G and G.ROOM_ATTACH and UIBox) then return end
+    local kind = W.box_kind()
+    if not kind then W.remove_box() return end
+    W.box_kind_now = kind
+    W.tight = not W.CORNER[kind] and W.tight_rect() or nil
+    set_view(kind)
+    local s = sig(kind)
+    if not force and alive(W.box) and W.box_sig == s then
+        place_box()
+        return
+    end
+    W.remove_box()
+    local function build()
+        W.box = UIBox{
+            definition = W.box_def(kind),
+            config = {align = "tli", offset = {x = 0, y = 0}, major = G.ROOM_ATTACH, bond = "Weak", instance_type = "POPUP"},
+        }
+    end
+    W.stack = false
+    build()
+    local _, _, sw = visible()
+    if W.box.T.w > sw - 0.4 then
+        W.box:remove()
+        W.stack = true
+        build()
+    end
+    W.box.attention_text = true
+    W.box.over_overlay = true
+    pin(W.box)
+    place_box()
+    W.box:align_to_major()
+    W.box:hard_set_VT()
+    W.box_sig = s
+    W.box_kind_now = kind
+    if kind == "prompt" and not S.prompt.juiced then
+        S.prompt.juiced = true
+        pcall(function()
+            local p = W.box:get_UIE_by_ID("bo_wp_panel")
+            if p then p:juice_up(0.3, 0.3) end
+            play_sound("highlight2", 1.1, 0.6)
+        end)
+    end
+end
+
+function W.show_prompt(title, detail)
+    S.prompt = {title = title, detail = detail}
+    W.refresh_box(true)
+end
+
+local function my_pid()
+    if S.ctx == "party" then return rawget(_G, "bom_party") and bom_party.S.me or nil end
+    local st = bom_match.get_state()
+    return st and (st.is_host and 0 or 1) or nil
+end
+
+local function on_room_ready(d)
+    if type(d) ~= "table" then return end
+    if d.ranked and W.searching() and not W.ranked_open() then
+        W.reset_ctx()
+        S.ctx = "ranked"
+        S.away = true
+        S.stash = {}
+        local name
+        for _, p in ipairs(type(d.players) == "table" and d.players or {}) do
+            if type(p) == "table" and p.pid ~= d.playerId and p.name then name = p.name end
+        end
+        S.found_name = name
+        G.E_MANAGER:add_event(Event({trigger = "immediate", blocking = false, blockable = false, pause_force = true, no_delete = true, func = function()
+            W.show_prompt(L("OPPONENT FOUND"), W.detail_for((W.watching() and S.found_name) or opp_name() or S.found_name, nil))
+            if W.solo_run() or W.watching() then
+                W.set_me("solo")
+                S.go_at = now() + W.FOUND_DELAY
+            end
+            return true
+        end}))
+    end
+end
+
+local function on_room_joined(d)
+    if not (S.ctx and S.away and S.ctx ~= "party") then return end
+    if S.ctx == "ranked" then
+        if S.prompt then S.prompt.detail = W.detail_for(opp_name() or (type(d) == "table" and d.player and d.player.name), W.other_status(1 - (my_pid() or 0))) end
+        return
+    end
+    local name = type(d) == "table" and type(d.player) == "table" and d.player.name or opp_name()
+    if name then W.show_prompt(L("LOBBY"), string.format(L("%s joined the lobby"), name)) end
+end
+
+local function on_ready_state(d)
+    if not (S.ctx and S.away and S.ctx ~= "party") then return end
+    if type(d) == "table" and d.ready == true then
+        local name = opp_name() or L("Your opponent")
+        W.show_prompt(S.ctx == "ranked" and L("OPPONENT FOUND") or L("LOBBY"), string.format(L("%s is ready"), name))
+    end
+end
+
+local function on_party_room(d)
+    if not (S.ctx == "party" and type(d) == "table" and d.phase == "lobby") then return end
+    local old = {}
+    local prev = party_room()
+    for _, p in ipairs(prev and prev.players or {}) do old[p.pid] = p end
+    local me = rawget(_G, "bom_party") and bom_party.S.me
+    local joined, readied
+    for _, p in ipairs(d.players or {}) do
+        if p.pid ~= me and not p.bot then
+            local o = old[p.pid]
+            if not o or o.name ~= p.name then joined = joined or p.name
+            elseif p.ready and not o.ready then readied = readied or p.name end
+        end
+        if p.pid ~= me then S.others[p.pid] = {name = p.name, status = p.wait} end
+    end
+    if not S.away then return end
+    if joined then W.show_prompt(L("LOBBY"), string.format(L("%s joined the lobby"), joined))
+    elseif readied then W.show_prompt(L("LOBBY"), string.format(L("%s is ready"), readied)) end
+end
+
+local function on_wait_status(d)
+    W.ensure_ctx()
+    if type(d) ~= "table" or not S.ctx then return true end
+    local key = d.pid ~= nil and d.pid or "opp"
+    S.others[key] = {name = d.name, status = d.status}
+    if S.prompt and S.ctx == "ranked" then S.prompt.detail = W.detail_for(opp_name() or d.name, d.status) end
+    if not S.away then
+        pcall(function()
+            if bom_ui and bom_ui.update_lobby_ready then bom_ui.update_lobby_ready() end
+            local P = rawget(_G, "bom_party")
+            if P and P.refresh_lobby then P.refresh_lobby() end
+        end)
+    end
+    W.refresh_box()
+    return true
+end
+
+local function leave_quietly()
+    pcall(function() if bom_rejoin and bom_rejoin.clear_session then bom_rejoin.clear_session() end end)
+    pcall(function() local P = rawget(_G, "bom_party"); if P and P.clear then P.clear() end end)
+    pcall(bom_match.reset)
+end
+
+local function on_room_closed(d)
+    if not (S.ctx and S.away) then return end
+    local ctx = S.ctx
+    W.reset_ctx()
+    leave_quietly()
+    if ctx == "ranked" then
+        W.note(L("Your opponent left. Back in the ranked queue."))
+        local u = U()
+        if u and u.queue_start then
+            u.Q.status = nil
+            u.queue_start()
+        end
+    else
+        W.note(L("The lobby was closed."))
+        W.flash_note()
+    end
+    W.refresh_box(true)
+    return true
+end
+
+function W.hold_in(d)
+    if type(d) ~= "table" or type(d.type) ~= "string" then return false end
+    if d.type == "room_ready" and d.ranked and not S.held and W.searching() and not W.ranked_open() then
+        on_room_ready(d)
+        if S.ctx ~= "ranked" then return false end
+        S.held = {d}
+        S.opp_pid = tonumber(d.playerId) == 0 and 1 or 0
+        local u = U()
+        if u and u.Q then u.Q.status = nil end
+        if u and u.update_view then pcall(u.update_view) end
+        return true
+    end
+    if not S.held then return false end
+    local P = PB()
+    if P and P.allowed_type and P.allowed_type(d.type) then return false end
+    if #S.held < W.HELD_MAX then S.held[#S.held + 1] = d end
+    if d.type == "wait_status" then pcall(on_wait_status, d)
+    elseif d.type == "ready_state" then pcall(on_ready_state, d)
+    elseif d.type == "room_closed" then pcall(W.held_closed) end
+    return true
+end
+
+function W.held_closed()
+    W.reset_ctx()
+    W.note(L("Your opponent left. Back in the ranked queue."))
+    local u = U()
+    if u and u.queue_start then
+        u.Q.status = nil
+        u.queue_start()
+    end
+    W.refresh_box(true)
+end
+
+function W.after_watch()
+    local list = S.held
+    if not list then return end
+    S.held = nil
+    for _, d in ipairs(list) do
+        local before = game_bits()
+        pcall(bom_events.dispatch, d)
+        pcall(stash_game_bits, before)
+    end
+end
+
+function W.flash_note()
+    if not (bom_ui and bom_ui.top_text and S.note) then return end
+    bom_ui.top_text({text = S.note, scale = touch() and 0.42 or 0.38, hold = 4, major = G.ROOM_ATTACH, align = "cm", offset = {x = 0, y = -3.2}, backdrop_colour = G.C.BLACK, silent = true})
+end
+
+local function swallow_when_away()
+    if S.ctx and S.away then return true end
+end
+
+local function on_guest_left(d)
+    if not (S.ctx and S.away and S.ctx == "room") then return end
+    local name = opp_name()
+    S.others = {}
+    if name then W.note(string.format(L("%s left the lobby"), name)) end
+end
+
+function W.register_events()
+    if W._events or not (bom_events and bom_events.register) then return end
+    W._events = true
+    bom_events.register("room_ready", on_room_ready)
+    bom_events.register("room_joined", function(d)
+        G.E_MANAGER:add_event(Event({trigger = "immediate", blocking = false, blockable = false, pause_force = true, no_delete = true,
+            func = function() pcall(on_room_joined, d) return true end}))
+    end)
+    bom_events.register("ready_state", function(d) pcall(on_ready_state, d) end)
+    bom_events.register("party_room", function(d) pcall(on_party_room, d) end)
+    bom_events.register("wait_status", on_wait_status)
+    bom_events.register("room_closed", on_room_closed)
+    bom_events.register("opponent_left", swallow_when_away)
+    bom_events.register("opponent_disconnected", swallow_when_away)
+    bom_events.register("guest_left", function(d) pcall(on_guest_left, d) end)
+    local P = rawget(_G, "bom_party")
+    if P and P.on_kicked and bom_events.unregister and bom_events.unregister("party_kicked", P.on_kicked) then
+        local kicked = P.on_kicked
+        bom_events.register("party_kicked", function(d)
+            if S.ctx and S.away then
+                W.reset_ctx()
+                leave_quietly()
+                W.note(L("The host removed you from the party"))
+                W.flash_note()
+                return true
+            end
+            return kicked(d)
+        end)
+    end
+end
+
+function W.register_funcs()
+    G.FUNCS.bo_wp_cancel = function()
+        S.confirm_until = now() + W.CONFIRM_HOLD
+        W.refresh_box(true)
+    end
+    G.FUNCS.bo_wp_cancel_yes = function()
+        S.confirm_until = nil
+        W.cancel_queue()
+    end
+    G.FUNCS.bo_wp_cancel_no = function()
+        S.confirm_until = nil
+        W.refresh_box(true)
+    end
+    G.FUNCS.bo_wp_fold = function()
+        S.confirm_until = nil
+        G.SETTINGS.bo_queue_folded = not G.SETTINGS.bo_queue_folded or nil
+        if G.save_settings then pcall(G.save_settings, G) end
+        W.refresh_box(true)
+    end
+    G.FUNCS.bo_wp_join = function() W.join() end
+    G.FUNCS.bo_wp_wait = function() W.wait() end
+    G.FUNCS.bo_wp_continue = function() W.continue_run() end
+    G.FUNCS.bo_wp_new_run = function() W.new_run() end
+end
+
+function W.lobby_buttons(kind)
+    if not in_lobby_phase() and kind ~= "ranked" then return {} end
+    local out = {}
+    if W.has_save() then out[#out + 1] = {kind == "ranked" and L("CONTINUE RUN") or L("Continue run"), "bo_wp_continue", G.C.BLUE, "bo_wp_continue"} end
+    out[#out + 1] = {kind == "ranked" and L("NEW RUN") or L("New run"), "bo_wp_new_run", G.C.BLUE, "bo_wp_new_run"}
+    return out
+end
+
+function W.update()
+    if not (G and G.STAGES) then return end
+    if S.ctx and not S.held and phase() ~= "lobby" then W.reset_ctx() end
+    W.ensure_ctx()
+    if S.pending_open and G.STAGE == G.STAGES.MAIN_MENU and G.MAIN_MENU_UI and not G.screenwipe then
+        S.pending_open = nil
+        if S.ctx then W.open_lobby() end
+    end
+    if S.ctx and S.away and S.me and now() - (S.sent_at or 0) > W.KEEPALIVE then W.set_me(S.me) end
+    if W.searching() and bom_core and bom_core.is_connected and not bom_core.is_connected() and not W.reconnecting and now() >= (W.retry_at or 0) then
+        W.requeue()
+    elseif not W.searching() then
+        W.retry_from, W.retry_at = nil, nil
+    end
+    local blocked = W.blocks_single()
+    if blocked ~= W.last_blocked then
+        W.last_blocked = blocked
+        pcall(function()
+            local m = rawget(_G, "mpm_menu")
+            if m and m.active and G.STAGE == G.STAGES.MAIN_MENU then m.rebuild_soon() end
+        end)
+    end
+    if S.note and now() >= S.note_until then S.note = nil end
+    if S.confirm_until and now() >= S.confirm_until then S.confirm_until = nil end
+    if S.go_at and not (S.ctx and S.away and S.prompt) then S.go_at = nil end
+    if S.go_at and now() >= S.go_at then
+        S.go_at = nil
+        pcall(W.join)
+    end
+    W.refresh_box()
+    if alive(W.box) and W.box_kind_now then
+        set_view(W.box_kind_now)
+    end
+end
+
+function W.requeue()
+    local u = U()
+    if not (u and u.Q) then return end
+    W.reconnecting = true
+    W.retry_from = W.retry_from or now()
+    bom_core.connect(function()
+        W.reconnecting = false
+        W.retry_from, W.retry_at = nil, nil
+        if not W.searching() then return end
+        local name = bom_room and bom_room.my_profile_name and bom_room.my_profile_name() or ""
+        bom_core.send({type = "find_match", ranked = true, pkey = bom_core.player_key(), mods = bom_core.mods_field(true),
+            version = bom_room.game_version(), name = name, deck_filter = bom_core.deck_filter_field()})
+    end, {silent = true, on_fail = function()
+        W.reconnecting = false
+        if W.searching() and now() - (W.retry_from or now()) < W.RETRY_FOR then
+            W.retry_at = now() + W.RETRY_GAP
+            return
+        end
+        W.retry_from, W.retry_at = nil, nil
+        if not W.searching() then return end
+        u.Q.status, u.Q.error = "error", "offline"
+        if u.update_view then u.update_view() end
+        W.note(L("Could not reach the server."))
+        W.flash_note()
+    end})
+end
+
+function W.register_strings()
+    if not mod_loc_register then return end
+    mod_loc_register{
+        fr = {
+            ["RANKED QUEUE"] = "FILE CLASSÉE", ["OPPONENT FOUND"] = "ADVERSAIRE TROUVÉ", ["JOIN"] = "REJOINDRE", ["WAIT"] = "ATTENDRE",
+            ["CONTINUE RUN"] = "CONTINUER LA PARTIE", ["NEW RUN"] = "NOUVELLE PARTIE", ["Continue run"] = "Continuer la partie", ["New run"] = "Nouvelle partie",
+            ["Your opponent: %s"] = "Votre adversaire : %s", ["%s is playing solo while waiting"] = "%s joue en solo en attendant",
+            ["%s chose Wait and keeps playing"] = "%s a choisi Attendre et continue de jouer", ["%s is in the lobby"] = "%s est dans le salon",
+            ["LOBBY"] = "SALON", ["%s joined the lobby"] = "%s a rejoint le salon", ["%s is ready"] = "%s est prêt",
+            ["%d of %d players ready"] = "%d joueurs prêts sur %d", ["Waiting for players"] = "En attente de joueurs",
+            ["Your opponent left. Back in the ranked queue."] = "Votre adversaire est parti. Retour dans la file classée.",
+            ["The lobby was closed."] = "Le salon a été fermé.", ["%s left the lobby"] = "%s a quitté le salon",
+            ["PLAYING SOLO"] = "JOUE EN SOLO", ["JOINS LATER"] = "VIENDRA PLUS TARD", ["Playing solo"] = "Joue en solo", ["Joins later"] = "Viendra plus tard",
+            ["Your opponent"] = "Votre adversaire",
+            ["Leave the queue?"] = "Quitter la file ?", ["YES"] = "OUI", ["NO"] = "NON", ["Lobby in %d"] = "Salon dans %d",
+        },
+        es = {
+            ["RANKED QUEUE"] = "COLA CLASIFICATORIA", ["OPPONENT FOUND"] = "RIVAL ENCONTRADO", ["JOIN"] = "UNIRSE", ["WAIT"] = "ESPERAR",
+            ["CONTINUE RUN"] = "CONTINUAR PARTIDA", ["NEW RUN"] = "NUEVA PARTIDA", ["Continue run"] = "Continuar partida", ["New run"] = "Nueva partida",
+            ["Your opponent: %s"] = "Tu rival: %s", ["%s is playing solo while waiting"] = "%s juega en solitario mientras espera",
+            ["%s chose Wait and keeps playing"] = "%s eligió Esperar y sigue jugando", ["%s is in the lobby"] = "%s está en la sala",
+            ["LOBBY"] = "SALA", ["%s joined the lobby"] = "%s entró en la sala", ["%s is ready"] = "%s está listo",
+            ["%d of %d players ready"] = "%d de %d jugadores listos", ["Waiting for players"] = "Esperando jugadores",
+            ["Your opponent left. Back in the ranked queue."] = "Tu rival se fue. Vuelves a la cola clasificatoria.",
+            ["The lobby was closed."] = "La sala se cerró.", ["%s left the lobby"] = "%s salió de la sala",
+            ["PLAYING SOLO"] = "JUEGA EN SOLITARIO", ["JOINS LATER"] = "SE UNIRÁ LUEGO", ["Playing solo"] = "Juega en solitario", ["Joins later"] = "Se unirá luego",
+            ["Your opponent"] = "Tu rival",
+            ["Leave the queue?"] = "¿Salir de la cola?", ["YES"] = "SÍ", ["NO"] = "NO", ["Lobby in %d"] = "Sala en %d",
+        },
+    }
+end
+
+function W.init()
+    W.install_save_rules()
+    W.register_events()
+    W.wrap_dispatch()
+    W.wrap_lobby_views()
+    W.register_funcs()
+    W.register_strings()
+end
+
+return W
+end

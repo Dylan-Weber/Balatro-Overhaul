@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 51
+l 68
 local Q = QOL
 local M = Q.feature("tip_ux", {})
 
@@ -52,6 +52,23 @@ function M.clamp_popup(cfg)
     return cfg
 end
 
+function M.fit_popup(card, cfg)
+    if type(cfg) ~= "table" or cfg.type ~= "tm" or not (card and card.T) then return cfg end
+    local pop = card.children and card.children.h_popup
+    local h = pop and pop.T and pop.T.h
+    if not h or h <= 0 then return cfg end
+    local top = card.T.y
+    if card.children.focused_ui and card.children.focused_ui.T then
+        top = math.min(top, card.children.focused_ui.T.y)
+    end
+    local off = cfg.offset and cfg.offset.y or -0.13
+    if top + off - h < 0.1 then
+        cfg.type = "bm"
+        cfg.offset = {x = cfg.offset and cfg.offset.x or 0, y = card.children.focused_ui and 0.12 or 0.1}
+    end
+    return cfg
+end
+
 function M.place_infotip(e)
     if not (e and e.config and e.config.ref_table) then return end
 r 32 2145 %20%20%20%20 -
@@ -68,7 +85,7 @@ l 11
     end
     if touch() then disable_tip_collision(info) end
 r 32 2150 %20%20%20%20 -
-l 45
+l 55
 end
 
 function M.init()
@@ -78,7 +95,7 @@ function M.init()
     if type(Card.align_h_popup) == "function" then
         local prev = Card.align_h_popup
         Card.align_h_popup = function(self, ...)
-            return M.clamp_popup(prev(self, ...))
+            return M.clamp_popup(M.fit_popup(self, prev(self, ...)))
         end
     end
 
@@ -90,6 +107,16 @@ function M.init()
         local prev_hover = Card.hover
         Card.hover = function(self, ...)
             local ret = prev_hover(self, ...)
+            if has_card_tip(self) then
+                local pop = self.children.h_popup
+                local cfg = self:align_h_popup()
+                if cfg.type ~= (pop.alignment and pop.alignment.type) then
+                    self.config.h_popup_config = cfg
+                    pop:set_alignment(cfg)
+                    pop:align_to_major()
+                    pop.VT.x, pop.VT.y = pop.T.x, pop.T.y
+                end
+            end
             if touch() and has_card_tip(self) then disable_tip_collision(self.children.h_popup) end
             return ret
         end

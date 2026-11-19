@@ -82,7 +82,13 @@ end)
 Q.row("Scoring", function()
     if G.SETTINGS.tally_joker == nil then G.SETTINGS.tally_joker = true end
     return UIK.toggle{id = 'set_tally_joker', label = mod_loc("Tally Joker"), info = mod_loc("A line under each Joker with its numbers"),
-        ref_table = G.SETTINGS, ref_value = 'tally_joker', callback = function() Q.save() if TALLY then TALLY.refresh_all() end end}
+        ref_table = G.SETTINGS, ref_value = 'tally_joker', callback = function() Q.save() local TJ = rawget(_G, 'TALLY') if TJ then TJ.refresh_all() end UIK.refresh() end}
+end)
+Q.row("Scoring", function()
+    if G.SETTINGS.tally_advanced == nil then G.SETTINGS.tally_advanced = false end
+    local off = G.SETTINGS.tally_joker == false
+    return UIK.toggle{id = 'set_tally_advanced', label = mod_loc("Tally Joker: Advanced"), info = off and mod_loc("Turn on Tally Joker first") or mod_loc("Says how each Joker gets its number"),
+        ref_table = G.SETTINGS, ref_value = 'tally_advanced', disabled = off, callback = function() Q.save() local TJ = rawget(_G, 'TALLY') if TJ then TJ.refresh_all() end end}
 end)
 Q.row("Shop", function()
     if not (Extras and Extras.set) then return nil end

@@ -1,0 +1,451 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 261
+local Store = require("functions/forge/forge_store")
+
+local T = {}
+
+T.MAX = 4
+T.PREFIX = "FType_"
+T.COLOURS = {"PURPLE", "GOLD", "GREEN", "TEAL", "ORANGE", "PINK", "BLUE", "RED", "BLACK"}
+T.HEX = {PURPLE = "8a5cd1", GOLD = "d99a1e", GREEN = "2f9a55", TEAL = "1d9399", ORANGE = "e0702a", PINK = "d8508f", BLUE = "3466d0", RED = "d8473f", BLACK = "3a3346"}
+T.list = {}
+T.by_set = {}
+T.by_id = {}
+
+local function smods() return type(rawget(_G, "SMODS")) == "table" end
+
+function T.fields(c)
+  local f = type(c) == "table" and type(c.fields) == "table" and c.fields or {}
+  local shop = tonumber(f.shop)
+  return {colour = T.HEX[f.colour] and f.colour or "PURPLE", shop = shop and math.max(0, shop) or 2}
+end
+
+function T.set_key(id) return T.PREFIX .. tostring(id) end
+
+function T.rate_key(set) return string.lower(set) .. "_rate" end
+
+function T.weight(t)
+  local g = G and G.GAME
+  local o = g and type(g.forge_type_rates) == "table" and tonumber(g.forge_type_rates[t.set])
+  if o then return math.max(0, o) end
+  return T.fields(t.c).shop
+end
+
+function T.set_weight(id, n, add)
+  local g = G and G.GAME
+  if not g then return end
+  local set = T.set_key(id)
+  local t = T.by_set[set]
+  local cur = (type(g.forge_type_rates) == "table" and tonumber(g.forge_type_rates[set])) or (t and T.fields(t.c).shop) or 0
+  g.forge_type_rates = type(g.forge_type_rates) == "table" and g.forge_type_rates or {}
+  g.forge_type_rates[set] = math.max(0, add and cur + (tonumber(n) or 0) or (tonumber(n) or 0))
+  g[T.rate_key(set)] = g.forge_type_rates[set]
+end
+
+function T.rgb(c)
+  local hex = T.HEX[T.fields(c).colour]
+  local r, g, b = tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
+  return {r / 255, g / 255, b / 255, 1}
+end
+
+function T.assign(items)
+  local list = {}
+  for _, c in ipairs(type(items) == "table" and items or {}) do
+    if type(c) == "table" and c.kind == "ctype" and c.enabled ~= false and type(c.id) == "string" then list[#list + 1] = c end
+  end
+  table.sort(list, function(a, b) return tostring(a.id) < tostring(b.id) end)
+  local out = {}
+  for i = 1, math.min(T.MAX, #list) do
+    local c = list[i]
+    out[#out + 1] = {id = c.id, c = c, set = T.set_key(c.id), index = i}
+  end
+  return out
+end
+
+function T.set_list(list)
+  T.list, T.by_set, T.by_id = list, {}, {}
+  for _, t in ipairs(list) do
+    T.by_set[t.set] = t
+    T.by_id[t.id] = t
+  end
+end
+
+function T.refresh_list()
+  local ok, items = pcall(Store.live_items)
+  T.set_list(T.assign(ok and items or {}))
+  return T.list
+end
+
+function T.set_of(c)
+  local f = type(c) == "table" and type(c.fields) == "table" and c.fields or {}
+  local v = f.ctype
+  if type(v) ~= "string" or v == "none" then return nil end
+  local R = package.loaded["functions/forge/forge_rules"]
+  local id = R and R.own_id and R.own_id("ctype", v)
+  local t = id and T.by_id[id]
+  return t and t.set or nil
+end
+
+function T.name(t)
+  local c = t and t.c
+  if c and c.name and c.name ~= "" then return c.name end
+  return mod_loc and mod_loc("Card type") or "Card type"
+end
+
+function T.live_cards(set)
+  local out = {}
+  for _, v in ipairs(G and G.P_CENTER_POOLS and G.P_CENTER_POOLS[set] or {}) do
+    if v.forge_kind and v.forge_on ~= false and not v.forge_lost then out[#out + 1] = v end
+  end
+  return out
+end
+
+function T.card_key(set, seed)
+  local live = T.live_cards(set)
+  if #live == 0 then return nil end
+  local have = {}
+  for _, area in ipairs({G.pack_cards, G.shop_jokers, G.consumeables}) do
+    for _, v in ipairs(area and area.cards or {}) do
+      local k = v.config and v.config.center and v.config.center.key
+      if k then have[k] = true end
+    end
+  end
+  local showman = type(find_joker) == "function" and next(find_joker("Showman"))
+  local fresh, all = {}, {}
+  for _, v in ipairs(live) do
+    local banned = G.GAME and G.GAME.banned_keys and G.GAME.banned_keys[v.key]
+    if not banned then
+      all[#all + 1] = v.key
+      if showman or not have[v.key] then fresh[#fresh + 1] = v.key end
+    end
+  end
+  table.sort(fresh)
+  table.sort(all)
+  local from = #fresh > 0 and fresh or all
+  if #from == 0 then return nil end
+  return pseudorandom_element(from, pseudoseed(seed))
+end
+
+function T.base_rate()
+  local g = G.GAME
+  local base = (g.joker_rate or 0) + (g.tarot_rate or 0) + (g.planet_rate or 0) + (g.playing_card_rate or 0) + (g.spectral_rate or 0)
+  local SM = rawget(_G, "SMODS")
+  for _, key in ipairs(SM and SM.ConsumableType and SM.ConsumableType.obj_buffer or {}) do
+    if key ~= "Tarot" and key ~= "Planet" and key ~= "Spectral" and not T.by_set[key] then base = base + (tonumber(g[string.lower(key) .. "_rate"]) or 0) end
+  end
+  return base
+end
+
+function T.without_rates(fn, ...)
+  local saved = {}
+  for _, t in ipairs(T.list) do
+    local k = T.rate_key(t.set)
+    saved[k] = G.GAME[k]
+    G.GAME[k] = 0
+  end
+  local r = {pcall(fn, ...)}
+  for k, v in pairs(saved) do G.GAME[k] = v end
+  if not r[1] then error(r[2], 0) end
+  return unpack(r, 2, table.maxn(r))
+end
+
+function T.ensure_rates()
+  if not (G and G.GAME) then return end
+  for _, t in ipairs(T.list) do G.GAME[T.rate_key(t.set)] = #T.live_cards(t.set) > 0 and T.weight(t) or 0 end
+  local SM = rawget(_G, "SMODS")
+  if SM and SM.ConsumableType and SM.ConsumableType.obj_buffer then
+    for _, key in ipairs(SM.ConsumableType.obj_buffer) do
+      if G.GAME[string.lower(key) .. "_rate"] == nil then G.GAME[string.lower(key) .. "_rate"] = 0 end
+    end
+  end
+end
+
+function T.pick(roll)
+  local total = 0
+  for _, t in ipairs(T.list) do
+    if #T.live_cards(t.set) > 0 then total = total + T.weight(t) end
+  end
+  if total <= 0 then return nil, 0 end
+  local at = roll * total
+  for _, t in ipairs(T.list) do
+    if #T.live_cards(t.set) > 0 then
+      local w = T.weight(t)
+      if w > 0 and at < w then return t, total end
+      at = at - w
+    end
+  end
+  return nil, total
+end
+
+local function loc(t)
+  local L = G and G.localization
+  if not (L and L.misc and L.descriptions) then return end
+  local low = string.lower(t.set)
+  local name = T.name(t)
+  L.misc.dictionary = L.misc.dictionary or {}
+  L.misc.dictionary["k_" .. low] = name
+  L.misc.dictionary["b_" .. low .. "_cards"] = name
+  L.descriptions[t.set] = L.descriptions[t.set] or {}
+  L.descriptions.Other = L.descriptions.Other or {}
+  local undisc = {name = name, text = {mod_loc and mod_loc("Not found yet") or "Not found yet"}}
+  local FJ = package.loaded["functions/forge/forge_joker"]
+  L.descriptions.Other["undiscovered_" .. low] = FJ and FJ.parsed and FJ.parsed(undisc) or undisc
+end
+
+function T.inject_loc()
+  for _, t in ipairs(T.list) do pcall(loc, t) end
+end
+
+function T.register_smods(list)
+  local SM = rawget(_G, "SMODS")
+  if not (SM and SM.ConsumableTypes and SM.ConsumableType and SM.ConsumableType.obj_buffer) then return end
+  local CT = SM.ConsumableType
+  for _, buf in ipairs({CT.obj_buffer, CT.visible_buffer or {}}) do
+    for i = #buf, 1, -1 do
+      local o = SM.ConsumableTypes[buf[i]]
+      if (o and o.forge_type) or (type(buf[i]) == "string" and buf[i]:sub(1, #T.PREFIX) == T.PREFIX) then table.remove(buf, i) end
+    end
+  end
+  for key, o in pairs(SM.ConsumableTypes) do if type(o) == "table" and o.forge_type then SM.ConsumableTypes[key] = nil end end
+  for _, t in ipairs(list) do
+    local col = T.rgb(t.c)
+    local obj = {key = t.set, original_key = t.set, primary_colour = col, secondary_colour = col, shop_rate = T.fields(t.c).shop,
+      collection_rows = {5, 5}, forge_type = t.id, set = "ConsumableType", loc_txt = {}}
+    setmetatable(obj, {__index = CT})
+    SM.ConsumableTypes[t.set] = obj
+    CT.obj_buffer[#CT.obj_buffer + 1] = t.set
+    if CT.visible_buffer then CT.visible_buffer[#CT.visible_buffer + 1] = t.set end
+    local ok, err = pcall(CT.inject, obj)
+    if not ok then require("functions/forge/forge_joker").log_once("type_smods_" .. t.id, "type inject failed: " .. tostring(err)) end
+  end
+end
+
+function T.register()
+  if not (G and G.P_CENTER_POOLS) then return end
+  local list = T.refresh_list()
+  for _, t in ipairs(list) do
+    G.P_CENTER_POOLS[t.set] = G.P_CENTER_POOLS[t.set] or {}
+    local col = T.rgb(t.c)
+    if G.C then
+      G.C.SET = G.C.SET or {}
+      G.C.SECONDARY_SET = G.C.SECONDARY_SET or {}
+      G.C.SET[t.set] = col
+      G.C.SECONDARY_SET[t.set] = col
+      if G.C.UI then G.C.UI[t.set] = G.C.UI.TEXT_LIGHT end
+    end
+    pcall(loc, t)
+  end
+  if smods() then T.register_smods(list) end
+  T.ensure_rates()
+end
+
+function T.pools()
+  local out = {}
+  for key in pairs(G and G.P_CENTER_POOLS or {}) do
+    if type(key) == "string" and key:sub(1, #T.PREFIX) == T.PREFIX then out[#out + 1] = key end
+  end
+  return out
+end
+
+function T.next_blind(blind, reset)
+  if reset or not (G and G.GAME) then return end
+  local m = tonumber(G.GAME.forge_next_blind)
+  local off = G.GAME.forge_next_boss_off
+  if not m and not off then return end
+  G.GAME.forge_next_blind = nil
+  if m and m > 0 and blind.chips then
+    local v = blind.chips * m
+    if type(v) == "number" then v = math.max(1, math.floor(v)) end
+    blind.chips = v
+    blind.chip_text = number_format(blind.chips)
+  end
+  if off and blind.boss then
+    G.GAME.forge_next_boss_off = nil
+r 3 617 %20%20%20%20 -
+l 38
+      if G.GAME.blind and not G.GAME.blind.disabled then G.GAME.blind:disable() end
+      return true
+    end}))
+  end
+end
+
+local function own_cards_button(t, n)
+  local low = string.lower(t.set)
+  return UIBox_button({button = "forge_collection_type", ref_table = {set = t.set}, label = {T.name(t)}, count = {tally = n, of = n}, minw = 4, id = "your_collection_" .. low, colour = G.C.SECONDARY_SET[t.set]})
+end
+
+local function find_parent(node, id)
+  if type(node) ~= "table" then return nil end
+  for _, child in ipairs(node.nodes or {}) do
+    for _, inner in ipairs(type(child) == "table" and child.nodes or {}) do
+      if type(inner) == "table" and inner.config and inner.config.id == id then return node end
+    end
+    local p = find_parent(child, id)
+    if p then return p end
+  end
+  return nil
+end
+
+function T.collection_menu(t)
+  if smods() then return t end
+  local parent = find_parent(t, "your_collection_spectrals")
+  if not parent then return t end
+  for _, ty in ipairs(T.list) do
+    local n = #T.live_cards(ty.set)
+    if n > 0 then parent.nodes[#parent.nodes + 1] = own_cards_button(ty, n) end
+  end
+  return t
+end
+
+function T.open_collection(e)
+  local set = e and e.config and e.config.ref_table and e.config.ref_table.set
+  if not (set and G.P_CENTER_POOLS[set]) then return end
+  local More = require("functions/forge/forge_kinds_more")
+r 32 1381 %20%20 -
+l 32
+  G.FUNCS.overlay_menu{definition = More.paged{items = T.live_cards(set), cols = 5, rows = 2, no_tip = true, make = function(v, area)
+    return Card(area.T.x + area.T.w / 2, area.T.y, G.CARD_W, G.CARD_H, G.P_CARDS.empty, v)
+  end}}
+end
+
+function T.install_hooks()
+  if T.hooked then return end
+  T.hooked = true
+  pcall(require("functions/forge/forge_startpack").install)
+  pcall(require("functions/forge/forge_typerules").install)
+  pcall(require("functions/forge/forge_moments").install)
+  pcall(require("functions/forge/forge_moredos").install)
+  G.FUNCS.forge_collection_type = T.open_collection
+  if type(create_card_for_shop) == "function" then
+    local orig = create_card_for_shop
+    create_card_for_shop = function(area, ...)
+      pcall(T.ensure_rates)
+      if not (G.GAME and area == G.shop_jokers and #T.list > 0) then return orig(area, ...) end
+      local forced = G.SETTINGS and G.SETTINGS.tutorial_progress and G.SETTINGS.tutorial_progress.forced_shop
+      local tagged = false
+      for _, tag in ipairs(G.GAME.tags or {}) do
+        if tag.config and tag.config.type == "store_joker_create" then tagged = true end
+      end
+      local ok, t, own = pcall(T.pick, pseudorandom(pseudoseed("forge_type_pick" .. G.GAME.round_resets.ante)))
+      if tagged or (forced and forced[#forced]) or not ok or not t or not own or own <= 0
+        or pseudorandom(pseudoseed("forge_type_cdt" .. G.GAME.round_resets.ante)) * (T.base_rate() + own) >= own then
+        return T.without_rates(orig, area, ...)
+      end
+      local key = T.card_key(t.set, "forge_type_shop" .. G.GAME.round_resets.ante)
+      if not key then return T.without_rates(orig, area, ...) end
+      local card = create_card(t.set, area, nil, nil, nil, nil, key, "sho")
+      create_shop_card_ui(card, t.set, area)
+r 3 617 %20%20%20%20%20%20 -
+l 108
+        for _, tag in ipairs(G.GAME.tags or {}) do
+          if tag:apply_to_run({type = "store_joker_modify", card = card}) then break end
+        end
+        return true
+      end}))
+      return card
+    end
+  end
+  if type(create_card) == "function" then
+    local orig = create_card
+    create_card = function(_type, area, legendary, _rarity, skip_materialize, soulable, forced_key, key_append, ...)
+      local set = G.GAME and G.GAME.forge_type_pack
+      if set and area and area == G.pack_cards and not forced_key and (_type == "Tarot" or _type == "Spectral" or _type == "Planet" or _type == "Tarot_Planet") then
+        local ok, key = pcall(T.card_key, set, "forge_type_pack" .. (G.GAME.round_resets and G.GAME.round_resets.ante or 1))
+        if ok and key then
+          _type = set
+          soulable = nil
+          forced_key = key
+        end
+      elseif not forced_key and type(_type) == "string" and T.by_set[_type] then
+        local ok, key = pcall(T.card_key, _type, "forge_type_card" .. (G.GAME and G.GAME.round_resets and G.GAME.round_resets.ante or 1))
+        if ok and key then forced_key = key end
+      end
+      return orig(_type, area, legendary, _rarity, skip_materialize, soulable, forced_key, key_append, ...)
+    end
+  end
+  if Card and Card.open then
+    local orig = Card.open
+    Card.open = function(self, ...)
+      if self.ability and self.ability.set == "Booster" and G.GAME then
+        local cen = self.config and self.config.center
+        G.GAME.forge_type_pack = cen and cen.forge_type_pack or nil
+        local item = cen and cen.forge_type_pack and Store.get_item(cen.forge_id)
+        G.GAME.forge_type_pack_name = item and item.name ~= "" and item.name or nil
+      end
+      return orig(self, ...)
+    end
+  end
+  for name, key in pairs({create_UIBox_arcana_pack = "k_arcana_pack", create_UIBox_spectral_pack = "k_spectral_pack"}) do
+    local orig = rawget(_G, name)
+    if type(orig) == "function" then
+      _G[name] = function(...)
+        local dict = G.localization and G.localization.misc and G.localization.misc.dictionary
+        local own = G.GAME and G.GAME.forge_type_pack and G.GAME.forge_type_pack_name
+        if not (dict and own) then return orig(...) end
+        local keep = dict[key]
+        dict[key] = own
+        local r = {pcall(orig, ...)}
+        dict[key] = keep
+        if not r[1] then error(r[2], 0) end
+        return unpack(r, 2, table.maxn(r))
+      end
+    end
+  end
+  if Blind and Blind.set_blind then
+    local orig = Blind.set_blind
+    Blind.set_blind = function(self, blind, reset, silent, ...)
+      local r = {orig(self, blind, reset, silent, ...)}
+      if blind then
+        local ok, err = pcall(T.next_blind, self, reset)
+        if not ok then require("functions/forge/forge_joker").log_once("type_blind", "next blind failed: " .. tostring(err)) end
+      end
+      return unpack(r)
+    end
+  end
+  if type(create_UIBox_your_collection) == "function" then
+    local orig = create_UIBox_your_collection
+    create_UIBox_your_collection = function(...)
+      local t = orig(...)
+      local ok, r = pcall(T.collection_menu, t)
+      return ok and r or t
+    end
+  end
+  if Game and Game.start_run then
+    local orig = Game.start_run
+    Game.start_run = function(self, ...)
+      local r = {orig(self, ...)}
+      pcall(T.ensure_rates)
+      return unpack(r)
+    end
+  end
+end
+
+local function register_strings()
+  if not mod_loc_register then return end
+  mod_loc_register{
+    fr = {
+      ["Card type"] = "Type de carte", ["Card types"] = "Types de carte", ["Shop weight"] = "Poids en boutique", ["Not found yet"] = "Pas encore trouvée",
+      ["Normal"] = "Normal", ["Red"] = "Rouge", ["Choose {C:attention}%d{} of up to {C:attention}%d{} {C:attention}%s{}"] = "Choisissez {C:attention}%d{} carte parmi {C:attention}%d{} ({C:attention}%s{})",
+      ["Its own family of cards"] = "Sa propre famille de cartes", ["Shows in the shop with weight {C:attention}%s{}"] = "En boutique avec un poids de {C:attention}%s{}",
+      ["Only in its own packs"] = "Seulement dans ses propres paquets", ["{C:attention}%d{} cards of this type"] = "{C:attention}%d{} cartes de ce type",
+      ["The next Blind is {C:attention}%s{} as big"] = "La prochaine Blinde est {C:attention}%s{} aussi grande", ["Next Blind size"] = "Taille de la prochaine Blinde",
+      ["Disable the next Boss Blind"] = "Désactiver la prochaine Blinde de boss", ["Disables the next {C:attention}Boss Blind{}"] = "Désactive la prochaine {C:attention}Blinde de boss{}",
+    },
+    es = {
+      ["Card type"] = "Tipo de carta", ["Card types"] = "Tipos de carta", ["Shop weight"] = "Peso en la tienda", ["Not found yet"] = "Aún no encontrada",
+      ["Normal"] = "Normal", ["Red"] = "Rojo", ["Choose {C:attention}%d{} of up to {C:attention}%d{} {C:attention}%s{}"] = "Elige {C:attention}%d{} de hasta {C:attention}%d{} cartas ({C:attention}%s{})",
+      ["Its own family of cards"] = "Su propia familia de cartas", ["Shows in the shop with weight {C:attention}%s{}"] = "Sale en la tienda con peso {C:attention}%s{}",
+      ["Only in its own packs"] = "Solo en sus propios sobres", ["{C:attention}%d{} cards of this type"] = "{C:attention}%d{} cartas de este tipo",
+      ["The next Blind is {C:attention}%s{} as big"] = "La próxima ciega es {C:attention}%s{} de grande", ["Next Blind size"] = "Tamaño de la próxima ciega",
+      ["Disable the next Boss Blind"] = "Desactivar la próxima ciega jefe", ["Disables the next {C:attention}Boss Blind{}"] = "Desactiva la próxima {C:attention}ciega jefe{}",
+    },
+  }
+end
+
+register_strings()
+
+return T
+end

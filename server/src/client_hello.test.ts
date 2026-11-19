@@ -51,4 +51,50 @@ describe('client_hello', () => {
     expect(b.msgs.some(m => m.type === 'name_refused')).toBe(false);
     a.ws.close(); b.ws.close();
   });
+
+  it('takes the build and name from social_hello when client_hello never came', async () => {
+    const name = `Soc${Math.floor(Math.random() * 1e5)}`;
+    const c = await connect();
+    c.ws.send(JSON.stringify({ type: 'social_hello', pkey: key('e'), name, version: '73' }));
+    await settle();
+    const s = live(name);
+    expect(s.length).toBe(1);
+    expect(s[0].version).toBe('73');
+    c.ws.close();
+  });
+
+  it('keeps what client_hello said over social_hello', async () => {
+    const name = `Kep${Math.floor(Math.random() * 1e5)}`;
+    const c = await connect();
+    c.ws.send(JSON.stringify({ type: 'client_hello', name, pkey: key('f'), version: '72' }));
+    await settle();
+    c.ws.send(JSON.stringify({ type: 'social_hello', pkey: key('f'), name: 'Other', version: '99' }));
+    await settle();
+    const s = live(name);
+    expect(s.length).toBe(1);
+    expect(s[0].version).toBe('72');
+    expect(live('Other').length).toBe(0);
+    c.ws.close();
+  });
+
+  it('still accepts an old social_hello without a version', async () => {
+    const name = `Old${Math.floor(Math.random() * 1e5)}`;
+    const c = await connect();
+    c.ws.send(JSON.stringify({ type: 'social_hello', pkey: key('g'), name }));
+    await settle();
+    const s = live(name);
+    expect(s.length).toBe(1);
+    expect(s[0].version).toBe('');
+    expect(c.msgs.some(m => m.type === 'error')).toBe(false);
+    c.ws.close();
+  });
+
+  it('ignores a bad version in social_hello', async () => {
+    const name = `Bad${Math.floor(Math.random() * 1e5)}`;
+    const c = await connect();
+    c.ws.send(JSON.stringify({ type: 'social_hello', pkey: key('h'), name, version: 'x'.repeat(40) }));
+    await settle();
+    expect(live(name)[0]?.version).toBe('');
+    c.ws.close();
+  });
 });

@@ -190,7 +190,11 @@ local function apply_regex(patch, text, target)
         warn("regex failed to compile for " .. target .. " from " .. patch.source .. ": " .. tostring(re))
         return text, false
     end
-    local caps = re:captures_all(text)
+    local cok, caps = pcall(re.captures_all, re, text)
+    if not cok then
+        warn("regex '" .. patch.pattern .. "' on " .. target .. " from " .. patch.source .. " could not be matched: " .. tostring(caps), patch, target, 0)
+        return text, false
+    end
     if #caps == 0 then
         warn("regex '" .. patch.pattern .. "' on " .. target .. " from " .. patch.source .. " resulted in no matches", patch, target, 0)
         return text, false

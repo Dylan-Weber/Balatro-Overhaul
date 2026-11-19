@@ -1,0 +1,378 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 236
+local FL = {}
+
+FL.V = 16
+FL.VANILLA = {"e_foil", "e_holo", "e_polychrome", "e_negative"}
+FL.SHADER = {e_foil = "foil", e_holo = "holo", e_polychrome = "polychrome", e_negative = "negative_shine"}
+FL.KINDS = {joker = true, tarot = true, planet = true, spectral = true, voucher = true, booster = true, enhancement = true, seal = true,
+  deck = true, collab = true, tag = true, blind = true, stake = true}
+FL.PX_KINDS = {joker = true, tarot = true, planet = true, spectral = true, voucher = true, booster = true, enhancement = true, seal = true,
+  back = true, skin = true, blind = true, tag = true, stake = true}
+FL.FACE = {Jack = true, Queen = true, King = true}
+FL.SKIN = FL.SKIN or {}
+
+local LOC = {
+  fr = {["Special effect: %s"] = "Effet spécial : %s", ["Special effect"] = "Effet spécial", ["None"] = "Aucun"},
+  es = {["Special effect: %s"] = "Efecto especial: %s", ["Special effect"] = "Efecto especial", ["None"] = "Ninguno"},
+}
+
+local function ml(s) return mod_loc and mod_loc(s) or s end
+local function store() return package.loaded["functions/forge/forge_store"] end
+local function shine() return package.loaded["functions/forge/forge_shine"] or require("functions/forge/forge_shine") end
+
+local function own_id(v)
+  if type(v) ~= "string" or v:sub(1, 6) ~= "forge_" then return nil end
+  local id = v:sub(7)
+  if id == "" or #id > 16 or id:find("[^%w]") then return nil end
+  return id
+end
+FL.own_id = own_id
+
+function FL.clean(v)
+  if type(v) ~= "string" or v == "" or v == "none" or #v > 40 then return nil end
+  if FL.SHADER[v] or own_id(v) then return v end
+  if v:match("^e_[%w_]+$") and v ~= "e_base" and v:sub(1, 8) ~= "e_forge_" then return v end
+  return nil
+end
+
+function FL.kind_ok(kind) return FL.KINDS[kind or "joker"] == true end
+
+local function mod_edition(v)
+  if FL.SHADER[v] or own_id(v) then return nil end
+  local c = G and G.P_CENTERS and G.P_CENTERS[v]
+  if type(c) ~= "table" or c.set ~= "Edition" or type(c.shader) ~= "string" then return nil end
+  if not (G.SHADERS and G.SHADERS[c.shader]) then return nil end
+  return c
+end
+
+local function own_item(v)
+  local id = own_id(v)
+  local S = store()
+  local c = id and S and S.get_item and S.get_item(id)
+  if c and c.kind == "edition" then return c end
+  return nil
+end
+
+function FL.options()
+  local out = {"none"}
+  for _, v in ipairs(FL.VANILLA) do out[#out + 1] = v end
+  local R = package.loaded["functions/forge/forge_rules"]
+  for _, v in ipairs(R and R.own_values and R.own_values("edition") or {}) do out[#out + 1] = v end
+  local pool = G and G.P_CENTER_POOLS and G.P_CENTER_POOLS.Edition or {}
+  local mods = {}
+  for _, c in ipairs(pool) do
+    if type(c) == "table" and type(c.key) == "string" and FL.clean(c.key) and mod_edition(c.key) then mods[#mods + 1] = c.key end
+  end
+  table.sort(mods)
+  for _, v in ipairs(mods) do out[#out + 1] = v end
+  return out
+end
+
+function FL.name(v)
+  v = FL.clean(v)
+  if not v then return ml("None") end
+  local c = own_item(v)
+  if c then return (c.name and c.name ~= "") and c.name or ml("Edition") end
+  local ok, s = pcall(rawget(_G, "localize"), {type = "name_text", set = "Edition", key = v})
+  if ok and type(s) == "string" and s ~= "" and s ~= "ERROR" then return s end
+  local short = v:gsub("^e_", ""):gsub("^forge_", "")
+  return short:sub(1, 1):upper() .. short:sub(2)
+end
+
+function FL.resolve(v)
+  v = FL.clean(v)
+  if not v then return nil end
+  if FL.SHADER[v] then return {vanilla = v} end
+  if own_id(v) then
+    local c = own_item(v)
+    if not c then return nil end
+    local FS = shine()
+    local K = rawget(_G, "ForgeKinds")
+    local More = K and K.more
+    local f = More and More.fields and More.fields(c) or c.fields
+    local look, spr = FS.look_of(f), FS.art(c)
+    if not (look or spr) then return nil end
+    return {own = look, art = spr}
+  end
+  local c = mod_edition(v)
+  if c then return {mod = c} end
+  return nil
+end
+
+function FL.skin_look(card)
+  local b = type(card) == "table" and card.base
+  if not (type(b) == "table" and FL.FACE[b.value]) then return nil end
+  local cd = G and G.SETTINGS and G.SETTINGS.CUSTOM_DECK
+  local key = cd and cd.Collabs and cd.Collabs[b.suit]
+  return key and FL.SKIN[key] or nil
+end
+
+function FL.of(card)
+  if type(card) ~= "table" then return nil end
+  if card.forge_forced ~= nil then return card.forge_forced or nil end
+  local cen = card.config and card.config.center
+  return (type(cen) == "table" and cen.forge_look) or FL.skin_look(card)
+end
+
+function FL.back_look(card)
+  if type(card) ~= "table" or not (G and G.GAME) then return nil end
+  local b = card.params and card.params.viewed_back and G.GAME.viewed_back or G.GAME.selected_back
+  local c = type(b) == "table" and b.effect and b.effect.center
+  return type(c) == "table" and c.forge_look or nil
+end
+
+function FL.stake_look()
+  local g = G and G.GAME
+  local id = g and g.forge_stake
+  local S = id and store()
+  local c = S and S.get_item and S.get_item(id)
+  return c and c.kind == "stake" and FL.clean(c.look) or nil
+end
+
+local function args_of(card) return card.ARGS and card.ARGS.send_to_shader end
+
+local function front_ok(card)
+  if not card.children.front then return false end
+  if card.should_hide_front then return not card:should_hide_front() end
+  return card.ability == nil or card.ability.effect ~= "Stone Card"
+end
+
+local function paint(card, spec, layer)
+  local args = args_of(card)
+  if spec.vanilla then
+    local sh = FL.SHADER[spec.vanilla]
+    if spec.vanilla == "e_negative" then
+      card.children.center:draw_shader("negative", nil, args)
+      if front_ok(card) then card.children.front:draw_shader("negative", nil, args) end
+      card.children.center:draw_shader(sh, nil, args)
+      return
+    end
+    card.children.center:draw_shader(sh, nil, args)
+    if front_ok(card) then card.children.front:draw_shader(sh, nil, args) end
+    return
+  end
+  if spec.own or spec.art then
+    local FS = shine()
+    if spec.own then FS.draw_shine(card, spec.own) end
+    if spec.art then FS.draw_art(card, spec.art, spec.own) end
+    return
+  end
+  local c = spec.mod
+  if type(c.draw) == "function" then
+    c:draw(card, layer)
+    return
+  end
+  card.children.center:draw_shader(c.shader, nil, args)
+  if front_ok(card) then card.children.front:draw_shader(c.shader, nil, args) end
+end
+
+local function shade(spr, spec, args, other)
+  local sh
+  if spec.vanilla then
+    if spec.vanilla == "e_negative" then
+      spr:draw_shader("negative", nil, args, nil, other)
+    end
+    sh = FL.SHADER[spec.vanilla]
+  elseif spec.own then
+    local FS = shine()
+    local key = FS.build(spec.own.shader)
+    if key then
+      local s = G.SHADERS[key]
+      local t = spec.own.tint
+      s:send("fe_tint", t and {t[1], t[2], t[3], 1} or {0, 0, 0, 0})
+      s:send("fe_amt", spec.own.amt or 1)
+      sh = key
+    else
+      sh = spec.own.shader
+    end
+  elseif spec.mod then
+    sh = spec.mod.shader
+  end
+  if sh then spr:draw_shader(sh, nil, args, nil, other) end
+end
+
+local function paint_sprite(spr, card, spec)
+  spr.role.draw_major = card
+  shade(spr, spec, args_of(card), card.children.center)
+end
+
+local function sprite_send(spr)
+  spr.forge_send = spr.forge_send or {0, 0}
+  local t = G.TIMERS and G.TIMERS.REAL or 0
+  spr.forge_send[1] = t / 28 + ((spr.ID or 0) % 17) * 0.07
+  spr.forge_send[2] = t
+  return spr.forge_send
+end
+
+function FL.paint_on(spr, v)
+  if not (spr and spr.draw_shader and spr.states and spr.states.visible ~= false) then return end
+  local spec = FL.resolve(v)
+  if not spec or (not spec.vanilla and not spec.own and not spec.mod) then return end
+  shade(spr, spec, sprite_send(spr.role and spr.role.draw_major or spr))
+end
+
+function FL.draw(card, layer)
+  if not (card and card.children and card.children.center) then return end
+  local spec = FL.resolve(FL.of(card))
+  if spec then paint(card, spec, layer) end
+end
+
+function FL.seal_look(card)
+  if not (card and card.seal and G.P_SEALS) then return nil end
+  if card.ability and card.ability.delay_seal then return nil end
+  local p = G.P_SEALS[card.seal]
+  return type(p) == "table" and p.forge_look or nil
+end
+
+function FL.draw_seal(card)
+  local v = FL.seal_look(card)
+  if not v then return end
+  local spr = G.shared_seals and G.shared_seals[card.seal]
+  local spec = spr and FL.resolve(v)
+  if spec then paint_sprite(spr, card, spec) end
+end
+
+function FL.draw_back(card)
+  local back = card and card.children and card.children.back
+  if not back then return end
+r 32 2158 %20%20 -
+l 134
+  if area and area.config and area.config.type == "deck" and area.cards and card ~= area.cards[1] then return end
+  local spec = FL.resolve(FL.back_look(card))
+  if not spec then return end
+  back.role.draw_major = card
+  shade(back, spec, args_of(card) or sprite_send(card))
+end
+
+local function safe(f, card, layer)
+  local ok, err = pcall(f, card, layer)
+  if not ok then
+    FL.errs = (FL.errs or 0) + 1
+    if FL.errs <= 5 then print("[forge_forcedlook] " .. tostring(err)) end
+  end
+end
+
+function FL.draw_safe(card, layer) safe(FL.draw, card, layer) end
+function FL.draw_plain(card) safe(FL.draw, card) end
+function FL.draw_seal_safe(card) safe(FL.draw_seal, card) end
+function FL.draw_back_safe(card) if FL.back_look(card) then safe(FL.draw_back, card) end end
+function FL.paint_on_safe(spr, v) safe(FL.paint_on, spr, v) end
+
+function FL.tag(spr, v)
+  if type(spr) ~= "table" or type(spr.draw) ~= "function" then return spr end
+  spr.forge_look = FL.clean(v)
+  if spr.forge_look and not spr.forge_look_draw then
+    local base = spr.draw
+    spr.forge_look_draw = true
+    spr.draw = function(self, ...)
+      local r = base(self, ...)
+      if self.forge_look and self.states and self.states.visible then FL.paint_on_safe(self, self.forge_look) end
+      return r
+    end
+  end
+  return spr
+end
+
+local function walk(t, fn, seen)
+  if type(t) ~= "table" or seen[t] then return end
+  seen[t] = true
+  local o = t.config and t.config.object
+  if type(o) == "table" then fn(o) end
+  for _, n in ipairs(t.nodes or {}) do walk(n, fn, seen) end
+end
+
+function FL.tag_tree(t, fn)
+  pcall(walk, t, fn, {})
+  return t
+end
+
+local function blind_atlas(o)
+  return G.ANIMATION_ATLAS and o.atlas == G.ANIMATION_ATLAS.blind_chips
+end
+
+function FL.blind_choice_look(kind)
+  local g = G and G.GAME
+  local key = g and g.round_resets and g.round_resets.blind_choices and g.round_resets.blind_choices[kind]
+  local p = key and G.P_BLINDS and G.P_BLINDS[key]
+  return p and p.forge_look or nil
+end
+
+local function install_generic(Hooks)
+  if FL.generic then return end
+  FL.generic = true
+  if Blind and Blind.draw then
+    Hooks.wrap("Blind", "draw", function(orig) return function(self, ...)
+      local r = orig(self, ...)
+      local p = self.config and self.config.blind
+      local spr = self.children and self.children.animatedSprite
+      if spr and type(p) == "table" and p.forge_look and self.states.visible then FL.paint_on_safe(spr, p.forge_look) end
+      return r
+    end end, {id = "forge.forcedlook.blind"})
+  end
+  local TagC = rawget(_G, "Tag")
+  if TagC and TagC.generate_UI then
+    Hooks.wrap("Tag", "generate_UI", function(orig) return function(self, ...)
+      local a, b, c = orig(self, ...)
+      local p = G.P_TAGS and G.P_TAGS[self.key]
+      if not self.hide_ability and p and p.forge_look and self.tag_sprite then FL.tag(self.tag_sprite, p.forge_look) end
+      return a, b, c
+    end end, {id = "forge.forcedlook.tag"})
+  end
+  Hooks.wrap(_G, "create_UIBox_blind_choice", function(orig) return function(kind, ...)
+    local t = orig(kind, ...)
+    local v = FL.blind_choice_look(kind)
+    if v then FL.tag_tree(t, function(o) if blind_atlas(o) then FL.tag(o, v) end end) end
+    return t
+  end end, {id = "forge.forcedlook.blind_choice"})
+  Hooks.wrap(_G, "create_UIBox_your_collection_blinds", function(orig) return function(...)
+    local t = orig(...)
+    FL.tag_tree(t, function(o)
+      local p = type(o.config) == "table" and o.config.blind
+      if type(p) == "table" and p.forge_look then FL.tag(o, p.forge_look) end
+    end)
+    return t
+  end end, {id = "forge.forcedlook.blind_collection"})
+  Hooks.wrap(_G, "get_stake_sprite", function(orig) return function(stake, ...)
+    local spr = orig(stake, ...)
+    local v = G.GAME and stake == G.GAME.stake and FL.stake_look()
+    if v then FL.tag(spr, v) end
+    return spr
+  end end, {id = "forge.forcedlook.stake"})
+end
+
+function FL.install()
+  local Hooks = package.loaded["overhaul.hooks"] or require("overhaul.hooks")
+  if not Hooks then return end
+  install_generic(Hooks)
+  if FL.installed then return end
+  local S = rawget(_G, "SMODS")
+  if not (S and S.DrawSteps and S.DrawSteps.seal) then return end
+  FL.installed = true
+  Hooks.wrap("SMODS.DrawSteps.seal", "func", function(orig) return function(self, layer, ...)
+    local r = orig(self, layer, ...)
+    FL.draw_seal_safe(self)
+    return r
+  end end, {id = "forge.forcedlook.seal"})
+  if S.DrawSteps.back then
+    Hooks.wrap("SMODS.DrawSteps.back", "func", function(orig) return function(self, ...)
+      local r = orig(self, ...)
+      FL.draw_back_safe(self)
+      return r
+    end end, {id = "forge.forcedlook.back"})
+  end
+end
+
+function FL.preview(card, v)
+  card.forge_forced = FL.clean(v) or false
+end
+
+if mod_loc_register then mod_loc_register(LOC) end
+
+_G.ForgeForcedLook = FL
+
+return FL
+end

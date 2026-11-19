@@ -1,0 +1,673 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 492
+local B = {}
+
+B.V = 16
+B.TARGETS = {"right", "left", "both", "all"}
+B.PASSIVE = {"boost_retrigger", "boost_double"}
+B.GAINS = {"boost_mult", "boost_chips", "boost_xmult"}
+B.IDS = {boost_retrigger = true, boost_double = true, boost_mult = true, boost_chips = true, boost_xmult = true}
+B.STAT = {boost_mult = "mult", boost_chips = "chips", boost_xmult = "xmult"}
+B.RETRIGGER_CTX = {"joker_main", "individual", "repetition", "before", "other_joker"}
+B.DOUBLE_CTX = {"joker_main", "individual", "repetition", "before", "after", "other_joker", "end_of_round", "discard"}
+
+local ADD_M = {"mult_mod", "mult", "h_mult"}
+local X_M = {"Xmult_mod", "x_mult", "xmult", "Xmult"}
+local ADD_C = {"chip_mod", "chips", "h_chips"}
+local X_C = {"Xchip_mod", "x_chips", "xchips", "Xchips"}
+local SUM = {"dollars", "p_dollars", "h_dollars", "repetitions"}
+local MONEY = {dollars = true, p_dollars = true, h_dollars = true}
+local MSG = {{"Xmult_mod", "a_xmult"}, {"x_mult", "a_xmult"}, {"xmult", "a_xmult"}, {"Xchip_mod", "a_xmult"}, {"mult_mod", "a_mult"}, {"chip_mod", "a_chips"}, {"dollars", "a_dollars"}}
+
+local TEXT = {
+  en = {
+    who = {right = "the {C:attention}Joker{} to the right", left = "the {C:attention}Joker{} to the left",
+      both = "each {C:attention}Joker{} next to this one", all = "every other {C:attention}Joker{}"},
+    retrigger1 = "retrigger %s", retrigger = "retrigger %s {C:attention}%s{} times",
+    double2 = "%s gives {C:attention}double{}", double = "%s gives {C:attention}%s{} times as much",
+    boost_mult = "%s gains {C:mult}+%s{} Mult", boost_chips = "%s gains {C:chips}+%s{} Chips", boost_xmult = "%s gains {X:mult,C:white} X%s {} Mult",
+    boosted = "{C:inactive}Boosted:{}",
+  },
+  fr = {
+    who = {right = "le {C:attention}Joker{} à droite", left = "le {C:attention}Joker{} à gauche", both = "chaque {C:attention}Joker{} voisin", all = "chaque autre {C:attention}Joker{}"},
+    retrigger1 = "redéclenche %s", retrigger = "redéclenche %s {C:attention}%s{} fois",
+    double2 = "%s donne le {C:attention}double{}", double = "%s donne {C:attention}%s{} fois plus",
+    boost_mult = "%s gagne {C:mult}+%s{} Multi", boost_chips = "%s gagne {C:chips}+%s{} jetons", boost_xmult = "%s gagne {X:mult,C:white} X%s {} Multi",
+    boosted = "{C:inactive}Boosté :{}",
+  },
+  es = {
+    who = {right = "el {C:attention}joker{} de la derecha", left = "el {C:attention}joker{} de la izquierda",
+      both = "cada {C:attention}joker{} vecino", all = "cada uno de los demás {C:attention}jokers{}"},
+    retrigger1 = "reactiva %s", retrigger = "reactiva %s {C:attention}%s{} veces",
+    double2 = "%s da el {C:attention}doble{}", double = "%s da {C:attention}%s{} veces más",
+    boost_mult = "%s gana {C:mult}+%s{} multi", boost_chips = "%s gana {C:chips}+%s{} fichas", boost_xmult = "%s gana {X:mult,C:white} X%s {} multi",
+    boosted = "{C:inactive}Potenciado:{}",
+  },
+}
+B.TEXT = TEXT
+
+B.LABEL_GIVE = {boost_retrigger = "Retrigger a Joker", boost_double = "A Joker gives more", boost_mult = "A Joker gains Mult", boost_chips = "A Joker gains Chips", boost_xmult = "A Joker gains XMult"}
+B.LABEL_TARGET = {right = "Joker to the right", left = "Joker to the left", both = "Both neighbours", all = "Every other Joker"}
+B.SHORT = {right = "(right)", left = "(left)", both = "(sides)", all = "(all)"}
+B.CHIP = {boost_retrigger = "Retrigger", boost_double = "Gives more", boost_mult = "Gains Mult", boost_chips = "Gains Chips", boost_xmult = "Gains XMult"}
+
+local LOC = {
+  fr = {
+    ["Retrigger a Joker"] = "Redéclencher un Joker", ["A Joker gives more"] = "Un Joker donne plus", ["A Joker gains Mult"] = "Un Joker gagne du Multi",
+    ["A Joker gains Chips"] = "Un Joker gagne des jetons", ["A Joker gains XMult"] = "Un Joker gagne des XMulti",
+    ["Joker to the right"] = "Joker à droite", ["Joker to the left"] = "Joker à gauche", ["Both neighbours"] = "Les deux voisins", ["Every other Joker"] = "Tous les autres Jokers",
+    ["(right)"] = "(droite)", ["(left)"] = "(gauche)", ["(sides)"] = "(côtés)", ["(all)"] = "(tous)", ["Gives more"] = "Donne plus",
+  },
+  es = {
+    ["Retrigger a Joker"] = "Reactivar un joker", ["A Joker gives more"] = "Un joker da más", ["A Joker gains Mult"] = "Un joker gana multi",
+    ["A Joker gains Chips"] = "Un joker gana fichas", ["A Joker gains XMult"] = "Un joker gana XMulti",
+    ["Joker to the right"] = "Joker de la derecha", ["Joker to the left"] = "Joker de la izquierda", ["Both neighbours"] = "Los dos vecinos", ["Every other Joker"] = "Todos los demás jokers",
+    ["(right)"] = "(derecha)", ["(left)"] = "(izquierda)", ["(sides)"] = "(lados)", ["(all)"] = "(todos)", ["Gives more"] = "Da más",
+  },
+}
+B.LOC = LOC
+
+local function lt(lang) return TEXT[lang] or TEXT.en end
+local function gl(name) return rawget(_G, name) end
+local function localize_(a) return gl("localize")(a) end
+local function status_text(...) return gl("card_eval_status_text")(...) end
+local function rules_mod() return package.loaded["functions/forge/forge_rules"] end
+local function power() return package.loaded["functions/forge/forge_power3"] end
+local function exp_mod()
+  local R = rules_mod()
+  return R and R.EXP
+end
+local function member(list, v)
+  for _, x in ipairs(list) do if x == v then return true end end
+  return false
+end
+local function loc(s) local f = gl("mod_loc") return f and f(s) or s end
+
+local function fmt(n)
+  local T = package.loaded["functions/forge/forge_text"]
+  return T and T.fmt_n and T.fmt_n(n) or tostring(n)
+end
+
+function B.who(v, lang) return lt(lang).who[v] or lt(lang).who.right end
+
+function B.text(g, lang)
+  local l = lt(lang)
+  local who = B.who(g.v, lang)
+  local n = tonumber(g.n) or 1
+  if g.id == "boost_retrigger" then
+    if n <= 1 then return string.format(l.retrigger1, who) end
+    return string.format(l.retrigger, who, fmt(n))
+  end
+  if g.id == "boost_double" then
+    if n == 2 then return string.format(l.double2, who) end
+    return string.format(l.double, who, fmt(n))
+  end
+  if l[g.id] then return string.format(l[g.id], who, fmt(n)) end
+  return ""
+end
+
+function B.aims(v, i, ti)
+  if i == ti then return false end
+  if v == "right" then return ti == i + 1 end
+  if v == "left" then return ti == i - 1 end
+  if v == "both" then return ti == i + 1 or ti == i - 1 end
+  return v == "all"
+end
+
+function B.targets(card, v, list)
+  list = list or (G.jokers and G.jokers.cards) or {}
+  local at
+  for i, j in ipairs(list) do if j == card then at = i break end end
+  local out = {}
+  if not at then return out end
+  for i, j in ipairs(list) do
+    if B.aims(v, at, i) and not j.forge_dying and not j.getting_sliced then out[#out + 1] = j end
+  end
+  return out
+end
+
+B.cache = {}
+function B.info(c)
+  local hit = B.cache[c.id]
+  if hit and hit.rules == c.rules then return hit.info end
+  local R = rules_mod()
+  local info = {retrigger = {}, double = {}}
+  for _, r in ipairs(R.clean_rules(c.rules)) do
+    if r.when == "passive" then
+      for _, g in ipairs(r.give) do
+        if g.id == "boost_retrigger" then info.retrigger[#info.retrigger + 1] = {v = g.v, n = math.max(1, math.floor(tonumber(g.n) or 1))}
+        elseif g.id == "boost_double" then info.double[#info.double + 1] = {v = g.v, n = tonumber(g.n) or 2} end
+      end
+    end
+  end
+  if #info.retrigger == 0 and #info.double == 0 then info = false end
+  B.cache[c.id] = {rules = c.rules, info = info}
+  return info
+end
+
+function B.info_of(card)
+  local P = power()
+  if not (P and P.is_forge and P.is_forge(card)) then return nil end
+  local c = P.item(card)
+  if not (c and type(c.rules) == "table") then return nil end
+  return B.info(c) or nil
+end
+
+function B.hits(t, list)
+  list = list or (G and G.jokers and G.jokers.cards)
+  if not list then return 0, 1 end
+  local ti
+  for i, j in ipairs(list) do if j == t then ti = i break end end
+  if not ti then return 0, 1 end
+  local reps, k, who, dbl = 0, 1, nil, nil
+  for i, j in ipairs(list) do
+    if i ~= ti and not j.debuff then
+      local info = B.info_of(j)
+      if info then
+        for _, e in ipairs(info.retrigger) do
+          if B.aims(e.v, i, ti) then
+            reps = reps + e.n
+            who = who or {}
+            for _ = 1, e.n do who[#who + 1] = j end
+          end
+        end
+        for _, e in ipairs(info.double) do
+          if B.aims(e.v, i, ti) then
+            k = k * e.n
+            dbl = dbl or {}
+            dbl[#dbl + 1] = j
+          end
+        end
+      end
+    end
+  end
+  return reps, k, who, dbl
+end
+
+local function ctx_in(context, list)
+  if type(context) ~= "table" then return false end
+  for _, k in ipairs(list) do if context[k] then return true end end
+  return false
+end
+function B.retrigger_ok(context) return ctx_in(context, B.RETRIGGER_CTX) and not context.blueprint and not context.retrigger_joker_check end
+function B.double_ok(context) return ctx_in(context, B.DOUBLE_CTX) and not context.retrigger_joker_check end
+
+function B.smods()
+  local S = rawget(_G, "SMODS")
+  return type(S) == "table" and type(S.calculate_retriggers) == "function" and S or nil
+end
+
+local function msg_var(key, n)
+  if (key == "a_chips" or key == "a_mult") and tonumber(n) and n < 0 then return localize_{type = "variable", key = key .. "_minus", vars = {-n}} end
+  return localize_{type = "variable", key = key, vars = {n}}
+end
+B.msg_var = msg_var
+
+local function round2(n) return math.floor(n * 100 + 0.5) / 100 end
+
+local function snapshot(r)
+  local s = {}
+  for _, p in ipairs(MSG) do s[p[1]] = r[p[1]] end
+  return s
+end
+
+local function fix_message(r, before)
+  if type(r.message) ~= "string" then return false end
+  for _, p in ipairs(MSG) do
+    local k = p[1]
+    local old, new = tonumber(before[k]), tonumber(r[k])
+    if old and new and old ~= new then
+      local ok, was = pcall(msg_var, p[2], old)
+      if ok and was == r.message then
+        local ok2, now = pcall(msg_var, p[2], new)
+        if ok2 then r.message = now return true end
+      end
+    end
+  end
+  return false
+end
+B.fix_message = fix_message
+
+function B.scale(r, k)
+  if type(r) ~= "table" or k == 1 then return r end
+  local before = snapshot(r)
+  for _, key in ipairs(ADD_M) do if tonumber(r[key]) and r[key] ~= 0 then r[key] = r[key] * k end end
+  for _, key in ipairs(ADD_C) do if tonumber(r[key]) and r[key] ~= 0 then r[key] = r[key] * k end end
+  for _, key in ipairs(X_M) do if tonumber(r[key]) and r[key] ~= 1 and r[key] > 0 then r[key] = r[key] * k end end
+  for _, key in ipairs(X_C) do if tonumber(r[key]) and r[key] ~= 1 and r[key] > 0 then r[key] = r[key] * k end end
+  for _, key in ipairs(SUM) do
+    if tonumber(r[key]) and r[key] ~= 0 then
+      if MONEY[key] or key == "repetitions" then r[key] = math.floor(r[key] * k + 0.5) else r[key] = r[key] * k end
+    end
+  end
+  fix_message(r, before)
+  local E = exp_mod()
+  if E and E.scale then E.scale(r, k) end
+  if type(r.extra) == "table" and r.extra ~= r then B.scale(r.extra, k) end
+  return r
+end
+
+local function show(card, key, n, colour)
+  if not (card and card.T) or type(gl("card_eval_status_text")) ~= "function" then return end
+  pcall(status_text, card, "extra", nil, nil, nil, {message = msg_var(key, n), colour = colour})
+end
+
+function B.bonus_of(card)
+  local fb = card and card.ability and card.ability.forge_boost
+  if type(fb) ~= "table" then return nil end
+  local m, c, x = tonumber(fb.mult) or 0, tonumber(fb.chips) or 0, tonumber(fb.xmult) or 1
+  if m == 0 and c == 0 and x == 1 then return nil end
+  return m, c, x
+end
+
+function B.bonus(card, r)
+  local m, c, x = B.bonus_of(card)
+  if not m then return r end
+  local made = r == nil
+  r = r or {card = card}
+  local before = snapshot(r)
+  local had = r.message
+  if m ~= 0 then r.mult_mod = (tonumber(r.mult_mod) or 0) + m end
+  if c ~= 0 then r.chip_mod = (tonumber(r.chip_mod) or 0) + c end
+  local E = exp_mod()
+  if x ~= 1 then
+    if E and E.has and E.has(r, "mult") then r.forge_xmult = (tonumber(r.forge_xmult) or 1) * x
+    else r.Xmult_mod = (tonumber(r.Xmult_mod) or 1) * x end
+  end
+  if E and E.main and E.main(r) then E.bake(r) end
+  local fixed = fix_message(r, before)
+  local parts = {}
+  if x ~= 1 then parts[#parts + 1] = {"a_xmult", x, G.C.MULT} end
+  if m ~= 0 then parts[#parts + 1] = {"a_mult", m, G.C.MULT} end
+  if c ~= 0 then parts[#parts + 1] = {"a_chips", c, G.C.CHIPS} end
+  if fixed and #parts == 1 then return r end
+  if made or had == nil then
+    local main = table.remove(parts, 1)
+    r.message = msg_var(main[1], main[2])
+    r.colour = main[3]
+  end
+  for _, p in ipairs(parts) do show(card, p[1], p[2], p[3]) end
+  return r
+end
+
+function B.add(card, stat, n)
+  if not (card and card.ability) then return end
+  local fb = type(card.ability.forge_boost) == "table" and card.ability.forge_boost or {}
+  if stat == "xmult" then fb.xmult = round2((tonumber(fb.xmult) or 1) + n)
+  else fb[stat] = (tonumber(fb[stat]) or 0) + n end
+  card.ability.forge_boost = fb
+end
+
+local function fold(st, p, adds, xs)
+  local a, x = 0, 1
+  for _, k in ipairs(adds) do a = a + (tonumber(p[k]) or 0) end
+  if type(p.extra) == "table" then a = a + (tonumber(p.extra[adds[1]]) or 0) end
+  for _, k in ipairs(xs) do
+    local v = tonumber(p[k])
+    if v then x = x * v end
+  end
+  st.K = (st.K + a) * x
+  st.X = st.X * x
+end
+
+function B.names(context)
+  if context.joker_main or context.other_joker or context.before or context.after then return {m = "mult_mod", x = "Xmult_mod", c = "chip_mod", xc = "Xchip_mod"} end
+  if G and context.cardarea and context.cardarea == G.hand then return {m = "h_mult", x = "x_mult", c = "h_chips", xc = "x_chips"} end
+  return {m = "mult", x = "x_mult", c = "chips", xc = "x_chips"}
+end
+
+function B.merge(list, context)
+  local last
+  for _, p in ipairs(list) do if p then last = p end end
+  if not last then return nil end
+  local m, c = {K = 0, X = 1}, {K = 0, X = 1}
+  local sums, funcs, out = {}, {}, {}
+  for _, p in ipairs(list) do
+    if p then
+      fold(m, p, ADD_M, X_M)
+      fold(c, p, ADD_C, X_C)
+      for _, k in ipairs(SUM) do if tonumber(p[k]) then sums[k] = (sums[k] or 0) + p[k] end end
+      if type(p.extra) == "table" and type(p.extra.func) == "function" then funcs[#funcs + 1] = p.extra.func end
+      for k, v in pairs(p) do if out[k] == nil then out[k] = v end end
+    end
+  end
+  for k, v in pairs(last) do out[k] = v end
+  for _, list2 in ipairs({ADD_M, X_M, ADD_C, X_C}) do for _, k in ipairs(list2) do out[k] = nil end end
+  for k, v in pairs(sums) do out[k] = v end
+  if type(out.extra) == "table" then
+    local e = {}
+    for k, v in pairs(out.extra) do e[k] = v end
+    e.mult_mod, e.chip_mod = nil, nil
+    if #funcs > 1 then e.func = function() for _, f in ipairs(funcs) do f() end end end
+    out.extra = next(e) and e or nil
+  end
+  local nm = B.names(context)
+  local function put(st, add_key, x_key)
+    if st.X == 0 then out[x_key] = 0 return end
+    if st.X ~= 1 then out[x_key] = st.X end
+    local a = st.K / st.X
+    if a ~= 0 then out[add_key] = a end
+  end
+  put(m, nm.m, nm.x)
+  put(c, nm.c, nm.xc)
+  return out
+end
+
+function B.live(context)
+  if not (context.joker_main or context.other_joker) then return false end
+  local play = G and G.play and G.play.cards
+  return play ~= nil and context.full_hand == play and context.scoring_hand ~= nil
+    and type(rawget(_G, "mult")) == "number" and type(rawget(_G, "hand_chips")) == "number"
+    and type(gl("mod_mult")) == "function" and type(gl("mod_chips")) == "function"
+end
+
+local function adds(p, keys)
+  local a = 0
+  for _, k in ipairs(keys) do a = a + (tonumber(p[k]) or 0) end
+  if type(p.extra) == "table" then a = a + (tonumber(p.extra[keys[1]]) or 0) end
+  return a
+end
+
+local function times(p, keys)
+  local x = 1
+  for _, k in ipairs(keys) do
+    local v = tonumber(p[k])
+    if v then x = x * v end
+  end
+  return x
+end
+
+function B.apply(p)
+  local E = exp_mod()
+  if E and E.main and E.main(p) then E.bake(p) end
+  local am, ac, xm, xc = adds(p, ADD_M), adds(p, ADD_C), times(p, X_M), times(p, X_C)
+  local m, c = rawget(_G, "mult"), rawget(_G, "hand_chips")
+  if am ~= 0 then m = gl("mod_mult")(m + am) end
+  if ac ~= 0 then c = gl("mod_chips")(c + ac) end
+  if xm ~= 1 then m = gl("mod_mult")(m * xm) end
+  if xc ~= 1 then c = gl("mod_chips")(c * xc) end
+  rawset(_G, "mult", m)
+  rawset(_G, "hand_chips", c)
+  local uht = gl("update_hand_text")
+  if type(uht) == "function" and (am ~= 0 or ac ~= 0 or xm ~= 1 or xc ~= 1) then
+    pcall(uht, {delay = 0}, {chips = (ac ~= 0 or xc ~= 1) and c, mult = (am ~= 0 or xm ~= 1) and m})
+  end
+end
+
+function B.factor(card)
+  if not card or card.debuff then return 1 end
+  local _, k = B.hits(card)
+  return tonumber(k) or 1
+end
+
+local function tag_fmt(v)
+  local nf = gl("number_format")
+  if type(nf) == "function" then
+    local ok, t = pcall(nf, v)
+    if ok and type(t) == "string" then return t end
+  end
+  return fmt(v)
+end
+
+function B.tag_text(text, k)
+  if type(text) ~= "string" or k == 1 then return text end
+  return (text:gsub("([%+Xx%$%^]+)(%d[%d,]*%.?%d*)", function(pre, digits)
+    local rest = digits:match("[,%.]+$") or ""
+    local n = tonumber((digits:sub(1, #digits - #rest):gsub(",", "")))
+    if not n then return nil end
+    local v = n * k
+    if pre:find("$", 1, true) then v = math.floor(v + 0.5) end
+    return pre .. tag_fmt(v) .. rest
+  end))
+end
+
+function B.tag(card, pieces)
+  local k = B.factor(card)
+  if k == 1 or type(pieces) ~= "table" then return pieces end
+  local out = {}
+  for i, p in ipairs(pieces) do
+    if type(p) == "table" and not p.chance and not p.second and type(p.text) == "string" then
+      local q = {}
+      for a, b in pairs(p) do q[a] = b end
+      q.text = B.tag_text(p.text, k)
+      out[i] = q
+    else
+      out[i] = p
+    end
+  end
+  return out
+end
+
+function B.again(booster)
+  if not (booster and booster.T) or type(gl("card_eval_status_text")) ~= "function" then return end
+  pcall(status_text, booster, "extra", nil, nil, nil, {message = localize_("k_again_ex"), colour = G.C.FILTER})
+end
+
+local function juice(cards)
+  if not (cards and G and G.E_MANAGER and Event) then return end
+  for _, j in ipairs(cards) do
+    G.E_MANAGER:add_event(Event({func = function() if j.juice_up then j:juice_up(0.5, 0.5) end return true end}))
+  end
+end
+
+function B.one(self, context, r, k, dbl)
+  if context.joker_main then r = B.bonus(self, r) end
+  if r and k ~= 1 and B.double_ok(context) and not context.blueprint then
+    r = B.scale(r, k)
+    juice(dbl)
+  end
+  return r
+end
+
+function B.smods_check(self, context, r)
+  local t, oc = context.other_card, context.other_context
+  if not (t and B.retrigger_ok(oc)) then return r end
+  local info = B.info_of(self)
+  if not info or #info.retrigger == 0 then return r end
+  local list = G.jokers and G.jokers.cards or {}
+  local i, ti
+  for x, j in ipairs(list) do
+    if j == self then i = x end
+    if j == t then ti = x end
+  end
+  if not (i and ti) then return r end
+  local n = 0
+  for _, e in ipairs(info.retrigger) do if B.aims(e.v, i, ti) then n = n + e.n end end
+  if n <= 0 then return r end
+  if type(r) == "table" and tonumber(r.repetitions) then
+    r.repetitions = r.repetitions + n
+    return r
+  end
+  return r or {repetitions = n, message = localize_("k_again_ex"), card = self}
+end
+
+function B.after(orig, self, context, r, ...)
+  if self.debuff then return r end
+  local S = B.smods()
+  if S then
+    local info = B.info_of(self)
+    if info and #info.retrigger > 0 then
+      S.optional_features = S.optional_features or {}
+      S.optional_features.retrigger_joker = true
+    end
+    if context.retrigger_joker_check then return B.smods_check(self, context, r) end
+  end
+r 3 3634 %20%20 -
+l 173
+    if context.joker_main then r = B.bonus(self, r) end
+    return r
+  end
+  local want_rt = not S and B.retrigger_ok(context)
+  local reps, k, who, dbl = 0, 1, nil, nil
+  if want_rt or ((r ~= nil or (context.joker_main and B.bonus_of(self))) and B.double_ok(context)) then reps, k, who, dbl = B.hits(self) end
+  if not want_rt then reps = 0 end
+  r = B.one(self, context, r, k, dbl)
+  if reps <= 0 then return r end
+  local list = {r}
+  for _ = 1, reps do
+    local x = orig(self, context, ...)
+    list[#list + 1] = B.one(self, context, x, k, dbl)
+  end
+  local jokerish = context.joker_main or context.other_joker or context.before
+  local direct = #list > 1 and B.live(context)
+  for i = 1, #list - 1 do
+    if list[i + 1] then
+      if direct then B.apply(list[i]) end
+      if jokerish and list[i] and list[i].message and type(gl("card_eval_status_text")) == "function" then
+        pcall(status_text, list[i].card or self, "jokers", nil, nil, nil, list[i])
+      end
+      B.again(who and who[i])
+    end
+  end
+  local E = exp_mod()
+  if direct and E and E.main and E.main(list[#list]) then E.bake(list[#list]) end
+  local out = B.merge(list, context)
+  if not direct or not out then return out end
+  local tail = B.merge({list[#list]}, context) or {}
+  for _, l in ipairs({ADD_M, X_M, ADD_C, X_C}) do for _, key in ipairs(l) do out[key] = tail[key] end end
+  local done = {}
+  for i = 1, #list - 1 do done[i] = list[i] end
+  out.forge_applied = done
+  return out
+end
+
+function B.dollar(self, n)
+  if self.debuff or not tonumber(n) or n == 0 then return n end
+  local _, k = B.hits(self)
+  if k == 1 then return n end
+  return math.floor(n * k + 0.5)
+end
+
+local function gain(g, card, src, context)
+  if context.blueprint then return end
+  local stat = B.STAT[g.id]
+  local n = tonumber(g.n) or 0
+  if not stat or n == 0 then return end
+  local R = rules_mod()
+  for _, t in ipairs(B.targets(card, g.v)) do
+    B.add(t, stat, n)
+    if R and R.status then R.status(t, localize_("k_upgrade_ex"), stat == "chips" and G.C.CHIPS or G.C.MULT) end
+  end
+end
+
+function B.line(card, lang)
+  local m, c, x = B.bonus_of(card)
+  if not m then return nil end
+  local parts = {lt(lang).boosted}
+  local L = TEXT[lang] and lang or "en"
+  local word = ({en = {"Mult", "Chips"}, fr = {"Multi", "jetons"}, es = {"multi", "fichas"}})[L]
+  if m ~= 0 then parts[#parts + 1] = "{C:mult}" .. (m < 0 and "-" or "+") .. fmt(math.abs(m)) .. "{} " .. word[1] end
+  if c ~= 0 then parts[#parts + 1] = "{C:chips}" .. (c < 0 and "-" or "+") .. fmt(math.abs(c)) .. "{} " .. word[2] end
+  if x ~= 1 then parts[#parts + 1] = "{X:mult,C:white} X" .. fmt(x) .. " {} " .. word[1] end
+  return table.concat(parts, " ")
+end
+
+function B.add_line(card, r)
+  if type(r) ~= "table" or type(r.main) ~= "table" then return end
+  local lang = G.SETTINGS and G.SETTINGS.language or "en"
+  lang = lang:sub(1, 2)
+  local line = B.line(card, lang)
+  local parse = gl("loc_parse_string")
+  if not (line and parse and G.localization and G.localization.descriptions) then return end
+  local O = G.localization.descriptions.Other
+  if not O then return end
+  O.forge_boosted = {name = "", text = {line}, text_parsed = {parse(line)}, name_parsed = {}}
+  local nodes = {}
+  gl("localize"){type = "other", key = "forge_boosted", nodes = nodes, vars = {}}
+  for _, l in ipairs(nodes) do r.main[#r.main + 1] = l end
+end
+
+function B.rules(R)
+  for _, id in ipairs(B.PASSIVE) do if not member(R.GIVE, id) then R.GIVE[#R.GIVE + 1] = id end end
+  for _, id in ipairs(B.GAINS) do if not member(R.GIVE, id) then R.GIVE[#R.GIVE + 1] = id end end
+  local JOKER = {joker = true}
+  for id in pairs(B.IDS) do R.HOST_GIVE[id] = JOKER end
+  local P = require("functions/forge/forge_power3")
+  if P.PASS then for _, id in ipairs(B.PASSIVE) do P.PASS[id] = true end end
+  R.NUM.boost_retrigger = {def = 1, lo = 1, hi = 10, step = 1, big = 5}
+  R.NUM.boost_double = {def = 2, lo = 1.1, hi = 100, step = 0.1, big = 1}
+  R.NUM.boost_mult = {def = 2, lo = 1, hi = R.BIG, step = 1, big = 5}
+  R.NUM.boost_chips = {def = 10, lo = 1, hi = R.BIG, step = 1, big = 10}
+  R.NUM.boost_xmult = {def = 0.1, lo = 0.05, hi = R.BIG, step = 0.05, big = 0.5}
+  for id in pairs(B.IDS) do
+    R.DEFAULT_GIVE[id] = function() return {id = id, v = "right", n = R.NUM[id].def} end
+    R.CLEAN_GIVE[id] = function(e) if not member(B.TARGETS, e.v) then e.v = "right" end end
+    R.TEXT_GIVE[id] = function(g, s, lang) return B.text(g, lang) end
+    R.LABEL_GIVE[id] = B.LABEL_GIVE[id]
+    R.SIMPLE_GIVE[id] = true
+  end
+  for _, id in ipairs(B.GAINS) do R.DOS[id] = gain end
+  R.VALUES_GIVE = R.VALUES_GIVE or {}
+  local function targets()
+    local out = {}
+    for _, v in ipairs(B.TARGETS) do out[#out + 1] = {label = loc(B.LABEL_TARGET[v]), value = v} end
+    return out
+  end
+  for id in pairs(B.IDS) do R.VALUES_GIVE[id] = targets end
+  R.NUM_LABEL = R.NUM_LABEL or {}
+  for id in pairs(B.IDS) do
+    R.NUM_LABEL[id] = function(g) return loc(B.CHIP[id]) .. " " .. loc(B.SHORT[g.v] or B.SHORT.right) end
+  end
+  R.NUM_FMT = R.NUM_FMT or {}
+  R.NUM_FMT.boost_double = function(v) return "X" .. fmt(v) end
+  local base_need = R.need_v
+  function R.need_v(rules, vars)
+    local need = base_need(rules, vars)
+    for _, r in ipairs(type(rules) == "table" and rules or {}) do
+      for _, l in ipairs(type(r) == "table" and {r.give, r.alt} or {}) do
+        for _, g in ipairs(type(l) == "table" and l or {}) do
+          if type(g) == "table" and B.IDS[g.id] then need = math.max(need, B.V) end
+        end
+      end
+    end
+    return need
+  end
+  if gl("mod_loc_register") then gl("mod_loc_register")(LOC) end
+end
+
+local function wrap(obj, name, make)
+  if obj and type(obj[name]) == "function" then obj[name] = make(obj[name]) end
+end
+
+local function log(key, err)
+  B.logged = B.logged or {}
+  if B.logged[key] then return end
+  B.logged[key] = true
+  print("[FORGE] boost " .. key .. " failed: " .. tostring(err))
+end
+
+function B.install()
+  local Card = gl("Card")
+  if B.hooked or not Card then return end
+  B.hooked = true
+  wrap(Card, "calculate_joker", function(orig) return function(self, context, ...)
+    local r, r2 = orig(self, context, ...)
+    if type(context) ~= "table" or not (self.ability and self.ability.set == "Joker") then return r, r2 end
+    local ok, nr = pcall(B.after, orig, self, context, r, ...)
+    if ok then return nr, r2 end
+    log("calc", nr)
+    return r, r2
+  end end)
+  wrap(Card, "calculate_dollar_bonus", function(orig) return function(self, ...)
+    local n = orig(self, ...)
+    if not (self.ability and self.ability.set == "Joker") then return n end
+    local ok, v = pcall(B.dollar, self, n)
+    if ok then return v end
+    log("dollars", v)
+    return n
+  end end)
+  wrap(Card, "generate_UIBox_ability_table", function(orig) return function(self, ...)
+    local r = orig(self, ...)
+    if self.ability and self.ability.forge_boost then
+      local ok, err = pcall(B.add_line, self, r)
+      if not ok then log("text", err) end
+    end
+    return r
+  end end)
+end
+
+return B
+end

@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 371
+l 439
 Progress = Progress or {}
 local P = Progress
 
@@ -10,6 +10,7 @@ P.LABELS = {
   replay = "replay",
   forge_test = "Forge test",
   forge = "Forge content",
+  forge_broken = "Broken Forge content",
   cheats = "cheats",
   custom = "custom run",
   practice = "Boss Practice",
@@ -81,35 +82,85 @@ local function card_forge(card)
 end
 P.card_forge = card_forge
 
+local function balance() return package.loaded["functions/forge/forge_balance"] end
+
+local function key_broken(k)
+  if not forge_key(k) then return nil end
+  local B = balance()
+  return B and B.key_broken(k) or nil
+end
+P.key_broken = key_broken
+
+local function center_broken(c)
+  if type(c) ~= "table" then return nil end
+  local B = balance()
+  if not B then return nil end
+  if type(c.forge_id) == "string" then
+    local n = B.id_broken(c.forge_id)
+    if n then return n end
+  end
+  return key_broken(c.key)
+end
+
+local function edition_broken(ed)
+  if type(ed) == "string" then return key_broken(ed) end
+  if type(ed) ~= "table" then return nil end
+  local B = balance()
+  if B and type(ed.forge) == "string" then
+    local n = B.id_broken(ed.forge)
+    if n then return n end
+  end
+  return key_broken(ed.type) or key_broken(ed.key)
+end
+
+local function card_broken(card)
+  if type(card) ~= "table" then return nil end
+  local cfg = card.config
+  return (cfg and center_broken(cfg.center)) or edition_broken(card.edition) or key_broken(card.seal)
+end
+P.card_broken = card_broken
+
 P.AREAS = {"jokers", "consumeables", "deck", "hand", "discard", "play"}
 
 function P.forge_in_run()
   local g = G and G.GAME
-  if not g then return false end
-  if g.forge_try or g.forge_stake then return true end
+  if not g then return nil end
+  local B = balance()
+  if not B then return nil end
+  local set = B.broken_set()
+  if next(set) == nil then return nil end
+  if g.forge_stake and B.id_broken(tostring(g.forge_stake)) then return B.id_broken(tostring(g.forge_stake)) end
   local b = g.selected_back
-  if b and b.effect and center_forge(b.effect.center) then return true end
-  for k in pairs(type(g.used_vouchers) == "table" and g.used_vouchers or {}) do
-    if forge_key(k) then return true end
+  local n = b and b.effect and center_broken(b.effect.center)
+  if n then return n end
+  if type(g.used_vouchers) == "table" then
+    for k in pairs(g.used_vouchers) do
+      n = key_broken(k)
+      if n then return n end
+    end
   end
   for _, t in ipairs(type(g.tags) == "table" and g.tags or {}) do
-    if type(t) == "table" and forge_key(t.key) then return true end
+    n = type(t) == "table" and key_broken(t.key)
+    if n then return n end
   end
   local bl = g.blind and g.blind.config and g.blind.config.blind
-  if center_forge(bl) then return true end
+  n = center_broken(bl)
+  if n then return n end
   local rr = g.round_resets
-  for _, k in pairs(rr and type(rr.blind_choices) == "table" and rr.blind_choices or {}) do
-    if forge_key(k) then return true end
+  for _, k in ipairs({"Small", "Big", "Boss"}) do
+    n = rr and type(rr.blind_choices) == "table" and key_broken(rr.blind_choices[k])
+    if n then return n end
   end
   for _, name in ipairs(P.AREAS) do
     local a = G[name]
     if type(a) == "table" and type(a.cards) == "table" then
       for _, c in ipairs(a.cards) do
-        if card_forge(c) then return true end
+        n = card_broken(c)
+        if n then return n end
       end
     end
   end
-  return false
+  return nil
 end
 
 function P.mark(reason)
@@ -118,8 +169,15 @@ function P.mark(reason)
   if not g.progress_off then g.progress_off = reason end
 end
 
-function P.note_forge()
-  if G and G.STAGES and G.STAGE == G.STAGES.RUN then P.mark("forge") end
+function P.mark_broken(name)
+  local g = G and G.GAME
+  if not (g and name) or g.progress_off then return end
+  g.progress_off = "forge_broken"
+  g.progress_why = tostring(name)
+end
+
+function P.note_forge(name)
+  if name and G and G.STAGES and G.STAGE == G.STAGES.RUN then P.mark_broken(name) end
 end
 
 local function owned(card)
@@ -132,7 +190,9 @@ local function owned(card)
 end
 
 function P.note(key)
-  if forge_key(key) and G and G.STAGES and G.STAGE == G.STAGES.RUN then P.mark("forge") end
+  if not (G and G.STAGES and G.STAGE == G.STAGES.RUN) then return end
+  local n = key_broken(key)
+  if n then P.mark_broken(n) end
 end
 
 local function in_run()
@@ -146,7 +206,7 @@ function P.scan()
   if P._scan_game == g and P._scan_t == now then return end
   P._scan_game, P._scan_t = g, now
   local ok, found = pcall(P.forge_in_run)
-  if ok and found then P.mark("forge") end
+  if ok and found then P.mark_broken(found) end
 end
 
 function P.run_reason()
@@ -187,7 +247,11 @@ function P.notice()
   if not r then return nil end
   local L = mod_loc or function(s) return s end
   local fmt = L("Progress is off for this run: %s")
-  local ok, s = pcall(string.format, fmt, L(P.LABELS[r] or r))
+  local label = L(P.LABELS[r] or r)
+  local why = G.GAME and G.GAME.progress_why
+  local port = rawget(_G, "UIK") and UIK.portrait and UIK.portrait()
+  if r == "forge_broken" and type(why) == "string" and why ~= "" and not port then label = label .. " (" .. why .. ")" end
+  local ok, s = pcall(string.format, fmt, label)
   return ok and s or nil
 end
 
@@ -307,12 +371,12 @@ function P.install()
     wrap_hook(Card, "open", function(self) P.note(self.config and self.config.center and self.config.center.key) end)
     wrap_hook(Card, "use_consumeable", function(self) P.note(self.config and self.config.center and self.config.center.key) end)
     wrap_hook(Tag, "apply_to_run", function(self) P.note(self.key) end)
-    wrap_hook(Card, "add_to_deck", function(self) if card_forge(self) then P.note_forge() end end)
-    wrap_hook(Card, "set_ability", function(self, center) if owned(self) and center_forge(center) then P.note_forge() end end)
-    wrap_hook(Card, "set_seal", function(self, seal) if owned(self) and forge_key(seal) then P.note_forge() end end)
+    wrap_hook(Card, "add_to_deck", function(self) if card_forge(self) then P.note_forge(card_broken(self)) end end)
+    wrap_hook(Card, "set_ability", function(self, center) if owned(self) and center_forge(center) then P.note_forge(center_broken(center)) end end)
+    wrap_hook(Card, "set_seal", function(self, seal) if owned(self) and forge_key(seal) then P.note_forge(key_broken(seal)) end end)
     wrap_hook(Card, "set_edition", function(self, ed)
       if not owned(self) then return end
-      if forge_key(ed) or (type(ed) == "table" and (ed.forge or forge_key(ed.key) or forge_key(ed.type))) then P.note_forge() end
+      if forge_key(ed) or (type(ed) == "table" and (ed.forge or forge_key(ed.key) or forge_key(ed.type))) then P.note_forge(edition_broken(ed)) end
     end)
     for k, fn in pairs(G.FUNCS) do
       if type(fn) == "function" and k:match("^debug_") and not k:match("^debug_pin") and k ~= "debug_try_unlock" then
@@ -357,6 +421,10 @@ if Game and Game.start_run and not P._start_wrapped then
       if P.sandbox then P.mark("forge_test") end
       if args.cheats or G.GAME.cheats_allowed then P.mark("cheats") end
       if replaying() then P.mark("replay") end
+      if G.GAME.forge_try then P.mark("forge_test") end
+      local B = balance()
+      local ok, name = pcall(function() return B and B.pool_broken() end)
+      if ok and name then P.mark_broken(name) end
     end
     return unpack(res)
   end
@@ -375,7 +443,7 @@ if G and G.FUNCS and type(G.FUNCS.start_run) == "function" and not P._funcs_wrap
   P._funcs_wrapped = true
   local orig = G.FUNCS.start_run
 r 32 2958 %20%20 -
-l 47
+l 49
     if P.sandbox and not (args and args.savetext) then
       local restart = (e and e.config and e.config.id == 'restart_button') or args == nil
       if restart or (args and args.bo_forge_test) then
@@ -406,6 +474,7 @@ if mod_loc_register then mod_loc_register{
     ["replay"] = "replay",
     ["Forge test"] = "test de la Forge",
     ["Forge content"] = "contenu de la Forge",
+    ["Broken Forge content"] = "contenu de la Forge cassé",
     ["cheats"] = "triches",
     ["custom run"] = "partie personnalisée",
     ["mods"] = "mods",
@@ -416,6 +485,7 @@ if mod_loc_register then mod_loc_register{
     ["replay"] = "repetición",
     ["Forge test"] = "prueba de la Forja",
     ["Forge content"] = "contenido de la Forja",
+    ["Broken Forge content"] = "contenido de la Forja roto",
     ["cheats"] = "trucos",
     ["custom run"] = "partida personalizada",
     ["mods"] = "mods",

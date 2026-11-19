@@ -1,0 +1,728 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 134
+local Store = require("functions/forge/forge_store")
+
+local S = {}
+
+S.CODES = "abcdefghijklmnopqrstuvwxyz"
+S.MAX = 4
+S.VANILLA = {"Spades", "Hearts", "Clubs", "Diamonds"}
+S.RANKS = {{"2", "2"}, {"3", "3"}, {"4", "4"}, {"5", "5"}, {"6", "6"}, {"7", "7"}, {"8", "8"}, {"9", "9"}, {"T", "10"}, {"J", "Jack"}, {"Q", "Queen"}, {"K", "King"}, {"A", "Ace"}}
+S.COLOURS = {
+  {id = "PURPLE", hex = "8a5cd1"}, {id = "GOLD", hex = "d99a1e"}, {id = "GREEN", hex = "2f9a55"}, {id = "TEAL", hex = "1d9399"},
+  {id = "ORANGE", hex = "e0702a"}, {id = "PINK", hex = "d8508f"}, {id = "BLUE", hex = "3466d0"}, {id = "BLACK", hex = "34343f"},
+}
+S.COLOUR_IDS = {}
+S.COLOUR_HEX = {}
+for _, c in ipairs(S.COLOURS) do
+  S.COLOUR_IDS[#S.COLOUR_IDS + 1] = c.id
+  S.COLOUR_HEX[c.id] = c.hex
+end
+
+S.INK = {60, 67, 104}
+S.TEMPLATE_ROW = 3
+S.PIP_W, S.PIP_H = 11, 10
+S.CORNER_W, S.CORNER_H = 7, 8
+S.CORNERS = {{6, 17}, {58, 70}}
+S.ACE = {erase = {19, 27, 33, 38}, x = 19, y = 33, scale = 3}
+local L, C, R = 19, 30, 41
+S.LAYOUT = {
+  ["2"] = {{C, 13}, {C, 72}},
+  ["3"] = {{C, 13}, {C, 43}, {C, 72}},
+  ["4"] = {{L, 13}, {L, 72}, {R, 13}, {R, 72}},
+  ["5"] = {{L, 13}, {L, 72}, {R, 13}, {R, 72}, {C, 43}},
+  ["6"] = {{L, 13}, {L, 43}, {L, 72}, {R, 13}, {R, 43}, {R, 72}},
+  ["7"] = {{L, 13}, {L, 43}, {L, 72}, {R, 13}, {R, 43}, {R, 72}, {C, 27}},
+  ["8"] = {{L, 13}, {L, 43}, {L, 72}, {R, 13}, {R, 43}, {R, 72}, {C, 27}, {C, 57}},
+  ["9"] = {{L, 13}, {L, 35}, {L, 50}, {L, 72}, {R, 13}, {R, 35}, {R, 50}, {R, 72}, {C, 24}},
+  ["T"] = {{L, 13}, {L, 35}, {L, 50}, {L, 72}, {R, 13}, {R, 35}, {R, 50}, {R, 72}, {C, 24}, {C, 62}},
+}
+S.FLIP_Y = 50
+
+local function smods() return type(rawget(_G, "SMODS")) == "table" end
+
+local function hash(id)
+  local h = 0
+  for i = 1, #id do h = (h * 31 + id:byte(i)) % 1000003 end
+  return h
+end
+
+function S.fields(c)
+  local f = type(c) == "table" and type(c.fields) == "table" and c.fields or {}
+  local colour = S.COLOUR_HEX[f.colour] and f.colour or "PURPLE"
+  local weight = tonumber(f.weight) or 100
+  weight = math.max(0, math.min(1e4, weight))
+  return {colour = colour, deck = f.deck ~= false, weight = weight}
+end
+
+function S.assign(items, taken)
+  local list = {}
+  for _, c in ipairs(items or {}) do
+    if type(c) == "table" and c.kind == "suit" and type(c.id) == "string" and c.enabled ~= false and not c.unset then list[#list + 1] = c end
+  end
+  table.sort(list, function(a, b) return a.id < b.id end)
+  local out, used = {}, {}
+  for code in pairs(taken or {}) do used[code] = true end
+  for _, c in ipairs(list) do
+    if #out >= S.MAX then break end
+    local start = hash(c.id) % #S.CODES
+    for i = 0, #S.CODES - 1 do
+      local n = (start + i) % #S.CODES + 1
+      local code = S.CODES:sub(n, n)
+      if not used[code] then
+        used[code] = true
+        out[#out + 1] = {c = c, id = c.id, code = code, key = code .. "_forge_" .. c.id, index = #out + 1}
+        break
+      end
+    end
+  end
+  return out
+end
+
+S.list = {}
+S.by_key = {}
+S.by_code = {}
+
+function S.set_list(list)
+  S.list, S.by_key, S.by_code = list, {}, {}
+  for _, s in ipairs(list) do
+    S.by_key[s.key] = s
+    S.by_code[s.code] = s
+  end
+end
+
+function S.is_own(suit) return type(suit) == "string" and S.by_key[suit] ~= nil end
+
+function S.keys()
+  local out = {}
+  for _, s in ipairs(S.list) do out[#out + 1] = s.key end
+  return out
+end
+
+function S.of_id(id)
+  for _, s in ipairs(S.list) do if s.id == id then return s end end
+  return nil
+end
+
+function S.all_suits()
+  local out = {}
+  for _, v in ipairs(S.VANILLA) do out[#out + 1] = v end
+  for _, s in ipairs(S.list) do out[#out + 1] = s.key end
+  return out
+end
+
+function S.card_key(s, rank_code) return s.code .. "_" .. rank_code end
+
+function S.atlas_key(s) return "forge_suit_" .. s.id end
+
+function S.p_card(s, i)
+  local r = S.RANKS[i]
+  return {name = r[2] .. " of " .. s.key, value = r[2], suit = s.key, pos = {x = i - 1, y = 0}, atlas = S.atlas_key(s), forge_suit = s.id}
+end
+
+function S.rank_code(value)
+  for _, r in ipairs(S.RANKS) do if r[2] == value then return r[1] end end
+  return nil
+end
+
+function S.weight_of(card)
+  if type(card) ~= "table" or not card.forge_suit then return 1 end
+  local s = S.of_id(card.forge_suit)
+  if not s then return 0 end
+  return S.fields(s.c).weight / 100
+end
+
+function S.weighted_pick(t, roll)
+  local list, total = {}, 0
+r 13 131 %20%20 -
+l 259
+    local w = S.weight_of(v)
+    if w > 0 then
+      list[#list + 1] = {k = k, v = v, w = w}
+      total = total + w
+    end
+  end
+  if total <= 0 then return nil end
+  table.sort(list, function(a, b) return tostring(a.k) < tostring(b.k) end)
+  local r = roll * total
+  for _, e in ipairs(list) do
+    r = r - e.w
+    if r <= 0 then return e.v, e.k end
+  end
+  local last = list[#list]
+  return last.v, last.k
+end
+
+function S.flush_in(hand, need)
+  if #hand > 5 or #hand < need then return nil end
+  for _, s in ipairs(S.list) do
+    local t = {}
+    for i = 1, #hand do
+      if hand[i]:is_suit(s.key, nil, true) then t[#t + 1] = hand[i] end
+    end
+    if #t >= need then return t end
+  end
+  return nil
+end
+
+function S.pips(rank_code)
+  local out = {}
+  for _, p in ipairs(S.LAYOUT[rank_code] or {}) do
+    out[#out + 1] = {x = p[1], y = p[2], w = S.PIP_W, h = S.PIP_H, flip = p[2] >= S.FLIP_Y}
+  end
+  return out
+end
+
+function S.colour_rgb(c)
+  local hex = S.COLOUR_HEX[S.fields(c).colour]
+  return tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
+end
+
+function S.colour(c)
+  local r, g, b = S.colour_rgb(c)
+  return {r / 255, g / 255, b / 255, 1}
+end
+
+local function symbol_data(c)
+  local a = c and c.art
+  if a and a.file and love.filesystem.getInfo(a.file) then
+    local ok, data = pcall(love.image.newImageData, a.file)
+    if ok and data and data:getWidth() == S.PIP_W and data:getHeight() == S.PIP_H then return data end
+  end
+  return nil
+end
+
+local function deck_data()
+  if S.deck == nil then
+    local ok, data = pcall(love.image.newImageData, "resources/textures/1x/8BitDeck.png")
+    S.deck = ok and data or false
+  end
+  return S.deck or nil
+end
+
+function S.default_symbol(c)
+  local deck = deck_data()
+  local out = love.image.newImageData(S.PIP_W, S.PIP_H)
+  if deck then out:paste(deck, 0, 0, C, S.TEMPLATE_ROW * 95 + 13, S.PIP_W, S.PIP_H) end
+  return out
+end
+
+local function is_ink(r, g, b, a)
+  return a > 0 and math.abs(r * 255 - S.INK[1]) < 2 and math.abs(g * 255 - S.INK[2]) < 2 and math.abs(b * 255 - S.INK[3]) < 2
+end
+
+local function stamp(out, ox, sym, x, y, w, h, flip)
+  local sw, sh = sym:getWidth(), sym:getHeight()
+  for j = 0, h - 1 do
+    for i = 0, w - 1 do
+      local si = math.min(sw - 1, math.floor(i * sw / w))
+      local sj = math.min(sh - 1, math.floor(j * sh / h))
+      local r, g, b, a = sym:getPixel(si, sj)
+      local dx, dy = x + i, y + j
+      if flip then dx, dy = x + w - 1 - i, y + h - 1 - j end
+      if a > 0 then out:setPixel(ox + dx, dy, r, g, b, a) end
+    end
+  end
+end
+
+local function clear(out, ox, x, y, w, h)
+  for j = y, y + h - 1 do
+    for i = x, x + w - 1 do out:setPixel(ox + i, j, 0, 0, 0, 0) end
+  end
+end
+
+local function tinted(sym, cr, cg, cb)
+  local out = love.image.newImageData(sym:getWidth(), sym:getHeight())
+  out:paste(sym, 0, 0, 0, 0, sym:getWidth(), sym:getHeight())
+  out:mapPixel(function(x, y, r, g, b, a)
+    if is_ink(r, g, b, a) then return cr, cg, cb, a end
+    return r, g, b, a
+  end)
+  return out
+end
+
+function S.build_image(c)
+  local deck = deck_data()
+  local out = love.image.newImageData(71 * 13, 95)
+  if not deck then return out end
+  local r8, g8, b8 = S.colour_rgb(c)
+  local cr, cg, cb = r8 / 255, g8 / 255, b8 / 255
+  local own = symbol_data(c)
+  local sym = own or tinted(S.default_symbol(c), cr, cg, cb)
+  for i, rank in ipairs(S.RANKS) do
+    local ox = (i - 1) * 71
+    out:paste(deck, ox, 0, (i - 1) * 71, S.TEMPLATE_ROW * 95, 71, 95)
+    for y = 0, 94 do
+      for x = 0, 70 do
+        local r, g, b, a = out:getPixel(ox + x, y)
+        if is_ink(r, g, b, a) then out:setPixel(ox + x, y, cr, cg, cb, a) end
+      end
+    end
+    if own then
+      for n, p in ipairs(S.CORNERS) do
+        clear(out, ox, p[1], p[2], S.CORNER_W, S.CORNER_H)
+        stamp(out, ox, sym, p[1], p[2], S.CORNER_W, S.CORNER_H, n == 2)
+      end
+    end
+    if not own then
+    elseif rank[1] == "A" then
+      local e = S.ACE.erase
+      clear(out, ox, e[1], e[2], e[3], e[4])
+      stamp(out, ox, sym, S.ACE.x, S.ACE.y, S.PIP_W * S.ACE.scale, S.PIP_H * S.ACE.scale, false)
+    else
+      for _, p in ipairs(S.pips(rank[1])) do
+        clear(out, ox, p.x, p.y, p.w, p.h)
+        stamp(out, ox, sym, p.x, p.y, p.w, p.h, p.flip)
+      end
+    end
+  end
+  return out
+end
+
+function S.start_symbol(c)
+  local r8, g8, b8 = S.colour_rgb(c)
+  return tinted(S.default_symbol(c), r8 / 255, g8 / 255, b8 / 255)
+end
+
+S.ICON = 18
+
+function S.icon_image(c)
+  local r8, g8, b8 = S.colour_rgb(c)
+  local sym = symbol_data(c)
+  sym = sym or tinted(S.default_symbol(c), r8 / 255, g8 / 255, b8 / 255)
+  local out = love.image.newImageData(S.ICON, S.ICON)
+  out:paste(sym, math.floor((S.ICON - S.PIP_W) / 2), math.floor((S.ICON - S.PIP_H) / 2), 0, 0, S.PIP_W, S.PIP_H)
+  return out
+end
+
+local function smods_taken()
+  local taken = {}
+  local SM = rawget(_G, "SMODS")
+  for key, suit in pairs(SM and SM.Suits or {}) do
+    if type(suit) == "table" and not suit.forge_suit and type(suit.card_key) == "string" then taken[suit.card_key] = true end
+  end
+  return taken
+end
+
+local function vanilla_rank(key)
+  for i, r in ipairs(S.RANKS) do if r[2] == key then return i end end
+  return nil
+end
+
+function S.smods_object(s)
+  local key = S.atlas_key(s)
+  local col = S.colour(s.c)
+  local obj = {
+    key = s.key, name = s.key, card_key = s.code, pos = {y = 0}, ui_pos = {x = 0, y = 0},
+    lc_atlas = key, hc_atlas = key, lc_ui_atlas = key .. "_icon", hc_ui_atlas = key .. "_icon",
+    lc_colour = col, hc_colour = col, suit_nominal = 0.04 + 0.01 * s.index, sort_id = 100 + s.index,
+    forge_suit = s.id, set = "Suit", original_key = s.key, mod = nil,
+  }
+  obj.in_pool = function(_, args)
+    local f = S.fields(s.c)
+    if args and args.initial_deck then return f.deck end
+    return f.weight > 0
+  end
+  return obj
+end
+
+function S.smods_cards(SM, obj, s)
+  local out = {}
+  for rkey, rank in pairs(SM.Ranks or {}) do
+    if type(rank) == "table" and type(rank.card_key) == "string" then
+      local i = vanilla_rank(rkey)
+      local card = {name = rkey .. " of " .. s.key, value = rkey, suit = s.key, forge_suit = s.id}
+      if i then
+        card.pos = {x = i - 1, y = 0}
+        card.lc_atlas, card.hc_atlas = obj.lc_atlas, obj.hc_atlas
+      else
+        local map = rank.suit_map or {}
+        card.pos = {x = rank.pos and rank.pos.x or 0, y = map.Spades or 3}
+        card.lc_atlas = map.Spades and rank.lc_atlas or "cards_1"
+        card.hc_atlas = map.Spades and rank.hc_atlas or "cards_2"
+      end
+      out[s.code .. "_" .. rank.card_key] = card
+    end
+  end
+  return out
+end
+
+function S.register_smods(list)
+  local SM = rawget(_G, "SMODS")
+  if not (SM and SM.Suits and SM.Suit and SM.Suit.obj_buffer) then return end
+  local buf = SM.Suit.obj_buffer
+  for i = #buf, 1, -1 do
+    local o = SM.Suits[buf[i]]
+    if o and o.forge_suit then
+      SM.Suits[buf[i]] = nil
+      table.remove(buf, i)
+    end
+  end
+  for key, o in pairs(SM.Suits) do if type(o) == "table" and o.forge_suit then SM.Suits[key] = nil end end
+  local cards = {}
+  for _, s in ipairs(list) do
+    local obj = S.smods_object(s)
+    setmetatable(obj, {__index = SM.Suit})
+    SM.Suits[s.key] = obj
+    buf[#buf + 1] = s.key
+    for k, v in pairs(S.smods_cards(SM, obj, s)) do cards[k] = v end
+    if G.COLLABS and G.COLLABS.options and G.COLLABS.options[s.key] == nil then G.COLLABS.options[s.key] = {} end
+  end
+  return cards
+end
+
+local function loc_names(s)
+  local misc = G.localization and G.localization.misc
+  if not misc then return end
+  misc.suits_plural = misc.suits_plural or {}
+  misc.suits_singular = misc.suits_singular or {}
+  misc.suits_plural[s.key] = s.c.name
+  misc.suits_singular[s.key] = s.c.name
+end
+
+function S.inject_loc()
+  for _, s in ipairs(S.list) do loc_names(s) end
+  pcall(require("functions/forge/forge_suitrules").install_text)
+end
+
+function S.register()
+  if not (G and G.P_CARDS) then return end
+  local list = S.assign(Store.live_items(), smods() and smods_taken() or nil)
+  S.set_list(list)
+  local smods_cards = smods() and S.register_smods(list) or nil
+  local want = {}
+  for _, s in ipairs(list) do
+    for i, r in ipairs(S.RANKS) do want[S.card_key(s, r[1])] = s end
+  end
+  for k in pairs(smods_cards or {}) do want[k] = true end
+r 3 101 %20%20 -
+l 188
+    if type(v) == "table" and v.forge_suit and not want[k] then G.P_CARDS[k] = nil end
+  end
+  local FJ = require("functions/forge/forge_joker")
+  for k, fresh in pairs(smods_cards or {}) do
+    local old = G.P_CARDS[k]
+    if type(old) == "table" and old.forge_suit then
+      for f in pairs(old) do old[f] = nil end
+      for f, v in pairs(fresh) do old[f] = v end
+    else
+      G.P_CARDS[k] = fresh
+    end
+  end
+  for _, s in ipairs(list) do
+    for i, r in ipairs(smods_cards and {} or S.RANKS) do
+      local key = S.card_key(s, r[1])
+      local old = G.P_CARDS[key]
+      local fresh = S.p_card(s, i)
+      if type(old) == "table" and old.forge_suit then
+        for k in pairs(old) do old[k] = nil end
+        for k, v in pairs(fresh) do old[k] = v end
+      else
+        G.P_CARDS[key] = fresh
+      end
+    end
+    local col = S.colour(s.c)
+    if G.C and G.C.SUITS then
+      G.C.SUITS[s.key] = col
+      if G.C.SO_1 then G.C.SO_1[s.key] = col end
+      if G.C.SO_2 then G.C.SO_2[s.key] = col end
+    end
+    loc_names(s)
+    if rawget(_G, "love") and love.image then
+      local ok, err = pcall(function()
+        FJ.atlas_from_data(S.atlas_key(s), S.build_image(s.c), 71, 95)
+        FJ.atlas_from_data(S.atlas_key(s) .. "_icon", S.icon_image(s.c), S.ICON, S.ICON)
+      end)
+      if not ok then FJ.log_once("suit_" .. s.id, "suit art failed: " .. tostring(err)) end
+    end
+  end
+  pcall(require("functions/forge/forge_suitrules").install_text)
+end
+
+local function own_in(cards)
+  for _, c in ipairs(cards or {}) do
+    if c.base and S.is_own(c.base.suit) then return true end
+  end
+  return false
+end
+
+local function split_own(cards)
+  local keep, own = {}, {}
+  for _, c in ipairs(cards) do
+    if c.base and S.is_own(c.base.suit) then own[#own + 1] = c else keep[#keep + 1] = c end
+  end
+  return keep, own
+end
+
+local function find_rows(node)
+  if type(node) ~= "table" then return nil end
+  if type(node.nodes) == "table" then
+    local first = node.nodes[1]
+    local inner = first and first.nodes and first.nodes[1]
+    local obj = inner and inner.config and inner.config.object
+    if obj and obj.config and obj.config.view_deck then return node.nodes end
+    for _, child in ipairs(node.nodes) do
+      local found = find_rows(child)
+      if found then return found end
+    end
+  end
+  return nil
+end
+
+function S.view_rows(rows, own, unplayed_only)
+  for _, s in ipairs(S.list) do
+    local cards = {}
+    for _, c in ipairs(own) do if c.base.suit == s.key then cards[#cards + 1] = c end end
+    if #cards > 0 then
+      table.sort(cards, function(a, b) return a:get_nominal() > b:get_nominal() end)
+      local area = CardArea(G.ROOM.T.x + 0.2 * G.ROOM.T.w / 2, G.ROOM.T.h, 6.5 * G.CARD_W, 0.6 * G.CARD_H,
+        {card_limit = #cards, type = "title", view_deck = true, highlight_limit = 0, card_w = G.CARD_W * 0.7, draw_layers = {"card"}})
+      rows[#rows + 1] = {n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = {{n = G.UIT.O, config = {object = area}}}}
+      for _, card in ipairs(cards) do
+        local copy = copy_card(card, nil, 0.7)
+        copy.greyed = unplayed_only and not ((card.area and card.area == G.deck) or card.ability.wheel_flipped) or nil
+        copy.T.x = area.T.x + area.T.w / 2
+        copy.T.y = area.T.y
+        copy:hard_set_T()
+        area:emplace(copy)
+      end
+    end
+  end
+end
+
+local function still(spr)
+  spr.states.drag.can = false
+  spr.states.hover.can = false
+  spr.states.collide.can = false
+  return spr
+end
+
+local function icon(s, w)
+  local atlas = G.ASSET_ATLAS[S.atlas_key(s) .. "_icon"]
+  if not atlas then return nil end
+  return still(Sprite(0, 0, w, w, atlas, {x = 0, y = 0}))
+end
+
+local function walk(node, fn)
+  if type(node) ~= "table" then return end
+  if fn(node) then return true end
+  for _, child in ipairs(node.nodes or {}) do
+    if walk(child, fn) then return true end
+  end
+end
+
+local function bump_text(t, add)
+  if add == 0 or type(t) ~= "table" or t.n ~= G.UIT.T or not t.config then return end
+  local v = tonumber(t.config.text)
+  if v then t.config.text = tostring(v + add) end
+end
+
+function S.counts(cards, filter)
+  local out = {suits = {}, ranks = {}, ace = 0, face = 0, num = 0}
+  for _, c in ipairs(cards) do
+    if c.ability and c.ability.name ~= "Stone Card" and c.ability.effect ~= "Stone Card" and (not filter or filter(c)) then
+      local id = c.base.id or 0
+      out.suits[c.base.suit] = (out.suits[c.base.suit] or 0) + 1
+      out.ranks[id] = (out.ranks[id] or 0) + 1
+      if id == 14 then out.ace = out.ace + 1 elseif id >= 11 and id <= 13 then out.face = out.face + 1 elseif id >= 2 and id <= 10 then out.num = out.num + 1 end
+    end
+  end
+  return out
+end
+
+S.RANK_LABELS = {[14] = "A", [13] = "K", [12] = "Q", [11] = "J", [10] = "10"}
+
+function S.view_tallies(res, own, unplayed_only)
+  local n = S.counts(own, unplayed_only and function(c) return (c.area and c.area == G.deck) or c.ability.wheel_flipped end or nil)
+  local labels = {}
+  for id = 2, 14 do labels[tostring(S.RANK_LABELS[id] or id)] = id end
+  walk(res, function(node)
+    local first = node.n == G.UIT.R and node.nodes and node.nodes[1]
+    local t = first and first.nodes and first.nodes[1]
+    local id = t and t.n == G.UIT.T and t.config and labels[tostring(t.config.text)]
+    if id and node.nodes[2] and node.nodes[2].nodes then bump_text(node.nodes[2].nodes[1], n.ranks[id] or 0) end
+  end)
+  local tips = {[localize("k_aces")] = n.ace, [localize("k_face_cards")] = n.face, [localize("k_numbered_cards")] = n.num}
+  local suit_row_parent, suit_row_at
+  local last_suit = localize("Diamonds", "suits_plural")
+  walk(res, function(node)
+    for i, child in ipairs(node.nodes or {}) do
+      for _, c in ipairs(child.nodes or {}) do
+        local tip = c.config and c.config.tooltip and c.config.tooltip.text and c.config.tooltip.text[1]
+        if tip and tips[tip] and c.nodes and c.nodes[2] and c.nodes[2].nodes then bump_text(c.nodes[2].nodes[1], tips[tip]) end
+        if tip == last_suit and not suit_row_parent then suit_row_parent, suit_row_at = node, i end
+      end
+    end
+  end)
+  if not suit_row_parent then return end
+  local row
+  for _, s in ipairs(S.list) do
+    local spr = icon(s, 0.5)
+    if spr then
+      if not row or #row.nodes >= 2 then
+        row = {n = G.UIT.R, config = {align = "cm", minh = 0.05, padding = 0.1}, nodes = {}}
+        suit_row_at = suit_row_at + 1
+        table.insert(suit_row_parent.nodes, suit_row_at, row)
+      end
+      row.nodes[#row.nodes + 1] = {n = G.UIT.C, config = {align = "cm", padding = 0.07, tooltip = {text = {s.c.name}}}, nodes = {
+        {n = G.UIT.R, config = {align = "cm", r = 0.1, padding = 0.04, emboss = 0.05, colour = G.C.JOKER_GREY}, nodes = {{n = G.UIT.O, config = {w = 0.5, h = 0.5, can_collide = false, object = spr}}}},
+        {n = G.UIT.R, config = {align = "cm"}, nodes = {{n = G.UIT.T, config = {text = tostring(n.suits[s.key] or 0), colour = G.C.WHITE, scale = 0.4, shadow = true}}}},
+      }}
+    end
+  end
+end
+
+function S.preview_tallies(res, own)
+  local box = res and res.nodes and res.nodes[1] and res.nodes[1].nodes and res.nodes[1].nodes[1]
+  local labels = box and box.nodes and box.nodes[1] and box.nodes[1].nodes
+  local tables = box and box.nodes and box.nodes[2] and box.nodes[2].nodes
+  if not (labels and tables and tables[1] and tables[1].nodes) then return end
+  local in_deck = {}
+  for _, c in ipairs(own) do if (c.area and c.area == G.deck) or c.ability.wheel_flipped then in_deck[#in_deck + 1] = c end end
+  local n = S.counts(in_deck)
+  for k, col in ipairs(tables[1].nodes) do
+    local id = 15 - k
+    local inner = col.nodes and col.nodes[1] and col.nodes[1].nodes and col.nodes[1].nodes[2]
+    if inner and inner.nodes then bump_text(inner.nodes[1], n.ranks[id] or 0) end
+  end
+r 30 471 %20%20 -
+l 42
+  for _, s in ipairs(S.list) do
+    local by_rank = {}
+    for _, c in ipairs(in_deck) do if c.base.suit == s.key then by_rank[c.base.id] = (by_rank[c.base.id] or 0) + 1 end end
+    local row = {}
+    for i = 14, 2, -1 do
+      local has = (by_rank[i] or 0) > 0
+      row[#row + 1] = {n = G.UIT.C, config = {align = "cm", padding = 0.05, minw = _minw + 0.098, minh = _minh}, nodes = {
+        {n = G.UIT.T, config = {text = tostring(by_rank[i] or 0), colour = has and G.C.WHITE or G.C.UI.TRANSPARENT_LIGHT, scale = has and 0.3 or 0.25, shadow = true, lang = G.LANGUAGES["en-us"]}},
+      }}
+    end
+    tables[#tables + 1] = {n = G.UIT.R, config = {align = "cm", r = 0.1, padding = 0.04, minh = 0.4, colour = mix_colours(G.C.SUITS[s.key] or G.C.WHITE, G.C.L_BLACK, 0.7)}, nodes = row}
+    local spr = icon(s, 0.3)
+    if spr then
+      table.insert(labels, {n = G.UIT.R, config = {align = "cm", r = 0.1, padding = 0.03, colour = G.C.JOKER_GREY}, nodes = {
+        {n = G.UIT.C, config = {align = "cm", minw = _minw, minh = _minh}, nodes = {{n = G.UIT.O, config = {can_collide = false, object = spr}}}},
+        {n = G.UIT.C, config = {align = "cm", minw = _minw * 2.4, minh = _minh, colour = G.C.L_BLACK, r = 0.1}, nodes = {
+          {n = G.UIT.T, config = {text = tostring(n.suits[s.key] or 0), colour = G.C.WHITE, scale = 0.3, shadow = true, lang = G.LANGUAGES["en-us"]}},
+        }},
+      }})
+    end
+  end
+end
+
+function S.install_hooks()
+  if S.hooked then return end
+  local ok, Hooks = pcall(require, "overhaul.hooks")
+  if not (ok and Hooks) then return end
+  S.hooked = true
+  Hooks.wrap(_G, "get_flush", function(orig) return function(hand, ...)
+    local ret = orig(hand, ...)
+    if smods() or #S.list == 0 or (type(ret) == "table" and #ret > 0) then return ret end
+    local four = next(find_joker("Four Fingers"))
+    local t = S.flush_in(hand, 5 - (four and 1 or 0))
+    if t then return {t} end
+    return ret
+  end end, {id = "forge_suits.get_flush"})
+  Hooks.wrap(_G, "find_joker", function(orig) return function(name, ...)
+    if S.no_smear and name == "Smeared Joker" then return {} end
+    return orig(name, ...)
+  end end, {id = "forge_suits.find_joker"})
+  Hooks.wrap(_G, "pseudorandom_element", function(orig) return function(t, seed, ...)
+    if smods() or #S.list == 0 or t ~= G.P_CARDS then return orig(t, seed, ...) end
+r 13 207 %20%20%20%20 -
+l 91
+    local v, k = S.weighted_pick(t, math.random())
+    if v == nil then return orig(t, seed, ...) end
+    return v, k
+  end end, {id = "forge_suits.pseudorandom_element"})
+  Hooks.wrap("Card", "is_suit", function(orig) return function(self, suit, ...)
+    if smods() or #S.list == 0 or not self.base or self.base.suit == suit or not (S.is_own(suit) or S.is_own(self.base.suit)) then return orig(self, suit, ...) end
+    S.no_smear = true
+    local okc, r = pcall(orig, self, suit, ...)
+    S.no_smear = nil
+    if not okc then error(r, 0) end
+    return r
+  end end, {id = "forge_suits.is_suit"})
+  Hooks.wrap("Card", "set_base", function(orig) return function(self, card, ...)
+    local r = orig(self, card, ...)
+    local s = self.base and S.by_key[self.base.suit]
+    if s and not smods() then
+      self.base.suit_nominal = 0.04 + 0.01 * s.index
+      self.base.suit_nominal_original = self.base.suit_nominal_original or (0.004 + 0.001 * s.index)
+    end
+    return r
+  end end, {id = "forge_suits.set_base"})
+  Hooks.wrap("Card", "change_suit", function(orig) return function(self, new_suit, ...)
+    local s = S.by_key[new_suit]
+    if not s or smods() then return orig(self, new_suit, ...) end
+    local code = S.rank_code(self.base and self.base.value)
+    local front = code and G.P_CARDS[S.card_key(s, code)]
+    if not front then return orig(self, new_suit, ...) end
+    self:set_base(front)
+    if G.GAME and G.GAME.blind then G.GAME.blind:debuff_card(self) end
+  end end, {id = "forge_suits.change_suit"})
+  Hooks.wrap("Game", "start_run", function(orig) return function(self, args, ...)
+    if smods() or #S.list == 0 or (args and args.savetext) then return orig(self, args, ...) end
+    local held = {}
+    for _, s in ipairs(S.list) do
+      if not S.fields(s.c).deck then
+        for _, r in ipairs(S.RANKS) do
+          local k = S.card_key(s, r[1])
+          if G.P_CARDS[k] then held[k] = G.P_CARDS[k]; G.P_CARDS[k] = nil end
+        end
+      end
+    end
+    local okr, res = pcall(orig, self, args, ...)
+    for k, v in pairs(held) do G.P_CARDS[k] = v end
+    if not okr then error(res, 0) end
+    return res
+  end end, {id = "forge_suits.start_run"})
+  local function hide_own(name)
+    Hooks.wrap("G.UIDEF", name, function(orig) return function(...)
+      if smods() or #S.list == 0 or not own_in(G.playing_cards) then return orig(...) end
+      local all = G.playing_cards
+      local keep, own = split_own(all)
+      G.playing_cards = keep
+      local okv, res = pcall(orig, ...)
+      G.playing_cards = all
+      if not okv then error(res, 0) end
+      if name == "view_deck" then
+        local rows = find_rows(res)
+        if rows then pcall(S.view_rows, rows, own, (...)) end
+        pcall(S.view_tallies, res, own, (...))
+      else
+        pcall(S.preview_tallies, res, own)
+      end
+      return res
+    end end, {id = "forge_suits." .. name})
+  end
+  hide_own("view_deck")
+  hide_own("deck_preview")
+  require("functions/forge/forge_suitrules").install()
+end
+
+local function register_strings()
+  if not mod_loc_register then return end
+  mod_loc_register{
+    fr = {
+      ["Suit"] = "Couleur", ["Suits"] = "Couleurs", ["Suit symbol"] = "Symbole de couleur", ["In the starting deck"] = "Dans le jeu de départ", ["Not in the starting deck"] = "Pas dans le jeu de départ",
+      ["How often in packs"] = "Fréquence dans les paquets", ["{C:attention}13{} cards, 2 to Ace"] = "{C:attention}13{} cartes, du 2 à l'As",
+      ["Shows in packs {C:attention}%d%%{} as often as a usual suit"] = "Dans les paquets {C:attention}%d %%{} aussi souvent qu'une couleur normale",
+      ["Teal"] = "Sarcelle", ["Pink"] = "Rose", ["Ink colour"] = "Teinte",
+    },
+    es = {
+      ["Suit"] = "Palo", ["Suits"] = "Palos", ["Suit symbol"] = "Símbolo del palo", ["In the starting deck"] = "En la baraja inicial", ["Not in the starting deck"] = "No está en la baraja inicial",
+      ["How often in packs"] = "Frecuencia en sobres", ["{C:attention}13{} cards, 2 to Ace"] = "{C:attention}13{} cartas, del 2 al As",
+      ["Shows in packs {C:attention}%d%%{} as often as a usual suit"] = "Sale en sobres un {C:attention}%d%%{} de lo que sale un palo normal",
+      ["Teal"] = "Turquesa", ["Pink"] = "Rosa", ["Ink colour"] = "Tinta",
+    },
+  }
+end
+
+register_strings()
+
+return S
+end

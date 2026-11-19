@@ -1075,7 +1075,7 @@ function AchievementManager.on_run_end(won, final_score, run_time, deck_key)
                 local all_common = true
                 for _, joker in ipairs(G.jokers.cards) do
                     if joker.config and joker.config.center then
-                        local rarity = joker.config.center.rarity or 1
+                        local rarity = tonumber(joker.config.center.rarity) or 2
                         if rarity > 1 then
                             all_common = false
                             break

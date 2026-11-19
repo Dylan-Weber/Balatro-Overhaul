@@ -1,0 +1,9 @@
+BOP 1
+eol lf
+final 1
+base 30
+c 1089
+l 1
+      if (AUT.card_type == 'Joker' or (AUT.badges and AUT.badges.force_rarity)) and not card_type and card.config.center.rarity then card_type = localize('k_'..string.lower(tostring(card.config.center.rarity))) end
+c 5347
+end

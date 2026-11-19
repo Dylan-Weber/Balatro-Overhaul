@@ -6726,8 +6726,8 @@ function mod_loc_register(t)
 end
 
 mod_loc_register{
-  fr = {["Also built on"] = "Aussi construit sur", ["Multiplayer based on"] = "Multijoueur basé sur", ["by Virtualized and the BMP team"] = "par Virtualized et l'équipe BMP", ["iOS port"] = "Portage iOS"},
-  es = {["Also built on"] = "También construido sobre", ["Multiplayer based on"] = "Multijugador basado en", ["by Virtualized and the BMP team"] = "por Virtualized y el equipo de BMP", ["iOS port"] = "Versión para iOS"},
+  fr = {["Also built on"] = "Aussi construit sur", ["Multiplayer based on"] = "Multijoueur basé sur", ["by Virtualized and the BMP team"] = "par Virtualized et l'équipe BMP", ["iOS port"] = "Portage iOS", ["Play while you wait"] = "Jouer en attendant"},
+  es = {["Also built on"] = "También construido sobre", ["Multiplayer based on"] = "Multijugador basado en", ["by Virtualized and the BMP team"] = "por Virtualized y el equipo de BMP", ["iOS port"] = "Versión para iOS", ["Play while you wait"] = "Jugar mientras esperas"},
 }
 
 mod_loc_register{

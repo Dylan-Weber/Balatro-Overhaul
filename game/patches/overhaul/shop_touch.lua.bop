@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 22
+l 26
 local Hooks = require("overhaul.hooks")
 
 local function shop_area(a)
@@ -18,6 +18,10 @@ local function mod_area(a)
     return a ~= nil and type(a.config) == "table" and not game_area(a) and G.CONTROLLER and G.CONTROLLER.HID and G.CONTROLLER.HID.touch or false
 end
 
+local function tap_collection(a)
+    return a ~= nil and type(a.config) == "table" and a.config.collection or false
+end
+
 local function pc_select(a)
     local t = a.config.type
     return t == 'hand' or t == 'joker' or t == 'consumeable' or (t == 'shop' and (a.config.highlighted_limit or 0) > 0)
@@ -26,7 +30,12 @@ end
 if Card and Card.single_tap then
     Hooks.wrap(Card, "single_tap", function(orig) return function(self, ...)
 r 3 1593 %20%20%20%20%20%20%20%20 -
-l 3
+l 8
+        if tap_collection(area) and not rawget(self, 'click') then
+            self:click()
+            if haptic_buzz then haptic_buzz(1) end
+            return
+        end
         local tap_select = shop_area(area) and (area.config.highlighted_limit or 1) > 0
         if not tap_select and mod_area(area) then tap_select = self.highlighted or pc_select(area) end
         if tap_select and not rawget(self, 'click') then

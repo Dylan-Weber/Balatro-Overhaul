@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 139
+l 158
 local Store = require("functions/forge/forge_store")
 local FJ = require("functions/forge/forge_joker")
 local R = require("functions/forge/forge_rules")
@@ -114,6 +114,22 @@ local function still(obj)
   return obj
 end
 
+function B.blank_joker(card)
+  local name = "forge_blank_joker"
+  if not G.ASSET_ATLAS[name] then
+    local src = D.blank_art("joker")
+    local ok, data = pcall(love.image.newImageData, src)
+    if not (ok and data) then return card end
+    FJ.atlas_from_data(name, data)
+  end
+  local spr = card and card.children and card.children.center
+  if spr and G.ASSET_ATLAS[name] then
+    spr.atlas = G.ASSET_ATLAS[name]
+    spr:set_sprite_pos({x = 0, y = 0})
+  end
+  return card
+end
+
 function B.sprite(kind_id, key, s)
   local k = Cat.kind(kind_id)
   s = s or 1
@@ -130,10 +146,13 @@ function B.sprite(kind_id, key, s)
     local st = G.P_STAKES[key] or G.P_STAKES.stake_red or G.P_STAKES.stake_white
     return still(Sprite(0, 0, 0.9 * s * 1.7, 0.9 * s * 1.7, G.ASSET_ATLAS[st and st.atlas or "chips"], st and st.pos or {x = 0, y = 0}))
   end
-  if kind_id == "seal" or kind_id == "collab" or kind_id == "edition" or kind_id == "enhancement" then
+  if kind_id == "seal" or kind_id == "collab" or kind_id == "edition" or kind_id == "enhancement" or kind_id == "suit" or kind_id == "hand" or kind_id == "sticker" then
     local card
-    if kind_id == "edition" then
+    if kind_id == "sticker" then
       card = Card(0, 0, w, h, nil, G.P_CENTERS.j_joker)
+      card.forge_stk_look = "Gold"
+    elseif kind_id == "edition" then
+      card = B.blank_joker(Card(0, 0, w, h, nil, G.P_CENTERS.j_joker))
       local FShine = require("functions/forge/forge_shine")
       if FShine.overhaul(key) then FShine.preview(card, FShine.look_of({shader = key})) else card:set_edition({[key] = true}, true, true) end
     elseif kind_id == "enhancement" then
@@ -145,13 +164,13 @@ function B.sprite(kind_id, key, s)
 r 7 1460 %20%20%20%20 -
 r 5 219 %20%20%20%20 -
 r 5 220 %20%20%20%20 -
-l 129
+l 137
     local area = CardArea(0, 0, w, h, {card_limit = 1, type = "title", highlight_limit = 0, collection = true, card_w = w})
     area:emplace(card)
     return area
   end
   local c = G.P_CENTERS[key] or G.P_CENTERS[k.sample]
-  local atlas = c and (c.atlas or (k.set == "Joker" and "Joker") or (k.set == "Enhanced" and "centers") or (k.set == "Back" and "centers") or k.set) or "Joker"
+  local atlas = c and (c.atlas or (k.id == "ctype" and "Tarot") or (k.set == "Joker" and "Joker") or (k.set == "Enhanced" and "centers") or ((k.set == "Back" or k.shape == "back") and "centers") or k.set) or "Joker"
   return still(Sprite(0, 0, w, h, G.ASSET_ATLAS[atlas] or G.ASSET_ATLAS.Joker, c and c.pos or {x = 0, y = 0}))
 end
 
@@ -232,8 +251,9 @@ function B.preview_center()
       pos = {x = 0, y = 0}, atlas = "Joker", config = {extra = {chips = 0, mult = 0, xmult = 1}}, no_collection = true, forge_preview = true, blueprint_compat = true}
     G.P_CENTERS[B.KEY] = c
   end
-  c.rarity, c.cost = d.rarity, d.cost
+  c.rarity, c.cost = require("functions/forge/forge_rarities").of_joker(d) or d.rarity, d.cost
   c.forge_start_ed = require("functions/forge/forge_always").value(d)
+  c.forge_look = d.look
   local atlas, pos = art_atlas(d)
   c.atlas, c.pos = atlas or "Joker", pos or {x = 0, y = 0}
   FJ.set_loc(B.KEY, d.name, D.lines(d, lang()))
@@ -246,13 +266,20 @@ local function draft_center(d, k)
   local c = {key = D.DRAFT_KEY[d.kind] or "c_forge_draft", set = k.set, name = d.name, unlocked = true, discovered = true, alerted = true, order = 1, cost = d.fields and d.fields.cost or 3,
     atlas = atlas or sample.atlas or k.set, pos = pos or sample.pos or {x = 0, y = 0}, config = {}, forge_draft = true, effect = "", cost_mult = 1, consumeable = (k.set == "Tarot" or k.set == "Planet" or k.set == "Spectral") or nil}
   if d.kind == "planet" then c.config.hand_type = d.fields.hand ~= "all" and d.fields.hand or "Pair" end
-  if d.kind == "booster" then c.config = {extra = 3, choose = 1}; c.kind = d.fields.pack end
+  if d.kind == "booster" then
+    c.config = {extra = 3, choose = 1}; c.kind = d.fields.pack
+    local tid = not atlas and R.own_id("ctype", d.fields.pack)
+    local ty = tid and require("functions/forge/forge_types").by_id[tid]
+    local ta = ty and require("functions/forge/forge_kinds_more").type_pack_art(ty.c)
+    if ta then c.atlas, c.pos = ta, {x = 0, y = 0} end
+  end
   if d.kind == "enhancement" then
     c.atlas = atlas or sample.atlas or "centers"
     c.no_collection = true
     G.P_CENTERS[c.key] = c
   end
   c.forge_start_ed = require("functions/forge/forge_always").value(d)
+  c.forge_look = d.look
   return c
 end
 
@@ -273,15 +300,83 @@ end
 function B.edition_sprite(c, s)
   s = s or 1
   local w, h = G.CARD_W * s, G.CARD_H * s
-  local card = Card(0, 0, w, h, nil, G.P_CENTERS.j_joker)
+  local card = B.blank_joker(Card(0, 0, w, h, nil, G.P_CENTERS.j_joker))
   B.edition_look(card, c, "list_" .. tostring(c.id))
 r 7 1460 %20%20 -
 r 5 219 %20%20 -
 r 5 220 %20%20 -
-l 52
+l 16
   local area = CardArea(0, 0, w, h, {card_limit = 1, type = "title", highlight_limit = 0, collection = true, card_w = w})
   area:emplace(card)
   return area
+end
+
+B.PREVIEW_KINDS = {fusion = true, sticker = true, ctype = true, rarity = true, hand = true, suit = true}
+
+function B.kind_preview(d, s, akey, rank, quiet)
+  if not (d and B.PREVIEW_KINDS[d.kind]) then return nil end
+  s = s or 1
+  local w, h = G.CARD_W * s, G.CARD_H * s
+  if d.kind == "fusion" then
+    local out = not D.unset(d, "out") and d.fields and d.fields.out
+    local card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, nil, G.P_CENTERS[out] or G.P_CENTERS.j_joker)
+    card.forge_preview = true
+    if quiet then
+r 7 1460 %20%20%20%20%20%20 -
+r 5 219 %20%20%20%20%20%20 -
+r 5 220 %20%20%20%20%20%20 -
+l 8
+    end
+    return area_for(w, h, card)
+  end
+  if d.kind == "sticker" then
+    local card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, nil, G.P_CENTERS.j_joker)
+    card.forge_preview = true
+    card.forge_stk_look = not D.unset(d, "look") and require("functions/forge/forge_stickers").fields(d).look or nil
+    if quiet then
+r 7 1460 %20%20%20%20%20%20 -
+r 5 219 %20%20%20%20%20%20 -
+r 5 220 %20%20%20%20%20%20 -
+l 33
+    end
+    return area_for(w, h, card)
+  end
+  if d.kind == "ctype" or d.kind == "rarity" then
+    local Types = require("functions/forge/forge_" .. (d.kind == "ctype" and "types" or d.kind == "sticker" and "stickers" or "rarities"))
+    local col = D.unset(d, "colour") and G.C.GREY or Types.rgb(d)
+    return {n = G.UIT.R, config = {align = "cm", minw = w, minh = h, padding = 0}, nodes = {
+      {n = G.UIT.R, config = {align = "cm", minw = w, maxw = w, minh = h - 0.06, maxh = h - 0.06, r = 0.12, colour = col, emboss = 0.06, padding = 0.08}, nodes = {
+        {n = G.UIT.T, config = {ref_table = d, ref_value = "name", scale = 0.42 * s, colour = G.C.UI.TEXT_LIGHT, shadow = true, maxw = w - 0.16}},
+      }},
+    }}
+  end
+  if d.kind == "hand" then
+    local ex = require("functions/forge/forge_hands").example(d)
+    local cw, ch = w * 0.62, h * 0.62
+    local area = CardArea(G.ROOM.T.x, G.ROOM.T.y, quiet and w or w * 1.25, ch, {card_limit = #ex, type = "title", highlight_limit = 0, collection = true, card_w = cw})
+    for _, e in ipairs(ex) do
+      local c = Card(G.ROOM.T.x, G.ROOM.T.y, cw, ch, G.P_CARDS[e[1]] or G.P_CARDS.S_A, G.P_CENTERS.c_base)
+      c.states.hover.can = false
+      c.states.drag.can = false
+      area:emplace(c)
+    end
+    return {n = G.UIT.R, config = {align = "cm", minw = w, minh = h, padding = 0}, nodes = {obj(area)}}
+  end
+  if d.kind == "suit" then
+    local card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, G.P_CARDS.S_A, G.P_CENTERS.c_base)
+    local Suits = require("functions/forge/forge_suits")
+    local ok, data = pcall(Suits.build_image, d)
+    if ok and data and FJ.atlas_from_data(akey, data) and card.children.front then
+      card.children.front.atlas = G.ASSET_ATLAS[akey]
+      card.children.front:set_sprite_pos({x = rank or 12, y = 0})
+    end
+    card.forge_preview = true
+r 7 1460 %20%20%20%20 -
+r 5 219 %20%20%20%20 -
+l 73
+    return area_for(w, h, card), card
+  end
+  return nil
 end
 
 function B.card_node(scale)
@@ -300,25 +395,46 @@ function B.card_node(scale)
   if k.shape == "tag" or k.shape == "blind" or k.shape == "stake" or k.shape == "back" then
     local spr = B.sprite(d.kind, d.from or k.sample, s)
     local atlas, pos = art_atlas(d)
-    if k.shape == "tag" and require("functions/forge/forge_kinds_more").small_art(d, "forge_draft_tag", 34, 34) then
+    local KM = require("functions/forge/forge_kinds_more")
+    local Spr = rawget(_G, "Sprite")
+    if k.shape == "tag" and KM.small_art(d, "forge_draft_tag", 34, 34) then
       spr = still(Sprite(0, 0, 0.9 * s * 1.9, 0.9 * s * 1.9, G.ASSET_ATLAS.forge_draft_tag, {x = 0, y = 0}))
+    elseif k.shape == "blind" and KM.small_art(d, "forge_draft_blind", 34, 34) then
+      spr = still(Spr(0, 0, 1.1 * s * 1.6, 1.1 * s * 1.6, G.ASSET_ATLAS.forge_draft_blind, {x = 0, y = 0}))
+    elseif k.shape == "stake" and KM.small_art(d, "forge_draft_stake", 29, 29) then
+      spr = still(Spr(0, 0, 0.9 * s * 1.7, 0.9 * s * 1.7, G.ASSET_ATLAS.forge_draft_stake, {x = 0, y = 0}))
     end
     if atlas and k.shape == "back" then spr = still(Sprite(0, 0, w, h, G.ASSET_ATLAS[atlas], pos)) end
     return {n = G.UIT.R, config = {align = "cm", minw = w, minh = h, padding = 0}, nodes = {obj(spr)}}
+  end
+  local node, pcard = B.kind_preview(d, s, "forge_draft_suit", B.state.suit_rank)
+  if node then
+    B.preview_card = pcard
+    return node
   end
   local card
   if d.kind == "enhancement" then
     card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, G.P_CARDS.S_A, draft_center(d, k))
   elseif d.kind == "seal" then
     card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, G.P_CARDS.S_A, G.P_CENTERS.c_base)
-    card:set_seal(G.P_SEALS and G.P_SEALS[d.from or ""] and d.from or "Red", true, true)
+    local atlas = art_atlas(d)
+    if atlas then
+      local spr = rawget(_G, "Sprite")(card.T.x, card.T.y, w, h, G.ASSET_ATLAS[atlas], {x = 0, y = 0})
+      spr:set_role({major = card, role_type = "Glued", draw_major = card})
+      card.children.forge_seal = spr
+    else
+      card:set_seal(G.P_SEALS and G.P_SEALS[d.from or ""] and d.from or "Red", true, true)
+    end
   elseif d.kind == "edition" then
-    card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, nil, G.P_CENTERS.j_joker)
+    card = B.blank_joker(Card(G.ROOM.T.x, G.ROOM.T.y, w, h, nil, G.P_CENTERS.j_joker))
     B.edition_look(card, d)
   elseif d.kind == "collab" then
     local pre = ({Hearts = "H", Diamonds = "D", Spades = "S", Clubs = "C"})[d.fields.suit] or "H"
     local face = B.state.face or "K"
-    card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, G.P_CARDS[pre .. "_" .. face], G.P_CENTERS.c_base)
+    local oid = R.own_id("suit", d.fields.suit)
+    local os = oid and require("functions/forge/forge_suits").of_id(oid)
+    if os then pre = os.code end
+    card = Card(G.ROOM.T.x, G.ROOM.T.y, w, h, G.P_CARDS[pre .. "_" .. face] or G.P_CARDS["H_" .. face], G.P_CENTERS.c_base)
     local file = d.faces and d.faces[face] or (face == "K" and d.art and d.art.file)
     if file and love.filesystem.getInfo(file) and card.children.front then
       local ok, data = pcall(love.image.newImageData, file)
@@ -333,7 +449,7 @@ function B.card_node(scale)
   card.forge_preview = true
 r 7 1460 %20%20 -
 r 5 219 %20%20 -
-l 1724
+l 1764
   B.preview_card = card
   return area_for(w, h, card)
 end
@@ -549,7 +665,7 @@ local function start_body()
     }, UIK.W, 0.3),
   }
   if #items > 0 then
-    nodes[#nodes + 1] = title(mod_loc("Or start from a game card:"), UIK.W, UIK.C.muted)
+    nodes[#nodes + 1] = title(mod_loc(kid == "challenge" and "Or start from a game challenge:" or "Or start from a game card:"), UIK.W, UIK.C.muted)
     nodes[#nodes + 1] = UIK.grid(items, per, {w = UIK.W - 0.2, padding = 0.04})
     if pages > 1 then
       nodes[#nodes + 1] = UIK.pager{prev = "forge_b_page", next = "forge_b_page", prev_ref = {d = -1}, next_ref = {d = 1}, text = string.format(mod_loc("Page %d of %d"), B.state.page, pages), w = UIK.W}
@@ -562,6 +678,9 @@ local function left_column(w)
   local d = draft()
   local nodes = {B.card_node(touch() and 0.72 or 0.78)}
   nodes[#nodes + 1] = {n = G.UIT.R, config = {align = "cm"}, nodes = {boxed(UIK.input{ref_table = d, ref_value = "name", max_length = Store.MAX_NAME, w = w, iw = w - 0.2, extended_corpus = true, callback = function() if #B.warnings(d) > 0 then refresh() end end})}}
+  local okb, bal = pcall(require("functions/forge/forge_balance").builder_node, d, w, {scale = touch() and 0.32 or 0.3})
+  B.balance_h = okb and bal and bal.bal_h or 0
+  if okb and bal then nodes[#nodes + 1] = bal end
   local bw = w - 0.2
   local art = {button(mod_loc("Draw its art"), "forge_b_art", nil, UIK.C.purple, bw, touch() and 0.7 or 0.56, "forge_draw")}
   if B.ART_SETS[d.kind] then
@@ -571,6 +690,8 @@ local function left_column(w)
       button(mod_loc("Draw it"), "forge_b_art", nil, UIK.C.purple, hw, touch() and 0.7 or 0.56, "forge_draw"),
     }, bw, 0.1)}
   end
+  if d.kind == "hand" or d.kind == "challenge" or d.kind == "rarity" or d.kind == "sticker" or d.kind == "fusion" then art = {} end
+  if d.kind == "ctype" then art = {button(mod_loc("Draw its pack art"), "forge_b_art", nil, UIK.C.purple, bw, touch() and 0.7 or 0.56, "forge_draw")} end
   if d.kind == "collab" then
     local fw = (bw - 0.16) / 3
     local faces = {}
@@ -592,7 +713,7 @@ end
 
 local function sections()
   local d = draft()
-  if d.kind == "joker" then return {"rules", "vars", "basics"} end
+  if d.kind == "joker" then return {"rules", "vars", "looks", "basics"} end
   local k = kind()
   if not advanced() then return {} end
   local has_fields = #(k.fields or {}) + #(k.adv_fields or {}) > 0
@@ -670,10 +791,11 @@ end
 
 B.SECS = {"rules", "vars", "basics"}
 B.SEC_LABEL = {rules = "Rules", vars = "Variables", basics = "Basics", logic = "Rules"}
+B.kit = {button = button, hrow = hrow, title = title, step_title = step_title, obj = obj, still = still}
 
 local ONLY_LABEL = {var = "Variable", hand = "Poker hand", suit = "Suit", rank = "Rank", enhancement = "Enhancement", seal = "Seal", edition = "Edition", cards_played = "Cards played", money = "Money", hands_left = "Hands left", discards_left = "Discards left", first_hand = "First hand", last_hand = "Last hand", ante = "Ante", jokers = "Jokers", boss = "Boss blind", chance = "Chance", blind = "Blind type", deck_cards = "Cards in deck", held_cards = "Cards in hand", consumables = "Consumables", hand_level = "Hand level", round = "Round"}
 local GIVE_LABEL = {chips = "+Chips", mult = "+Mult", xmult = "XMult", money = "Money", retrigger = "Retrigger", gain_chips = "Gains Chips", gain_mult = "Gains Mult", gain_xmult = "Gains XMult", create = "Create a card", level_up = "Level up the hand", change = "Change the card", hand = "+Hands", discard = "+Discards", destroy_self = "Destroys itself", var_add = "Change a variable", var_set = "Set a variable", var_chips = "+Chips for each point", var_mult = "+Mult for each point", destroy_card = "Destroy the card", add_card = "Add a card to the deck", sell_value = "Gains sell value", perma_chips = "Card gains Chips forever", copy_card = "Copy the card", tag = "Create a tag", disable_boss = "Disable the Boss Blind", destroy_joker = "Destroy a random joker", make_card = "Create a chosen card"}
-local OP_SPEC = {var = true, cards_played = true, money = true, hands_left = true, discards_left = true, ante = true, jokers = true, deck_cards = true, held_cards = true, consumables = true, hand_level = true, round = true}
+local OP_SPEC = {var = true, cards_played = true, money = true, hands_left = true, discards_left = true, ante = true, jokers = true, deck_cards = true, held_cards = true, consumables = true, hand_level = true, round = true, amount = true, select_limit = true}
 for k, v in pairs(R.LABEL_ONLY or {}) do ONLY_LABEL[k] = ONLY_LABEL[k] or v end
 for k, v in pairs(R.LABEL_GIVE or {}) do GIVE_LABEL[k] = GIVE_LABEL[k] or v end
 GIVE_LABEL.var_pick = "Set a variable"
@@ -723,6 +845,7 @@ function B.num_vars()
 end
 
 local VAR_STEP = {var_pick = "Set %s to", var_add = "Add to %s", var_set = "Set %s to", var_chips = "Chips for each %s", var_mult = "Mult for each %s", var_xmult = "XMult for each %s", var_xchips = "XChips for each %s", var_money = "Money for each %s"}
+for k, v in pairs(R.VAR_STEP or {}) do VAR_STEP[k] = VAR_STEP[k] or v end
 local function run_give_spec(g)
   if not (g and g.run) then return nil end
   local HR = package.loaded["functions/forge/forge_hostrules"]
@@ -738,10 +861,11 @@ end
 B.give_num = give_num
 
 local function num_label(x, map)
+  if R.NUM_LABEL and R.NUM_LABEL[x.id] then return R.NUM_LABEL[x.id](x, map[x.id]) end
   local rs = run_give_spec(x)
   if rs then return mod_loc(rs.label) end
   if x.var and VAR_STEP[x.id] then return string.format(mod_loc(VAR_STEP[x.id]), T.var_name(dvars(), x.var)) end
-  if x.id == "create_rarity" then return mod_loc(map[x.id]) .. ": " .. mod_loc(x.v or "Common") end
+  if x.id == "create_rarity" then return mod_loc(map[x.id]) .. ": " .. (R.own_id("rarity", x.v) and R.own_label("rarity", x.v) or mod_loc(x.v or "Common")) end
   if x.id == "make_ed_joker" or x.id == "ed_joker" then return mod_loc(map[x.id]) .. ": " .. R.ed_name(x.v or "foil") end
   if R.PER_GIVE[x.id] and x.per then
     local what = mod_loc(R.LABEL_COUNT[x.per] or x.per)
@@ -793,9 +917,11 @@ local function spaced(list, pad)
 end
 
 local function num_fmt(id)
+  if R.NUM_FMT and R.NUM_FMT[id] then return R.NUM_FMT[id] end
   if id == "chance" then return function(v) return "1 / " .. T.fmt_n(v) end end
-  if id == "money" or id == "sell_value" then return function(v) return "$" .. T.fmt_n(v) end end
+  if id == "money" or id == "sell_value" or id == "money_per" then return function(v) v = tonumber(v) or 0 return (v < 0 and "-$" or "$") .. T.fmt_n(math.abs(v)) end end
   if id == "xmult" or id == "xchips" then return function(v) return "X" .. T.fmt_n(v) end end
+  if R.EXP_IDS and R.EXP_IDS[id] then return function(v) return "^" .. T.fmt_n(v) end end
   return function(v) return T.fmt_n(v) end
 end
 
@@ -1042,10 +1168,18 @@ end
 
 local function joker_price(d, w)
   local cw = touch() and 3.2 or 2.9
-  local names = {}
+  local names, own = {}, R.own_values("rarity")
   for i = 1, 4 do names[i] = Cat.value_label("rarity", i) end
+  local cur = d.rarity or 1
+  for i, v in ipairs(own) do
+    names[4 + i] = R.own_label("rarity", v)
+    if d.own_rarity == v then cur = 4 + i end
+  end
   local nodes = hrow({
-    UIK.cycle{options = names, current = d.rarity or 1, w = cw, cw = cw - 0.2, no_pips = true, callback = function(i) d.rarity = i; B.dirty = true; refresh() end},
+    UIK.cycle{options = names, current = cur, w = cw, cw = cw - 0.2, no_pips = true, callback = function(i)
+      if i > 4 then d.own_rarity, d.rarity = own[i - 4], 3 else d.own_rarity, d.rarity = nil, i end
+      B.dirty = true; refresh()
+    end},
     UIK.stepper{ref_table = d, ref_value = "cost", min = 1, max = 20, step = 1, w = cw, cw = cw - 0.2, format = function(v) return "$" .. tostring(v) end, callback = function() B.dirty = true; refresh() end},
   }, w, 0.3)
   local b = D.balance(d)
@@ -1145,11 +1279,17 @@ function B.type_commit()
     v = math.max(spec.lo, math.min(spec.hi, v))
     if spec.step % 1 == 0 and spec.lo % 1 == 0 then v = math.floor(v + 0.5) else v = math.floor(v * 100 + 0.5) / 100 end
     ty.t[ty.k] = v
+    B.touched(ty.t, ty.k)
     B.dirty = true
   end
   B.state.typing = nil
   B.type_box = nil
   refresh()
+end
+
+function B.touched(t, k)
+  local d = draft()
+  if d and t == d.fields then D.choose(d, k) end
 end
 
 function B.flat_step(ref, key, spec, fmt, cw, h)
@@ -1243,6 +1383,7 @@ local function joker_body(w)
   local nodes = {}
   local sec = advanced() and (B.state.sec or "rules") or "all"
   if sec == "vars" then return vars_body(w) end
+  if sec == "looks" and B.looks_body then return B.looks_body(w) end
   if sec == "basics" then
     local price = joker_price(d, w)
     nodes[#nodes + 1] = step_title(1, mod_loc("PRICE AND RARITY"), w)
@@ -1292,6 +1433,8 @@ end
 
 function B.requires_text(v)
   if not v or v == "none" then return mod_loc("Directly, no voucher needed") end
+  local gate = require("functions/forge/forge_gates").text(v)
+  if gate then return gate end
   return string.format(mod_loc("After %s is bought"), Cat.value_label("voucher", v))
 end
 
@@ -1320,6 +1463,7 @@ function B.field_set(d, f, v)
     return
   end
   d.fields[f.id] = v
+  D.choose(d, f.id)
   local More = rawget(_G, "ForgeKinds") and ForgeKinds.more
   if d.kind == "booster" and f.id == "size" and More and More.PACK_SHOWN[v] then
     d.fields.shown, d.fields.choose = More.PACK_SHOWN[v], More.PACK_CHOOSE[v]
@@ -1352,6 +1496,7 @@ G.FUNCS.forge_b_fcycle = function(e)
   local cur = 1
   local now = f.top and (d[f.id] or "none") or d.fields[f.id]
   for i, v in ipairs(values) do if v == now then cur = i end end
+  if not f.top and D.unset(d, f.id) then cur = (r2.d or 1) > 0 and 0 or #values + 1 end
   cur = (cur - 1 + (r2.d or 1)) % #values + 1
   B.field_set(d, f, values[cur])
   play_sound("paper1", 1, 0.3)
@@ -1360,8 +1505,8 @@ end
 
 function B.requires_cell(label, v, w)
   local _, h, cw = B.cell_dims(w)
-  local txt = B.requires_text(v)
-  return B.cell(mod_loc(label), UIK.button{label = txt, button = "forge_b_requires", ref_table = {}, colour = UIK.C.accent, w = cw, h = h, scale = fit(txt, cw, sc()), col = true, id = "forge_requires"}, w)
+  local txt, s = wrap_label(B.requires_text(v), cw, sc())
+  return B.cell(mod_loc(label), UIK.button{label = txt, button = "forge_b_requires", ref_table = {}, colour = UIK.C.accent, w = cw, h = h, scale = s, col = true, id = "forge_requires"}, w)
 end
 
 local function field_row(d, f, w)
@@ -1369,8 +1514,12 @@ local function field_row(d, f, w)
   local _, h, cw = B.cell_dims(w)
   local label = mod_loc(f.label)
   if f.dynamic == "voucher" then return B.requires_cell(f.label, fields[f.id], w) end
+  if f.dynamic == "joker" then
+    local txt = D.unset(d, f.id) and mod_loc("Not chosen yet") or R.card_label(fields[f.id])
+    return B.cell(label, UIK.button{label = txt, button = "forge_b_pick_joker", ref_table = {field = f.id, label = label}, colour = UIK.C.accent, w = cw, h = h, scale = fit(txt, cw, sc()), col = true, id = "forge_pick_" .. f.id}, w)
+  end
   if f.type == "num" then
-    return B.cell(label, B.num_row(nil, fields, f.id, f.num, function(v) return Cat.fmt(f.num, v) end, cw - B.type_w() - 0.05, true, true), w)
+    return B.cell(label, B.num_row(nil, fields, f.id, f.num, function(v) if D.unset(d, f.id) then return mod_loc("Not chosen yet") end return Cat.fmt(f.num, v) end, cw - B.type_w() - 0.05, true, true), w)
   end
   if f.type == "toggle" then
     local box = UIK.checkbox({ref_table = fields, ref_value = f.id, callback = function() B.dirty = true; refresh() end})
@@ -1383,7 +1532,7 @@ local function field_row(d, f, w)
       box,
     }}
   end
-  return B.cell(label, B.flat_cycle(f, Cat.value_label(Cat.field_what(f), fields[f.id]), cw, h), w)
+  return B.cell(label, B.flat_cycle(f, D.unset(d, f.id) and mod_loc("Not chosen yet") or Cat.value_label(Cat.field_what(f), fields[f.id]), cw, h), w)
 end
 
 local function num_cell(t, key, spec, w)
@@ -1512,6 +1661,11 @@ local function items_body(w)
   local fields = {}
   for _, f in ipairs(k.fields or {}) do fields[#fields + 1] = f end
   if advanced() then for _, f in ipairs(k.adv_fields or {}) do fields[#fields + 1] = f end end
+  for i = #fields, 1, -1 do
+    local f = fields[i]
+    if f.id == "ctype" and #R.own_values("ctype") == 0 and ((d.fields or {}).ctype or "none") == "none" then table.remove(fields, i)
+    elseif d.kind == "hand" and f.id == "group2" and not require("functions/forge/forge_hands").GROUPS[(d.fields or {}).pattern] then table.remove(fields, i) end
+  end
   local pick_field
   if d.kind == "tarot" or d.kind == "spectral" then
     for i = #fields, 1, -1 do if fields[i].id == "select" then pick_field = table.remove(fields, i) end end
@@ -1620,7 +1774,7 @@ local function editor_port()
   local rw = W - 0.1
   local col = left_column(tw)
   local card = table.remove(col.nodes, 1)
-  B.port_top_h = G.CARD_H * 0.72 + 2.4
+  B.port_top_h = G.CARD_H * 0.72 + 2.4 + (B.balance_h or 0)
   local body = draft().kind == "joker" and joker_body(rw) or items_body(rw)
   local nodes = {
     {n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = {
@@ -1711,10 +1865,10 @@ function B.pick(o)
   refresh()
 end
 
-function B.ask_card(title, choose, remove)
+function B.ask_card(title, choose, remove, sets)
   local kinds = {}
-  for _, set in ipairs(R.CARD_KINDS) do kinds[#kinds + 1] = {label = Cat.value_label("set", set), value = set} end
-  B.pick{title = mod_loc("WHICH KIND OF CARD?"), options = kinds, colour = UIK.C.accent, remove = remove, choose = function(set)
+  for _, set in ipairs(sets or R.CARD_KINDS) do kinds[#kinds + 1] = {label = Cat.value_label("set", set), value = set} end
+  local function pick_set(set)
     local opts = {}
     for _, v in ipairs(R.card_values(set)) do opts[#opts + 1] = {label = R.card_label(v), value = v, colour = R.own_id("card", v) and G.C.GREEN or nil} end
     if #opts == 0 then
@@ -1728,7 +1882,9 @@ function B.ask_card(title, choose, remove)
       B.dirty = true
       refresh()
     end}
-  end}
+  end
+  if #kinds == 1 then return pick_set(kinds[1].value) end
+  B.pick{title = mod_loc("WHICH KIND OF CARD?"), options = kinds, colour = UIK.C.accent, remove = remove, choose = pick_set}
 end
 
 local function pick_body()
@@ -2059,7 +2215,7 @@ do
   Hooks.wrap("Controller", "update", function(orig) return function(self, ...)
     if self.text_input_hook == B.TEXT_HOOK and not B.text_active() then
 r 17 775 %20%20%20%20%20%20 -
-l 981
+l 1068
       if UIK.touch() and love.keyboard and love.keyboard.setTextInput then pcall(love.keyboard.setTextInput, false) end
     end
     local r = Hooks.pack(orig(self, ...))
@@ -2158,12 +2314,12 @@ function B.save()
   local art = keep_art(d, id)
   local c
   if d.kind == "joker" then
-    c = Store.put({id = id, name = d.name, rarity = d.rarity, cost = d.cost, enabled = d.enabled, art = art, rules = R.clean_rules(d.rules), vars = R.clean_vars(d.vars), text = d.text, created = d.created, mode = d.mode, compat = d.compat, requires = d.requires, always_ed = d.always_ed})
+    c = Store.put({id = id, name = d.name, rarity = d.rarity, own_rarity = d.own_rarity, cost = d.cost, enabled = d.enabled, art = art, rules = R.clean_rules(d.rules), vars = R.clean_vars(d.vars), text = d.text, created = d.created, mode = d.mode, compat = d.compat, requires = d.requires, always_ed = d.always_ed, look = d.look})
     if c then FJ.register_all() end
   else
     local rules = {}
     for _, r in ipairs(d.rules or {}) do if #(r.give or {}) > 0 then rules[#rules + 1] = r end end
-    c = Store.put_item({id = id, kind = d.kind, name = d.name, mode = d.mode, enabled = d.enabled, created = d.created, fields = d.fields, effects = d.effects, text = d.text, art = art, from = d.from, faces = keep_faces(d, id), rules = rules, vars = d.vars})
+    c = Store.put_item({id = id, kind = d.kind, name = d.name, mode = d.mode, enabled = d.enabled, created = d.created, fields = d.fields, effects = d.effects, text = d.text, art = art, from = d.from, faces = keep_faces(d, id), rules = rules, vars = d.vars, unset = d.unset, look = d.look})
     local K = rawget(_G, "ForgeKinds")
     if c and K and K.refresh then pcall(K.refresh, c.id) end
   end
@@ -2210,19 +2366,34 @@ local function only_values(o)
   if R.VALUES_ONLY and R.VALUES_ONLY[o.id] then return R.VALUES_ONLY[o.id]() end
   local out = {}
   local function add(v, label) out[#out + 1] = {label = label, value = v} end
-  if o.id == "hand" then for _, h in ipairs(R.HANDS) do add(h, T.hand_name(h)) end end
-  if o.id == "suit" then for _, s in ipairs(R.SUITS) do add(s, s == "red" and mod_loc("Red") or s == "black" and mod_loc("Black") or T.suit_name(s, true)) end end
+  if o.id == "hand" then
+    for _, h in ipairs(R.HANDS) do add(h, T.hand_name(h)) end
+    for _, h in ipairs(R.own_values("hand")) do add(h, R.own_label("hand", h)) end
+  end
+  if o.id == "suit" then
+    for _, s in ipairs(R.SUITS) do add(s, s == "red" and mod_loc("Red") or s == "black" and mod_loc("Black") or T.suit_name(s, true)) end
+    for _, s in ipairs(R.own_values("suit")) do add(s, R.own_label("suit", s)) end
+  end
   if o.id == "rank" then for _, v in ipairs(R.RANKS) do add(v, RANK_LABEL[v] and mod_loc(RANK_LABEL[v]) or T.rank_name(v, lang())) end end
   if o.id == "enhancement" then for _, v in ipairs(R.enhancements()) do add(v, T.enh_name(v)) end end
   if o.id == "seal" then for _, v in ipairs(R.seals()) do add(v, T.seal_name(v)) end end
   if o.id == "edition" then for _, v in ipairs(R.editions()) do add(v, T.edition_name(v)) end end
-  if o.id == "blind" then for _, v in ipairs(R.BLINDS) do add(v, T.blind_name(v)) end end
+  if o.id == "blind" then
+    for _, v in ipairs(R.BLINDS) do add(v, T.blind_name(v)) end
+    for _, v in ipairs(Cat.values("bossblind")) do add(v, Cat.value_label("bossblind", v)) end
+  end
   if o.id == "played_rank" then for _, v in ipairs(R.RANKS) do add(v, RANK_LABEL[v] and mod_loc(RANK_LABEL[v]) or T.rank_name(v, lang())) end end
-  if o.id == "played_suit" or o.id == "held_all" then for _, s in ipairs(R.SUITS) do add(s, s == "red" and mod_loc("Red") or s == "black" and mod_loc("Black") or T.suit_name(s, true)) end end
-  if o.id == "suit_and_other" then for _, s in ipairs(R.FOUR_SUITS) do add(s, T.suit_name(s, true)) end end
-  if o.id == "used_kind" then for _, v in ipairs(R.USE_KINDS) do add(v, Cat.value_label("set", v)) end end
+  if o.id == "played_suit" or o.id == "held_all" then
+    for _, s in ipairs(R.SUITS) do add(s, s == "red" and mod_loc("Red") or s == "black" and mod_loc("Black") or T.suit_name(s, true)) end
+    for _, s in ipairs(R.own_values("suit")) do add(s, R.own_label("suit", s)) end
+  end
+  if o.id == "suit_and_other" then for _, s in ipairs(R.suits()) do add(s, T.suit_name(s, true)) end end
+  if o.id == "used_kind" then
+    for _, v in ipairs(R.USE_KINDS) do add(v, Cat.value_label("set", v)) end
+    for _, v in ipairs(R.own_values("ctype")) do add(v, R.own_label("ctype", v)) end
+  end
   if R.FILTER_ONLY[o.id] and not o.op_next then
-    for _, v in ipairs(R.filter_values(o.id)) do if R.ed_match(v) then add(v, R.ed_name(R.ed_match(v))) else add(v, v == "any" and mod_loc("Any card") or v == "enhanced" and mod_loc("Enhanced card") or RANK_LABEL[v] and mod_loc(RANK_LABEL[v]) or tonumber(v) and T.rank_name(v, lang()) or R.member(R.FOUR_SUITS, v) and T.suit_name(v, true) or (v == "red" or v == "black") and mod_loc(v == "red" and "Red" or "Black") or T.enh_name(v)) end end
+    for _, v in ipairs(R.filter_values(o.id)) do if R.FILTER_LABEL and R.FILTER_LABEL(o.id, v) then add(v, R.FILTER_LABEL(o.id, v)) elseif R.ed_match(v) then add(v, R.ed_name(R.ed_match(v))) else add(v, v == "any" and mod_loc("Any card") or v == "enhanced" and mod_loc("Enhanced card") or RANK_LABEL[v] and mod_loc(RANK_LABEL[v]) or tonumber(v) and T.rank_name(v, lang()) or (R.member(R.FOUR_SUITS, v) or R.own_id("suit", v)) and T.suit_name(v, true) or (v == "red" or v == "black") and mod_loc(v == "red" and "Red" or "Black") or T.enh_name(v)) end end
     return out
   end
   if o.id == "every" then
@@ -2246,10 +2417,16 @@ local function give_values(g)
     if rs.v then for _, v in ipairs(Cat.values(rs.v)) do out[#out + 1] = {label = Cat.value_label(rs.v, v), value = v} end end
     return out
   end
-  if g.id == "create" then for _, v in ipairs(R.KINDS) do out[#out + 1] = {label = Cat.value_label("set", v), value = v} end end
+  if g.id == "create" then
+    for _, v in ipairs(R.KINDS) do out[#out + 1] = {label = Cat.value_label("set", v), value = v} end
+    for _, v in ipairs(R.own_values("ctype")) do out[#out + 1] = {label = R.own_label("ctype", v), value = v} end
+  end
   if g.id == "add_card" then for _, v in ipairs(R.add_cards()) do out[#out + 1] = {label = v == "c_base" and mod_loc("Random card") or T.enh_name(v), value = v} end end
   if g.id == "tag" then out[#out + 1] = {label = mod_loc("Random Tag"), value = R.TAG_RANDOM} end
-  if g.id == "create_rarity" then for _, v in ipairs(R.RARITIES) do out[#out + 1] = {label = mod_loc(v), value = v} end end
+  if g.id == "create_rarity" then
+    for _, v in ipairs(R.RARITIES) do out[#out + 1] = {label = mod_loc(v), value = v} end
+    for _, v in ipairs(R.own_values("rarity")) do out[#out + 1] = {label = R.own_label("rarity", v), value = v} end
+  end
   if g.id == "add_to_hand" then
     out[#out + 1] = {label = mod_loc("Random seal"), value = "random"}
     for _, v in ipairs(R.seals()) do out[#out + 1] = {label = T.seal_name(v), value = v} end
@@ -2338,6 +2515,7 @@ local function ask_give_value(g)
     return ask_var(g, function() ask_give_value(g) end)
   end
   g.var_asked = nil
+  if R.ASK_GIVE and R.ASK_GIVE[g.id] then return R.ASK_GIVE[g.id](g) end
   if g.id == "make_card" then return B.ask_card(mod_loc(GIVE_LABEL.make_card), function(v) g.v = v end) end
   if R.PER_GIVE[g.id] then
     local when = rule().when
@@ -2409,8 +2587,13 @@ local function ask_effect_value(d, e)
   if not (spec and spec.v) then refresh() return end
   if spec.look then return B.ask_look_target(e) end
   if spec.v == "card" then return B.ask_card(mod_loc(spec.label), function(v) e.v = v end) end
+  if spec.v == "joker" then return B.ask_card(mod_loc(spec.label), function(v) e.v = v end, nil, {"Joker"}) end
+  if spec.v == "consumable" then return B.ask_card(mod_loc(spec.label), function(v) e.v = v end, nil, {"Tarot", "Planet", "Spectral"}) end
   local opts = {}
-  for _, v in ipairs(Cat.values(spec.v)) do opts[#opts + 1] = {label = Cat.value_label(spec.v, v), value = v} end
+  local me = spec.v == "chdeck" and d.id and (R.OWN_PREFIX.challenge .. tostring(d.id))
+  for _, v in ipairs(Cat.values(spec.v, spec.base)) do
+    if v ~= me then opts[#opts + 1] = {label = Cat.value_label(spec.v, v), value = v} end
+  end
   B.pick{title = mod_loc(spec.label), options = opts, choose = function(v)
     e.v = v
     B.state.pick = nil
@@ -2481,6 +2664,33 @@ G.FUNCS.forge_b_pick_only_fx = function(e)
   ask_run_only(eff.only, ref(e).j or 1, eff.when or Cat.default_when(d.kind, eff.id) or "now")
 end
 
+G.FUNCS.forge_b_pick_joker = function(e)
+  local d = draft()
+  local t = e and e.config and e.config.ref_table or {}
+  if not (d and t.field) then return end
+  if d.kind == "fusion" then
+    local Fu = require("functions/forge/forge_fusion")
+    local on = d.fields.on == "Consumables" and "Consumables" or "Jokers"
+    if t.field == "out" then
+      B.ask_card(t.label or mod_loc("Joker"), function(v) d.fields[t.field] = v; D.choose(d, t.field) end, nil, on == "Consumables" and {"Tarot", "Planet", "Spectral"} or {"Joker"})
+    else
+      local opts = Fu.ingredient_options(on)
+      if t.field == "c" then table.insert(opts, 1, {label = mod_loc("Nothing"), value = "j_none", colour = UIK.C.inactive}) end
+      B.pick{title = t.label or mod_loc("Joker"), options = opts, choose = function(v)
+        d.fields[t.field] = v
+        D.choose(d, t.field)
+        B.state.pick = nil
+        B.dirty = true
+        refresh()
+      end}
+    end
+    refresh()
+    return
+  end
+  B.ask_card(t.label or mod_loc("Joker"), function(v) d.fields[t.field] = v; D.choose(d, t.field) end, nil, {"Joker"})
+  refresh()
+end
+
 G.FUNCS.forge_b_requires = function()
   local d = draft()
   if not (d and (d.fields or d.kind == "joker")) then return end
@@ -2491,11 +2701,27 @@ G.FUNCS.forge_b_requires = function()
     if center.requires and own then for _, r in ipairs(center.requires) do if r == own then blocked = true end end end
     if not blocked then opts[#opts + 1] = {label = Cat.value_label("voucher", center.key), value = center.key} end
   end
-  B.pick{title = mod_loc("WHEN DOES IT SHOW UP?"), options = opts, choose = function(v)
+  local Gates = require("functions/forge/forge_gates")
+  local function set(v)
     if d.kind == "joker" then d.requires = v ~= "none" and v or nil else d.fields.requires = v end
     B.state.pick = nil
     B.dirty = true
     refresh()
+  end
+  if d.kind ~= "voucher" then
+    for i, gk in ipairs(Gates.ORDER) do table.insert(opts, 1 + i, {label = mod_loc(Gates.ASK[gk]) .. "...", value = "?" .. gk, colour = G.C.PURPLE}) end
+  end
+  B.pick{title = mod_loc("WHEN DOES IT SHOW UP?"), options = opts, choose = function(v)
+    local gk = type(v) == "string" and v:match("^%?(%a+)$")
+    if gk == "played" then
+      local hopts = {}
+      for _, h in ipairs(Cat.field_values({options = Cat.HANDS, own = "hand"})) do hopts[#hopts + 1] = {label = Cat.value_label("hand", h), value = h, colour = R.own_id("hand", h) and G.C.GREEN or nil} end
+      B.pick{title = upper(mod_loc(Gates.ASK.played)), options = hopts, choose = function(h) set(Gates.make("played", h)) end}
+    elseif gk then
+      B.ask_card(upper(mod_loc(Gates.ASK[gk])), function(j) set(Gates.make(gk, j)) end, nil, {"Joker"})
+    else
+      set(v)
+    end
   end}
 end
 
@@ -2517,10 +2743,21 @@ G.FUNCS.forge_b_page = function(e)
   refresh()
 end
 
+function B.blank(k)
+  B.new_draft{kind = k}
+  local d = D.blank(k)
+  B.state.draft = d
+  local src = D.blank_art(k)
+  local raw = src and love.filesystem.getInfo(src) and love.filesystem.read(src)
+  if raw then
+    Store.ensure_dirs()
+    if fs_write(B.DRAFT_ART, raw) then d.art = {file = B.DRAFT_ART} end
+  end
+  return d
+end
+
 G.FUNCS.forge_b_blank = function()
-  local k = B.state.start or "joker"
-  local d = B.new_draft{kind = k, art = D.sample_art(k)}
-  if k == "joker" then d.rules = {{when = "card_scored", only = {}, give = {R.default_give("mult")}}} end
+  B.blank(B.state.start or "joker")
   refresh()
 end
 
@@ -2550,7 +2787,7 @@ end
 
 G.FUNCS.forge_b_sec = function(e)
   local s2 = ref(e).sec
-  if s2 ~= "rules" and s2 ~= "basics" and s2 ~= "vars" and s2 ~= "logic" then return end
+  if s2 ~= "rules" and s2 ~= "basics" and s2 ~= "vars" and s2 ~= "logic" and s2 ~= "looks" then return end
   B.state.sec = s2
   refresh()
 end
@@ -2816,6 +3053,7 @@ G.FUNCS.forge_b_hold = function(e)
   local v = B.step_value(r2.spec, r2.t[r2.k], (tonumber(r2.d) or 0) * mult)
   if v == r2.t[r2.k] then return end
   r2.t[r2.k] = v
+  B.touched(r2.t, r2.k)
   B.dirty = true
   if r2.disp then r2.disp.s = r2.disp.fmt and r2.disp.fmt(v) or T.fmt_n(v) end
   play_sound("button", 1 + math.min(held, 3) * 0.05, 0.25)
@@ -2833,6 +3071,7 @@ G.FUNCS.forge_b_jump = function(e)
   local v = B.step_value(spec, t[k], tonumber(r2.d) or 0)
   if v == t[k] then return end
   t[k] = v
+  B.touched(t, k)
   play_sound("button", 1, 0.4)
   B.dirty = true
   refresh()
@@ -2972,7 +3211,7 @@ G.FUNCS.forge_b_art_back = function()
   refresh()
 end
 
-B.PX_KIND = {joker = "joker", tarot = "tarot", planet = "planet", spectral = "spectral", voucher = "voucher", booster = "booster", deck = "back", enhancement = "enhancement", seal = "seal", edition = "edition", tag = "tag", blind = "blind", stake = "stake", collab = "skin"}
+B.PX_KIND = {joker = "joker", tarot = "tarot", planet = "planet", spectral = "spectral", voucher = "voucher", booster = "booster", ctype = "booster", deck = "back", enhancement = "enhancement", seal = "seal", edition = "edition", tag = "tag", blind = "blind", stake = "stake", collab = "skin", suit = "suit"}
 B.PX_FAMILY = {tarot = {"tarot", "planet", "spectral"}, planet = {"planet", "tarot", "spectral"}, spectral = {"spectral", "tarot", "planet"}}
 
 G.FUNCS.forge_b_art = function()
@@ -2983,7 +3222,7 @@ G.FUNCS.forge_b_art = function()
   local ak = B.PX_KIND[d.kind] or "joker"
   local pk = PX.kind(ak)
   local w, h = pk.w or P.W, pk.h or P.H
-  local a = d.art or D.sample_art(d.kind) or {}
+  local a = d.art or D.sample_art(d.kind == "ctype" and "booster" or d.kind) or {}
   B.state.art_base = (pk.w and a.atlas) and {atlas = a.atlas, x = a.x or 0, y = a.y or 0} or nil
   if a.file ~= B.DRAFT_ART then
     local doc
@@ -2992,6 +3231,10 @@ G.FUNCS.forge_b_art = function()
       if ok and data and data:getWidth() == w and data:getHeight() == h then doc = P.from_image_data(data) end
     elseif a.atlas and not a.anim then
       doc = PX.sprite_data(a.atlas, {x = a.x or 0, y = a.y or 0}, w, h)
+    end
+    if not doc and d.kind == "suit" then
+      local ok, data = pcall(require("functions/forge/forge_suits").start_symbol, d)
+      if ok and data then doc = P.from_image_data(data) end
     end
     Store.ensure_dirs()
     if doc then
@@ -3014,7 +3257,7 @@ G.FUNCS.forge_b_face = function(e)
   if not (d and r) then return end
   B.state.face = r
   local More = rawget(_G, "ForgeKinds") and ForgeKinds.more
-  local ok, data = pcall(function() return More and More.face_image(d, r, d.fields and d.fields.suit or "Hearts") end)
+  local ok, data = pcall(function() return More and More.face_image(d, r, More.collab_suit and More.collab_suit(d) or d.fields and d.fields.suit or "Hearts") end)
   if ok and data then
     Store.ensure_dirs()
     fs_write(B.DRAFT_ART, data:encode("png"):getString())
@@ -3085,7 +3328,7 @@ G.FUNCS.forge_try_back = function(e)
     if love.timer.getTime() - left > 60 then return true end
     if not (G.STATE == G.STATES.MENU and G.STAGE == G.STAGES.MAIN_MENU and G.MAIN_MENU_UI) then return false end
 r 32 1825 %20%20%20%20 -
-l 179
+l 183
     B.edit(id)
     JokerForge.ui.open("builder")
     return true
@@ -3205,6 +3448,7 @@ local function register_strings()
       ["Values this joker remembers: a number, or a suit, rank, hand, edition, enhancement or seal. A rule can change one or check it, and a number can give Chips or Mult for each point."] = "Des valeurs que ce joker retient : un nombre, ou une couleur, une valeur de carte, une main, une édition, une amélioration ou un sceau. Une règle peut en changer une ou la vérifier, et un nombre peut donner des Jetons ou du Multi par point.",
       ["Starts at %s"] = "Départ : %s", ["+ Add a variable"] = "+ Ajouter une variable", ["WHICH VARIABLE?"] = "QUELLE VARIABLE ?", ["Count"] = "Compte", ["Add to %s"] = "Ajouter à %s", ["Set %s to"] = "Mettre %s à", ["Chips for each %s"] = "Jetons par %s", ["Mult for each %s"] = "Multi par %s",
       ["WHAT ARE YOU MAKING?"] = "QUE VOULEZ-VOUS CRÉER ?", ["MAKE A %s"] = "CRÉER : %s", ["Blank"] = "Vierge", ["Another kind"] = "Autre type", ["Or start from a game card:"] = "Ou partez d'une carte du jeu :",
+      ["Draw its pack art"] = "Dessiner son paquet",
       ["Page %d of %d"] = "Page %d sur %d", ["Draw its art"] = "Dessiner", ["Draw a face card:"] = "Dessiner une figure :", ["Simple"] = "Simple", ["Advanced"] = "Avancé",
       ["Poker hand"] = "Main de poker", ["Suit"] = "Couleur", ["Rank"] = "Valeur", ["Enhancement"] = "Amélioration", ["Seal"] = "Sceau", ["Edition"] = "Édition", ["Cards played"] = "Cartes jouées", ["Money"] = "Argent", ["Hands left"] = "Mains restantes", ["Discards left"] = "Défausses restantes",
       ["First hand"] = "Première main", ["Last hand"] = "Dernière main", ["Ante"] = "Mise", ["Jokers"] = "Jokers", ["Boss blind"] = "Blinde boss", ["Chance"] = "Chance",
@@ -3237,6 +3481,7 @@ local function register_strings()
       ["Values this joker remembers: a number, or a suit, rank, hand, edition, enhancement or seal. A rule can change one or check it, and a number can give Chips or Mult for each point."] = "Valores que este joker recuerda: un número, o un palo, un valor, una mano, una edición, una mejora o un sello. Una regla puede cambiar uno o comprobarlo, y un número puede dar Fichas o multi por cada punto.",
       ["Starts at %s"] = "Empieza en %s", ["+ Add a variable"] = "+ Añadir variable", ["WHICH VARIABLE?"] = "¿QUÉ VARIABLE?", ["Count"] = "Cuenta", ["Add to %s"] = "Sumar a %s", ["Set %s to"] = "Poner %s en", ["Chips for each %s"] = "Fichas por cada %s", ["Mult for each %s"] = "multi por cada %s",
       ["WHAT ARE YOU MAKING?"] = "¿QUÉ VAS A CREAR?", ["MAKE A %s"] = "CREAR: %s", ["Blank"] = "En blanco", ["Another kind"] = "Otro tipo", ["Or start from a game card:"] = "O empieza desde una carta del juego:",
+      ["Draw its pack art"] = "Dibujar su sobre",
       ["Page %d of %d"] = "Página %d de %d", ["Draw its art"] = "Dibujarlo", ["Draw a face card:"] = "Dibujar una figura:", ["Simple"] = "Simple", ["Advanced"] = "Avanzado",
       ["Poker hand"] = "Mano de póker", ["Suit"] = "Palo", ["Rank"] = "Valor", ["Enhancement"] = "Mejora", ["Seal"] = "Sello", ["Edition"] = "Edición", ["Cards played"] = "Cartas jugadas", ["Money"] = "Dinero", ["Hands left"] = "Manos restantes", ["Discards left"] = "Descartes restantes",
       ["First hand"] = "Primera mano", ["Last hand"] = "Última mano", ["Ante"] = "Apuesta", ["Jokers"] = "Jokers", ["Boss blind"] = "Ciega jefe", ["Chance"] = "Probabilidad",
@@ -3263,6 +3508,8 @@ if mod_loc_register then
       ["WHAT DOES IT HOLD?"] = "¿QUÉ GUARDA?", ["STARTS AS"] = "EMPIEZA EN"},
   }
 end
+
+require("functions/forge/forge_grow").builder(B)
 
 return B
 end

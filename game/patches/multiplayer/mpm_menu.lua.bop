@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 155
+l 184
 local M = {}
 
 M.active = M.active or false
@@ -61,9 +61,15 @@ function M.left_specs()
     }
 end
 
+local function single_blocked()
+    local W = rawget(_G, "bom_waitplay")
+    return W and W.blocks_single and W.blocks_single() or false
+end
+M.single_blocked = single_blocked
+
 function M.right_specs(quit_func)
     local out = {
-        {id = "mpm_single_button", button = "mpm_exit", colour = G.C.GREEN, label = L("SINGLEPLAYER")},
+        {id = "mpm_casino_button", button = "mpm_open_casino", colour = G.C.GREEN, label = L("THE CASINO")},
         {button = "options", colour = G.C.ORANGE, label = localize("b_options_cap")},
     }
     if G.F_QUIT_BUTTON then out[3] = {button = quit_func or "quit", colour = G.C.RED, label = localize("b_quit_cap")} end
@@ -87,6 +93,11 @@ function M.tile_button(o)
     if o.band then
         local sc = o.band_scale or 0.28
         local bh = sc * 1.35
+        local room = (h - 0.9 * (o.scale or 0.5)) / 2
+        if room < bh then
+            bh = math.max(0.12, room)
+            sc = bh / 1.35
+        end
         rows[1].config.minh = math.max(0, h - 2 * bh)
         table.insert(rows, 1, {n = G.UIT.R, config = {align = "cr", minw = w, minh = bh, padding = 0}, nodes = {
             {n = G.UIT.C, config = {align = "cm", minw = o.band_w or 1.0, minh = bh, r = 0.1, colour = G.C.GOLD}, nodes = {
@@ -120,11 +131,29 @@ function M.mods_button(minw, minh, scale)
         band = L("BETA"), band_scale = bs * k, band_w = math.max(1.0, scale * 1.4) * k}
 end
 
+function M.single_spec()
+    local blocked = single_blocked()
+    return {id = "mpm_single_button", button = blocked and "nil" or "mpm_exit", colour = blocked and G.C.UI.BACKGROUND_INACTIVE or G.C.BLUE, label = L("SINGLEPLAYER")}
+end
+
+function M.big_scale(w, scale, specs)
+    local lang = G and G.LANG
+    local f = lang and lang.font
+    if not (f and f.FONT and G.TILESIZE) then return scale end
+    local avail = w - 2 * math.max(0.3, w * 0.09)
+    local out = scale
+    for _, v in ipairs(specs) do
+        local tw = f.FONT:getWidth(tostring(v.label)) * f.squish * f.FONTSCALE / G.TILESIZE
+        if tw > 0 then out = math.min(out, avail * scale / tw) end
+    end
+    return out
+end
+
 function M.big_specs()
     return {
         {id = "main_menu_play", button = "mpm_open_play", label = localize("b_play_cap")},
-        {mods = true},
-        {id = "mpm_ranked_button", button = "mp_open_ranked", label = L("RANKED")},
+        {mods = true, label = L("MODS")},
+        M.single_spec(),
     }
 end
 
@@ -209,17 +238,17 @@ function M.enter()
 end
 
 function M.exit()
-    local queued = bom_ranked_ui and bom_ranked_ui.searching and bom_ranked_ui.searching()
-    if not queued then pcall(function() if bom_ranked_ui and bom_ranked_ui.queue_cancel then bom_ranked_ui.queue_cancel(true) end end) end
+    pcall(function() if bom_ranked_ui and bom_ranked_ui.queue_cancel then bom_ranked_ui.queue_cancel(true) end end)
     local so = rawget(_G, "social_online")
-    if not in_room() and not queued and not (so and so.keep and so.keep()) then pcall(function() bom_core.disconnect() end) end
+    if not in_room() and not (so and so.keep and so.keep()) then pcall(function() bom_core.disconnect() end) end
     pcall(function()
         local hook = rawget(_G, "mps_on_menu")
         if type(hook) == "function" then hook(false) end
     end)
     M.active = false
+    M.casino = nil
 r 32 1825 %20%20%20%20 -
-l 95
+l 96
     M.rebuild_soon()
     play_sound("cardSlide2", 1, 0.5)
 end
@@ -306,6 +335,7 @@ function M.play_body()
             scale = t and 0.5 or 0.45, sub = M.daily_sub("weekly"), sub_scale = t and 0.3 or 0.27},
     }}
     return column({
+        full(L("RANKED"), "mp_open_ranked", G.C.RED, "mpm_ranked"),
         full(L("BROWSE ROOMS"), "mpm_browse", G.C.BLUE, "mpm_browse"),
         full(L("CREATE ROOM"), "mpm_create", G.C.ORANGE, "mpm_create"),
         full(L("JOIN WITH CODE"), "mpm_join", G.C.GREEN, "mpm_join"),
@@ -502,7 +532,7 @@ function M.open_daily(kind)
         footer = {UIK.button{label = L("PLAY"), button = "mpm_daily_start", ref_table = {kind = kind}, colour = G.C.GREEN, id = "mpm_daily_start"}}
     end
 r 32 1381 %20%20%20%20 -
-l 60
+l 107
     G.FUNCS.overlay_menu{definition = UIK.window{zoom = false, id = "mpm_daily", compact = true, w = DAILY_W,
         title = kind == "weekly" and L("WEEKLY") or L("DAILY"),
         tabs = {{key = kind, label = "", build = function() return M.daily_body(kind) end}},
@@ -531,6 +561,49 @@ function M.request_info()
     M.with_connection(function() M.send({type = "menu_info"}) end)
 end
 
+function M.casino_blocks()
+    return M.casino == true and on_menu() and single_blocked()
+end
+
+function M.casino_refuse()
+    local W = rawget(_G, "bom_waitplay")
+    play_sound("cancel", 1, 0.6)
+    if W and W.note then
+        W.note(W.searching and W.searching() and L("Leave the ranked queue to start a run") or L("A match is waiting for you"))
+        if W.flash_note then W.flash_note() end
+    end
+end
+
+function M.install_casino_gate()
+    if M.gate_on or not G.FUNCS.start_run then return end
+    M.gate_on = true
+    local start = G.FUNCS.start_run
+    G.FUNCS.start_run = function(e, args, ...)
+        if not (type(args) == "table" and args.mp_start) and M.casino_blocks() then return M.casino_refuse() end
+        return start(e, args, ...)
+    end
+    local exit = G.FUNCS.exit_overlay_menu
+    if exit then
+        G.FUNCS.exit_overlay_menu = function(...)
+            local r = exit(...)
+            if M.casino and G.E_MANAGER and Event then
+                G.E_MANAGER:add_event(Event({blocking = false, blockable = false, pause_force = true, timer = "REAL", func = function()
+                    if not G.OVERLAY_MENU then M.casino = nil end
+                    return true
+                end}))
+            end
+            return r
+        end
+    end
+end
+
+function M.open_casino(e)
+    if not G.FUNCS.open_tavern_hub then return end
+    M.install_casino_gate()
+    M.casino = true
+    return G.FUNCS.open_tavern_hub(e)
+end
+
 local function open_or(name, fallback, e)
     local f = G.FUNCS[name]
     if f then return f(e) end
@@ -554,8 +627,12 @@ function M.register()
         M.open_play()
         if not was then after_enter() end
     end
-    G.FUNCS.mpm_exit = function() M.exit() end
-    G.FUNCS.mpm_open_play = function() M.open_play() end
+    G.FUNCS.mpm_exit = function()
+        if single_blocked() then return end
+        M.exit()
+    end
+    G.FUNCS.mpm_open_play = function() M.casino = nil; M.open_play() end
+    G.FUNCS.mpm_open_casino = function(e) return M.open_casino(e) end
     G.FUNCS.mpm_browse = function()
         if bom_browse and bom_browse.show then bom_browse.show() end
     end
@@ -564,7 +641,7 @@ function M.register()
     end
     G.FUNCS.mpm_join = function()
 r 32 1381 %20%20%20%20%20%20%20%20 -
-l 71
+l 73
         G.FUNCS.overlay_menu{definition = create_UIBox_join_room_input({title = L("JOIN WITH CODE"), back = "mpm_open_play"})}
     end
     G.FUNCS.mpm_daily = function(e)
@@ -615,6 +692,7 @@ function M.init()
                 ["BROWSE ROOMS"] = "PARCOURIR LES SALLES", ["CREATE ROOM"] = "CRÉER UNE SALLE", ["JOIN WITH CODE"] = "REJOINDRE AVEC CODE",
                 ["DAILY"] = "QUOTIDIEN", ["WEEKLY"] = "HEBDO", ["Loading..."] = "Chargement...", ["Offline"] = "Hors ligne", ["left"] = "restant",
                 ["Ends in"] = "Se termine dans", ["d"] = "j", ["h"] = "h", ["m"] = "min", ["Could not reach the server."] = "Serveur injoignable.",
+                ["Leave the ranked queue to start a run"] = "Quittez la file classée pour lancer une partie", ["A match is waiting for you"] = "Un match vous attend",
                 ["Mode"] = "Mode", ["Lives"] = "Vies", ["PvP from ante"] = "JcJ dès la mise initiale", ["Final ante"] = "Dernière mise initiale", ["Ready timer"] = "Minuteur",
                 ["Deck"] = "Jeu", ["Stake"] = "Mise", ["MP stake"] = "Mise MP", ["Shared queue"] = "File commune", ["MP cards"] = "Cartes MP", ["Hide opponent score"] = "Score adverse caché",
                 ["Score preview"] = "Aperçu du score", ["Layers"] = "Couches", ["Banned cards"] = "Cartes interdites",
@@ -626,6 +704,7 @@ function M.init()
                 ["BROWSE ROOMS"] = "BUSCAR SALAS", ["CREATE ROOM"] = "CREAR SALA", ["JOIN WITH CODE"] = "UNIRSE CON CÓDIGO",
                 ["DAILY"] = "DIARIO", ["WEEKLY"] = "SEMANAL", ["Loading..."] = "Cargando...", ["Offline"] = "Sin conexión", ["left"] = "restante",
                 ["Ends in"] = "Termina en", ["d"] = "d", ["h"] = "h", ["m"] = "min", ["Could not reach the server."] = "No se pudo conectar.",
+                ["Leave the ranked queue to start a run"] = "Sal de la cola clasificatoria para empezar una partida", ["A match is waiting for you"] = "Una partida te espera",
                 ["Mode"] = "Modo", ["Lives"] = "Vidas", ["PvP from ante"] = "JcJ desde la apuesta inicial", ["Final ante"] = "Última apuesta inicial", ["Ready timer"] = "Temporizador",
                 ["Deck"] = "Baraja", ["Stake"] = "Pozo", ["MP stake"] = "Pozo MP", ["Shared queue"] = "Cola común", ["MP cards"] = "Cartas MP", ["Hide opponent score"] = "Ocultar puntuación rival",
                 ["Score preview"] = "Vista previa", ["Layers"] = "Capas", ["Banned cards"] = "Cartas vetadas",

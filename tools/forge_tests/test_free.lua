@@ -13,7 +13,7 @@ local bounded = {}
 for _, k in ipairs(Cat.KINDS) do
   for _, list in ipairs({k.fields or {}, k.adv_fields or {}}) do
     for _, f in ipairs(list) do
-      if f.type == "num" and f.num.hi - f.num.lo < 9 and f.id ~= "shown" and f.id ~= "choose" then bounded[#bounded + 1] = k.id .. "." .. f.id end
+      if f.type == "num" and f.num.hi - f.num.lo < 9 and f.id ~= "shown" and f.id ~= "choose" and f.id ~= "count" then bounded[#bounded + 1] = k.id .. "." .. f.id end
     end
   end
 end

@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 393
+l 397
 local PB = {}
 
 local function L(s) return mod_loc and mod_loc(s) or s end
@@ -58,11 +58,15 @@ end
 PB.allowed_type = allowed
 
 function PB.filter_in(data)
-    if not S or S.waiting_start or S.injecting or type(data) ~= "table" then return false end
+    if not S or S.injecting or type(data) ~= "table" then return false end
+    local W = rawget(_G, "bom_waitplay")
+    if W and W.hold_in and W.hold_in(data) then return true end
+    if S.waiting_start then return false end
     return not allowed(data.type)
 end
 
-local OUT_ALLOW = { ping = true, spectate_list = true, spectate_watch = true, spectate_leave = true, social_status = true }
+local OUT_ALLOW = { ping = true, spectate_list = true, spectate_watch = true, spectate_leave = true, social_status = true,
+    find_match = true, cancel_search = true, wait_status = true }
 
 local STUB_GLOBALS = {
     "save_run", "check_for_unlock", "unlock_card", "unlock_achievement", "discover_card",
@@ -858,11 +862,13 @@ local function launch()
     pcall(function() S.tag_saved = PB.apply_tag_needs(S.start) end)
     pcall(function()
 r 32 1825 %20%20%20%20%20%20%20%20 -
-l 293
+l 297
     end)
     if start.deck_name and get_deck_from_name then
         pcall(function() G.GAME.viewed_back = Back(get_deck_from_name(start.deck_name)) end)
     end
+    local menu = rawget(_G, "mpm_menu")
+    if menu then menu.casino = nil end
     if h.kind == "local" or not (bmatch() and bom_room and bom_room.do_mp_start_run) then
         G.FUNCS.start_run(nil, { seed = seed, stake = tonumber(start.stake) or 1, mp_stake = start.mp_stake })
         return
@@ -1032,6 +1038,8 @@ function PB.stop(quiet)
         pcall(bom_core.send, { type = "spectate_leave" })
     end
     if bom_core and bom_core.send and was.mode == "live" then pcall(bom_core.send, { type = "social_status", where = "menu" }) end
+    local W = rawget(_G, "bom_waitplay")
+    if W and W.after_watch then pcall(W.after_watch) end
 end
 
 function PB.leave()

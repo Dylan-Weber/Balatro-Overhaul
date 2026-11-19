@@ -181,7 +181,7 @@ function P.orient_popup(kind)
     footer[1] = UIK.button{label = L('orient_try_again'), button = 'orient_msg_retry', colour = UIK.C.ok, w = math.min(w * 0.5, 3.6), h = touch and 0.9 or 0.7, scale = touch and 0.5 or 0.45}
   end
 r 32 1381 %20%20 -
-l 406
+l 407
   G.FUNCS.overlay_menu{definition = UIK.window{
     id = 'orient_msg', compact = true, w = w,
     title = L('orient_' .. kind .. '_title'),
@@ -360,6 +360,7 @@ end
 
 function P.blind_select_lift(box)
   if P.on() or not (box and box.UIRoot and box.T and G.hand and G.hand.T and G.jokers and G.jokers.T) then return 0 end
+  if CLASSIC_LAYOUT and CLASSIC_LAYOUT.on() then return 0 end
   local low
   local function walk(n, d, off)
     if type(n) ~= 'table' or d > 30 then return end
@@ -661,7 +662,7 @@ function P.layout_run()
   P.layout_hud()
   drop_labels()
 r 7 1672 %20%20 -
-l 490
+l 496
   if G.blind_select and G.blind_select.alignment and G.STATE == G.STATES.BLIND_SELECT then
     if P.on() then
       G.blind_select.alignment.offset.y = P.blind_select_offset(G.blind_select)
@@ -758,6 +759,12 @@ function P.shop_def(t)
   local row1 = btns and parent_of(t, btns)
   if not (btns and row1 and #row1.nodes == 2) then return t end
   for _, b in ipairs(btns.nodes) do b.n = G.UIT.C end
+  local ni, ri
+  for i, b in ipairs(btns.nodes) do
+    if b == nr then ni = i
+    elseif def_find(b, function(n) return n.config and n.config.button == 'reroll_shop' end) then ri = i end
+  end
+  if ni and ri then btns.nodes[ni], btns.nodes[ri] = btns.nodes[ri], btns.nodes[ni] end
   btns.n = G.UIT.R
   btns.config.padding = 0.1
   row1.nodes[2].n = G.UIT.R

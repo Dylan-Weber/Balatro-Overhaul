@@ -26,7 +26,7 @@ JokerForge.mods = Mods
 JokerForge.mods_ui = ModsUI
 JokerForge.online = Online
 ForgeMods = Mods
-FJ.text_for = function(c, lang) return require("functions/forge/forge_always").with_line(c, Text.lines(c, lang), lang) end
+FJ.text_for = function(c, lang) return require("functions/forge/forge_rarityrules").with_lines(c, require("functions/forge/forge_always").with_line(c, Text.lines(c, lang), lang), lang) end
 FJ.vars_for = function(center, card)
   local c = center and center.forge_id and Store.get(center.forge_id)
   if card and card.ability and c and type(c.vars) == "table" and #c.vars > 0 and G.STAGE == G.STAGES.RUN and card.area and not (card.area.config and card.area.config.collection) then
@@ -166,5 +166,15 @@ pcall(Mods.load)
 Mods.install_hooks()
 FJ.install_hooks()
 Kinds.install_hooks()
+pcall(require("functions/forge/forge_suits").install_hooks)
+pcall(require("functions/forge/forge_hands").install_hooks)
+pcall(require("functions/forge/forge_types").install_hooks)
+pcall(require("functions/forge/forge_challenges").install_hooks)
+pcall(require("functions/forge/forge_rarities").install_hooks)
+pcall(require("functions/forge/forge_stickers").install_hooks)
+pcall(require("functions/forge/forge_fusion").install_hooks)
+pcall(require("functions/forge/forge_gates").install_hooks)
+pcall(function() require("functions/forge/forge_rules").MESS.install() end)
+pcall(function() require("functions/forge/forge_rules").MESS.install_debuff() end)
 
 return JokerForge

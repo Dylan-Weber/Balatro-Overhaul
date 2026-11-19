@@ -35,7 +35,7 @@ function UI.card_node(c, o)
   if o.still then
 r 7 1460 %20%20%20%20 -
 r 5 220 %20%20%20%20 -
-l 246
+l 258
   end
   area:emplace(card)
   return {n = G.UIT.R, config = {align = "cm", minw = w, minh = h, padding = 0}, nodes = {{n = G.UIT.O, config = {object = area}}}}
@@ -45,6 +45,13 @@ local function name_line(c, w)
   return {n = G.UIT.R, config = {align = "cm", minw = w, minh = touch() and 0.5 or 0.45, padding = 0}, nodes = {
     {n = G.UIT.C, config = {align = "cm", maxw = w - 0.1}, nodes = {UIK.text(c.name, {scale = touch() and 0.44 or 0.4, colour = c.enabled and UIK.C.text or UIK.C.muted})}},
   }}
+end
+
+local function balance_line(c, w)
+  local Bal = require("functions/forge/forge_balance")
+  local res = Bal.of(c)
+  if not res then return nil end
+  return {n = G.UIT.R, config = {align = "cm", minw = w, padding = 0.02}, nodes = {Bal.pill(res.level, {scale = touch() and 0.36 or 0.34, maxw = w - 0.2})}}
 end
 
 local function small_button(label, func, id, colour, w)
@@ -63,6 +70,10 @@ function UI.item_node(c, o)
   if c.kind == "edition" and B0 and B0.edition_sprite then
     spr = B0.edition_sprite(c, s)
     return {n = G.UIT.R, config = {align = "cm", minw = w, minh = h, padding = 0}, nodes = {{n = G.UIT.O, config = {object = spr}}}}
+  end
+  if B0 and B0.kind_preview and B0.PREVIEW_KINDS[c.kind] then
+    local ok, node = pcall(B0.kind_preview, c, s, "forge_cr_" .. tostring(c.id), nil, true)
+    if ok and node then return node end
   end
   if a.file and love.filesystem.getInfo(a.file) then
     local ok, data = pcall(love.image.newImageData, a.file)
@@ -109,6 +120,7 @@ local function creation_column(c)
   return {n = G.UIT.C, config = {align = "tm", minw = w, padding = 0.04}, nodes = {
     UI.any_node(c, {scale = UIK.portrait() and 0.95 or touch() and 0.86 or 1}),
     name_line(c, w),
+    balance_line(c, w),
     UIK.toggle{label = mod_loc("Use in runs"), ref_table = box, ref_value = "on", w = w, callback = function(v) UI.set_enabled(c.id, v) end},
     {n = G.UIT.R, config = {align = "cm", minw = w, padding = 0.03}, nodes = {small_button(mod_loc("Edit"), "forge_edit", c.id, UIK.C.accent, w)}},
     {n = G.UIT.R, config = {align = "cm", minw = w, padding = 0.03}, nodes = {

@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 164
+l 165
 ﻿local MP = {}
 local function try_require(path)
     local ok, result = pcall(require, path)
@@ -69,7 +69,8 @@ bom_playback   = MP.playback
 MP.ranked     = try_require("multiplayer.bom_ranked")
 bom_ranked     = MP.ranked
 MP.ranked_ui  = try_require("multiplayer.bom_ranked_ui")
-MP.queue_run  = try_require("multiplayer.bom_queue_run")
+MP.waitplay   = try_require("multiplayer.bom_waitplay")
+bom_waitplay   = MP.waitplay
 MP.social     = try_require("multiplayer.bom_social")
 bom_social     = MP.social
 MP.kit        = try_require("multiplayer.bom_kit")
@@ -138,8 +139,8 @@ function MP.init()
     if MP.party and MP.party.init then pcall(MP.party.init) end
     if MP.party_run and MP.party_run.init then pcall(MP.party_run.init) end
     if MP.ranked and MP.ranked.init then pcall(MP.ranked.init) end
+    if MP.waitplay and MP.waitplay.init then pcall(MP.waitplay.init) end
     if MP.ranked_ui and MP.ranked_ui.register then pcall(MP.ranked_ui.register) end
-    if MP.queue_run and MP.queue_run.init then pcall(MP.queue_run.init) end
     if MP.fair and MP.fair.init then pcall(MP.fair.init) end
     for _, m in ipairs({MP.ranked_ui, MP.replay, MP.playback, MP.spectate}) do
         if m and m.register_strings then pcall(m.register_strings) end
@@ -198,11 +199,11 @@ function MP.update(dt)
     if AndroidWS then AndroidWS.poll() end
     if MP.core and MP.core.update then MP.core.update(dt) end
     if MP.ranked and MP.ranked.update then pcall(MP.ranked.update, dt) end
-    if MP.queue_run and MP.queue_run.update then pcall(MP.queue_run.update) end
     if MP.social and MP.social.update then pcall(MP.social.update) end
     if MP.emotes and MP.emotes.update then pcall(MP.emotes.update) end
     if MP.ui and MP.ui.pvp_result_tick then pcall(MP.ui.pvp_result_tick) end
     if MP.rejoin and MP.rejoin.update then MP.rejoin.update(dt) end
+    if MP.waitplay and MP.waitplay.update then pcall(MP.waitplay.update, dt) end
     if MP.sync and MP.sync.update then MP.sync.update(dt) end
     if MP.custom_objects and MP.custom_objects.update then MP.custom_objects.update(dt) end
     if MP.mode_content and MP.mode_content.update then pcall(MP.mode_content.update) end

@@ -469,7 +469,7 @@ l 3
             },
             banned_tags = {
 r 6 518 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 12
+l 38
             },
             banned_other = {
                 {id = 'bl_goad', type = 'blind'},
@@ -482,4 +482,30 @@ l 12
 }
 
 for _, c in ipairs(list) do G.CHALLENGES[#G.CHALLENGES + 1] = c end
+
+local by_id, proxies = {}, {}
+for _, c in ipairs(list) do by_id[c.id] = c end
+
+local function noop() end
+
+local function smods_index()
+    local S = rawget(_G, "SMODS")
+    local t = type(S) == "table" and rawget(S, "Challenges")
+    if type(t) ~= "table" or getmetatable(t) ~= nil then return false end
+    setmetatable(t, {__index = function(_, k)
+        local c = by_id[k]
+        if not c then return nil end
+        if not proxies[k] then proxies[k] = setmetatable({calculate = noop}, {__index = c}) end
+        return proxies[k]
+    end})
+    return true
+end
+
+local Hooks = require("overhaul.hooks")
+Hooks.wrap("Game", "start_run", function(orig) return function(...)
+    pcall(smods_index)
+    return orig(...)
+end end, {id = "overhaul.challenges.smods_index"})
+
+return {smods_index = smods_index, by_id = by_id}
 end

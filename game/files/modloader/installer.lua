@@ -544,6 +544,17 @@ function ModInstaller.find_zips(opts)
             end
         end
     end
+    if where ~= "picked" and love.filesystem.getInfo(PICK_DIR, "directory") then
+        local pdir = love.filesystem.getSaveDirectory() .. "/" .. PICK_DIR
+        local before = #found
+        for _, name in ipairs(love.filesystem.getDirectoryItems(PICK_DIR)) do
+            if name:lower():sub(-4) == ".zip" then pcall(consider, join(pdir, name), name, "picked") end
+        end
+        local picked = {}
+        for i = before + 1, #found do picked[#picked + 1] = found[i] end
+        for i = #found, before + 1, -1 do table.remove(found, i) end
+        for i = #picked, 1, -1 do table.insert(found, 1, picked[i]) end
+    end
     local save = love.filesystem.getSaveDirectory()
     for _, name in ipairs(love.filesystem.getDirectoryItems(MODS_DIR)) do
         if name:lower():sub(-4) == ".zip" then pcall(consider, save .. "/" .. MODS_DIR .. "/" .. name, name, "mods") end

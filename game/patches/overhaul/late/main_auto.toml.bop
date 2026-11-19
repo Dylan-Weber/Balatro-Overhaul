@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 279
+l 280
 [manifest]
 version = "1.0.0"
 priority = 0
@@ -206,6 +206,7 @@ require "functions/shop/tavern";
 require "functions/portrait";
 require "functions/hud_scale";
 require "functions/phone_text";
+require "functions/classic_layout";
 require "overhaul.init";
 if ReleaseFlags then ReleaseFlags.apply() end
 ${post}'''
@@ -983,7 +984,7 @@ function menu_zoom_target(w, h)
 	local extra = G.UI_SIZE_EXTRA or 1
 	if not o or (fill <= 0 and extra <= 1) then return 1 end
 	local phone = _G._IS_DESKTOP == false
-	local plain = fill <= 0 or (not phone and not (o.definition and o.definition.config and o.definition.config.uik_zoom))
+	local plain = fill <= 0 or (not phone and not (o.definition and o.definition.config and o.definition.config.uik_zoom)) or (CLASSIC_LAYOUT and CLASSIC_LAYOUT.plain_zoom(o))
 	if plain and extra <= 1 then return 1 end
 	local zr = PORTRAIT and PORTRAIT.read_check and PORTRAIT.read_check(o) or 0
 	local t = o.T

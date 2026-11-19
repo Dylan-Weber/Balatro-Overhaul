@@ -1,0 +1,301 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 183
+local SK = {}
+
+SK.made = {}
+SK.suits = {}
+SK.RANKS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King", "Ace"}
+SK.FACES = {"King", "Queen", "Jack"}
+
+local function ml(s) return mod_loc and mod_loc(s) or s end
+local function S() return require("functions/forge/forge_suits") end
+local function smods()
+  local SM = rawget(_G, "SMODS")
+  return type(SM) == "table" and type(SM.DeckSkins) == "table" and SM.DeckSkin ~= nil and SM or nil
+end
+
+function SK.default_key(suit)
+  if smods() then return "default_" .. suit end
+  return "default"
+end
+
+local function names_of(suit)
+  local L = G.localization and G.localization.misc
+  if not L then return nil end
+  L.collabs = L.collabs or {}
+  L.collabs[suit] = L.collabs[suit] or {}
+  return L.collabs[suit]
+end
+
+function SK.sync_options()
+  local opts = G.COLLABS.options
+  local now = {}
+  for _, s in ipairs(S().list) do
+    now[s.key] = true
+    local list = opts[s.key]
+    if type(list) ~= "table" then
+      list = {}
+      opts[s.key] = list
+    end
+    local def = SK.default_key(s.key)
+    if list[1] ~= def then
+      for i = #list, 1, -1 do if list[i] == def or list[i] == "default" then table.remove(list, i) end end
+      table.insert(list, 1, def)
+    end
+    local names = names_of(s.key)
+    if names then
+      names["1"] = ml("Default")
+      names[def] = ml("Default")
+    end
+  end
+  for key in pairs(SK.suits) do
+    if not now[key] then
+      opts[key] = nil
+      local C = G.SETTINGS and G.SETTINGS.CUSTOM_DECK and G.SETTINGS.CUSTOM_DECK.Collabs
+      if C then C[key] = nil end
+    end
+  end
+  SK.suits = now
+end
+
+function SK.fix_choices()
+  local C = G.SETTINGS and G.SETTINGS.CUSTOM_DECK and G.SETTINGS.CUSTOM_DECK.Collabs
+  if not C then return end
+  for suit, list in pairs(G.COLLABS.options) do
+    local cur = C[suit]
+    if cur ~= nil then
+      local found = false
+      for _, v in ipairs(list) do if v == cur then found = true end end
+      if not found and (S().is_own(suit) or (type(cur) == "string" and cur:sub(1, 13) == "collab_forge_")) then C[suit] = list[1] end
+    elseif S().is_own(suit) and smods() then
+      C[suit] = list[1]
+    end
+  end
+end
+
+local function palette(key, ranks, display, atlas, style, hc)
+  return {key = key, ranks = ranks, display_ranks = display, atlas = atlas, pos_style = style, hc_default = hc or nil, loc_txt = nil}
+end
+
+local function skin(SM, key, suit, pals)
+  local obj = {key = key, original_key = key, suit = suit, set = "DeckSkin", forge_skin = true, palettes = pals, palette_map = {}, registered = true}
+  for _, p in ipairs(pals) do obj.palette_map[p.key] = p end
+  setmetatable(obj, {__index = SM.DeckSkin})
+  return obj
+end
+
+SK.PALETTE = {lc = "Low Contrast Colours", hc = "High Contrast Colours"}
+
+function SK.palette_name(key)
+  local t = localize("b_deckskins_" .. key)
+  if type(t) ~= "string" or t == "" or t == "ERROR" then return ml(SK.PALETTE[key]) end
+  return t
+end
+
+function SK.sync_smods()
+  local SM = smods()
+  if not SM then return end
+  local buf = SM.DeckSkin.obj_buffer
+  for key in pairs(SK.made) do
+    SM.DeckSkins[key] = nil
+    if type(buf) == "table" then
+      for i = #buf, 1, -1 do if buf[i] == key then table.remove(buf, i) end end
+    end
+  end
+  SK.made = {}
+  local L = G.localization and G.localization.misc
+  if L then L.collab_palettes = L.collab_palettes or {} end
+  local function add(obj, name)
+    if SM.DeckSkins[obj.key] and not SM.DeckSkins[obj.key].forge_skin then return end
+    SM.DeckSkins[obj.key] = obj
+    SK.made[obj.key] = true
+    if type(buf) == "table" then buf[#buf + 1] = obj.key end
+    if L then
+      local lc, hc = SK.palette_name("lc"), SK.palette_name("hc")
+      L.collab_palettes[obj.key] = {lc, hc, ["1"] = lc, ["2"] = hc}
+      G.COLLABS.colour_palettes = G.COLLABS.colour_palettes or {}
+      G.COLLABS.colour_palettes[obj.key] = {"lc", "hc"}
+      local names = names_of(obj.suit)
+      if names then names[obj.key] = name end
+    end
+  end
+  for _, s in ipairs(S().list) do
+    local atlas = S().atlas_key(s)
+    add(skin(SM, SK.default_key(s.key), s.key, {palette("lc", SK.RANKS, SK.FACES, atlas, "deck"), palette("hc", SK.RANKS, SK.FACES, atlas, "deck", true)}), ml("Default"))
+  end
+  local Store = require("functions/forge/forge_store")
+  for suit, list in pairs(G.COLLABS.options) do
+    for _, key in ipairs(list) do
+      if type(key) == "string" and key:sub(1, 13) == "collab_forge_" then
+        local c = Store.get_item(key:sub(14))
+        add(skin(SM, key, suit, {palette("lc", SK.FACES, SK.FACES, key .. "_1", "collab"), palette("hc", SK.FACES, SK.FACES, key .. "_2", "collab", true)}), c and c.name or key)
+      end
+    end
+  end
+end
+
+function SK.face_image(suit, r)
+  local s = S().by_key[suit]
+  if not s then return nil end
+  SK.cache = SK.cache or {}
+  local img = SK.cache[s.id]
+  if not img then
+    img = S().build_image(s.c)
+    SK.cache[s.id] = img
+  end
+  local x = ({J = 9, Q = 10, K = 11})[r]
+  if not x then return nil end
+  local out = love.image.newImageData(71, 95)
+  out:paste(img, 0, 0, x * 71, 0, 71, 95)
+  return out
+end
+
+function SK.sync()
+  if not (G and G.COLLABS and G.COLLABS.options) then return end
+  SK.cache = nil
+  SK.install()
+  SK.sync_options()
+  local M = require("functions/forge/forge_kinds_more")
+  pcall(M.register_collabs)
+  SK.sync_smods()
+  SK.fix_choices()
+end
+
+function SK.tab(suit)
+  local s = S().by_key[suit]
+  local t = {}
+  local face_cards = CardArea(0, 0, 4 * G.CARD_W, 1.4 * G.CARD_H, {card_limit = 3, type = "title", highlight_limit = 0})
+  t[#t + 1] = {n = G.UIT.R, config = {align = "cm", colour = G.C.BLACK, r = 0.1, padding = 0.07, no_fill = true}, nodes = {{n = G.UIT.O, config = {object = face_cards}}}}
+  local loc = localize(suit, "collabs")
+  local opts = {}
+  local current = 1
+  for i, v in ipairs(G.COLLABS.options[suit] or {}) do
+    opts[i] = type(loc) == "table" and loc[tostring(i)] or (v == "default" and ml("Default") or v)
+    if G.SETTINGS.CUSTOM_DECK.Collabs[suit] == v then current = i end
+  end
+  t[#t + 1] = {n = G.UIT.R, config = {align = "cm"}, nodes = {
+    create_option_cycle({options = opts, w = 5.5, cycle_shoulders = true, curr_suit = suit, opt_callback = "change_collab", current_option = current,
+      colour = G.C.RED, focus_args = {snap_to = true, nav = "wide"}}),
+  }}
+  t[#t + 1] = create_toggle({label = localize("b_high_contrast_cards"), ref_table = G.SETTINGS, ref_value = "colourblind_option", callback = G.FUNCS.refresh_contrast_mode})
+  for _, f in ipairs({"K", "Q", "J"}) do
+    local p = s and G.P_CARDS[S().card_key(s, f)]
+    if p then
+      local card = Card(0, 0, G.CARD_W * 1.2, G.CARD_H * 1.2, p, G.P_CENTERS.c_base)
+      card.no_ui = true
+r 30 2585 %20%20%20%20%20%20 -
+l 110
+    end
+  end
+  return {n = G.UIT.ROOT, config = {align = "cm", padding = 0, colour = G.C.CLEAR, r = 0.1, minw = 7, minh = 4.2}, nodes = t}
+end
+
+SK.your_i = 1
+
+function SK.own_tabs()
+  local out = {}
+  for _, s in ipairs(S().list) do
+    if G.COLLABS and G.COLLABS.options[s.key] then out[#out + 1] = s end
+  end
+  return out
+end
+
+function SK.grouped()
+  local UIK = rawget(_G, "UIK")
+  local touch = type(UIK) == "table" and UIK.touch and UIK.touch() or (G and G.F_MOBILE)
+  return touch and #SK.own_tabs() >= 2 or false
+end
+
+function SK.yours_tab()
+  local own = SK.own_tabs()
+  if #own == 0 then return {n = G.UIT.ROOT, config = {colour = G.C.CLEAR}, nodes = {}} end
+  SK.your_i = math.max(1, math.min(#own, tonumber(SK.your_i) or 1))
+  local names = {}
+  for i, s in ipairs(own) do names[i] = localize(s.key, "suits_plural") end
+  local inner = SK.tab(own[SK.your_i].key)
+  inner.n = G.UIT.R
+  return {n = G.UIT.ROOT, config = {align = "cm", padding = 0.05, colour = G.C.CLEAR}, nodes = {
+    {n = G.UIT.R, config = {align = "cm"}, nodes = {
+      create_option_cycle({options = names, w = 5.5, cycle_shoulders = true, opt_callback = "forge_sk_pick_suit", current_option = SK.your_i,
+        colour = G.C.BLUE, focus_args = {snap_to = true, nav = "wide"}}),
+    }},
+    inner,
+  }}
+end
+
+function SK.pick_suit(args)
+  SK.your_i = tonumber(args and args.to_key) or 1
+  G.E_MANAGER:add_event(Event({trigger = "immediate", blocking = false, blockable = false, func = function()
+    local tc = G.OVERLAY_MENU and G.OVERLAY_MENU:get_UIE_by_ID("tab_contents")
+    if tc and tc.config and tc.config.object then
+      tc.config.object:remove()
+      tc.config.object = UIBox{definition = SK.yours_tab(), config = {offset = {x = 0, y = 0}, parent = tc, type = "cm"}}
+      tc.UIBox:recalculate()
+    end
+    return true
+  end}))
+end
+
+function SK.install()
+  if G and G.FUNCS then G.FUNCS.forge_sk_pick_suit = SK.pick_suit end
+  if SK.hooked then return end
+  SK.hooked = true
+  local M = require("functions/forge/forge_kinds_more")
+  if M.face_image and not M.forge_sk_face then
+    M.forge_sk_face = true
+    local base = M.face_image
+    M.face_image = function(c, r, suit, opt)
+      local f = c and c.faces and c.faces[r]
+      if not (f and love.filesystem.getInfo(f)) and S().is_own(suit) and not (r == "K" and c and c.art and c.art.file) then
+        local ok, img = pcall(SK.face_image, suit, r)
+        if ok and img then return img end
+      end
+      return base(c, r, suit, opt)
+    end
+  end
+  if G.UIDEF and G.UIDEF.custom_deck_tab then
+    local base = G.UIDEF.custom_deck_tab
+    G.UIDEF.custom_deck_tab = function(suit, ...)
+      if S().is_own(suit) and not smods() then return SK.tab(suit) end
+      return base(suit, ...)
+    end
+  end
+  if type(rawget(_G, "create_UIBox_customize_deck")) == "function" then
+    local base = rawget(_G, "create_UIBox_customize_deck")
+    _G.create_UIBox_customize_deck = function(...)
+      local own = S().list
+      if #own == 0 or smods() then return base(...) end
+      local tabs = {}
+      for i, suit in ipairs({"Spades", "Hearts", "Clubs", "Diamonds"}) do
+        tabs[#tabs + 1] = {label = localize(suit, "suits_plural"), chosen = i == 1, tab_definition_function = G.UIDEF.custom_deck_tab, tab_definition_function_args = suit}
+      end
+      if SK.grouped() then
+        SK.your_i = 1
+        tabs[#tabs + 1] = {label = ml("Your suits"), tab_definition_function = SK.yours_tab}
+      else
+        for _, s in ipairs(SK.own_tabs()) do
+          tabs[#tabs + 1] = {label = localize(s.key, "suits_plural"), tab_definition_function = G.UIDEF.custom_deck_tab, tab_definition_function_args = s.key}
+        end
+      end
+      return create_UIBox_generic_options({back_func = "options", snap_back = nil, contents = {
+        {n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = {create_tabs({tabs = tabs, snap_to_nav = true, no_shoulders = true})}},
+      }})
+    end
+  end
+end
+
+local function register_strings()
+  if not mod_loc_register then return end
+  mod_loc_register{
+    fr = {["Your suits"] = "Vos couleurs", ["Default"] = "Par défaut", ["Low Contrast Colours"] = "Couleurs à faible contraste", ["High Contrast Colours"] = "Couleurs à fort contraste"},
+    es = {["Your suits"] = "Tus palos", ["Default"] = "Predeterminado", ["Low Contrast Colours"] = "Colores de bajo contraste", ["High Contrast Colours"] = "Colores de alto contraste"},
+  }
+end
+
+register_strings()
+
+return SK
+end

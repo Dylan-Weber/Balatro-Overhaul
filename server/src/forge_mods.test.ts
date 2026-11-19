@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from 'bun:test';
-import { ForgeBoard, MemoryForgeStore, D1ForgeStore, forgeStoreFor, validateForge, checkMod, forgeHandlers, setForgeBoard, FORGE_MAX_BYTES, FORGE_PER_PAGE, FORGE_MAX_PER_OWNER, FORGE_HIDE_AT } from './forge_mods';
+import { ForgeBoard, MemoryForgeStore, D1ForgeStore, forgeStoreFor, validateForge, checkMod, forgeHandlers, setForgeBoard, FORGE_MAX_BYTES, FORGE_PER_PAGE, FORGE_MAX_PER_OWNER, FORGE_HIDE_AT, FORGE_MAX_ALT_KEYS, altKeys, ownsEntry } from './forge_mods';
 import { startServer } from './index';
 
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAEcAAABfCAYAAAA=';
@@ -66,6 +66,11 @@ describe('checkMod', () => {
     expect(checkMod(mod({ jokers: [], creations: [] }))).toEqual({ ok: false, reason: 'empty', why: 'empty' });
     expect(checkMod(mod({ jokers: Array.from({ length: 61 }, (_, i) => ({ id: `j${i}` })) }))).toEqual({ ok: false, reason: 'too_many', why: 'too_many' });
     expect(checkMod(mod({ creations: [{ id: 'x', kind: 'nonsense' }] }))).toEqual({ ok: false, reason: 'not_forge', why: 'bad_kind' });
+    for (const kind of ['suit', 'hand', 'ctype', 'challenge', 'rarity', 'sticker', 'fusion']) {
+      const r = checkMod(mod({ v: 16, creations: [{ id: 'x', kind }] }));
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.summary[kind]).toBe(1);
+    }
     expect(checkMod(mod({ files: { hthief: 'notpng=' } }))).toEqual({ ok: false, reason: 'bad_art', why: 'bad_art' });
     expect(checkMod(mod({ files: { '../evil': PNG } }))).toEqual({ ok: false, reason: 'bad_art', why: 'bad_art_name' });
     expect(checkMod(mod({ files: { big: PNG + 'A'.repeat(90 * 1024) } }))).toEqual({ ok: false, reason: 'bad_art', why: 'art_too_big' });
@@ -89,6 +94,10 @@ describe('validateForge', () => {
     expect(validateForge({ type: 'forge_get', id: 'ABC' })).toBe('forge_get: invalid id');
     expect(validateForge({ type: 'forge_report', id: 'abc123', reason: 'spam!' })).toBe('forge_report: invalid reason');
     expect(validateForge({ type: 'forge_report', id: 'abc123', reason: 'rude' })).toBeNull();
+    expect(validateForge({ type: 'forge_browse', mine: true, keys: [K1, K2] })).toBeNull();
+    expect(validateForge({ type: 'forge_browse', keys: K1 })).toBe('forge_browse: invalid keys');
+    expect(validateForge({ type: 'forge_get', id: 'abc123', keys: ['short'] })).toBe('forge_get: invalid keys');
+    expect(validateForge({ type: 'forge_unpublish', id: 'abc123', keys: Array(FORGE_MAX_ALT_KEYS + 1).fill(K1) })).toBe('forge_unpublish: invalid keys');
   });
 });
 
@@ -164,6 +173,44 @@ describe('ForgeBoard', () => {
     expect(await b.unpublish(K1, 'abc123')).toEqual({ ok: true });
     expect((await b.browse(K1)).total).toBe(0);
   });
+  it('reads the old keys a player sends as the same author', async () => {
+    expect(altKeys({ keys: [K1, K2, K2, 'bad', 7] }, K1)).toEqual([K2]);
+    expect(altKeys({}, K1)).toEqual([]);
+    expect(ownsEntry({ owner: K2 }, undefined, [K2])).toBe(false);
+    expect(ownsEntry({ owner: K2 }, K1, [K2])).toBe(true);
+    const { b, clock } = board();
+    await b.publish(K1, mod());
+    await b.get(K3, 'abc123');
+    const all = await b.browse(K2, 1, '', false, [K1]);
+    expect(all.mods[0].mine).toBe(true);
+    expect((await b.browse(K2, 1, '', true)).total).toBe(0);
+    expect((await b.browse(K2, 1, '', true, [K1])).mods.map(m => m.id)).toEqual(['abc123']);
+    expect((await b.browse(K3, 1, '', true, [K4])).total).toBe(0);
+    const g = await b.get(K2, 'abc123', [K1]);
+    expect(g.ok && g.mine).toBe(true);
+    expect((await b.browse(K4)).mods[0].downloads).toBe(1);
+    expect(await b.report(K2, 'abc123', 'rude', [K1])).toEqual({ ok: false, reason: 'own' });
+    clock.t += 30_000;
+    expect(await b.publish(K3, mod({ version: 2 }), false, [K4])).toEqual({ ok: false, reason: 'taken' });
+    expect(await b.publish(K2, mod({ version: 2, name: 'Heart Pack 2' }), false, [K1])).toEqual({ ok: true, id: 'abc123', version: 2, updated: true });
+    const after = (await b.browse(K2, 1, '', true)).mods[0];
+    expect(after.name).toBe('Heart Pack 2');
+    expect(after.downloads).toBe(1);
+    expect((await b.browse(K1, 1, '', true)).total).toBe(0);
+    expect((await b.browse(K1, 1, '', true, [K2])).total).toBe(1);
+    expect(await b.unpublish(K3, 'abc123', [K4])).toEqual({ ok: false, reason: 'not_yours' });
+    expect(await b.unpublish(K1, 'abc123', [K2])).toEqual({ ok: true });
+    expect((await b.browse(K4)).total).toBe(0);
+  });
+  it('counts the mods of every key toward the cap', async () => {
+    const { b, clock } = board();
+    for (let i = 0; i < FORGE_MAX_PER_OWNER; i++) {
+      clock.t += 30_000;
+      await b.publish(i % 2 ? K1 : K2, mod({ id: `c${String(i).padStart(4, '0')}` }));
+    }
+    clock.t += 30_000;
+    expect(await b.publish(K1, mod({ id: 'clast1' }), false, [K2])).toEqual({ ok: false, reason: 'too_many_mods' });
+  });
 });
 
 describe('stores', () => {
@@ -214,6 +261,14 @@ describe('handlers', () => {
     expect(out.map(o => String(o.type)).sort()).toEqual(['forge_list', 'forge_mod', 'forge_published', 'forge_reported', 'forge_unpublished']);
     expect(out[0].ok).toBe(true);
     expect(out.find(o => o.type === 'forge_unpublished')).toEqual({ type: 'forge_unpublished', id: 'abc123', ok: false, reason: 'not_yours' });
+    out.length = 0;
+    h.forge_browse(K3, { page: 1, mine: true, keys: [K1] });
+    h.forge_get(K3, { id: 'abc123', keys: [K1] });
+    h.forge_unpublish(K3, { id: 'abc123', keys: [K1] });
+    await Bun.sleep(5);
+    expect((out.find(o => o.type === 'forge_list')?.mods as { mine?: boolean }[])[0].mine).toBe(true);
+    expect(out.find(o => o.type === 'forge_mod')?.mine).toBe(true);
+    expect(out.find(o => o.type === 'forge_unpublished')?.ok).toBe(true);
   });
 });
 
@@ -248,6 +303,10 @@ describe('server', () => {
     ws.send(JSON.stringify({ type: 'forge_get', pkey: K2, id: 'abc123' }));
     const g = await wait('forge_mod');
     expect(g.mod).toBe(big);
+    ws.send(JSON.stringify({ type: 'forge_browse', pkey: K3, page: 1, mine: true, keys: [K1] }));
+    for (let i = 0; i < 200 && msgs.filter(x => x.type === 'forge_list').length < 2; i++) await Bun.sleep(10);
+    const mine = msgs.filter(x => x.type === 'forge_list')[1];
+    expect((mine.mods as { id: string; mine?: boolean }[]).map(m => [m.id, m.mine])).toEqual([['abc123', true]]);
     ws.send(JSON.stringify({ type: 'forge_get', id: 'BAD' }));
     const e = await wait('error');
     expect(String(e.reason)).toContain('forge_get: invalid id');

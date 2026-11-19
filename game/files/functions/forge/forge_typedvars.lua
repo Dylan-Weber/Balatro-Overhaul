@@ -9,9 +9,14 @@ return function(R)
   local function text() return package.loaded["functions/forge/forge_text"] end
 
   function R.var_values(ty)
-    if ty == "suit" then return {"Hearts", "Diamonds", "Spades", "Clubs"} end
+    if ty == "suit" then return R.suits and R.suits() or {"Hearts", "Diamonds", "Spades", "Clubs"} end
     if ty == "rank" then return R.VAR_RANKS end
-    if ty == "hand" then return R.HANDS end
+    if ty == "hand" then
+      local out = {}
+      for _, h in ipairs(R.HANDS) do out[#out + 1] = h end
+      for _, h in ipairs(R.own_values("hand")) do out[#out + 1] = h end
+      return out
+    end
     if ty == "edition" then return R.editions() end
     if ty == "enhancement" then return R.enhancements() end
     if ty == "seal" then return R.seals() end
@@ -248,6 +253,7 @@ return function(R)
     local need = base_need(rules, vars)
     for _, v in ipairs(type(vars) == "table" and vars or {}) do
       if type(v) == "table" and v.type and v.type ~= "number" then need = math.max(need, R.TYPED_V) end
+      if type(v) == "table" and v.type == "hand" and R.own_id("hand", v.start) then need = math.max(need, 16) end
     end
     if rule_refs(rules) then need = math.max(need, R.TYPED_V) end
     if R.nv_used(rules) then need = math.max(need, R.NV_V) end

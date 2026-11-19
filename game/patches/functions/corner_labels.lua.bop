@@ -96,7 +96,7 @@ function CL.draw(text, x, y, opts)
     if opts.anchor == "tr" then x = x - w end
     love.graphics.push()
 r 12 278 %20%20%20%20 -
-l 149
+l 151
     local bg = opts.bg or {0, 0, 0, 0.75}
     love.graphics.setColor(bg[1], bg[2], bg[3], bg[4] or 1)
     love.graphics.rectangle("fill", x, y, w, h, 4, 4)
@@ -208,6 +208,7 @@ end
 
 function CL.draw_modded()
     local text = CL.progress_text()
+    CL.modded_rect = nil
     if not text then return end
     local sw = love.graphics.getWidth()
     local scale = CL.scale()
@@ -215,7 +216,8 @@ function CL.draw_modded()
     local w = CL.box(text, scale, font)
     local room = sw - CL.MARGIN * 2
     if w > room then scale = scale * room / w end
-    CL.draw(text, sw - CL.MARGIN, CL.MARGIN, {anchor = "tr", scale = scale, bg = {0.8, 0.1, 0.1, 0.85}, colour = {1, 1, 1, 1}, font = font})
+    local bw, bh, bx, by = CL.draw(text, sw - CL.MARGIN, CL.MARGIN, {anchor = "tr", scale = scale, bg = {0.8, 0.1, 0.1, 0.85}, colour = {1, 1, 1, 1}, font = font})
+    if bx then CL.modded_rect = {x = bx, y = by, w = bw, h = bh, at = love.timer.getTime()} end
 end
 
 function CL.version_text()

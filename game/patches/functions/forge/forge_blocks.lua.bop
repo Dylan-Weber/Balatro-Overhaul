@@ -151,7 +151,7 @@ return function(R)
     c.op = c.op or "at_least"
   end
   R.CLEAN_ONLY.deck_count = R.CLEAN_ONLY.discarded
-  R.CLEAN_GIVE.create_rarity = fix(R.RARITIES, "Common")
+  R.CLEAN_GIVE.create_rarity = function(c) if not (R.member(R.RARITIES, c.v) or R.own_id("rarity", c.v)) then c.v = "Common" end end
   R.CLEAN_GIVE.add_to_hand = function(e)
     if e.v ~= "random" and not R.value_ok("seal", e.v) then e.v = "random" end
   end
@@ -320,7 +320,7 @@ l 71
       G.GAME.joker_buffer = (G.GAME.joker_buffer or 0) + 1
       made = made + 1
       local legendary = g.v == "Legendary"
-      local roll = RARITY_ROLL[g.v] or 0
+      local roll = R.own_id("rarity", g.v) and g.v or RARITY_ROLL[g.v] or 0
 r 3 617 %20%20%20%20%20%20 -
 l 4
         local c = create_card("Joker", G.jokers, legendary or nil, not legendary and roll or nil, nil, nil, nil, "forge_rar")
@@ -338,7 +338,7 @@ l 8
     if not G.hand then return end
     local v = g.v
 r 3 617 %20%20%20%20 -
-l 573
+l 580
       local made = create_playing_card({front = pseudorandom_element(G.P_CARDS, pseudoseed("forge_hand_fr")), center = G.P_CENTERS.c_base}, G.hand, nil, nil, {G.C.SECONDARY_SET.Enhanced})
       local seal = v
       if seal == "random" or not R.usable("seal", seal) then
@@ -493,8 +493,9 @@ l 573
   TG.create_rarity = function(g, s, lang)
     local l = lt(lang)
     local n = math.floor(tonumber(g.n) or 1)
-    if n <= 1 then return string.format(l.create_rarity1, RARITY_COL[g.v] or "blue", l.rarity[g.v] or g.v) end
-    return string.format(l.create_rarity, n, RARITY_COL[g.v] or "blue", l.rarities[g.v] or g.v)
+    local own = R.own_id("rarity", g.v) and R.own_label("rarity", g.v)
+    if n <= 1 then return string.format(l.create_rarity1, RARITY_COL[g.v] or "attention", own or l.rarity[g.v] or g.v) end
+    return string.format(l.create_rarity, n, RARITY_COL[g.v] or "attention", own or l.rarities[g.v] or g.v)
   end
   TG.add_to_hand = function(g, s, lang)
     local l = lt(lang)
@@ -608,7 +609,7 @@ l 573
     chips_per = {def = 2, lo = 1, hi = R.BIG, step = 1, big = 10},
     mult_per = {def = 1, lo = 1, hi = R.BIG, step = 1, big = 5},
     xmult_per = {def = 0.2, lo = 0.01, hi = R.BIG, step = 0.01, big = 1},
-    money_per = {def = 1, lo = 1, hi = R.BIG, step = 1, big = 5},
+    money_per = {def = 1, lo = -R.BIG, hi = R.BIG, step = 1, big = 5},
     gain_mult_per = {def = 1, lo = 1, hi = R.BIG, step = 1, big = 5},
     gain_xmult_per = {def = 0.1, lo = 0.01, hi = R.BIG, step = 0.01, big = 1},
   }
@@ -649,12 +650,12 @@ l 573
 
   D.money_per = function(g, card, src, context, other, out)
     local n = g.n * R.count_of(g, card, context)
-    if n <= 0 then return end
+    if n == 0 then return end
     if out.card_ctx and out.when == "card_scored" then
-      out.ret.dollars = (out.ret.dollars or 0) + n
+      n = R.money_cut(n, out.ret.dollars)
+      if n ~= 0 then out.ret.dollars = (out.ret.dollars or 0) + n end
     else
-      ease_dollars(n)
-      R.status(src, localize("$") .. T.fmt_n(n), G.C.MONEY)
+      R.pay(n, src)
     end
   end
   local function gain_per(field)
@@ -725,6 +726,9 @@ l 573
     },
   }
   R.PER_TEXT = P
+  P.en.money_per_lose = "{C:red}-$%s{} for each %s"
+  P.fr.money_per_lose = "{C:red}-%s ${} par %s"
+  P.es.money_per_lose = "{C:red}-$%s{} por cada %s"
   local function pt(lang) return P[lang] or P.en end
 
   function R.one_label(v, lang)
@@ -743,7 +747,10 @@ l 573
   end
 
   for id in pairs(R.PER_GIVE) do
-    TG[id] = function(g, s, lang) return string.format(pt(lang)[id], T.fmt_n(g.n), R.count_label(g, lang)) end
+    TG[id] = function(g, s, lang)
+      if id == "money_per" and (tonumber(g.n) or 0) < 0 then return string.format(pt(lang).money_per_lose, T.fmt_n(-g.n), R.count_label(g, lang)) end
+      return string.format(pt(lang)[id], T.fmt_n(g.n), R.count_label(g, lang))
+    end
   end
   TG.strip_enh = function(g, s, lang) return pt(lang).strip_enh end
 

@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 333
+l 351
 local P = {}
 
 local function plain_num(v)
@@ -262,7 +262,21 @@ function P.rules(R)
   end
   local OUTSIDE = {blind_selected = true, first_hand = true, round_end = true, shop_end = true, blind_skipped = true, after = true, reroll = true}
   R.GIVE_WHEN.save_run = {would_lose = true}
-  R.GIVE_WHEN.dagger = OUTSIDE
+  P.SCORING = {card_scored = true, card_held = true, hand_played = true, before = true, self_sold = true, would_lose = true, passive = true, other_joker = true}
+  R.GIVE_WHEN.dagger = setmetatable({}, {__index = function(_, w) return type(w) == "string" and not P.SCORING[w] end})
+  P.DAGGER_OLD = OUTSIDE
+  local base_need = R.need_v
+  R.need_v = function(rules, vars)
+    local need = base_need(rules, vars)
+    for _, r in ipairs(type(rules) == "table" and rules or {}) do
+      for _, k in ipairs({"give", "alt"}) do
+        for _, g in ipairs(type(r) == "table" and type(r[k]) == "table" and r[k] or {}) do
+          if type(g) == "table" and g.id == "dagger" and not OUTSIDE[r.when] then need = math.max(need, 16) end
+        end
+      end
+    end
+    return need
+  end
   R.GIVE_WHEN.sell_all = OUTSIDE
   R.GIVE_WHEN.dup_joker = {self_sold = true, blind_selected = true, round_end = true, shop_end = true, blind_skipped = true}
   R.GIVE_WHEN.copy_consumable = {shop_end = true, blind_selected = true, round_end = true, blind_skipped = true, reroll = true}
@@ -307,12 +321,16 @@ function P.rules(R)
   for id in pairs(P.KEY) do
     if not R.CLEAN_GIVE[id] then R.CLEAN_GIVE[id] = function(e) e.v = nil end end
   end
-  R.CLEAN_ONLY.other_rarity = function(c) fix(R.RARITIES or {"Common", "Uncommon", "Rare", "Legendary"}, "Uncommon")(c); c.op, c.n = nil, nil end
+  R.CLEAN_ONLY.other_rarity = function(c)
+    if not R.own_id("rarity", c.v) then fix(R.RARITIES or {"Common", "Uncommon", "Rare", "Legendary"}, "Uncommon")(c) end
+    c.op, c.n = nil, nil
+  end
   R.CLEAN_ONLY.blind_percent = function(c) c.v = nil; c.op = c.op or "at_least" end
 
   R.CHECKS.other_rarity = function(o, context, card)
     local j = context.other_joker
     local c = j and j.config and j.config.center
+    if R.own_id("rarity", o.v) then return c ~= nil and j ~= card and c.rarity == o.v end
     return c ~= nil and j ~= card and c.rarity == P.RARITY_N[o.v]
   end
   R.CHECKS.blind_percent = function(o)
@@ -380,7 +398,7 @@ l 40
       G.GAME.consumeable_buffer = (G.GAME.consumeable_buffer or 0) + 1
     end
 r 3 617 %20%20%20%20 -
-l 168
+l 173
       local pick = pseudorandom_element(area.cards, pseudoseed("forge_perkeo"))
       if pick then
         local c = copy_card(pick, nil)
@@ -414,7 +432,10 @@ l 168
   TG.dup_joker = function(g, s, lang) return lt(lang).dup_joker end
   TG.copy_consumable = function(g, s, lang) return lt(lang).copy_consumable[g.v] or lt(lang).copy_consumable.negative end
   local RCOL = {Common = "blue", Uncommon = "green", Rare = "red", Legendary = "legendary"}
-  TO.other_rarity = function(o, s, lang) return string.format(lt(lang).other_rarity, RCOL[o.v] or "green", lt(lang).rarity[o.v] or o.v) end
+  TO.other_rarity = function(o, s, lang)
+    if R.own_id("rarity", o.v) then return string.format(lt(lang).other_rarity, "attention", R.own_label("rarity", o.v)) end
+    return string.format(lt(lang).other_rarity, RCOL[o.v] or "green", lt(lang).rarity[o.v] or o.v)
+  end
   TO.blind_percent = function(o, s, lang) return string.format(lt(lang).blind_percent, s[o.op or "at_least"] or s.at_least, T.fmt_n(tonumber(o.n) or 25)) end
 
   for lang, t in pairs(TEXT) do
@@ -443,6 +464,7 @@ l 168
   R.VALUES_ONLY.other_rarity = function()
     local out = {}
     for _, v in ipairs({"Common", "Uncommon", "Rare", "Legendary"}) do out[#out + 1] = {label = mod_loc and mod_loc(v) or v, value = v} end
+    for _, v in ipairs(R.own_values("rarity")) do out[#out + 1] = {label = R.own_label("rarity", v), value = v} end
     return out
   end
   if R.COUNTS and R.COUNT and R.PER_GIVE and not R.member(R.COUNTS, "tarots_used") then
@@ -458,22 +480,22 @@ l 168
       fr = {"carte {C:planet}Planète{} différente utilisée dans la partie", "carte {C:tarot}Tarot{} utilisée dans la partie"},
       es = {"carta de {C:planet}Planeta{} distinta usada en la partida", "carta de {C:tarot}Tarot{} usada en la partida"},
     }
-    for id in pairs(R.PER_GIVE) do
+    function R.per_tarot_text(id)
       local base = R.TEXT_GIVE[id]
-      if base then
-        R.TEXT_GIVE[id] = function(gv, s, lang, ...)
-          if gv.per ~= "tarots_used" then return base(gv, s, lang, ...) end
-          local x = {}
-          for k, v in pairs(gv) do x[k] = v end
-          x.per = "planets_used"
-          local t = base(x, s, lang, ...)
-          local sw = SWAP[lang] or SWAP.en
-          local a, b = t:find(sw[1], 1, true)
-          if a then t = t:sub(1, a - 1) .. sw[2] .. t:sub(b + 1) end
-          return t
-        end
+      if not base then return end
+      R.TEXT_GIVE[id] = function(gv, s, lang, ...)
+        if gv.per ~= "tarots_used" then return base(gv, s, lang, ...) end
+        local x = {}
+        for k, v in pairs(gv) do x[k] = v end
+        x.per = "planets_used"
+        local t = base(x, s, lang, ...)
+        local sw = SWAP[lang] or SWAP.en
+        local a, b = t:find(sw[1], 1, true)
+        if a then t = t:sub(1, a - 1) .. sw[2] .. t:sub(b + 1) end
+        return t
       end
     end
+    for id in pairs(R.PER_GIVE) do R.per_tarot_text(id) end
   end
   if mod_loc_register then mod_loc_register(LOC) end
 end
@@ -545,6 +567,7 @@ local function apply(k, d)
     g.current_round.free_rerolls = (g.current_round.free_rerolls or 0) + d
     if calculate_reroll_cost then calculate_reroll_cost(true) end
   elseif k == "debt" then g.bankrupt_at = (g.bankrupt_at or 0) - d
+  elseif P.APPLY and P.APPLY[k] then P.APPLY[k](d)
   end
 end
 

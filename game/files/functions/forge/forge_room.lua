@@ -43,6 +43,7 @@ local function files_of(c)
   local out = {}
   if c.art and c.art.file then out[#out + 1] = {"art", c.art.file} end
   for _, r in ipairs({"J", "Q", "K"}) do if c.faces and c.faces[r] then out[#out + 1] = {r, c.faces[r]} end end
+  require("functions/forge/forge_grow").room_files(c, out)
   return out
 end
 
@@ -80,6 +81,7 @@ function R.pack(max_bytes)
     x.forge_mod, x.mod_id, x.src = nil, nil, nil
     x.art = type(x.art) == "table" and x.art.file == nil and x.art or nil
     x.faces = nil
+    require("functions/forge/forge_grow").room_strip(x)
     for _, pair in ipairs(files_of(s.c)) do arts[#arts + 1] = {x = x, slot = pair[1], path = pair[2], key = "r" .. x.id .. pair[1]} end
     local list = s.joker and out.jokers or out.creations
     list[#list + 1] = x
@@ -99,7 +101,7 @@ function R.pack(max_bytes)
   for _, a in ipairs(arts) do
     local data = f and f.getInfo(a.path) and f.read(a.path)
     local w, h = Mods.png_size(data)
-    local ok = type(data) == "string" and #data <= Mods.MAX_FILE and w == 71 and h == 95
+    local ok = type(data) == "string" and #data <= Mods.MAX_FILE and Mods.art_size_ok(w, h)
     if ok then
       local b = Mods.b64_encode(data)
       local more = #b + #a.key + 8
@@ -107,7 +109,7 @@ function R.pack(max_bytes)
         files[a.key] = b
         size = size + more
         local p = "forge/art/" .. a.key .. ".png"
-        if a.slot == "art" then a.x.art = {file = p} else a.x.faces = a.x.faces or {}; a.x.faces[a.slot] = p end
+        if a.slot == "art" then a.x.art = {file = p} elseif not require("functions/forge/forge_grow").room_put(a.x, a.slot, p) then a.x.faces = a.x.faces or {}; a.x.faces[a.slot] = p end
         kept = kept + 1
       else
         dropped = dropped + 1

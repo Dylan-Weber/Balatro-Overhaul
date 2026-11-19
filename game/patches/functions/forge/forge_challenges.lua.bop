@@ -1,0 +1,559 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 389
+local Store = require("functions/forge/forge_store")
+local Cat = require("functions/forge/forge_catalog")
+local R = require("functions/forge/forge_rules")
+
+local Ch = {}
+Ch.DX = require("functions/forge/forge_chdeck")
+
+Ch.PREFIX = "chl_forge_"
+Ch.list = {}
+
+Ch.MODS = {ch_dollars = "dollars", ch_hands = "hands", ch_discards = "discards", ch_hand_size = "hand_size", ch_joker_slots = "joker_slots", ch_consumable_slots = "consumable_slots", ch_reroll = "reroll_cost"}
+Ch.CUSTOM = {ch_no_reward = "no_reward", ch_no_extra = "no_extra_hand_money", ch_no_interest = "no_interest", ch_all_eternal = "all_eternal", ch_debuff_played = "debuff_played_cards",
+  ch_inflation = "inflation", ch_chips_cap = "chips_dollar_cap", ch_flipped = "flipped_cards", ch_eternal_ante = "set_eternal_ante", ch_slots_ante = "set_joker_slots_ante",
+  ch_discard_cost = "discard_cost", ch_hand_per_dollar = "minus_hand_size_per_X_dollar"}
+Ch.CUSTOM_VALUE = {ch_flipped = true, ch_eternal_ante = true, ch_slots_ante = true, ch_discard_cost = true, ch_hand_per_dollar = true}
+Ch.RANK_LETTER = {Ace = "A", King = "K", Queen = "Q", Jack = "J", ["10"] = "T", ["9"] = "9", ["8"] = "8", ["7"] = "7", ["6"] = "6", ["5"] = "5", ["4"] = "4", ["3"] = "3", ["2"] = "2"}
+Ch.SUIT_LETTER = {Hearts = "H", Diamonds = "D", Spades = "S", Clubs = "C"}
+Ch.PACK_PREFIX = {Arcana = "p_arcana", Celestial = "p_celestial", Spectral = "p_spectral", Standard = "p_standard", Buffoon = "p_buffoon"}
+Ch.RATE = {Joker = "joker_rate", Tarot = "tarot_rate", Planet = "planet_rate", Spectral = "spectral_rate", Playing = "playing_card_rate"}
+
+local function copy(t)
+  if type(t) ~= "table" then return t end
+  local o = {}
+  for k, v in pairs(t) do o[k] = copy(v) end
+  return o
+end
+
+local function key_of(id) return Ch.PREFIX .. tostring(id) end
+Ch.key_of = key_of
+
+function Ch.id_of(key)
+  if type(key) ~= "string" or key:sub(1, #Ch.PREFIX) ~= Ch.PREFIX then return nil end
+  local id = key:sub(#Ch.PREFIX + 1)
+  if id == "" then return nil end
+  return id
+end
+
+function Ch.item(key)
+  local id = Ch.id_of(key)
+  local c = id and Store.get_item(id)
+  if c and c.kind == "challenge" then return c end
+  return nil
+end
+
+local function centers() return G and G.P_CENTERS or {} end
+
+local function usable_card(v)
+  local c = centers()[v]
+  return c ~= nil and not c.forge_lost and c.forge_on ~= false
+end
+
+function Ch.find(id)
+  for i, ch in ipairs(G and G.CHALLENGES or {}) do
+    if type(ch) == "table" and ch.id == id then return ch, i end
+  end
+  return nil
+end
+
+local function own_type_packs(v)
+  local out = {}
+  local ok, all = pcall(Store.live_items)
+  for _, c in ipairs(ok and type(all) == "table" and all or {}) do
+    if c.kind == "booster" and c.enabled ~= false and type(c.fields) == "table" and c.fields.pack == v then out[#out + 1] = R.OWN_PREFIX.pack .. c.id end
+  end
+  table.sort(out)
+  return out
+end
+
+local function pack_ids(name)
+  if R.own_id("pack", name) then return {name} end
+  if R.own_id("ctype", name) then return own_type_packs(name) end
+  local p = Ch.PACK_PREFIX[name]
+  local out = {}
+  if not p then return out end
+  for k in pairs(centers()) do
+    if type(k) == "string" and k:sub(1, #p) == p then out[#out + 1] = k end
+  end
+  table.sort(out)
+  return out
+end
+
+local function line_of(c, e)
+  local ok, s = pcall(Cat.effect_line, c.kind, e)
+  return ok and type(s) == "string" and s or nil
+end
+
+Ch.LETTERS = {"2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"}
+
+function Ch.protos(deck)
+  local out = {}
+  for _, s in ipairs({"S", "H", "C", "D"}) do
+    for _, r in ipairs(Ch.LETTERS) do
+      if not ((deck.no_ranks or {})[r] or (deck.no_suits or {})[s]) then out[#out + 1] = {s = s, r = r, e = deck.enhancement, d = deck.edition, g = deck.seal} end
+    end
+  end
+  return out
+end
+
+function Ch.deck_cards(v, self_id, depth)
+  local oid = R.own_id("challenge", v)
+  if oid then
+    if oid == self_id or (depth or 0) > 4 then return nil end
+    local src = Store.get_item(oid)
+    if not (src and src.kind == "challenge" and src.enabled ~= false) then return nil end
+    local ok, built = pcall(Ch.build, src, (depth or 0) + 1)
+    if not (ok and built) then return nil end
+    if type(built.deck.cards) == "table" then return copy(built.deck.cards) end
+    return Ch.protos(built.deck)
+  end
+  local src = Ch.find(v)
+  if src and src.deck and type(src.deck.cards) == "table" then return copy(src.deck.cards) end
+  return nil
+end
+
+function Ch.back_name(v)
+  local oid = R.own_id("deck", v)
+  if oid then
+    local d = R.own_item("deck", v)
+    return d and d.enabled ~= false and ("Forge " .. oid) or nil
+  end
+  local cen = centers()[v]
+  return cen and cen.set == "Back" and type(cen.name) == "string" and cen.name or nil
+end
+
+local function own_val(what, v) return R.own_id(what, v) ~= nil end
+
+function Ch.build(c, depth)
+  local f = {}
+  local ch = {name = c.name ~= "" and c.name or "Challenge", id = key_of(c.id), forge_ch = c.id, unlocked = true,
+    rules = {custom = {}, modifiers = {}}, jokers = {}, consumeables = {}, vouchers = {},
+    deck = {type = "Challenge Deck"}, restrictions = {banned_cards = {}, banned_tags = {}, banned_other = {}}, forge_lines = {}}
+  if G and G.C and G.C.GREEN then ch.button_colour = G.C.GREEN end
+  local no_ranks, no_suits = {}, {}
+  local banned = {}
+  local function ban(list, entry)
+    if banned[entry.id] then return end
+    banned[entry.id] = true
+    list[#list + 1] = entry
+  end
+  local function custom_line(e)
+    local s = line_of(c, e)
+    if not s then return end
+    local i = #ch.forge_lines + 1
+    ch.forge_lines[i] = s
+    ch.rules.custom[#ch.rules.custom + 1] = {id = "forge_" .. tostring(c.id) .. "_" .. i}
+  end
+  for _, e in ipairs(type(c.effects) == "table" and c.effects or {}) do
+    local id, n, v = e.id, tonumber(e.n), e.v
+    local spec = Cat.effect("challenge", id)
+    if not spec then
+    elseif spec.run then custom_line(e)
+    elseif Ch.DX.EDIT[id] or Ch.DX.START[id] then custom_line(e)
+    elseif Ch.MODS[id] then
+      for i = #ch.rules.modifiers, 1, -1 do if ch.rules.modifiers[i].id == Ch.MODS[id] then table.remove(ch.rules.modifiers, i) end end
+      ch.rules.modifiers[#ch.rules.modifiers + 1] = {id = Ch.MODS[id], value = math.floor(n or spec.num.def)}
+    elseif Ch.CUSTOM[id] then
+      local entry = {id = Ch.CUSTOM[id]}
+      if Ch.CUSTOM_VALUE[id] then entry.value = math.floor(n or spec.num.def) end
+      ch.rules.custom[#ch.rules.custom + 1] = entry
+    elseif id == "ch_no_reward_b" then
+      ch.rules.custom[#ch.rules.custom + 1] = {id = "no_reward_specific", value = v}
+    elseif id == "ch_joker" or id == "ch_eternal" then
+      if usable_card(v) then ch.jokers[#ch.jokers + 1] = {id = v, eternal = id == "ch_eternal" or nil} end
+    elseif id == "ch_joker_edition" or id == "ch_joker_pinned" then
+      local last = ch.jokers[#ch.jokers]
+      if last and id == "ch_joker_pinned" then last.pinned = true end
+      if last and id == "ch_joker_edition" and v then
+        if own_val("edition", v) then last.forge_ed = v else last.edition = v end
+      end
+    elseif id == "ch_joker_sticker" then
+      local last = ch.jokers[#ch.jokers]
+      if last and R.own_id("sticker", v) then last.forge_stk = R.own_id("sticker", v) end
+    elseif id == "ch_card" then
+      if usable_card(v) then ch.consumeables[#ch.consumeables + 1] = {id = v} end
+    elseif id == "ch_voucher" then
+      if usable_card(v) then ch.vouchers[#ch.vouchers + 1] = {id = v} end
+    elseif id == "ch_enhance" then
+      if not own_val("enhancement", v) then f.enhancement = v end
+      custom_line(e)
+    elseif id == "ch_edition" then
+      if not own_val("edition", v) then f.edition = v end
+      custom_line(e)
+    elseif id == "ch_seal" then
+      if not own_val("seal", v) then f.seal = v end
+      custom_line(e)
+    elseif id == "ch_deck" then
+      local name = Ch.back_name(v)
+      if name then ch.deck.type, ch.forge_back = name, v end
+      custom_line(e)
+    elseif id == "ch_no_faces" then no_ranks.J, no_ranks.Q, no_ranks.K = true, true, true; custom_line(e)
+    elseif id == "ch_no_rank" then
+      if Ch.RANK_LETTER[v] then no_ranks[Ch.RANK_LETTER[v]] = true end
+      custom_line(e)
+    elseif id == "ch_no_suit" then
+      if Ch.SUIT_LETTER[v] then no_suits[Ch.SUIT_LETTER[v]] = true
+      elseif R.own_id("suit", v) then
+        ch.deck.forge_no_suits = ch.deck.forge_no_suits or {}
+        ch.deck.forge_no_suits[#ch.deck.forge_no_suits + 1] = v
+      end
+      custom_line(e)
+    elseif id == "ch_deck_of" then
+      local cards = Ch.deck_cards(v, c.id, depth)
+      if cards then f.cards = cards end
+    elseif id == "ch_ban_card" or id == "ch_ban_voucher" then
+      if centers()[v] then ban(ch.restrictions.banned_cards, {id = v}) end
+    elseif id == "ch_ban_pack" then
+      local ids = pack_ids(v)
+      if ids[1] then ban(ch.restrictions.banned_cards, {id = ids[1], ids = ids}) end
+    elseif id == "ch_ban_tag" then
+      if G and G.P_TAGS and G.P_TAGS[v] then ban(ch.restrictions.banned_tags, {id = v}) end
+    elseif id == "ch_ban_blind" then
+      if (G and G.P_BLINDS and G.P_BLINDS[v]) or R.own_item("boss", v) then ban(ch.restrictions.banned_other, {id = v, type = "blind"}) end
+    elseif id == "ch_no_shop" then
+      if v == "Joker" then ch.rules.custom[#ch.rules.custom + 1] = {id = "no_shop_jokers"}
+      elseif Ch.RATE[v] then
+        ch.forge_rates = ch.forge_rates or {}
+        ch.forge_rates[Ch.RATE[v]] = 0
+        custom_line(e)
+      elseif R.own_item("ctype", v) then
+        ch.forge_no_types = ch.forge_no_types or {}
+        ch.forge_no_types[#ch.forge_no_types + 1] = R.own_id("ctype", v)
+        custom_line(e)
+      end
+    end
+  end
+  if f.cards then
+    local out = {}
+    for _, card in ipairs(f.cards) do
+      if not (no_ranks[card.r] or no_suits[card.s]) then
+        local p = copy(card)
+        if f.enhancement then p.e = f.enhancement end
+        if f.edition then p.d = f.edition end
+        if f.seal then p.g = f.seal end
+        out[#out + 1] = p
+      end
+    end
+    ch.deck.cards = out
+  else
+    if next(no_ranks) then ch.deck.no_ranks = no_ranks end
+    if next(no_suits) then ch.deck.no_suits = no_suits end
+    ch.deck.enhancement = f.enhancement
+    ch.deck.edition = f.edition
+    ch.deck.gold_seal = f.seal
+    ch.deck.seal = f.seal
+  end
+  return ch
+end
+
+local function parse(line)
+  if type(loc_parse_string) == "function" then
+    local ok, r = pcall(loc_parse_string, line)
+    if ok then return r end
+  end
+  return nil
+end
+
+function Ch.inject_loc()
+  local L = G and G.localization and G.localization.misc
+  if not L then return end
+  L.challenge_names = L.challenge_names or {}
+  L.v_text_parsed = L.v_text_parsed or {}
+  for _, ch in ipairs(Ch.list) do
+    local fresh = Ch.build_item(ch.forge_ch)
+    if fresh then ch.name, ch.forge_lines = fresh.name, fresh.forge_lines end
+    L.challenge_names[ch.id] = ch.name
+    for i, line in ipairs(ch.forge_lines or {}) do
+      local p = parse(line)
+      if p then L.v_text_parsed["ch_c_forge_" .. tostring(ch.forge_ch) .. "_" .. i] = {p} end
+    end
+  end
+end
+
+function Ch.build_item(id)
+  local c = Store.get_item(id)
+  if not (c and c.kind == "challenge") then return nil end
+  return Ch.build(c)
+end
+
+function Ch.items()
+  local ok, all = pcall(Store.live_items)
+  local out = {}
+  for _, c in ipairs(ok and type(all) == "table" and all or {}) do
+    if c.kind == "challenge" and c.enabled ~= false and type(c.id) == "string" then out[#out + 1] = c end
+  end
+  table.sort(out, function(a, b) return tostring(a.id) < tostring(b.id) end)
+  return out
+end
+
+function Ch.register()
+  if not (G and G.CHALLENGES) then return end
+  for i = #G.CHALLENGES, 1, -1 do
+    local ch = G.CHALLENGES[i]
+    if type(ch) == "table" and ch.forge_ch then table.remove(G.CHALLENGES, i) end
+  end
+  Ch.list = {}
+  for _, c in ipairs(Ch.items()) do
+    local ok, ch = pcall(Ch.build, c)
+    if ok and ch then
+      Ch.list[#Ch.list + 1] = ch
+      G.CHALLENGES[#G.CHALLENGES + 1] = ch
+    end
+  end
+  Ch.inject_loc()
+end
+
+local function rank_name(letter)
+  for name, l in pairs(Ch.RANK_LETTER) do if l == letter then return name end end
+  return nil
+end
+
+function Ch.from_game(ch)
+  local fx = {}
+  local exact = true
+  local function add(e) fx[#fx + 1] = e end
+  local rev_mods, rev_custom = {}, {}
+  for k, v in pairs(Ch.MODS) do rev_mods[v] = k end
+  for k, v in pairs(Ch.CUSTOM) do rev_custom[v] = k end
+  local rules = type(ch.rules) == "table" and ch.rules or {}
+  for _, v in ipairs(rules.modifiers or {}) do
+    if rev_mods[v.id] then add({id = rev_mods[v.id], n = v.value}) else exact = false end
+  end
+  for _, v in ipairs(rules.custom or {}) do
+    if v.id == "no_reward_specific" then add({id = "ch_no_reward_b", v = v.value})
+    elseif v.id == "no_shop_jokers" then add({id = "ch_no_shop", v = "Joker"})
+    elseif rev_custom[v.id] then add({id = rev_custom[v.id], n = v.value})
+    elseif v.id ~= "set_seed" and v.id ~= "daily" then exact = false end
+  end
+  for _, v in ipairs(ch.jokers or {}) do
+    add({id = v.eternal and "ch_eternal" or "ch_joker", v = v.id})
+    if v.edition then add({id = "ch_joker_edition", v = v.edition}) end
+    if v.pinned then add({id = "ch_joker_pinned"}) end
+  end
+  for _, v in ipairs(ch.consumeables or {}) do add({id = "ch_card", v = v.id}) end
+  for _, v in ipairs(ch.vouchers or {}) do add({id = "ch_voucher", v = v.id}) end
+  local deck = type(ch.deck) == "table" and ch.deck or {}
+  if type(deck.cards) == "table" then add({id = "ch_deck_of", v = ch.id}) end
+  if deck.enhancement then add({id = "ch_enhance", v = deck.enhancement}) end
+  if deck.edition then add({id = "ch_edition", v = deck.edition}) end
+  if deck.gold_seal or deck.seal then add({id = "ch_seal", v = deck.seal or deck.gold_seal}) end
+  local ranks = {}
+  for r in pairs(deck.no_ranks or {}) do ranks[#ranks + 1] = r end
+  if deck.yes_ranks then for _, r in pairs(Ch.RANK_LETTER) do if not deck.yes_ranks[r] then ranks[#ranks + 1] = r end end end
+  table.sort(ranks)
+  for _, r in ipairs(ranks) do if rank_name(r) then add({id = "ch_no_rank", v = rank_name(r)}) end end
+  for s in pairs(deck.no_suits or {}) do
+    for name, l in pairs(Ch.SUIT_LETTER) do if l == s then add({id = "ch_no_suit", v = name}) end end
+  end
+  local res = type(ch.restrictions) == "table" and ch.restrictions or {}
+  for _, v in ipairs(res.banned_cards or {}) do
+    local id = tostring(v.id)
+    if id:sub(1, 2) == "p_" then
+      local set
+      for name, p in pairs(Ch.PACK_PREFIX) do if id:sub(1, #p) == p then set = name end end
+      if set then add({id = "ch_ban_pack", v = set}) else exact = false end
+    elseif id:sub(1, 2) == "v_" then add({id = "ch_ban_voucher", v = id})
+    else add({id = "ch_ban_card", v = id}) end
+  end
+  for _, v in ipairs(res.banned_tags or {}) do add({id = "ch_ban_tag", v = v.id}) end
+  for _, v in ipairs(res.banned_other or {}) do if v.type == "blind" then add({id = "ch_ban_blind", v = v.id}) else exact = false end end
+  if deck.yes_suits or (deck.type and deck.type ~= "Challenge Deck") then exact = false end
+  return fx, exact
+end
+
+function Ch.templates()
+  local out = {}
+  for _, ch in ipairs(G and G.CHALLENGES or {}) do
+    if type(ch) == "table" and not ch.forge_ch and type(ch.id) == "string" then
+      local ok, fx, exact = pcall(Ch.from_game, ch)
+      if ok and exact then out[#out + 1] = {key = ch.id, challenge = true, effects = fx} end
+    end
+  end
+  return out
+end
+
+function Ch.template_name(t)
+  local names = G and G.localization and G.localization.misc and G.localization.misc.challenge_names
+  return names and names[t.key] or t.key
+end
+
+function Ch.on_start(args)
+  if type(args) ~= "table" or args.savetext or type(args.challenge) ~= "table" or not args.challenge.forge_ch then return end
+  local ch = args.challenge
+  for k, v in pairs(ch.forge_rates or {}) do G.GAME[k] = v end
+  if ch.forge_no_types then
+    local Ty = require("functions/forge/forge_types")
+    for _, tid in ipairs(ch.forge_no_types) do Ty.set_weight(tid, 0) end
+  end
+  for k, j in ipairs(ch.jokers or {}) do
+    if j.forge_ed then
+r 3 617 %20%20%20%20%20%20 -
+l 10
+        local card = G.jokers and G.jokers.cards[k]
+        local ed = R.edition_arg(j.forge_ed)
+        if card and ed then card:set_edition(ed, true, true) end
+        return true
+      end}))
+    end
+  end
+  local c = Ch.item(ch.id)
+  if c then
+    local Run = require("functions/forge/forge_run")
+r 3 617 %20%20%20%20 -
+l 22
+      Run.apply_now(c, {key = ch.id})
+      return true
+    end}))
+    Ch.DX.on_start(c)
+  end
+end
+
+function Ch.pre_start(args)
+  local ch = type(args) == "table" and not args.savetext and args.challenge
+  if not (type(ch) == "table" and ch.forge_ch and ch.deck and ch.deck.type) then return end
+  local find = rawget(_G, "get_deck_from_name")
+  if type(find) == "function" and not find(ch.deck.type) then ch.deck.type = "Challenge Deck" end
+end
+
+function Ch.unlocked(v, k)
+  local p = G.PROFILES[G.SETTINGS.profile]
+  if type(v) == "table" and v.forge_ch then return true end
+  if p.all_unlocked then return true end
+  return p.challenges_unlocked and p.challenges_unlocked >= k
+end
+
+function Ch.list_page(page)
+r 30 5540 %20%20 -
+r 30 5541 %20%20 -
+r 30 5233 %20%20 -
+l 1
+    if k > G.CHALLENGE_PAGE_SIZE * (page or 0) and k <= G.CHALLENGE_PAGE_SIZE * ((page or 0) + 1) then
+r 30 5544 %20%20%20%20%20%20 -
+l 121
+      local challenge_completed = G.PROFILES[G.SETTINGS.profile].challenge_progress.completed[v.id or '']
+      local challenge_unlocked = Ch.unlocked(v, k)
+      challenge_list[#challenge_list + 1] =
+      {n = G.UIT.R, config = {align = "cm"}, nodes = {
+        {n = G.UIT.C, config = {align = 'cl', minw = 0.8}, nodes = {
+          {n = G.UIT.T, config = {text = k .. '', scale = 0.4, colour = G.C.WHITE}},
+        }},
+        UIBox_button({id = k, col = true, label = {challenge_unlocked and localize(v.id, 'challenge_names') or localize('k_locked')}, button = challenge_unlocked and 'change_challenge_description' or 'nil', colour = challenge_unlocked and (v.forge_ch and G.C.GREEN or G.C.RED) or G.C.GREY, minw = 4, scale = 0.4, minh = 0.6, focus_args = {snap_to = not snapped}}),
+        {n = G.UIT.C, config = {align = 'cm', padding = 0.05, minw = 0.6}, nodes = {
+          {n = G.UIT.C, config = {minh = 0.4, minw = 0.4, emboss = 0.05, r = 0.1, colour = challenge_completed and G.C.GREEN or G.C.BLACK}, nodes = {
+            challenge_completed and {n = G.UIT.O, config = {object = Sprite(0, 0, 0.4, 0.4, G.ASSET_ATLAS["icons"], {x = 1, y = 0})}} or nil,
+          }},
+        }},
+      }}
+      snapped = true
+    end
+  end
+  return {n = G.UIT.ROOT, config = {align = "cm", padding = 0.1, colour = G.C.CLEAR}, nodes = challenge_list}
+end
+
+function Ch.install_hooks()
+  if Ch.hooked then return end
+  Ch.hooked = true
+  local Hooks = require("overhaul.hooks")
+  Hooks.wrap("Game", "start_run", function(orig) return function(self, args, ...)
+    pcall(Ch.pre_start, args)
+    local r = orig(self, args, ...)
+    local ok, err = pcall(Ch.on_start, args)
+    if not ok then require("functions/forge/forge_joker").log_once("ch_start", "challenge start failed: " .. tostring(err)) end
+    return r
+  end end, {id = "forge_challenges.start_run"})
+  if type(rawget(_G, "SMODS")) ~= "table" and G and G.UIDEF and G.UIDEF.challenge_list_page then
+    G.UIDEF.challenge_list_page = Ch.list_page
+  end
+end
+
+local function register_strings()
+  if not mod_loc_register then return end
+  mod_loc_register{
+    fr = {
+      ["Challenge"] = "Défi", ["Challenges"] = "Défis",
+      ["Start with a Joker"] = "Commencer avec un Joker", ["Edition on the last starting Joker"] = "Édition sur le dernier Joker de départ", ["The last starting Joker is {C:dark_edition}%s{}"] = "Le dernier Joker de départ est {C:dark_edition}%s{}",
+      ["Pin the last starting Joker"] = "Épingler le dernier Joker de départ", ["The last starting Joker is pinned"] = "Le dernier Joker de départ est épinglé", ["Start with an Eternal Joker"] = "Commencer avec un Joker Éternel", ["Start with a consumable"] = "Commencer avec un consommable",
+      ["Start with {C:attention}%s{}"] = "Commencez avec {C:attention}%s{}", ["Start with an {C:attention}Eternal{} {C:attention}%s{}"] = "Commencez avec {C:attention}%s{} {C:attention}Éternel{}",
+      ["Starting money"] = "Argent de départ", ["Start with {C:money}$%d{}"] = "Commencez avec {C:money}%d ${}",
+      ["Hands per round"] = "Mains par manche", ["{C:blue}%d{} hands per round"] = "{C:blue}%d{} mains par manche",
+      ["Discards per round"] = "Défausses par manche", ["{C:red}%d{} discards per round"] = "{C:red}%d{} défausses par manche",
+      ["Hand size"] = "Taille de la main", ["Hand size {C:attention}%d{}"] = "Taille de la main : {C:attention}%d{}",
+      ["Joker slots"] = "Emplacements de Joker", ["{C:attention}%d{} Joker slots"] = "{C:attention}%d{} emplacements de Joker",
+      ["Consumable slots"] = "Emplacements de consommable", ["{C:attention}%d{} consumable slots"] = "{C:attention}%d{} emplacements de consommable",
+      ["Reroll price"] = "Prix de la relance", ["Rerolls start at {C:money}$%d{}"] = "Les relances commencent à {C:money}%d ${}",
+      ["Every card enhanced"] = "Toutes les cartes améliorées", ["Every card is a {C:attention}%s{}"] = "Chaque carte est {C:attention}%s{}",
+      ["Every card has an edition"] = "Toutes les cartes avec une édition", ["Every card is {C:dark_edition}%s{}"] = "Chaque carte est {C:dark_edition}%s{}",
+      ["Every card has a seal"] = "Toutes les cartes avec un sceau", ["Every card has a {C:attention}%s{}"] = "Chaque carte a un {C:attention}%s{}",
+      ["No face cards"] = "Pas de figures", ["No face cards in the deck"] = "Aucune figure dans le jeu",
+      ["Remove a rank"] = "Retirer une valeur", ["No {C:attention}%s{} in the deck"] = "Aucun {C:attention}%s{} dans le jeu",
+      ["Remove a suit"] = "Retirer une couleur",
+      ["Deck of a game challenge"] = "Jeu d'un défi du jeu",
+      ["Deck of another challenge"] = "Jeu d'un autre défi", ["Same deck as {C:attention}%s{}"] = "Même jeu que {C:attention}%s{}",
+      ["Ban a card"] = "Bannir une carte", ["{C:attention}%s{} is banned"] = "{C:attention}%s{} est banni",
+      ["Ban a voucher"] = "Bannir un bon", ["Ban a pack type"] = "Bannir un type de paquet", ["{C:attention}%s{} packs are banned"] = "Les paquets {C:attention}%s{} sont bannis",
+      ["Ban a tag"] = "Bannir une étiquette", ["Ban a Boss Blind"] = "Bannir une Blinde de boss",
+      ["No cards of a kind in the shop"] = "Aucune carte d'un type en boutique", ["No {C:attention}%s{} cards in the shop"] = "Aucune carte {C:attention}%s{} en boutique",
+      ["Blinds give no reward money"] = "Les Blindes ne rapportent rien", ["A Blind gives no reward"] = "Une Blinde ne rapporte rien", ["{C:attention}%s{} gives no reward money"] = "{C:attention}%s{} ne rapporte pas d'argent",
+      ["No money for hands left"] = "Pas d'argent pour les mains restantes", ["No extra money for hands left"] = "Pas d'argent en plus pour les mains restantes",
+      ["No interest"] = "Pas d'intérêts", ["Every Joker is Eternal"] = "Tous les Jokers sont Éternels", ["Every Joker is {C:attention}Eternal{}"] = "Tous les Jokers sont {C:attention}Éternels{}",
+      ["Played cards get debuffed"] = "Les cartes jouées sont affaiblies", ["Played cards are debuffed after scoring"] = "Les cartes jouées sont affaiblies après le score",
+      ["Cards drawn face down"] = "Cartes piochées face cachée", ["{C:green}1 in %d{} cards are drawn face down"] = "{C:green}1 carte sur %d{} est piochée face cachée",
+      ["Jokers turn Eternal at an ante"] = "Jokers Éternels à partir d'une mise", ["From ante {C:attention}%d{}, every Joker is Eternal"] = "Dès la mise {C:attention}%d{}, tous les Jokers sont Éternels",
+      ["No Joker slots from an ante"] = "Plus d'emplacements de Joker à partir d'une mise", ["From ante {C:attention}%d{}, Joker slots drop to 0"] = "Dès la mise {C:attention}%d{}, plus aucun emplacement de Joker",
+      ["Prices go up after every buy"] = "Les prix montent à chaque achat", ["Prices go up by {C:money}$1{} after every buy"] = "Les prix montent de {C:money}1 ${} à chaque achat",
+      ["Discards cost money"] = "Les défausses coûtent de l'argent", ["Every discard costs {C:money}$%d{}"] = "Chaque défausse coûte {C:money}%d ${}",
+      ["Chips capped by your money"] = "Jetons limités par votre argent", ["Base Chips can't go over your money"] = "Les Jetons de base ne dépassent pas votre argent",
+      ["-1 hand size per $"] = "-1 taille de main par $", ["{C:attention}-1{} hand size for every {C:money}$%d{} you have"] = "{C:attention}-1{} taille de main pour chaque tranche de {C:money}%d ${}",
+      ["Small Blind"] = "Petite Blinde", ["Big Blind"] = "Grosse Blinde", ["Boss Blind"] = "Blinde de boss",
+      ["Or start from a game challenge:"] = "Ou partez d'un défi du jeu :", ["In the Challenges list (Play > Challenges)"] = "Dans la liste des défis (Jouer > Défis)",
+    },
+    es = {
+      ["Challenge"] = "Desafío", ["Challenges"] = "Desafíos",
+      ["Start with a Joker"] = "Empezar con un comodín", ["Edition on the last starting Joker"] = "Edición en el último comodín inicial", ["The last starting Joker is {C:dark_edition}%s{}"] = "El último comodín inicial es {C:dark_edition}%s{}",
+      ["Pin the last starting Joker"] = "Fijar el último comodín inicial", ["The last starting Joker is pinned"] = "El último comodín inicial está fijado", ["Start with an Eternal Joker"] = "Empezar con un comodín eterno", ["Start with a consumable"] = "Empezar con un consumible",
+      ["Start with {C:attention}%s{}"] = "Empiezas con {C:attention}%s{}", ["Start with an {C:attention}Eternal{} {C:attention}%s{}"] = "Empiezas con {C:attention}%s{} {C:attention}eterno{}",
+      ["Starting money"] = "Dinero inicial", ["Start with {C:money}$%d{}"] = "Empiezas con {C:money}$%d{}",
+      ["Hands per round"] = "Manos por ronda", ["{C:blue}%d{} hands per round"] = "{C:blue}%d{} manos por ronda",
+      ["Discards per round"] = "Descartes por ronda", ["{C:red}%d{} discards per round"] = "{C:red}%d{} descartes por ronda",
+      ["Hand size"] = "Tamaño de mano", ["Hand size {C:attention}%d{}"] = "Tamaño de mano: {C:attention}%d{}",
+      ["Joker slots"] = "Espacios de comodín", ["{C:attention}%d{} Joker slots"] = "{C:attention}%d{} espacios de comodín",
+      ["Consumable slots"] = "Espacios de consumible", ["{C:attention}%d{} consumable slots"] = "{C:attention}%d{} espacios de consumible",
+      ["Reroll price"] = "Precio de renovar", ["Rerolls start at {C:money}$%d{}"] = "Renovar empieza en {C:money}$%d{}",
+      ["Every card enhanced"] = "Todas las cartas mejoradas", ["Every card is a {C:attention}%s{}"] = "Cada carta es {C:attention}%s{}",
+      ["Every card has an edition"] = "Todas las cartas con edición", ["Every card is {C:dark_edition}%s{}"] = "Cada carta es {C:dark_edition}%s{}",
+      ["Every card has a seal"] = "Todas las cartas con sello", ["Every card has a {C:attention}%s{}"] = "Cada carta tiene un {C:attention}%s{}",
+      ["No face cards"] = "Sin figuras", ["No face cards in the deck"] = "No hay figuras en la baraja",
+      ["Remove a rank"] = "Quitar un valor", ["No {C:attention}%s{} in the deck"] = "No hay {C:attention}%s{} en la baraja",
+      ["Remove a suit"] = "Quitar un palo",
+      ["Deck of a game challenge"] = "Baraja de un desafío del juego",
+      ["Deck of another challenge"] = "Baraja de otro desafío", ["Same deck as {C:attention}%s{}"] = "La misma baraja que {C:attention}%s{}",
+      ["Ban a card"] = "Prohibir una carta", ["{C:attention}%s{} is banned"] = "{C:attention}%s{} está prohibido",
+      ["Ban a voucher"] = "Prohibir un vale", ["Ban a pack type"] = "Prohibir un tipo de sobre", ["{C:attention}%s{} packs are banned"] = "Los sobres {C:attention}%s{} están prohibidos",
+      ["Ban a tag"] = "Prohibir una etiqueta", ["Ban a Boss Blind"] = "Prohibir una ciega jefe",
+      ["No cards of a kind in the shop"] = "Sin cartas de un tipo en la tienda", ["No {C:attention}%s{} cards in the shop"] = "No hay cartas de {C:attention}%s{} en la tienda",
+      ["Blinds give no reward money"] = "Las ciegas no dan dinero", ["A Blind gives no reward"] = "Una ciega no da dinero", ["{C:attention}%s{} gives no reward money"] = "{C:attention}%s{} no da dinero",
+      ["No money for hands left"] = "Sin dinero por manos restantes", ["No extra money for hands left"] = "Sin dinero extra por manos restantes",
+      ["No interest"] = "Sin intereses", ["Every Joker is Eternal"] = "Todos los comodines son eternos", ["Every Joker is {C:attention}Eternal{}"] = "Todos los comodines son {C:attention}eternos{}",
+      ["Played cards get debuffed"] = "Las cartas jugadas se debilitan", ["Played cards are debuffed after scoring"] = "Las cartas jugadas se debilitan después de puntuar",
+      ["Cards drawn face down"] = "Cartas robadas boca abajo", ["{C:green}1 in %d{} cards are drawn face down"] = "{C:green}1 de cada %d{} cartas se roba boca abajo",
+      ["Jokers turn Eternal at an ante"] = "Comodines eternos desde una apuesta", ["From ante {C:attention}%d{}, every Joker is Eternal"] = "Desde la apuesta {C:attention}%d{}, todos los comodines son eternos",
+      ["No Joker slots from an ante"] = "Sin espacios de comodín desde una apuesta", ["From ante {C:attention}%d{}, Joker slots drop to 0"] = "Desde la apuesta {C:attention}%d{}, no quedan espacios de comodín",
+      ["Prices go up after every buy"] = "Los precios suben con cada compra", ["Prices go up by {C:money}$1{} after every buy"] = "Los precios suben {C:money}$1{} con cada compra",
+      ["Discards cost money"] = "Los descartes cuestan dinero", ["Every discard costs {C:money}$%d{}"] = "Cada descarte cuesta {C:money}$%d{}",
+      ["Chips capped by your money"] = "Fichas limitadas por tu dinero", ["Base Chips can't go over your money"] = "Las fichas base no pasan de tu dinero",
+      ["-1 hand size per $"] = "-1 tamaño de mano por $", ["{C:attention}-1{} hand size for every {C:money}$%d{} you have"] = "{C:attention}-1{} tamaño de mano por cada {C:money}$%d{} que tengas",
+      ["Small Blind"] = "Ciega pequeña", ["Big Blind"] = "Ciega grande", ["Boss Blind"] = "Ciega jefe",
+      ["Or start from a game challenge:"] = "O empieza desde un desafío del juego:", ["In the Challenges list (Play > Challenges)"] = "En la lista de desafíos (Jugar > Desafíos)",
+    },
+  }
+end
+
+register_strings()
+
+return Ch
+end

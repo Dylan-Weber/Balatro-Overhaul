@@ -218,6 +218,7 @@ local CONNECT_TIMEOUT = mp_config and mp_config.CONNECT_TIMEOUT or 15
 local REACH_TIMEOUT = mp_config and mp_config.REACH_TIMEOUT or 20
 local connect_extended = false
 local was_connected = false
+local hello_open = nil
 
 local LOC = {
     fr = {
@@ -328,6 +329,13 @@ function bom_core.player_key()
     if not (G and G.SETTINGS) then return nil end
     local k = G.SETTINGS.mp_player_key
     if type(k) ~= "string" or not k:match("^[A-Za-z0-9]+$") or #k ~= 24 then
+        local FO = rawget(_G, "ForgeOnline")
+        local ok, saved = pcall(function() return FO and FO.settings_keys and FO.settings_keys() or {} end)
+        if ok and saved[1] then
+            G.SETTINGS.mp_player_key = saved[1]
+            if G.save_settings then pcall(G.save_settings, G) end
+            return saved[1]
+        end
         local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
         local t = {}
         for i = 1, 24 do
@@ -579,6 +587,11 @@ function bom_core.update(dt)
         if not ok_lost then mp_log.error("BOM_CORE", "connection lost handler failed: %s", tostring(err_lost)) end
     end
     local fresh = connected_now and not was_connected
+    local opens = AndroidWS.openCount and AndroidWS.openCount() or nil
+    if opens ~= nil then
+        fresh = connected_now and opens ~= hello_open
+        if fresh then hello_open = opens end
+    end
     was_connected = connected_now
     if fresh then pcall(bom_core.send_hello) end
     if connected_now and reconnect_callback then

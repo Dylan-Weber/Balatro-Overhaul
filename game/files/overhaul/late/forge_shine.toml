@@ -15,3 +15,55 @@ ${indent}elseif (self.edition and self.edition.negative) or (self.ability.name =
 ${body}'''
 times = 1
 optional = true
+
+[[patches]]
+[patches.pattern]
+id = "forge_forcedlook.plain_draw"
+target = "card.lua"
+pattern = "--If the card has any edition/seal, add that here"
+position = "before"
+payload = '''
+            if ForgeForcedLook and ForgeForcedLook.of(self) then ForgeForcedLook.draw_plain(self) end
+'''
+match_indent = true
+times = 1
+optional = true
+
+[[patches]]
+[patches.pattern]
+id = "forge_forcedlook.plain_seal"
+target = "card.lua"
+pattern = "if self.seal == 'Gold' then G.shared_seals[self.seal]:draw_shader('voucher', nil, self.ARGS.send_to_shader, nil, self.children.center) end"
+position = "after"
+payload = '''
+if ForgeForcedLook and ForgeForcedLook.seal_look(self) then ForgeForcedLook.draw_seal_safe(self) end
+'''
+match_indent = true
+times = 1
+optional = true
+
+[[patches]]
+[patches.pattern]
+id = "forge_forcedlook.plain_back_deck"
+target = "card.lua"
+pattern = "self.children.back:draw(overlay)"
+position = "after"
+payload = '''
+if ForgeForcedLook then ForgeForcedLook.draw_back_safe(self) end
+'''
+match_indent = true
+times = 1
+optional = true
+
+[[patches]]
+[patches.pattern]
+id = "forge_forcedlook.plain_back"
+target = "card.lua"
+pattern = "self.children.back:draw_shader('dissolve')"
+position = "after"
+payload = '''
+if ForgeForcedLook then ForgeForcedLook.draw_back_safe(self) end
+'''
+match_indent = true
+times = 1
+optional = true

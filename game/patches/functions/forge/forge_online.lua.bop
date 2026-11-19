@@ -2,14 +2,19 @@ BOP 1
 eol lf
 final 1
 base 0
-l 407
+l 516
 local Mods = require("functions/forge/forge_mods")
+local json = require("bot.sim.json")
 
 local O = {}
 
 O.MAX_BYTES = 512 * 1024
 O.TIMEOUT = 12
+O.OWNERS = "forge/owners.json"
+O.MAX_KEYS = 8
+O.SETTINGS_FILES = {"settings.jkr", "modded_settings.jkr"}
 O.state = O.state or {status = "idle", page = 1, tab = "all", data = nil, msg = nil, busy = {}}
+O.state.want = O.state.want or {}
 
 local function touch() return UIK.touch() end
 local function core() return rawget(_G, "bom_core") end
@@ -34,10 +39,79 @@ function O.with_connection(go, fail)
   if fail then fail() end
 end
 
+function O.valid_key(k)
+  return type(k) == "string" and #k == 24 and k:match("^[A-Za-z0-9]+$") ~= nil
+end
+
+function O.merge_keys(cur, ...)
+  local out, seen = {}, {}
+  if cur then seen[cur] = true end
+  for i = 1, select("#", ...) do
+    local list = select(i, ...)
+    for _, k in ipairs(type(list) == "table" and list or {}) do
+      if O.valid_key(k) and not seen[k] and #out < O.MAX_KEYS then
+        seen[k] = true
+        out[#out + 1] = k
+      end
+    end
+  end
+  return out
+end
+
+local function sfs() return love.mod_filesystem or love.filesystem end
+
+function O.owner_keys()
+  local f = sfs()
+  local raw = f and f.getInfo(O.OWNERS) and f.read(O.OWNERS)
+  local ok, t = pcall(json.decode, raw or "")
+  return ok and type(t) == "table" and type(t.keys) == "table" and t.keys or {}
+end
+
+function O.settings_keys()
+  local out = {}
+  local f = sfs()
+  for _, name in ipairs(O.SETTINGS_FILES) do
+    local ok, k = pcall(function()
+      local raw = f and f.getInfo(name) and f.read(name)
+      local unpack_table = rawget(_G, "get_table_from_string")
+      local t = raw and unpack_table and unpack_table(raw)
+      return type(t) == "table" and t.mp_player_key or nil
+    end)
+    if ok and O.valid_key(k) then out[#out + 1] = k end
+  end
+  return out
+end
+
+function O.remember(k, more)
+  if not O.valid_key(k) then return end
+  local list = O.owner_keys()
+  local first = {k}
+  for _, x in ipairs(list) do if x == k then first = {} end end
+  local keys = O.merge_keys(nil, first, list, more)
+  local same = #keys == #list
+  for i = 1, #keys do same = same and keys[i] == list[i] end
+  if same then return end
+  local ok, raw = pcall(json.encode, {v = 1, keys = keys})
+  local f = sfs()
+  if ok and f then
+    if not f.getInfo("forge") then pcall(f.createDirectory, "forge") end
+    pcall(f.write, O.OWNERS, raw)
+  end
+end
+
+function O.alt_keys(cur)
+  return O.merge_keys(cur, O.owner_keys(), O.settings_keys())
+end
+
 function O.send(msg)
   local c = core()
   if not (c and c.send) then return false end
   msg.pkey = c.player_key and c.player_key() or nil
+  if msg.pkey then
+    local ok, alts = pcall(O.alt_keys, msg.pkey)
+    if ok and #alts > 0 then msg.keys = alts end
+    pcall(O.remember, msg.pkey, ok and alts or nil)
+  end
   return c.send(msg)
 end
 
@@ -134,11 +208,16 @@ function O.on_mod(d)
   if O.claim and O.claim(d) then return end
   local id = type(d.id) == "string" and d.id or ""
   O.state.busy[id] = nil
+  local want = O.state.want[id]
+  O.state.want[id] = nil
   if not d.ok or type(d.mod) ~= "string" then
     say(O.err_text(d.reason), G.C.RED)
   else
-    local mod, err = Mods.install(d.mod)
-    if mod then
+    local mod, err = Mods.install(d.mod, {mine = d.mine == true or (want and want.mine) or nil})
+    if mod and want and want.edit then
+      if play_sound then play_sound("card1", 1.1, 0.6) end
+      return O.edit(mod.id, want.edit)
+    elseif mod then
       say(string.format(mod_loc("Installed %s. It is in Forged."), mod.name), G.C.GREEN)
       if play_sound then play_sound("card1", 1.1, 0.6) end
       if is_open() then O.browse(O.state.page) end
@@ -226,6 +305,21 @@ function O.unpublish(id)
   end)
 end
 
+function O.edit(id, online_version)
+  local MU = rawget(_G, "ForgeModsUI")
+  local mod = Mods.get(id)
+  if not (MU and MU.open_export and mod) then return end
+  MU.open_export(id, "online", {version = tonumber(online_version) or 1, publish = true})
+end
+
+function O.update(id, online_version)
+  local mod = Mods.get(id)
+  if mod and mod.mine then return O.edit(id, online_version) end
+  O.state.want[id] = {mine = true, edit = tonumber(online_version) or 1}
+  O.state.msg = nil
+  O.get(id)
+end
+
 function O.on_unpublished(d)
   if type(d) ~= "table" then return end
   if d.ok then say(mod_loc("It is not online any more. Your copy stays in Forged."), G.C.UI.TEXT_LIGHT) else say(O.err_text(d.reason), G.C.RED) end
@@ -259,8 +353,14 @@ local BTN_W = 1.9
 local BTN_SCALE = 0.45
 local function port() return UIK.portrait() end
 
-local function row_button(label, func, ref, colour, disabled)
-  return UIK.button{label = label, button = func, ref_table = ref, colour = colour, w = BTN_W, h = btn_h(), scale = fit_scale(label, BTN_W, BTN_SCALE), col = true, disabled = disabled}
+local function row_button(label, func, ref, colour, disabled, w)
+  w = w or BTN_W
+  return UIK.button{label = label, button = func, ref_table = ref, colour = colour, w = w, h = btn_h(), scale = fit_scale(label, w, BTN_SCALE), col = true, disabled = disabled}
+end
+
+local function pair_w(a, b)
+  local need = math.max(UIK.text_w(a, BTN_SCALE), UIK.text_w(b, BTN_SCALE)) + 0.25
+  return math.min(math.max(BTN_W, need), 2.6)
 end
 
 local function gap(w) return {n = G.UIT.C, config = {align = "cm", minw = w or 0.15}, nodes = {}} end
@@ -269,8 +369,11 @@ local function row(m, rw)
   local local_mod = Mods.get(m.id)
   local ver = tonumber(m.version) or 1
   local main
+  local bw = m.mine and pair_w(mod_loc("Update"), mod_loc("Remove")) or BTN_W
   if O.state.busy[m.id] then
-    main = row_button(mod_loc("Getting..."), nil, nil, G.C.GREEN, true)
+    main = row_button(mod_loc("Getting..."), nil, nil, G.C.GREEN, true, bw)
+  elseif m.mine then
+    main = row_button(mod_loc("Update"), "forge_online_update", {id = m.id, version = ver}, G.C.ORANGE, nil, bw)
   elseif local_mod and local_mod.mine then
     main = row_button(mod_loc("Yours"), nil, nil, G.C.GREEN, true)
   elseif local_mod and local_mod.version >= ver then
@@ -280,18 +383,23 @@ local function row(m, rw)
   else
     main = row_button(mod_loc("Get"), "forge_online_get", {id = m.id}, G.C.GREEN)
   end
-  local second = m.mine and row_button(mod_loc("Unpublish"), "forge_online_unpublish", {id = m.id}, G.C.RED)
+  local second = m.mine and row_button(mod_loc("Remove"), "forge_online_remove", {id = m.id, name = m.name}, G.C.RED, nil, bw)
     or row_button(mod_loc("Report"), "forge_online_report", {id = m.id, name = m.name}, G.C.RED)
   local t = touch()
   local p = port()
   local ls = t and 0.38 or 0.34
-  local iw = p and rw - 0.3 or rw - 2 * BTN_W - 0.7
+  local iw = p and rw - 0.3 or rw - 2 * bw - 0.7
   local downloads = tonumber(m.downloads) or 0
   local head = {
     {n = G.UIT.T, config = {text = tostring(m.name), scale = t and 0.55 or 0.5, colour = G.C.WHITE, shadow = true}},
     {n = G.UIT.T, config = {text = "  v" .. ver, scale = ls, colour = G.C.GOLD, shadow = true}},
     m.mine and {n = G.UIT.T, config = {text = "  " .. mod_loc("YOURS"), scale = ls, colour = G.C.GREEN, shadow = true}} or nil,
   }
+  local blv = local_mod and require("functions/forge/forge_balance").worst(Mods.all_of(local_mod))
+  if blv then
+    head[#head + 1] = {n = G.UIT.C, config = {minw = 0.15}, nodes = {}}
+    head[#head + 1] = require("functions/forge/forge_balance").pill(blv, {scale = ls})
+  end
   local info = {{n = G.UIT.R, config = {align = "cl", padding = 0.02, maxw = iw}, nodes = head}}
   local function put(text, colour)
     info[#info + 1] = {n = G.UIT.R, config = {align = "cl", padding = 0.02}, nodes = {
@@ -328,6 +436,7 @@ local function row(m, rw)
     add(sum)
   else
     local hw = UIK.text_w(tostring(m.name), t and 0.55 or 0.5) + UIK.text_w("  v" .. ver .. (m.mine and ("  " .. mod_loc("YOURS")) or "") .. "   " .. dl, ls)
+    if blv then hw = hw + UIK.text_w(require("functions/forge/forge_balance").t(blv), ls) + 0.45 end
     if hw <= iw - 0.1 then
       head[#head + 1] = {n = G.UIT.T, config = {text = "   " .. dl, scale = ls, colour = UIK.C.muted, shadow = true}}
       add((by ~= "" and (by .. "   ") or "") .. sum, nil, 1)
@@ -411,7 +520,7 @@ end
 
 function O.show()
 r 32 1381 %20%20 -
-l 175
+l 218
   G.FUNCS.overlay_menu{definition = UIK.window{
     id = "forge_online",
     title = mod_loc("FORGED ONLINE"),
@@ -455,6 +564,45 @@ end
 G.FUNCS.forge_online_unpublish = function(e)
   local id = e and e.config and e.config.ref_table and e.config.ref_table.id
   if id then O.unpublish(id) end
+end
+
+G.FUNCS.forge_online_update = function(e)
+  local ref = e and e.config and e.config.ref_table
+  if ref and ref.id and not O.state.busy[ref.id] then O.update(ref.id, ref.version) end
+end
+
+G.FUNCS.forge_online_remove = function(e)
+  local ref = e and e.config and e.config.ref_table
+  if not (ref and ref.id) then return end
+  O.state.removing = {id = ref.id, name = ref.name}
+  local bw = touch() and 4.4 or 4.2
+  local function b(label, func, colour, id)
+    return UIK.button{label = label, button = func, colour = colour, w = bw, scale = fit_scale(label, bw, touch() and 0.46 or 0.42), col = true, id = id}
+  end
+  G.FUNCS.overlay_menu{definition = UIK.window{
+    id = "forge_remove", compact = true, w = 9.6,
+    title = mod_loc("REMOVE IT FROM ONLINE?"),
+    tabs = {{key = "a", label = "", build = function()
+      return UIK.stack({
+        {n = G.UIT.R, config = {align = "cm", padding = 0.06}, nodes = {UIK.text(tostring(ref.name or ""), {scale = 0.48})}},
+        UIK.note({mod_loc("Players who got it keep it."), mod_loc("Your copy stays in Forged.")}, {w = 9.2}),
+        {n = G.UIT.R, config = {align = "cm", padding = 0.06}, nodes = {b(mod_loc("Remove"), "forge_online_remove_go", UIK.C.danger, "forge_remove_go")}},
+      }, {w = 9.2})
+    end}},
+    back_func = "forge_online_remove_back", back_inline = false,
+  }}
+end
+
+G.FUNCS.forge_online_remove_go = function(e)
+  local r = O.state.removing
+  O.state.removing = nil
+  O.show()
+  if r then O.unpublish(r.id) end
+end
+
+G.FUNCS.forge_online_remove_back = function(e)
+  O.state.removing = nil
+  O.show()
 end
 
 G.FUNCS.forge_mods_publish = function(e)
@@ -543,6 +691,8 @@ local function register_strings()
       ["Your profile is not ready to publish yet. Open Multiplayer once, then try again."] = "Votre profil n'est pas encore prêt pour publier. Ouvrez le Multijoueur une fois, puis réessayez.",
       ["REPORT THIS MOD?"] = "SIGNALER CE MOD ?", ["What is wrong with it?"] = "Quel est le problème ?", ["It does not work"] = "Il ne marche pas",
       ["Rude or hateful"] = "Insultant ou haineux", ["Stolen work"] = "Travail volé", ["Something else"] = "Autre chose",
+      ["Remove"] = "Retirer", ["REMOVE IT FROM ONLINE?"] = "LE RETIRER DU MODE EN LIGNE ?",
+      ["Players who got it keep it."] = "Les joueurs qui l'ont le gardent.", ["Your copy stays in Forged."] = "Votre copie reste dans Forgés.",
     },
     es = {
       ["FORGED ONLINE"] = "FORJADOS EN LÍNEA", ["All mods"] = "Todos los mods", ["Published by me"] = "Publicados por mí", ["REFRESH"] = "ACTUALIZAR",
@@ -578,6 +728,8 @@ local function register_strings()
       ["Your profile is not ready to publish yet. Open Multiplayer once, then try again."] = "Tu perfil aún no está listo para publicar. Abre Multijugador una vez y vuelve a intentarlo.",
       ["REPORT THIS MOD?"] = "¿DENUNCIAR ESTE MOD?", ["What is wrong with it?"] = "¿Qué le pasa?", ["It does not work"] = "No funciona",
       ["Rude or hateful"] = "Ofensivo o de odio", ["Stolen work"] = "Trabajo robado", ["Something else"] = "Otra cosa",
+      ["Remove"] = "Retirar", ["REMOVE IT FROM ONLINE?"] = "¿QUITARLO DE LÍNEA?",
+      ["Players who got it keep it."] = "Quien lo tiene lo conserva.", ["Your copy stays in Forged."] = "Tu copia se queda en Forjados.",
     },
   }
 end

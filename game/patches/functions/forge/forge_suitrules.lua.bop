@@ -1,0 +1,513 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 386
+local X = {}
+
+X.RANK_ID = {["2"] = 2, ["3"] = 3, ["4"] = 4, ["5"] = 5, ["6"] = 6, ["7"] = 7, ["8"] = 8, ["9"] = 9, ["10"] = 10, Jack = 11, Queen = 12, King = 13, Ace = 14}
+X.BOSS_SUIT = {bl_goad = "Spades", bl_head = "Hearts", bl_club = "Clubs", bl_window = "Diamonds"}
+X.MAX_COPIES = 1000
+X.PER_IDS = {"chips_per", "mult_per", "xmult_per", "money_per", "gain_mult_per", "gain_xmult_per"}
+
+local function smods() return type(rawget(_G, "SMODS")) == "table" end
+local function Suits() return require("functions/forge/forge_suits") end
+local function Rules() return package.loaded["functions/forge/forge_rules"] end
+
+function X.fields(c)
+  local f = type(c) == "table" and type(c.fields) == "table" and c.fields or {}
+  local function num(k, lo, hi, def)
+    local v = tonumber(f[k])
+    if not v or v ~= v then return def end
+    return math.max(lo, math.min(hi, v))
+  end
+  local low = X.RANK_ID[tostring(f.low)] and tostring(f.low) or "2"
+  local high = X.RANK_ID[tostring(f.high)] and tostring(f.high) or "Ace"
+  if X.RANK_ID[low] > X.RANK_ID[high] then low, high = high, low end
+  local function as(v) return type(v) == "string" and v ~= "none" and v or nil end
+  return {
+    chips = num("chips", 0, 1e15, 0), mult = num("mult", 0, 1e15, 0), xmult = num("xmult", 1, 1e15, 1), money = num("money", 0, 1e9, 0),
+    held_xmult = num("held_xmult", 1, 1e15, 1), held_money = num("held_money", 0, 1e9, 0),
+    as1 = as(f.as1), as2 = as(f.as2), low = low, high = high, copies = math.floor(num("copies", 1, X.MAX_COPIES, 1)),
+    never_debuff = f.never_debuff == true, boss = (X.BOSS_SUIT[f.boss] or f.boss == "any_boss" or X.own_boss(f.boss)) and f.boss or nil,
+  }
+end
+
+function X.own_boss(v)
+  local R = Rules()
+  return R and R.own_id("boss", v) ~= nil or false
+end
+
+function X.full_range(f) return f.low == "2" and f.high == "Ace" end
+
+function X.rank_ok(c, value)
+  local f = X.fields(c)
+  if X.full_range(f) then return true end
+  local id = X.RANK_ID[tostring(value)]
+  if not id and smods() and SMODS.Ranks and SMODS.Ranks[value] then id = tonumber(SMODS.Ranks[value].id) end
+  if not id then return false end
+  return id >= X.RANK_ID[f.low] and id <= X.RANK_ID[f.high]
+end
+
+function X.ranks_in(c)
+  local out = {}
+  for _, v in ipairs({"2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King", "Ace"}) do
+    if X.rank_ok(c, v) then out[#out + 1] = v end
+  end
+  return out
+end
+
+function X.own_of(card)
+  local base = type(card) == "table" and card.base
+  if not (base and base.suit) then return nil end
+  local s = Suits().by_key[base.suit]
+  return s
+end
+
+function X.as_keys(c)
+  local f = X.fields(c)
+  local out = {}
+  local R = Rules()
+  for _, v in ipairs({f.as1, f.as2}) do
+    local key = R and R.suit_key and R.suit_key(v) or v
+    if key then out[key] = true end
+  end
+  return out
+end
+
+local function stone(card)
+  return card.ability and (card.ability.effect == "Stone Card" or card.ability.name == "Stone Card")
+end
+
+function X.counts_as(card, suit, bypass, flush)
+  local s = X.own_of(card)
+  if not s or s.key == suit then return false end
+  if not X.as_keys(s.c)[suit] then return false end
+  if stone(card) then return false end
+  if smods() and SMODS.has_no_suit and SMODS.has_no_suit(card) then return false end
+  if not flush and not bypass and card.debuff then return false end
+  return true
+end
+
+function X.bonus(card, what)
+  if not card or card.debuff or stone(card) then return nil end
+  local s = X.own_of(card)
+  if not s then return nil end
+  local f = X.fields(s.c)
+  local v = f[what]
+  if what == "xmult" or what == "held_xmult" then return v ~= 1 and v or nil end
+  return v ~= 0 and v or nil
+end
+
+function X.boss_hits(blind, card)
+  local s = X.own_of(card)
+  if not (s and blind) or blind.disabled then return false end
+  local f = X.fields(s.c)
+  if not f.boss then return false end
+  local key = blind.config and blind.config.blind and blind.config.blind.key
+  if f.boss == "any_boss" then return blind.boss and true or false end
+  return key == f.boss
+end
+
+function X.never(card)
+  local s = X.own_of(card)
+  return s ~= nil and X.fields(s.c).never_debuff
+end
+
+function X.doc_lines(f, add, card_only)
+  local x = X.fields({fields = f})
+  local n = #X.ranks_in({fields = f})
+  local T = require("functions/forge/forge_text")
+  local Cat = require("functions/forge/forge_catalog")
+  local copies = x.copies
+  local rv = function(v) return Cat.value_label("rankvalue", v) end
+  if card_only then
+  elseif X.full_range(x) then
+    add(string.format(mod_loc("{C:attention}%d{} cards, %s to %s"), n * copies, rv("2"), rv("Ace")))
+  else
+    add(string.format(mod_loc("{C:attention}%d{} cards, %s to %s"), n * copies, rv(x.low), rv(x.high)))
+  end
+  if not card_only then
+    if copies > 1 then add(string.format(mod_loc("{C:attention}%d{} of each rank"), copies)) end
+    add(f.deck == false and mod_loc("Not in the starting deck") or mod_loc("In the starting deck"))
+    local wt = tonumber(f.weight) or 100
+    if wt ~= 100 then add(string.format(mod_loc("Shows in packs {C:attention}%d%%{} as often as a usual suit"), wt)) end
+  end
+  local as = {}
+  for _, v in ipairs({x.as1, x.as2}) do as[#as + 1] = "{C:attention}" .. T.suit_name(v, true) .. "{}" end
+  if #as == 1 then add(string.format(mod_loc("Also counts as %s"), as[1])) end
+  if #as == 2 then add(string.format(mod_loc("Also counts as %s and %s"), as[1], as[2])) end
+  if x.chips > 0 then add(string.format(mod_loc("{C:chips}+%s{} Chips when scored"), Cat.fmt({}, x.chips))) end
+  if x.mult > 0 then add(string.format(mod_loc("{C:mult}+%s{} Mult when scored"), Cat.fmt({}, x.mult))) end
+  if x.xmult ~= 1 then add(string.format(mod_loc("{X:mult,C:white} X%s {} Mult when scored"), Cat.fmt({}, x.xmult))) end
+  if x.money > 0 then add(string.format(mod_loc("{C:money}$%s{} when scored"), Cat.fmt({}, x.money))) end
+  if x.held_xmult ~= 1 then add(string.format(mod_loc("{X:mult,C:white} X%s {} Mult while held in hand"), Cat.fmt({}, x.held_xmult))) end
+  if x.held_money > 0 then add(string.format(mod_loc("{C:money}$%s{} if held at end of round"), Cat.fmt({}, x.held_money))) end
+  if x.never_debuff then add(mod_loc("Can never be debuffed")) end
+  if x.boss == "any_boss" then add(mod_loc("Debuffed by every Boss Blind"))
+  elseif x.boss then add(string.format(mod_loc("Debuffed by {C:attention}%s{}"), Cat.value_label("boss", x.boss))) end
+end
+
+X.ONE = {en = "{C:attention}%s{} card", fr = "carte de {C:attention}%s{}", es = "carta de {C:attention}%s{}"}
+
+function X.rules(R)
+  R.HOST_OF.suit = "card"
+  local own = function(v) return R.own_id("suit", v) ~= nil end
+  local base_matches = R.matches
+  R.matches = function()
+    local out = base_matches()
+    for _, v in ipairs(R.own_values("suit")) do out[#out + 1] = v end
+    return out
+  end
+  local base_card_match = R.card_match
+  R.card_match = function(c, v)
+    if own(v) then return R.suit_ok(c, v) end
+    return base_card_match(c, v)
+  end
+  local base_mlabel = R.match_label
+  R.match_label = function(v, lang, plural)
+    if own(v) then return R.own_label("suit", v) end
+    return base_mlabel(v, lang, plural)
+  end
+  local base_one = R.one_label
+  R.one_label = function(v, lang)
+    if own(v) then return string.format(X.ONE[lang] or X.ONE.en, R.own_label("suit", v)) end
+    return base_one(v, lang)
+  end
+  local function keep_own(fn, field)
+    if type(fn) ~= "function" then return fn end
+    return function(c, ...)
+      local v = type(c) == "table" and c[field]
+      local r = fn(c, ...)
+      if own(v) then c[field] = v end
+      return r
+    end
+  end
+  for _, id in ipairs({"discarded", "deck_count", "played_suit", "held_all", "suit_and_other"}) do R.CLEAN_ONLY[id] = keep_own(R.CLEAN_ONLY[id], "v") end
+  for _, id in ipairs(X.PER_IDS) do
+    local fn = R.CLEAN_GIVE[id]
+    if type(fn) == "function" then
+      R.CLEAN_GIVE[id] = function(e, ...)
+        local m = type(e) == "table" and e.m
+        local r = fn(e, ...)
+        if own(m) and R.COUNT_MATCH[e.per] then e.m = m end
+        return r
+      end
+    end
+  end
+  local C = R.CHECKS
+  local base_other = C.suit_and_other
+  if base_other then
+    C.suit_and_other = function(o, context, ...)
+      if not own(o.v) then return base_other(o, context, ...) end
+      local key = R.suit_key(o.v)
+      if not key then return false end
+      local hand = context and (context.scoring_hand or context.full_hand) or {}
+      local mine, other = {}, {}
+      for i, c in ipairs(hand) do
+        if c.is_suit and c:is_suit(key) then mine[#mine + 1] = i end
+        for _, s in ipairs(R.suits()) do
+          local k2 = R.suit_key(s) or s
+          if k2 ~= key and c.is_suit and c:is_suit(k2) then other[#other + 1] = i break end
+        end
+      end
+      for _, i in ipairs(mine) do for _, j in ipairs(other) do if i ~= j then return true end end end
+      return false
+    end
+  end
+  local base_held = C.held_all
+  if base_held then
+    C.held_all = function(o, ...)
+      if own(o.v) then
+        local key = R.suit_key(o.v)
+        if not key then return false end
+        for _, c in ipairs(G.hand and G.hand.cards or {}) do
+          if not c:is_suit(key, nil, true) then return false end
+        end
+        return true
+      end
+      return base_held(o, ...)
+    end
+  end
+end
+
+local function rules_item(card)
+  local s = X.own_of(card)
+  if not s then return nil end
+  local c = s.c
+  if type(c.rules) ~= "table" or #c.rules == 0 or c.enabled == false then return nil end
+  return {c = c, key = "x_" .. c.id}
+end
+
+function X.card_lines(c, lang)
+  if type(c.text) == "table" and type(c.text[lang]) == "table" and #c.text[lang] > 0 then return c.text[lang] end
+  local out = {}
+  X.doc_lines(c.fields or {}, function(l) out[#out + 1] = l end, true)
+  local R = Rules()
+  if R and type(c.rules) == "table" and #c.rules > 0 then
+    local T = require("functions/forge/forge_text")
+    for _, l in ipairs(T.lines({rules = R.clean_rules(c.rules, "suit"), vars = R.clean_vars(c.vars), kind = "suit"}, lang)) do out[#out + 1] = l end
+  end
+  return out
+end
+
+function X.install_text()
+  if not (G and G.localization and G.localization.descriptions) then return end
+  local FJ = require("functions/forge/forge_joker")
+  local lang = FJ.lang()
+  local O = G.localization.descriptions.Other
+  if not O then return end
+  for _, s in ipairs(Suits().list) do
+    local ok, lines = pcall(X.card_lines, s.c, lang)
+    local key = "forge_suit_" .. s.c.id
+    if ok and type(lines) == "table" and #lines > 0 then O[key] = FJ.parsed({name = s.c.name, text = lines}) else O[key] = nil end
+  end
+end
+
+function X.install()
+  if X.hooked then return end
+  local okh, Hooks = pcall(require, "overhaul.hooks")
+  if not (okh and Hooks) then return end
+  X.hooked = true
+  local S = Suits()
+  local HR = require("functions/forge/forge_hostrules")
+  HR.STATE_PREFIX.suit = "x_"
+  table.insert(HR.KEY_KINDS, {"^forge_suit_(%w+)$", {suit = true}})
+  local base_items = HR.items_on
+  HR.items_on = function(card)
+    local out = base_items(card)
+    if card and card.ability and not card.debuff then
+      local it = rules_item(card)
+      if it then out[#out + 1] = it end
+    end
+    return out
+  end
+  local base_weight = S.weight_of
+  S.weight_of = function(card)
+    local w = base_weight(card)
+    if w > 0 and type(card) == "table" and card.forge_suit then
+      local s = S.of_id(card.forge_suit)
+      if s and not X.rank_ok(s.c, card.value) then return 0 end
+    end
+    return w
+  end
+  local base_obj = S.smods_object
+  S.smods_object = function(s)
+    local obj = base_obj(s)
+    local pool = obj.in_pool
+    obj.in_pool = function(self, args)
+      if args and args.rank and args.rank ~= "" and not X.rank_ok(s.c, args.rank) then return false end
+      return pool(self, args)
+    end
+    return obj
+  end
+  Hooks.wrap("Card", "is_suit", function(orig) return function(self, suit, bypass, flush, ...)
+    local r = orig(self, suit, bypass, flush, ...)
+    if r or #S.list == 0 then return r end
+    local ok, yes = pcall(X.counts_as, self, suit, bypass, flush)
+    if ok and yes then return true end
+    return r
+  end end, {id = "forge_suitrules.is_suit"})
+  local function add_num(name, what)
+    Hooks.wrap("Card", name, function(orig) return function(self, ...)
+      local r = orig(self, ...)
+      if #S.list == 0 then return r end
+      local ok, v = pcall(X.bonus, self, what)
+      if not (ok and v) then return r end
+      return (tonumber(r) or 0) + v
+    end end, {id = "forge_suitrules." .. name})
+  end
+  local function mul_num(name, what)
+    Hooks.wrap("Card", name, function(orig) return function(self, ...)
+      local r = orig(self, ...)
+      if #S.list == 0 then return r end
+      local ok, v = pcall(X.bonus, self, what)
+      if not (ok and v) then return r end
+      local base = tonumber(r) or 0
+      if base == 0 then return v end
+      return base * v
+    end end, {id = "forge_suitrules." .. name})
+  end
+  add_num("get_chip_bonus", "chips")
+  add_num("get_chip_mult", "mult")
+  mul_num("get_chip_x_mult", "xmult")
+  mul_num("get_chip_h_x_mult", "held_xmult")
+  Hooks.wrap("Card", "get_p_dollars", function(orig) return function(self, ...)
+    local r = orig(self, ...)
+    if #S.list == 0 then return r end
+    local ok, v = pcall(X.bonus, self, "money")
+    if not (ok and v) then return r end
+    G.GAME.dollar_buffer = (G.GAME.dollar_buffer or 0) + v
+    G.E_MANAGER:add_event(Event({func = function() G.GAME.dollar_buffer = 0; return true end}))
+    return (tonumber(r) or 0) + v
+  end end, {id = "forge_suitrules.get_p_dollars"})
+  Hooks.wrap("Card", "get_end_of_round_effect", function(orig) return function(self, context, ...)
+    local r = orig(self, context, ...)
+    if #S.list == 0 or type(r) ~= "table" then return r end
+    local ok, v = pcall(X.bonus, self, "held_money")
+    if ok and v then
+      r.h_dollars = (tonumber(r.h_dollars) or 0) + v
+      r.card = self
+    end
+    return r
+  end end, {id = "forge_suitrules.end_of_round"})
+  Hooks.wrap("Card", "set_debuff", function(orig) return function(self, should, ...)
+    if should and #S.list > 0 then
+      local ok, never = pcall(X.never, self)
+      if ok and never then should = false end
+    end
+    return orig(self, should, ...)
+  end end, {id = "forge_suitrules.set_debuff"})
+  Hooks.wrap("Blind", "debuff_card", function(orig) return function(self, card, ...)
+    local d = self.debuff
+    local raw = type(d) == "table" and d.suit
+    local R = Rules()
+    local mapped = raw and R and R.own_id("suit", raw) and R.suit_key(raw)
+    if mapped then d.suit = mapped end
+    local okc, r = pcall(orig, self, card, ...)
+    if mapped then d.suit = raw end
+    if not okc then error(r, 0) end
+    if #S.list > 0 and card and not card.debuff then
+      local ok, hit = pcall(X.boss_hits, self, card)
+      if ok and hit then card:set_debuff(true) end
+    end
+    return r
+  end end, {id = "forge_suitrules.debuff_card"})
+  Hooks.wrap("Game", "start_run", function(orig) return function(self, args, ...)
+    local fresh = not (args and args.savetext)
+    local held = {}
+    local deck = fresh and args and type(args.challenge) == "table" and type(args.challenge.deck) == "table" and args.challenge.deck
+    if deck and type(deck.forge_no_suits) == "table" then
+      local R = Rules()
+      for _, v in ipairs(deck.forge_no_suits) do
+        local s = R and S.by_key[R.suit_key(v) or ""]
+        if s then
+          deck.no_suits = deck.no_suits or {}
+          deck.no_suits[s.code] = true
+        end
+      end
+    end
+    if fresh and not smods() then
+      for _, s in ipairs(S.list) do
+r 3 101 %20%20%20%20%20%20%20%20 -
+l 44
+          if type(v) == "table" and v.forge_suit == s.id and not X.rank_ok(s.c, v.value) then held[k] = v; G.P_CARDS[k] = nil end
+        end
+      end
+    end
+    local okr, res = pcall(orig, self, args, ...)
+    for k, v in pairs(held) do G.P_CARDS[k] = v end
+    if not okr then error(res, 0) end
+    if fresh then pcall(X.add_copies) end
+    return res
+  end end, {id = "forge_suitrules.start_run"})
+  if type(generate_card_ui) == "function" then
+    local base_gen = generate_card_ui
+    generate_card_ui = function(center, full, ...)
+      local r = base_gen(center, full, ...)
+      if full == nil and type(r) == "table" and type(center) == "table" and (center.set == "Default" or center.set == "Enhanced") then
+        local card = HR.describing
+        local s = card and X.own_of(card)
+        local O = G.localization and G.localization.descriptions and G.localization.descriptions.Other
+        if s and O and O["forge_suit_" .. s.c.id] then pcall(base_gen, {set = "Other", key = "forge_suit_" .. s.c.id}, r) end
+      end
+      return r
+    end
+  end
+end
+
+function X.suit_fronts(v)
+  local R = Rules()
+  local S = Suits()
+  local key = R and R.suit_key(v) or v
+  local s = S.by_key and S.by_key[key or ""]
+  local out = {}
+  for k, p in pairs(G.P_CARDS or {}) do
+    if type(p) == "table" and p.suit == key and p.value and X.RANK_ID[tostring(p.value)] and (not s or X.rank_ok(s.c, p.value)) then out[#out + 1] = k end
+  end
+  table.sort(out, function(a, b) return X.RANK_ID[tostring(G.P_CARDS[a].value)] < X.RANK_ID[tostring(G.P_CARDS[b].value)] end)
+  return out
+end
+
+function X.add_suit(v, copies)
+  if not (G.playing_cards and G.deck and G.P_CARDS) then return 0 end
+  local fronts = X.suit_fronts(v)
+  local made = 0
+  for _ = 1, math.max(1, math.min(10, math.floor(tonumber(copies) or 1))) do
+    for _, k in ipairs(fronts) do
+r 3 1207 %20%20%20%20%20%20 -
+l 25
+      local card = rawget(_G, "Card")(G.deck.T.x, G.deck.T.y, G.CARD_W, G.CARD_H, G.P_CARDS[k], G.P_CENTERS.c_base, {playing_card = G.playing_card})
+      card:add_to_deck()
+      G.playing_cards[#G.playing_cards + 1] = card
+      G.deck:emplace(card)
+      made = made + 1
+    end
+  end
+  if made > 0 then
+    G.deck.config.card_limit = #G.playing_cards
+    G.GAME.starting_deck_size = #G.playing_cards
+  end
+  return made
+end
+
+function X.add_copies()
+  local S = Suits()
+  if not (G.playing_cards and G.deck) then return end
+  local any = false
+  for _, s in ipairs(S.list) do
+    local n = X.fields(s.c).copies
+    if n > 1 then
+      local base = {}
+      for _, c in ipairs(G.playing_cards) do if c.base and c.base.suit == s.key then base[#base + 1] = c end end
+      for _, c in ipairs(base) do
+        for _ = 2, n do
+r 3 1207 %20%20%20%20%20%20%20%20%20%20 -
+l 46
+          local copy = copy_card(c, nil, nil, G.playing_card)
+          copy:add_to_deck()
+          G.playing_cards[#G.playing_cards + 1] = copy
+          G.deck:emplace(copy)
+          any = true
+        end
+      end
+    end
+  end
+  if any then
+    G.deck.config.card_limit = #G.playing_cards
+    G.GAME.starting_deck_size = #G.playing_cards
+  end
+end
+
+local function register_strings()
+  if not mod_loc_register then return end
+  mod_loc_register{
+    fr = {
+      ["+Chips when scored"] = "+Jetons quand elle marque", ["+Mult when scored"] = "+Multi quand elle marque", ["Also counts as"] = "Compte aussi comme", ["And also as"] = "Et aussi comme",
+      ["XMult when scored"] = "XMulti quand elle marque", ["$ when scored"] = "$ quand elle marque", ["XMult while held"] = "XMulti en main", ["$ held at round end"] = "$ en main en fin de manche",
+      ["Lowest rank"] = "Valeur la plus basse", ["Highest rank"] = "Valeur la plus haute", ["Copies of each rank"] = "Copies de chaque valeur", ["Never debuffed"] = "Jamais affaiblie", ["Debuffed by"] = "Affaiblie par",
+      ["Every Boss Blind"] = "Toutes les Blindes Boss", ["{C:attention}%d{} cards, %s to %s"] = "{C:attention}%d{} cartes, de %s à %s", ["{C:attention}%d{} of each rank"] = "{C:attention}%d{} de chaque valeur",
+      ["Also counts as %s"] = "Compte aussi comme %s", ["Also counts as %s and %s"] = "Compte aussi comme %s et %s",
+      ["{C:chips}+%s{} Chips when scored"] = "{C:chips}+%s{} jetons quand elle marque", ["{C:mult}+%s{} Mult when scored"] = "{C:mult}+%s{} multi quand elle marque",
+      ["{X:mult,C:white} X%s {} Mult when scored"] = "{X:mult,C:white} X%s {} multi quand elle marque", ["{C:money}$%s{} when scored"] = "{C:money}%s ${} quand elle marque",
+      ["{X:mult,C:white} X%s {} Mult while held in hand"] = "{X:mult,C:white} X%s {} multi tant qu'elle est en main", ["{C:money}$%s{} if held at end of round"] = "{C:money}%s ${} si en main en fin de manche",
+      ["Can never be debuffed"] = "Ne peut jamais être affaiblie", ["Debuffed by every Boss Blind"] = "Affaiblie par toutes les Blindes Boss", ["Debuffed by {C:attention}%s{}"] = "Affaiblie par {C:attention}%s{}",
+    },
+    es = {
+      ["+Chips when scored"] = "+Fichas al anotar", ["+Mult when scored"] = "+Multi al anotar", ["Also counts as"] = "También cuenta como", ["And also as"] = "Y también como",
+      ["XMult when scored"] = "XMulti al anotar", ["$ when scored"] = "$ al anotar", ["XMult while held"] = "XMulti en la mano", ["$ held at round end"] = "$ en la mano al final de la ronda",
+      ["Lowest rank"] = "Valor más bajo", ["Highest rank"] = "Valor más alto", ["Copies of each rank"] = "Copias de cada valor", ["Never debuffed"] = "Nunca debilitada", ["Debuffed by"] = "Debilitada por",
+      ["Every Boss Blind"] = "Todas las ciegas jefe", ["{C:attention}%d{} cards, %s to %s"] = "{C:attention}%d{} cartas, del %s al %s", ["{C:attention}%d{} of each rank"] = "{C:attention}%d{} de cada valor",
+      ["Also counts as %s"] = "También cuenta como %s", ["Also counts as %s and %s"] = "También cuenta como %s y %s",
+      ["{C:chips}+%s{} Chips when scored"] = "{C:chips}+%s{} fichas al anotar", ["{C:mult}+%s{} Mult when scored"] = "{C:mult}+%s{} multi al anotar",
+      ["{X:mult,C:white} X%s {} Mult when scored"] = "{X:mult,C:white} X%s {} multi al anotar", ["{C:money}$%s{} when scored"] = "{C:money}$%s{} al anotar",
+      ["{X:mult,C:white} X%s {} Mult while held in hand"] = "{X:mult,C:white} X%s {} multi mientras esté en la mano", ["{C:money}$%s{} if held at end of round"] = "{C:money}$%s{} si está en la mano al final de la ronda",
+      ["Can never be debuffed"] = "Nunca puede ser debilitada", ["Debuffed by every Boss Blind"] = "Debilitada por todas las ciegas jefe", ["Debuffed by {C:attention}%s{}"] = "Debilitada por {C:attention}%s{}",
+    },
+  }
+end
+
+register_strings()
+
+return X
+end

@@ -1,0 +1,366 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 110
+return function(R)
+  local E = {}
+  R.EXP = E
+  E.V = 16
+  E.IDS = {emult = "mult", echips = "chips"}
+  E.ORDER = {"echips", "emult"}
+  E.CAP = 1e100
+  R.EXP_IDS = E.IDS
+
+  R.NUM.emult = {def = 1.5, lo = 1.05, hi = 100, step = 0.05, big = 0.5}
+  R.NUM.echips = {def = 1.1, lo = 1.05, hi = 100, step = 0.05, big = 0.5}
+  R.MULT_NUM.emult, R.MULT_NUM.echips = true, true
+
+  for _, id in ipairs(E.ORDER) do
+    local seen = false
+    for _, v in ipairs(R.GIVE) do if v == id then seen = true end end
+    if not seen then R.GIVE[#R.GIVE + 1] = id end
+    R.HOST_GIVE[id] = {joker = true, card = true, run = true}
+    R.GIVE_WHEN[id] = {card_scored = true, hand_played = true}
+  end
+  R.DEFAULT_GIVE.emult = function() return {id = "emult", n = R.NUM.emult.def} end
+  R.DEFAULT_GIVE.echips = function() return {id = "echips", n = R.NUM.echips.def} end
+
+  for id in pairs(E.IDS) do
+    R.DOS[id] = function(g, card, src, context, other, out)
+      if not (out and out.ret) or out.when == "card_held" then return end
+      local n = tonumber(g.n)
+      if not n or n ~= n or n == 1 then return end
+      local k = "forge_" .. id
+      out.ret[k] = (out.ret[k] or 1) * n
+    end
+  end
+
+  local base_need = R.need_v
+  function R.need_v(rules, vars)
+    local need = base_need(rules, vars)
+    for _, r in ipairs(type(rules) == "table" and rules or {}) do
+      for _, l in ipairs(type(r) == "table" and {r.give, r.alt} or {}) do
+        for _, g in ipairs(type(l) == "table" and l or {}) do
+          if type(g) == "table" and E.IDS[g.id] then need = math.max(need, E.V) end
+        end
+      end
+    end
+    return need
+  end
+
+  function E.pow(cur, n)
+    n = tonumber(n)
+    if not n or n == 1 or n ~= n then return cur end
+    if type(cur) ~= "number" then
+      local ok, r = pcall(function() return cur ^ n end)
+      return ok and r or cur
+    end
+    if cur ~= cur or cur <= 0 or cur >= E.CAP then return cur end
+    local r = cur ^ n
+    if r ~= r or r > E.CAP then r = E.CAP end
+    return r
+  end
+
+  local function member(list, v)
+    for _, x in ipairs(type(list) == "table" and list or {}) do if x == v then return true end end
+    return false
+  end
+
+  function E.talisman()
+    local S = rawget(_G, "SMODS")
+    if not (rawget(_G, "Talisman") and type(S) == "table") then return false end
+    return member(S.scoring_parameter_keys, "e_mult") or member(S.calculation_keys, "e_mult")
+  end
+
+  local WORD = {
+    en = {mult = "Mult", chips = "Chips"},
+    fr = {mult = "Multi", chips = "jetons"},
+    es = {mult = "multi", chips = "fichas"},
+  }
+  local function lang()
+    local Cat = package.loaded["functions/forge/forge_catalog"]
+    local l = Cat and Cat.lang and Cat.lang() or "en"
+    return WORD[l] and l or "en"
+  end
+  local function T() return package.loaded["functions/forge/forge_text"] end
+  local function fmt(n)
+    local t = T()
+    if t and t.fmt_n then return t.fmt_n(n) end
+    return tostring(n)
+  end
+
+  function E.message(id, n, l)
+    local w = WORD[l or lang()] or WORD.en
+    return "^" .. fmt(n) .. " " .. w[E.IDS[id]]
+  end
+
+  function E.colour(id)
+    local C = G and G.C
+    if not C then return nil end
+    if id == "emult" and C.emult then return C.emult end
+    if id == "echips" and C.echips then return C.echips end
+    return C.DARK_EDITION
+  end
+
+  local function status(card, text, colour)
+    if not (card and text) or type(card_eval_status_text) ~= "function" then return end
+    pcall(card_eval_status_text, card, "extra", nil, nil, nil, {message = text, colour = colour})
+  end
+
+  local function raise_plain(kind, n)
+    if kind == "mult" then
+      local new = E.pow(mult, n)
+      if new == mult then return false end
+      mult = mod_mult(new)
+r 15 715 %20%20%20%20%20%20 -
+l 4
+    else
+      local new = E.pow(hand_chips, n)
+      if new == hand_chips then return false end
+      hand_chips = mod_chips(new)
+r 15 707 %20%20%20%20%20%20 -
+l 61
+    end
+    return true
+  end
+
+  local function raise(kind, n)
+    local S = rawget(_G, "SMODS")
+    local P = type(S) == "table" and type(S.Scoring_Parameters) == "table" and S.Scoring_Parameters[kind]
+    if P and P.current ~= nil and type(P.modify) == "function" then
+      local cur = P.current
+      local new = E.pow(cur, n)
+      if new == cur then return false end
+      P:modify(new - cur)
+      return true
+    end
+    return raise_plain(kind, n)
+  end
+  E.raise = raise
+
+  local function steps(ret)
+    local out = {}
+    for _, id in ipairs(E.ORDER) do
+      local n = tonumber(ret["forge_" .. id])
+      if n and n ~= 1 then out[#out + 1] = {id = id, kind = E.IDS[id], n = n} end
+    end
+    return out
+  end
+
+  local function finish_talisman(ret, list)
+    for _, s in ipairs(list) do
+      local k = s.kind == "mult" and "e_mult" or "e_chips"
+      ret[k] = (tonumber(ret[k]) or 1) * s.n
+    end
+  end
+
+  local function finish_smods(ret, list, target, src, scored)
+    local before = ret.func
+    local l = lang()
+    ret.func = function()
+      if before then before() end
+      for _, s in ipairs(list) do
+        if raise(s.kind, s.n) then
+          if scored and type(juice_card) == "function" then pcall(juice_card, src) end
+          status(target, E.message(s.id, s.n, l), E.colour(s.id))
+        end
+      end
+    end
+  end
+
+  local function finish_card(ret, list, target)
+    local ex = type(ret.extra) == "table" and ret.extra or {}
+    local before, old_msg, old_col = ex.func, ex.message, ex.colour
+    local l = lang()
+    list.x = ret.x_mult
+    ret.x_mult = nil
+    local last = list[#list]
+    ex.func = function()
+      if before then before() end
+      if old_msg then status(target, old_msg, old_col) end
+      local xm = list.x
+      if xm and xm ~= 1 then
+        mult = mod_mult(mult * xm)
+r 15 715 %20%20%20%20%20%20%20%20 -
+l 131
+        if type(card_eval_status_text) == "function" then pcall(card_eval_status_text, target, "x_mult", xm) end
+      end
+      for i, s in ipairs(list) do
+        raise_plain(s.kind, s.n)
+        if i < #list then status(target, E.message(s.id, s.n, l), E.colour(s.id)) end
+      end
+    end
+    ex.message = E.message(last.id, last.n, l)
+    ex.colour = E.colour(last.id)
+    ret.extra = ex
+  end
+
+  local BAKE = {mult = {"mult", "mult_mod", "Xmult_mod", "forge_xmult"}, chips = {"hand_chips", "chip_mod", "Xchip_mod", "forge_xchips"}}
+  function E.main(ret)
+    return type(ret) == "table" and type(ret.forge_steps) == "table" and ret.forge_steps.main == true
+  end
+  function E.has(ret, kind)
+    if not E.main(ret) then return false end
+    for _, s in ipairs(ret.forge_steps) do if s.kind == kind then return true end end
+    return false
+  end
+  function E.bake(ret)
+    if not E.main(ret) then return ret end
+    for _, s in ipairs(ret.forge_steps) do
+      local b = BAKE[s.kind]
+      local cur = rawget(_G, b[1])
+      if type(cur) == "number" then
+        local x = tonumber(ret[b[4]]) or tonumber(ret[b[3]]) or 1
+        local base = cur + (tonumber(ret[b[2]]) or 0)
+        ret[b[4]] = x
+        if base > 0 then ret[b[3]] = E.pow(base * x, s.n) / base
+        else ret[b[3]] = x ~= 1 and x or nil end
+      end
+    end
+    return ret
+  end
+
+  local function finish_main(ret, list, src)
+    local l = lang()
+    if ret.message then status(src, ret.message, ret.colour) end
+    list.main = true
+    E.bake(ret)
+    for i = 1, #list - 1 do status(src, E.message(list[i].id, list[i].n, l), E.colour(list[i].id)) end
+    local last = list[#list]
+    ret.message = E.message(last.id, last.n, l)
+    ret.colour = E.colour(last.id)
+    ret.edition = true
+  end
+
+  function E.finish(ret, card, context)
+    local list = steps(ret)
+    if #list == 0 then return ret end
+    ret.forge_steps = list
+    local src = context.blueprint_card or card
+    local scored = context.individual and context.other_card ~= nil
+    local target = scored and context.other_card or src
+    if E.talisman() then
+      finish_talisman(ret, list)
+    elseif rawget(_G, "SMODS") then
+      finish_smods(ret, list, target, src, scored)
+    elseif scored then
+      finish_card(ret, list, target)
+    else
+      finish_main(ret, list, src)
+    end
+    return ret
+  end
+
+  E.SCALE = {"forge_emult", "forge_echips", "e_mult", "e_chips", "Emult_mod", "Echip_mod"}
+  local function relabel(t, list, olds, l)
+    if type(t) ~= "table" or type(t.message) ~= "string" then return end
+    for i, s in ipairs(list) do
+      if t.message == E.message(s.id, olds[i], l) then t.message = E.message(s.id, s.n, l) return end
+    end
+  end
+  function E.scale(r, k)
+    k = tonumber(k)
+    if type(r) ~= "table" or not k or k == 1 then return r end
+    for _, key in ipairs(E.SCALE) do
+      local v = tonumber(r[key])
+      if v and v ~= 1 and v > 0 then r[key] = v * k end
+    end
+    local list = r.forge_steps
+    if type(list) ~= "table" then return r end
+    local olds = {}
+    for i, s in ipairs(list) do
+      olds[i] = s.n
+      s.n = s.n * k
+    end
+    if tonumber(list.x) and list.x ~= 1 and list.x > 0 then list.x = list.x * k end
+    local l = lang()
+    relabel(r, list, olds, l)
+    relabel(r.extra, list, olds, l)
+    if list.main then
+      for _, key in ipairs({"forge_xmult", "forge_xchips"}) do
+        local v = tonumber(r[key])
+        if v and v ~= 1 and v > 0 then r[key] = v * k end
+      end
+      E.bake(r)
+    end
+    return r
+  end
+
+  function E.apply(chips, mult, r)
+    if type(r) ~= "table" then return chips, mult, false end
+    local changed = false
+    for _, id in ipairs(E.ORDER) do
+      local n = tonumber(r["forge_" .. id])
+      if n and n ~= 1 then
+        if id == "echips" then chips = E.pow(chips, n) else mult = E.pow(mult, n) end
+        changed = true
+      end
+    end
+    return chips, mult, changed
+  end
+
+  function E.card_step(id, n, card)
+    local r = {["forge_" .. id] = n}
+    E.finish(r, card, {individual = true, other_card = card})
+    return r
+  end
+
+  function E.fold_x(ret, target)
+    if type(ret) ~= "table" or not ret.forge_exp or rawget(_G, "SMODS") then return end
+    local xm = tonumber(ret.x_mult)
+    local ex = type(ret.extra) == "table" and ret.extra
+    if not (xm and xm ~= 1 and ex and ex.func) then return end
+    local f = ex.func
+    ret.x_mult = nil
+    ex.func = function()
+      mult = mod_mult(mult * xm)
+r 15 715 %20%20%20%20%20%20 -
+l 46
+      if target and type(card_eval_status_text) == "function" then pcall(card_eval_status_text, target, "x_mult", xm) end
+      f()
+    end
+  end
+
+  local base_calc = R.calculate
+  function R.calculate(card, context, rules, vars, opts)
+    local r = base_calc(card, context, rules, vars, opts)
+    if type(opts) == "table" and opts.host == "run" and type(context) == "table" and context.joker_main then return r end
+    if type(r) == "table" and (r.forge_emult or r.forge_echips) and type(context) == "table" then
+      local ok, err = pcall(E.finish, r, card, context)
+      if not ok and R.log_once then R.log_once("exp_" .. tostring(card and card.config and card.config.center and card.config.center.key), "exponent step failed: " .. tostring(err)) end
+    end
+    return r
+  end
+
+  local TXT = {
+    en = {emult = "{X:%s,C:white} ^%s {} Mult", echips = "{X:%s,C:white} ^%s {} Chips"},
+    fr = {emult = "{X:%s,C:white} ^%s {} Multi", echips = "{X:%s,C:white} ^%s {} jetons"},
+    es = {emult = "{X:%s,C:white} ^%s {} multi", echips = "{X:%s,C:white} ^%s {} fichas"},
+  }
+  function E.text_colour(id)
+    local C = G and G.C
+    if C and C[id] and rawget(_G, "Talisman") then return id end
+    return "dark_edition"
+  end
+  for id in pairs(E.IDS) do
+    R.TEXT_GIVE[id] = function(g, s, l)
+      local t = TXT[l] or TXT.en
+      return string.format(t[id], E.text_colour(id), fmt(g.n))
+    end
+  end
+
+  R.LABEL_GIVE.emult, R.LABEL_GIVE.echips = "^Mult", "^Chips"
+  E.LINE = {emult = "{X:dark_edition,C:white}%s{} Mult", echips = "{X:dark_edition,C:white}%s{} Chips"}
+  function E.line_colour(id, str)
+    if type(str) ~= "string" then return str end
+    return (str:gsub("X:dark_edition", "X:" .. E.text_colour(id), 1))
+  end
+  if mod_loc_register then
+    mod_loc_register{
+      fr = {["^Mult"] = "^Multi", ["^Chips"] = "^Jetons", [E.LINE.emult] = "{X:dark_edition,C:white}%s{} Multi", [E.LINE.echips] = "{X:dark_edition,C:white}%s{} Jetons"},
+      es = {["^Mult"] = "^Multi", ["^Chips"] = "^Fichas", [E.LINE.emult] = "{X:dark_edition,C:white}%s{} multi", [E.LINE.echips] = "{X:dark_edition,C:white}%s{} fichas"},
+    }
+  end
+end
+end

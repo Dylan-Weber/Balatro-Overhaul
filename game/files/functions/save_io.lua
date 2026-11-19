@@ -141,8 +141,10 @@ end
 M.ZIP_SKIP = {mods = true, Mods = true, lovely = true, backups = true, crash_reports = true, cache = true, workshop = true, shots = true, updates = true}
 
 function M.save_entry(name)
+    local prev
     for part in name:gmatch("([^/]+)/") do
-        if M.ZIP_SKIP[part] then return false end
+        if M.ZIP_SKIP[part] and not (part == "mods" and prev == "forge") then return false end
+        prev = part
     end
     return true
 end

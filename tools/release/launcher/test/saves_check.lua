@@ -227,6 +227,9 @@ writef(FIX .. "/bigsave.zip", SIO.zip(SIO.entries({["Balatro/1/profile.jkr"] = o
 check("Balatro folder zipped with its Mods folder still imports", SIO.unzip(readf(FIX .. "/withmods.zip"), nil, SIO.save_entry) ~= nil)
 check("save over the size cap refused", select(2, SIO.unzip(readf(FIX .. "/bigsave.zip"), nil, SIO.save_entry)) == "too_big")
 check("Overhaul folder zipped whole still imports", SIO.normalize(SIO.unzip(SIO.zip(SIO.entries({["Overhaul/modded/profile.jkr"] = orig["1/profile.jkr"]})), nil, SIO.save_entry))["modded/profile.jkr"] ~= nil)
+check("Forge mods folder kept on import", SIO.save_entry("forge/mods/abc123.forgemod") and SIO.save_entry("Overhaul/forge/mods/index.json"))
+check("game mods folders still left out", not SIO.save_entry("mods/x/a.lua") and not SIO.save_entry("Balatro/Mods/x.lua") and not SIO.save_entry("Balatro/mods/forge/x.lua"))
+check("Forge author keys file carried", not SIO.skip("forge/owners.json"))
 SIO.MAX_TOTAL = cap
 os.execute("truncate -s 200M '" .. FIX .. "/huge.zip'")
 local hf, herr = V.read_import(FIX .. "/huge.zip")

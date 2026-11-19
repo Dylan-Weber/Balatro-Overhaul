@@ -2,6 +2,63 @@
 
 Changelog for the updates, first being the latest changes. 
 
+## 2.1.2
+
+*Overhaul 2.1.2, 2026-11-19. The Forge can now make your own suits, poker hands, card types, rarities, stickers, challenges and fusions, every creation can be used by your other creations, play solo while the ranked queue searches, Classic Layout on phones, and fixes for 14 crash reports.*
+
+### The Forge: new things to make
+- **Your own suits.** Draw a suit symbol, pick an ink colour, and get 13 new cards, 2 to Ace. Flushes count, Tarots and Spectrals can turn cards into it, and Run Info shows it. Suits get full rules too: what they do when scored, held or discarded, "Also counts as" another suit, a rank range, any number of copies in the deck, and a Boss Blind that debuffs them.
+- **Your own poker hands.** Pick a pattern (different suits, same suit, in a row, face cards, two groups, every suit and more), how many cards (no limit), which hand it beats and its Chips and Mult. Make its Planet with a Forge Planet. Hands can have their own rules and can stay hidden until played.
+- **Your own card types.** A family of cards with a name, a colour and a shop weight, like "Runes" or "Curses". Tarots and Spectrals join a type, packs can hold one, and each type gets a page in the Collection. Types get rules, a fixed sell price (even $0), a Negative chance, a limit on how many you hold, and their own pack art.
+- **Your own rarities and stickers.** A rarity like "Epic" with its name, colour, shop odds, price and rules for every Joker of it. Stickers like "Cursed" or "Fresh" with full rules, on Jokers, playing cards or any card, that can peel off after some rounds. A card can hold as many stickers as you like.
+- **Your own challenges.** Starting Jokers, consumables, vouchers, money and slots, a starting deck editor, banned cards, packs, tags and Boss Blinds, the game's challenge rules, and any Deck effect. They show up in Play > Challenges, and every game challenge can be a starting point.
+- **Joker fusions.** Two or three Jokers (or consumables) fuse into another for a price, with a Fuse button next to Sell. Ingredients can be "any Rare Joker", fusions can keep upgrades and grown values, and a shop card that completes a fusion shows a badge.
+- **Everything is linked.** Your Boss Blinds, poker hands, suits, rarities, card types, stickers, stakes, packs, decks and challenges now show up in every list that picks that kind of thing, so what you make can be used by what you make next.
+
+### The Forge: new effects
+- **Jokers that grow up.** "Becomes another Joker" turns a Joker into another one, like an egg that hatches into a random Rare Joker after 3 rounds.
+- **Looks.** A Joker can have up to 6 pictures and change look as it goes.
+- **Boost other Jokers.** Retrigger a neighbour, make it give more, or make it gain Mult, Chips or XMult for good, on vanilla, Forge and mod Jokers.
+- **^Mult and ^Chips.** Raise Mult or Chips to a power, with Talisman or Amulet big numbers when they are installed.
+- **More moments.** When you earn or spend money, when a card is drawn, before a discard (with "Cancel the discard"), when another Joker is sold, when you get a Tag, a Joker or a consumable, when you beat a Boss Blind, when a new ante starts, when you enter the shop and when a hand levels up.
+- **More ways to mess with the run.** Change the Blind score, move the ante, level hands up or down, free rerolls, shop slots, cheaper rerolls, a free card in every shop, debuff cards or heal them, discard drawn cards, draw cards from anywhere.
+- **Cards to select.** Play and discard more or fewer than 5 cards, from Jokers, Decks, Challenges, Vouchers, Stakes, Tags, consumables and Boss Blinds. Big hands still find the best poker hand.
+- **Losing twins.** "Lose money for each", "-Chips for each" and "-Mult for each". Money can go below $0 like Rental.
+- **Free pack.** Decks, Challenges, Stakes, Vouchers, Tarots and Spectrals can open any pack, your own Boosters too.
+- **New conditions.** "Any discarded card is" and "All discarded cards are", how much money was earned or spent, how many Jokers of a rarity you have, whether a card has a sticker, and more.
+- **Destroy a neighbour Joker.** Now works on every moment outside scoring, like when a consumable is used.
+- **Cards that show up when it makes sense.** After a Joker is destroyed, while you own a Joker, or after a poker hand is played.
+- **Special effect look.** Give a card the look of Foil, Holographic, Polychrome, Negative or any edition, just for the look.
+
+### The Forge: builder
+- **Balance check.** Every creation gets a level, Weak, Fair, Strong, Overpowered or Broken, with a one-line reason. Progress stays on up to Overpowered, only Broken turns it off (asked by Mouse). Every effect is rated, so huge numbers show Broken.
+- **Blank.** Blank really starts from nothing, with an empty card to draw on.
+- **Published by me.** Your online packs have Update and Remove, and they no longer vanish after an update or between normal and modded play (reported by Mouse).
+- **Fixes.** Creations show the real look of suits, hands, types, rarities, stickers and fusions, and Forge Blinds and Stakes show their art in a run.
+- Creations that use the new features need Overhaul 2.1.2 or later.
+
+### Multiplayer
+- **Play while you wait.** While the ranked queue searches you can continue or start a solo run, and the queue keeps going in the menus, the Training Grounds, replays and while watching a match. When an opponent is found you pick Join or Wait. Idea and bug report by OkiMaSha, ranked queue help and the queue timer by GrantDPowell, thanks a lot!
+- **New main menu.** PLAY, MODS and SINGLEPLAYER are the big buttons, RANKED is inside PLAY, and THE CASINO is on the multiplayer menu.
+- **Fixes.** Opening a lobby no longer deletes your single-player Continue (reported by OkiMaSha), and PLAY and MODS have the same text size as in the normal menu.
+
+### Gameplay
+- **Tally Joker.** Clear labels like Retrigger 2 or +90 Chips, an Advanced setting that says how in a few words, Blueprint and Brainstorm show the copied Joker (or Incompatible), and in portrait the lines fit under your Jokers.
+- **Profile icon.** Settings > Gameplay > Main menu has a Reset button that puts the main menu profile icon back in its corner.
+
+### Phones
+- **Classic Layout.** A new setting in Settings > Display > Interface brings back the original compact Run Info, tabs and Blind panels in landscape (asked by SmallShape, #48).
+- **Portrait shop.** Reroll and Next Round swapped places, so Next Round is harder to hit by mistake.
+- **Your suits.** Your own suits share one "Your suits" tab in Customize Deck.
+- **Cryptid.** Code card pickers and the Thematic Sets screen work with taps.
+
+### Mods
+- **Zip installs.** Add a mod from a zip has a search bar, a Browse button on PC, and you can drop a mod zip on the game window.
+- **Fewer crashes.** Profiles Plus, JoyousSpring, Paperback, Betmma Spells and Vouchers, All in Jest, Cryptid with Art Box, Malverk, Rofflatro, QoL Bundle, Pokermon Dip, Sticky Fingers on gamepad, and mods that add buttons to the run HUD.
+
+### Other fixes
+- Starting a new run with a card selected, buying the same shop card twice, and a few rare crashes when showing a text or leaving a run.
+
 ## 2.1.1
 
 *Overhaul 2.1.1, 2026-11-17. Mods on phones work again after 2.1, no more black screen on the first start, a Forge guide and new Forge deck effects, and fixes for #43, #44, #45 and #46.*

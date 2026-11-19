@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 108
+l 62
 local Store = require("functions/forge/forge_store")
 local Cat = require("functions/forge/forge_catalog")
 local R = require("functions/forge/forge_rules")
@@ -15,7 +15,7 @@ ForgeRun = Run
 Run.RATE = {Joker = "joker_rate", Tarot = "tarot_rate", Planet = "planet_rate", Spectral = "spectral_rate", Playing = "playing_card_rate"}
 Run.RARE = {[1] = "rarity_common", [2] = "rarity_uncommon", [3] = "rarity_rare"}
 Run.BASE = {pack_slots = 2, voucher_slots = 1, rarity_common = 70, rarity_uncommon = 25, rarity_rare = 5}
-Run.SCORE = {chips = true, mult = true, xmult = true, xchips = true}
+Run.SCORE = {chips = true, mult = true, xmult = true, xchips = true, emult = true, echips = true}
 
 local function log_once(key, msg) FJ.log_once("run_" .. key, msg) end
 
@@ -31,6 +31,45 @@ local function add_bonus(key, n)
   local g = game()
   g.forge_bonus = g.forge_bonus or {}
   g.forge_bonus[key] = (tonumber(g.forge_bonus[key]) or 0) + n
+end
+
+function Run.boss_ok(key)
+  local b = type(key) == "string" and G.P_BLINDS and G.P_BLINDS[key]
+  if not (b and b.boss) then return false end
+  if R.own_id("boss", key) and not R.own_item("boss", key) then return false end
+  return true
+end
+
+function Run.force_boss(key)
+  local g = game()
+  if not (g and Run.boss_ok(key)) then return false end
+  local rr = g.round_resets
+  local states = rr and rr.blind_states
+  local in_boss = g.blind and g.blind.boss and G.STATE ~= G.STATES.SHOP and G.STATE ~= G.STATES.BLIND_SELECT
+  if rr and rr.blind_choices and states and states.Boss ~= "Defeated" and states.Boss ~= "Current" and not in_boss then
+    rr.blind_choices.Boss = key
+    G.E_MANAGER:add_event(Event({func = function() pcall(Run.refresh_boss) return true end}))
+    return true
+  end
+  g.forge_next_boss = key
+  return true
+end
+
+function Run.refresh_boss()
+  if not (G.blind_select and G.blind_select_opts and G.blind_select_opts.boss and G.STATE == G.STATES.BLIND_SELECT) then return end
+  local old = G.blind_select_opts.boss
+  local par = old.parent
+  if not par then return end
+  old:remove()
+  local dyn, choice, colour_of, mix = rawget(_G, "UIBox_dyn_container"), rawget(_G, "create_UIBox_blind_choice"), rawget(_G, "get_blind_main_colour"), rawget(_G, "mix_colours")
+  local col = colour_of("Boss")
+  local def = {n = G.UIT.ROOT, config = {align = "cm", colour = G.C.CLEAR}, nodes = {dyn({choice("Boss")}, false, col, mix(G.C.BLACK, col, 0.8))}}
+  G.blind_select_opts.boss = UIBox{T = {par.T.x, 0, 0, 0}, definition = def, config = {align = "bmi", offset = {x = 0, y = G.ROOM.T.y + 9}, major = par, xy_bond = "Weak"}}
+r 32 2835 %20%20 -
+r 32 2836 %20%20 -
+r 32 2837 %20%20 -
+r 32 2838 %20%20 -
+l 90
 end
 
 local function fields_of(c)
@@ -63,10 +102,20 @@ function Run.sources()
     local c = center_item(back)
     if c then out[#out + 1] = {c = c, key = back.key, times = 1, deck = true} end
   end
+  local ch = g.challenge and require("functions/forge/forge_challenges").item(g.challenge)
+  if ch then out[#out + 1] = {c = ch, key = g.challenge, times = 1} end
   if g.forge_stake then
+    for _, sid in ipairs(type(g.forge_stake_bases) == "table" and g.forge_stake_bases or {}) do
+      local c = Store.get_item(sid)
+      if c and c.kind == "stake" then out[#out + 1] = {c = c, key = "stake_forge_" .. c.id, times = 1} end
+    end
     local c = Store.get_item(g.forge_stake)
     if c and c.kind == "stake" then out[#out + 1] = {c = c, key = "stake_forge_" .. c.id, times = 1} end
   end
+  local hands = package.loaded["functions/forge/forge_hands"]
+  local hk = G.STATE == G.STATES.HAND_PLAYED and g.last_hand_played
+  local hc = hk and hands and hands.by_key and hands.by_key[hk]
+  if hc and type(hc.rules) == "table" and #hc.rules > 0 then out[#out + 1] = {c = hc, key = hk, times = 1, hand = true} end
   local b = g.blind
   local p = b and b.config and b.config.blind
   if p and p.forge_kind == "blind" and not b.disabled then
@@ -112,7 +161,7 @@ Run.each = each
 local function change_slots(area, n)
   if not area then return end
 r 3 617 %20%20 -
-l 55
+l 61
     area.config.card_limit = math.max(0, area.config.card_limit + n)
     return true
   end}))
@@ -148,7 +197,13 @@ end
 function Run.apply(e, src)
   local g = game()
   if not g then return end
+  if R.SELECT and R.SELECT.apply(e) then return end
+  if R.STICKERS and R.STICKERS.apply(e) then return end
   local id = e.id
+  if id == "give_pack" or id == "free_pack" then
+    require("functions/forge/forge_startpack").queue(e.v)
+    return
+  end
   local n = tonumber(e.n) or 0
   local whole = math.floor(n)
   if id == "hand_size" or id == "hand_size_plus" then
@@ -169,7 +224,7 @@ function Run.apply(e, src)
     g.current_round.reroll_cost = math.max(0, g.current_round.reroll_cost + n)
   elseif id == "discount" then
 r 3 617 %20%20%20%20 -
-l 27
+l 33
       g.discount_percent = math.max(g.discount_percent or 0, n)
       for _, v in pairs(G.I.CARD) do if v.set_cost then v:set_cost() end end
       return true
@@ -178,7 +233,10 @@ l 27
     local have = g.shop and g.shop.joker_max or 2
     local d = math.max(whole, 1 - have)
     G.E_MANAGER:add_event(Event({func = function() change_shop_size(d) return true end}))
-  elseif id == "money" or id == "dollars" then ease_dollars(n)
+  elseif id == "money" then
+    n = R.money_cut and R.money_cut(n) or n
+    if n ~= 0 then ease_dollars(n) end
+  elseif id == "dollars" then ease_dollars(n)
   elseif id == "interest_amount" then g.interest_amount = math.max(0, (g.interest_amount or 1) + n)
   elseif id == "money_per_hand" then g.modifiers.money_per_hand = (g.modifiers.money_per_hand or 1) + n
   elseif id == "money_per_discard" then g.modifiers.money_per_discard = (g.modifiers.money_per_discard or 0) + n
@@ -187,18 +245,21 @@ l 27
     for k, v in pairs(g.probabilities) do g.probabilities[k] = v * math.max(0, n) end
   elseif id == "shop_rate" then
     local key = Run.RATE[e.v]
-    if key then g[key] = math.max(0, (g[key] or 0) + n) end
+    local tid = R.own_id("ctype", e.v)
+    if tid then require("functions/forge/forge_types").set_weight(tid, n, true)
+    elseif key then g[key] = math.max(0, (g[key] or 0) + n) end
   elseif id == "edition_rate" then g.edition_rate = (g.edition_rate or 1) * math.max(0, n)
   elseif id == "rarity_weight" then
-    local key = Run.RARE[tonumber(e.v) or 3]
+    local key = R.own_id("rarity", e.v) and e.v or Run.RARE[tonumber(e.v) or 3]
     if key then add_bonus(key, n) end
+  elseif id == "next_boss" then Run.force_boss(e.v)
   elseif id == "pack_slots" or id == "voucher_slots" then add_bonus(id, whole)
   elseif id == "free_rerolls" then
     add_bonus("free_rerolls", whole)
     if G.STATE == G.STATES.SHOP and g.current_round then
       g.current_round.free_rerolls = math.max(0, (g.current_round.free_rerolls or 0) + whole)
 r 3 603 %20%20%20%20%20%20 -
-l 372
+l 393
     end
   elseif id == "ante_now" then
     local d = math.max(whole, -g.round_resets.ante)
@@ -310,6 +371,8 @@ function Run.score(chips, mult)
       if e.id == "chips" then chips = chips + n
       elseif e.id == "mult" then mult = mult + n
       elseif e.id == "xchips" then chips = chips * n
+      elseif e.id == "echips" then chips = R.EXP.pow(chips, n)
+      elseif e.id == "emult" then mult = R.EXP.pow(mult, n)
       else mult = mult * n end
     end
     changed = true
@@ -337,7 +400,7 @@ function Run.card_bonus(card, id)
     if not Run.pass(e, ctx, s.key .. "_" .. i) then return end
     local n = tonumber(e.n) or 0
     for _ = 1, s.times do
-      if id == "xmult" or id == "xchips" then total = (total or 1) * n else total = (total or 0) + n end
+      if id == "xmult" or id == "xchips" or id == "emult" or id == "echips" then total = (total or 1) * n else total = (total or 0) + n end
     end
   end)
   return total
@@ -396,6 +459,7 @@ function Run.need_of(center)
     need = c and c.requires
   end
   if not need or need == "none" or need == center.key then return nil end
+  if require("functions/forge/forge_gates").parse(need) then return need end
   local v = G.P_CENTERS[need]
   if not v or v.forge_on == false then return nil end
   return need
@@ -404,6 +468,8 @@ end
 function Run.need_met(center)
   local need = Run.need_of(center)
   if not need then return true end
+  local Gates = require("functions/forge/forge_gates")
+  if Gates.parse(need) then return Gates.now(need) end
   local g = game()
   return (g and g.used_vouchers or {})[need] and true or false
 end
@@ -479,6 +545,22 @@ function Run.install()
   Run.hooked = true
   Run.wrap_rules()
   HR.install()
+  local okh, Hooks = pcall(require, "overhaul.hooks")
+  if okh and Hooks then
+    Hooks.wrap(_G, "get_new_boss", function(orig) return function(...)
+      local g = game()
+      local key = g and g.forge_next_boss
+      if key then
+        g.forge_next_boss = nil
+        if Run.boss_ok(key) then
+          g.bosses_used = g.bosses_used or {}
+          g.bosses_used[key] = (g.bosses_used[key] or 0) + 1
+          return key
+        end
+      end
+      return orig(...)
+    end end, {id = "forge_run.next_boss"})
+  end
   if G and G.FUNCS and G.FUNCS.get_poker_hand_info then
     local orig = G.FUNCS.get_poker_hand_info
     G.FUNCS.get_poker_hand_info = function(cards, ...)
@@ -572,14 +654,17 @@ function Run.wrap_funcs()
     F.cash_out = function(e, ...)
       local r = orig(e, ...)
 r 3 617 %20%20%20%20%20%20 -
-l 3
-        local n = Run.bonus("free_rerolls")
+l 4
+        local n = Run.bonus("free_rerolls") + (tonumber(G.GAME.forge_rr_next) or 0)
+        G.GAME.forge_rr_next = nil
         if n ~= 0 and G.GAME.current_round then
           G.GAME.current_round.free_rerolls = math.max(0, (G.GAME.current_round.free_rerolls or 0) + n)
 r 3 603 %20%20%20%20%20%20%20%20%20%20 -
-l 106
+l 108
         end
         Run.fire("shop_enter")
+        local Mess = require("functions/forge/forge_rules").MESS
+        if Mess then Mess.shop_opened() end
         return true
       end}))
       return r

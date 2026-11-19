@@ -1,0 +1,260 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 193
+local M = {}
+
+M.V = 16
+M.WHENS = {"money_earned", "money_spent", "card_drawn", "joker_sold", "joker_added", "tag_added", "boss_beaten", "ante_up", "shop_opened", "hand_leveled", "consumable_added"}
+M.NEW = {money_earned = true, money_spent = true, card_drawn = true, joker_sold = true, joker_added = true, tag_added = true, boss_beaten = true,
+  shop_opened = true, hand_leveled = true, consumable_added = true, amount = true}
+M.RUN = {"money_earned", "money_spent", "card_drawn", "joker_sold", "joker_added", "tag_added", "boss_beaten", "hand_leveled", "consumable_added"}
+M.MONEY = {money_earned = true, money_spent = true}
+
+M.TEXT = {
+  en = {money_earned = "When you earn money", money_spent = "When you spend money", card_drawn = "When a card is drawn",
+    joker_sold = "When another Joker is sold", joker_added = "When you get another Joker", tag_added = "When you get a Tag",
+    boss_beaten = "When you beat a Boss Blind", ante_up = "When a new ante starts", shop_opened = "When you enter the shop",
+    hand_leveled = "When a poker hand levels up", consumable_added = "When you get a consumable"},
+  fr = {money_earned = "Quand vous gagnez de l'argent", money_spent = "Quand vous dépensez de l'argent", card_drawn = "Quand une carte est piochée",
+    joker_sold = "Quand un autre Joker est vendu", joker_added = "Quand vous obtenez un autre Joker", tag_added = "Quand vous obtenez une étiquette",
+    boss_beaten = "Quand vous battez une Blinde de boss", ante_up = "Quand une nouvelle mise commence", shop_opened = "Quand vous entrez dans la boutique",
+    hand_leveled = "Quand une main de poker monte de niveau", consumable_added = "Quand vous obtenez un consommable"},
+  es = {money_earned = "Cuando ganas dinero", money_spent = "Cuando gastas dinero", card_drawn = "Cuando robas una carta",
+    joker_sold = "Cuando se vende otro joker", joker_added = "Cuando consigues otro joker", tag_added = "Cuando consigues una etiqueta",
+    boss_beaten = "Cuando vences a una ciega jefe", ante_up = "Cuando empieza una nueva apuesta", shop_opened = "Cuando entras en la tienda",
+    hand_leveled = "Cuando una mano de póker sube de nivel", consumable_added = "Cuando consigues un consumible"},
+}
+M.RUN_TEXT = {joker_sold = "When a Joker is sold", joker_added = "When you get a Joker"}
+M.TALLY = {money_earned = "t_earned", money_spent = "t_spent", card_drawn = "t_drawn", joker_sold = "t_jsold", tag_added = "t_tags", boss_beaten = "t_bosses"}
+M.COUNTS = {"t_earned", "t_spent", "t_drawn", "t_jsold", "t_tags", "t_bosses"}
+M.COUNT_TEXT = {
+  en = {t_earned = "{C:money}${} earned this run", t_spent = "{C:money}${} spent this run", t_drawn = "card drawn this run",
+    t_jsold = "Joker sold this run", t_tags = "Tag gained this run", t_bosses = "{C:attention}Boss Blind{} beaten this run"},
+  fr = {t_earned = "{C:money}${} gagné dans la partie", t_spent = "{C:money}${} dépensé dans la partie", t_drawn = "carte piochée dans la partie",
+    t_jsold = "Joker vendu dans la partie", t_tags = "étiquette obtenue dans la partie", t_bosses = "{C:attention}Blinde de boss{} battue dans la partie"},
+  es = {t_earned = "{C:money}${} ganado en la partida", t_spent = "{C:money}${} gastado en la partida", t_drawn = "carta robada en la partida",
+    t_jsold = "joker vendido en la partida", t_tags = "etiqueta conseguida en la partida", t_bosses = "{C:attention}ciega jefe{} vencida en la partida"},
+}
+M.COUNT_LABEL = {t_earned = "$ earned this run", t_spent = "$ spent this run", t_drawn = "Card drawn this run",
+  t_jsold = "Joker sold this run", t_tags = "Tag gained this run", t_bosses = "Boss Blind beaten this run"}
+M.AMOUNT = {
+  en = "the amount is %s {C:money}$%d{}", fr = "le montant est %s {C:money}%d ${}", es = "la cantidad es %s {C:money}$%d{}",
+}
+
+function M.rules(R)
+  for _, w in ipairs(M.WHENS) do
+    if not R.member(R.WHEN, w) then R.WHEN[#R.WHEN + 1] = w end
+    if not R.member(R.JOKER_WHEN, w) then R.JOKER_WHEN[#R.JOKER_WHEN + 1] = w end
+  end
+  for _, w in ipairs(M.RUN) do
+    if not R.member(R.HOST_WHEN.run, w) then R.HOST_WHEN.run[#R.HOST_WHEN.run + 1] = w end
+  end
+  R.CARD_WHEN.card_drawn = true
+  if not R.member(R.ONLY, "amount") then R.ONLY[#R.ONLY + 1] = "amount" end
+  R.NUM.amount = {def = 5, lo = 1, hi = 1e6, step = 1, big = 5}
+  R.DEFAULT_ONLY.amount = function() return {id = "amount", op = "at_least", n = 5} end
+  R.CLEAN_ONLY.amount = function(c) c.v = nil; c.op = c.op or "at_least" end
+  R.CHECKS.amount = function(o, context) return R.compare(o.op, tonumber(context and context.forge_amount) or 0, tonumber(o.n) or 5) end
+  R.LABEL_ONLY.amount = "The amount"
+  R.ONLY_WHEN.amount = M.MONEY
+  R.TEXT_ONLY.amount = function(o, s, lang) return string.format(M.AMOUNT[lang] or M.AMOUNT.en, s[o.op or "at_least"] or s.at_least, math.floor(tonumber(o.n) or 5)) end
+  for _, id in ipairs(M.COUNTS) do
+    M.NEW[id] = true
+    if R.COUNTS and not R.member(R.COUNTS, id) then R.COUNTS[#R.COUNTS + 1] = id end
+    if R.COUNT then R.COUNT[id] = function() return M.tally(id) end end
+    if R.LABEL_COUNT then R.LABEL_COUNT[id] = M.COUNT_LABEL[id] end
+  end
+  for lang, t in pairs(R.PER_TEXT or {}) do
+    if type(t) == "table" and type(t.counts) == "table" then
+      for id, txt in pairs(M.COUNT_TEXT[lang] or M.COUNT_TEXT.en) do t.counts[id] = txt end
+    end
+  end
+  R.ONLY_WHEN.used_kind = R.ONLY_WHEN.used_kind or {}
+  R.ONLY_WHEN.used_kind.consumable_added = true
+  local base_only = R.allowed_only
+  R.allowed_only = function(when, only, host, ...)
+    local ho = R.HOST_ONLY[only]
+    if not (ho and not ho[host or "joker"]) then
+      if when == "card_drawn" and R.CARD_ONLY[only] and host ~= "use" then return true end
+      if when == "hand_leveled" and only == "hand" then return true end
+    end
+    return base_only(when, only, host, ...)
+  end
+  local base_need = R.need_v
+  function R.need_v(rules, vars)
+    local need = base_need(rules, vars)
+    for _, r in ipairs(type(rules) == "table" and rules or {}) do
+      if type(r) == "table" and M.NEW[r.when] then need = math.max(need, M.V) end
+      for _, o in ipairs(type(r) == "table" and type(r.only) == "table" and r.only or {}) do
+        if type(o) == "table" and M.NEW[o.id] then need = math.max(need, M.V) end
+      end
+      for _, k in ipairs({"give", "alt"}) do
+        for _, g in ipairs(type(r) == "table" and type(r[k]) == "table" and r[k] or {}) do
+          if type(g) == "table" and M.NEW[g.per] then need = math.max(need, M.V) end
+        end
+      end
+    end
+    return need
+  end
+  local T = require("functions/forge/forge_text")
+  if T and T.W then
+    for lang, t in pairs(M.TEXT) do
+      if T.W[lang] then for w, s in pairs(t) do T.W[lang][w] = s end end
+    end
+  end
+  if T and T.RUN_WHEN then for w, s in pairs(M.RUN_TEXT) do T.RUN_WHEN[w] = s end end
+end
+
+local function copy(ctx)
+  local c = {}
+  for k, v in pairs(ctx or {}) do c[k] = v end
+  return c
+end
+
+function M.jokers(when, ctx, skip)
+  if not (G and G.jokers and G.jokers.cards) then return end
+  for _, j in ipairs(G.jokers.cards) do
+    if j ~= skip and j.calculate_joker then
+      local c = copy(ctx)
+      c.forge_when = when
+      pcall(j.calculate_joker, j, c)
+    end
+  end
+end
+
+function M.tally(id)
+  local t = G and G.GAME and G.GAME.forge_tally
+  return type(t) == "table" and tonumber(t[id]) or 0
+end
+
+function M.count(when, ctx)
+  local id = M.TALLY[when]
+  if not id then return end
+  G.GAME.forge_tally = type(G.GAME.forge_tally) == "table" and G.GAME.forge_tally or {}
+  local add = M.MONEY[when] and (tonumber(ctx and ctx.forge_amount) or 0) or 1
+  G.GAME.forge_tally[id] = (tonumber(G.GAME.forge_tally[id]) or 0) + add
+end
+
+function M.fire(when, ctx, skip, only_jokers)
+  M.busy = M.busy or {}
+  if not (G and G.GAME and G.STAGE == G.STAGES.RUN) then return end
+  M.count(when, ctx)
+  if M.busy[when] then return end
+  M.busy[when] = true
+  local ok, err = pcall(function()
+    M.jokers(when, ctx, skip)
+    if when ~= "ante_up" and not only_jokers then
+      local HR = package.loaded["functions/forge/forge_hostrules"]
+      if HR and HR.fire then HR.fire(when, ctx) end
+    end
+  end)
+  M.busy[when] = nil
+  if not ok then print("[FORGE] moment " .. tostring(when) .. " failed: " .. tostring(err)) end
+end
+
+local function is_joker(card)
+  return type(card) == "table" and card.ability and card.ability.set == "Joker"
+end
+
+local function is_consumable(card)
+  return type(card) == "table" and card.ability and card.ability.consumeable ~= nil and card.ability.set ~= "Joker"
+end
+
+function M.install()
+  if M.hooked then return end
+  local okh, Hooks = pcall(require, "overhaul.hooks")
+  if not (okh and Hooks) then return end
+  M.hooked = true
+  Hooks.wrap(_G, "ease_dollars", function(orig) return function(mod, ...)
+    local r = orig(mod, ...)
+    local n = tonumber(mod) or 0
+    if n > 0 then M.fire("money_earned", {forge_amount = n}) elseif n < 0 then M.fire("money_spent", {forge_amount = -n}) end
+    return r
+  end end, {id = "forge_moments.money"})
+  Hooks.wrap("CardArea", "remove_card", function(orig) return function(self, ...)
+    local card = orig(self, ...)
+    if card and G and self == G.deck then card.forge_from_deck = true end
+    return card
+  end end, {id = "forge_moments.from_deck"})
+  Hooks.wrap("CardArea", "emplace", function(orig) return function(self, card, ...)
+    local r = orig(self, card, ...)
+    if card and card.forge_from_deck then
+      card.forge_from_deck = nil
+      if G and self == G.hand then M.fire("card_drawn", {other_card = card, cardarea = G.hand}) end
+    end
+    return r
+  end end, {id = "forge_moments.drawn"})
+  Hooks.wrap("Card", "sell_card", function(orig) return function(self, ...)
+    if is_joker(self) and self.area == G.jokers then M.fire("joker_sold", {forge_joker = self}, self) end
+    return orig(self, ...)
+  end end, {id = "forge_moments.sold"})
+  Hooks.wrap("Card", "add_to_deck", function(orig) return function(self, from_debuff, ...)
+    local was = self.added_to_deck
+    local r = orig(self, from_debuff, ...)
+    if not from_debuff and not was and self.added_to_deck and is_joker(self) then
+      local me = self
+      if G and G.E_MANAGER and Event then
+r 3 617 %20%20%20%20%20%20%20%20 -
+l 29
+          if me.area == G.jokers then M.fire("joker_added", {forge_joker = me}, me) end
+          return true
+        end}))
+      end
+    elseif not from_debuff and not was and self.added_to_deck and is_consumable(self) then
+      M.fire("consumable_added", {consumeable = self, card = self})
+    end
+    return r
+  end end, {id = "forge_moments.added"})
+  Hooks.wrap(_G, "add_tag", function(orig) return function(tag, ...)
+    local r = orig(tag, ...)
+    M.fire("tag_added", {forge_tag = tag})
+    return r
+  end end, {id = "forge_moments.tag"})
+  Hooks.wrap(_G, "end_round", function(orig) return function(...)
+    local b = G and G.GAME and G.GAME.blind
+    if b and b.boss and (tonumber(G.GAME.chips) or 0) >= (tonumber(b.chips) or 0) and (tonumber(b.chips) or 0) > 0 then
+      M.fire("boss_beaten", {})
+    end
+    return orig(...)
+  end end, {id = "forge_moments.boss"})
+  Hooks.wrap(_G, "level_up_hand", function(orig) return function(card, hand, instant, amount, ...)
+    local r = orig(card, hand, instant, amount, ...)
+    if (tonumber(amount) or 1) > 0 and type(hand) == "string" then M.fire("hand_leveled", {scoring_name = hand, forge_amount = tonumber(amount) or 1}) end
+    return r
+  end end, {id = "forge_moments.level"})
+  Hooks.wrap("G.FUNCS", "cash_out", function(orig) return function(...)
+    local r = orig(...)
+    if G and G.E_MANAGER and Event then
+r 3 617 %20%20%20%20%20%20 -
+l 28
+        M.fire("shop_opened", {}, nil, true)
+        return true
+      end}))
+    end
+    return r
+  end end, {id = "forge_moments.shop"})
+  Hooks.wrap(_G, "ease_ante", function(orig) return function(mod, ...)
+    local r = orig(mod, ...)
+    if (tonumber(mod) or 0) > 0 then M.fire("ante_up", {}) end
+    return r
+  end end, {id = "forge_moments.ante"})
+end
+
+local function register_strings()
+  if not mod_loc_register then return end
+  mod_loc_register{
+    fr = {["When a Joker is sold"] = "Quand un Joker est vendu", ["When you get a Joker"] = "Quand vous obtenez un Joker", ["The amount"] = "Le montant",
+      ["$ earned this run"] = "$ gagné dans la partie", ["$ spent this run"] = "$ dépensé dans la partie", ["Card drawn this run"] = "Carte piochée dans la partie",
+      ["Joker sold this run"] = "Joker vendu dans la partie", ["Tag gained this run"] = "Étiquette obtenue dans la partie", ["Boss Blind beaten this run"] = "Blinde de boss battue dans la partie"},
+    es = {["When a Joker is sold"] = "Cuando se vende un joker", ["When you get a Joker"] = "Cuando consigues un joker", ["The amount"] = "La cantidad",
+      ["$ earned this run"] = "$ ganado en la partida", ["$ spent this run"] = "$ gastado en la partida", ["Card drawn this run"] = "Carta robada en la partida",
+      ["Joker sold this run"] = "Joker vendido en la partida", ["Tag gained this run"] = "Etiqueta conseguida en la partida", ["Boss Blind beaten this run"] = "Ciega jefe vencida en la partida"},
+  }
+end
+
+register_strings()
+
+return M
+end

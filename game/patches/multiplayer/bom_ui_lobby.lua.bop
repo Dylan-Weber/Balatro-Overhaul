@@ -295,7 +295,7 @@ l 21
 
                 local overlay_ref = G.MP_MATCH_START_OVERLAY
 r 1 112 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 412
+l 430
                     trigger = 'after',
                     delay = 2,
                     func = function()
@@ -320,11 +320,11 @@ l 412
         return lobby_wide() and 1.4 * 1.15 or 1.4
     end
 
-    local function player_panel(panel_label, player_name, is_ready, emote_id, showcase)
+    local function player_panel(panel_label, player_name, is_ready, emote_id, showcase, away_text)
         local LS = lobby_ls()
         local border_col = is_ready and G.C.GREEN or G.C.JOKER_GREY
-        local ready_text = mod_loc(is_ready and "READY" or "WAITING")
-        local ready_col  = is_ready and G.C.GREEN or G.C.UI.TEXT_INACTIVE
+        local ready_text = (not is_ready and away_text) or mod_loc(is_ready and "READY" or "WAITING")
+        local ready_col  = is_ready and G.C.GREEN or (away_text and G.C.ORANGE or G.C.UI.TEXT_INACTIVE)
         local text_w = showcase and 1.7*LS or 2.15*LS
         local text_col = { n = G.UIT.C, config = { align = "cm", padding = 0.07*LS,
                 colour = G.C.BLACK, r = 0.08*LS, minw = text_w, minh = 0.91*LS }, nodes = {
@@ -374,7 +374,8 @@ l 412
                 { n = G.UIT.T, config = { text = mod_loc("VS"), scale = 0.42*LS,
                     colour = G.C.GOLD, shadow = true } },
             }},
-            player_panel(mod_loc("OPPONENT"), opp_name, state.opp_ready, "bom_emote_opp", opp_sc),
+            player_panel(mod_loc("OPPONENT"), opp_name, state.opp_ready, "bom_emote_opp", opp_sc,
+                not state.waiting_guest and bom_waitplay and bom_waitplay.opp_status_label and bom_waitplay.opp_status_label(true) or nil),
         }}
     end
 
@@ -465,6 +466,8 @@ l 412
         return mg and mg.lobby_wait and mg.lobby_wait(state) or false
     end
 
+    local create_start_ready_button_core
+
     local function create_start_ready_button(state)
         bot_funcs()
         local is_ready = state.my_ready
@@ -482,6 +485,21 @@ l 412
             items = { "ready" }
         end
         if lobby_waits(state) then items[#items + 1] = { mod_loc("Play while you wait"), "mg_wait_play", G.C.PURPLE, "mg_wait_row" } end
+        local solo = {}
+        if (state.waiting_guest or not state.opp_ready) and bom_waitplay and bom_waitplay.lobby_buttons then solo = bom_waitplay.lobby_buttons("room") end
+        if #solo > 0 then
+            local main = create_start_ready_button_core(state, items, is_ready)
+            local g = grid_spec((#items >= 4 or #items == 2) and 4 or 3)
+            local row = {}
+            for i, it in ipairs(solo) do row[i] = grid_button(g, it[1], it[2], it[3], it[4]) end
+            return { n = G.UIT.R, config = { align = "cm", padding = 0 }, nodes = {
+                { n = G.UIT.C, config = { align = "cm", padding = 0 }, nodes = { main, grid_row(row) } },
+            }}
+        end
+        return create_start_ready_button_core(state, items, is_ready)
+    end
+
+    create_start_ready_button_core = function(state, items, is_ready)
         local g = grid_spec((#items >= 4 or #items == 2) and 4 or 3)
         if lobby_pairs() and (#items > 1 or lobby_wide()) then
             local wide = { w = 2 * g.w + 0.15, h = g.h, scale = g.scale + 0.04 }

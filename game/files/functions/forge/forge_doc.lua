@@ -28,7 +28,8 @@ D.copy = copy
 function D.new(kind, o)
   o = o or {}
   local k = Cat.kind(kind)
-  local d = {id = o.id, kind = k.id, name = o.name or mod_loc("New") .. " " .. mod_loc(k.label), mode = o.mode or "simple", enabled = o.enabled ~= false, created = o.created, text = o.text, art = o.art, from = type(o.from) == "string" and o.from or nil, faces = type(o.faces) == "table" and o.faces or nil}
+  local d = {id = o.id, kind = k.id, name = o.name or mod_loc("New") .. " " .. mod_loc(k.label), mode = o.mode or "simple", enabled = o.enabled ~= false, created = o.created, text = o.text, art = o.art, from = type(o.from) == "string" and o.from or nil, faces = type(o.faces) == "table" and o.faces or nil, unset = o.unset == true or nil,
+    look = require("functions/forge/forge_forcedlook").clean(o.look)}
   if k.rules then
     d.rarity = o.rarity or 1
     d.cost = o.cost or 4
@@ -37,6 +38,7 @@ function D.new(kind, o)
     d.vars = o.vars or {}
     d.requires = type(o.requires) == "string" and o.requires ~= "none" and o.requires or nil
     d.always_ed = type(o.always_ed) == "string" and o.always_ed ~= "none" and o.always_ed or nil
+    d.own_rarity = R.own_id("rarity", o.own_rarity) and o.own_rarity or nil
   else
     d.fields = Cat.clean_fields(k.id, o.fields)
     d.effects = o.effects or {}
@@ -44,7 +46,7 @@ function D.new(kind, o)
       d.rules = type(o.rules) == "table" and o.rules or {}
       d.vars = type(o.vars) == "table" and o.vars or {}
     end
-    if #d.effects == 0 and (k.simple_max or 0) > 0 and k.id ~= "booster" then
+    if o.effects == nil and (k.simple_max or 0) > 0 and k.id ~= "booster" then
       for _, e in ipairs(Cat.effects_for(k.id)) do
         if e.simple then d.effects[1] = Cat.default_effect(k.id, e.id) break end
       end
@@ -168,6 +170,7 @@ D.GAME_TEMPLATES = {
 
 function D.templates(kind)
   if kind == "joker" then return D.JOKER_TEMPLATES end
+  if kind == "challenge" then return require("functions/forge/forge_challenges").templates() end
   return D.GAME_TEMPLATES[kind] or {}
 end
 
@@ -183,6 +186,7 @@ function D.template_name(kind, t)
   if kind == "seal" then return Cat.value_label("seal", t.key) end
   if kind == "edition" then return Cat.value_label("shader", t.key) end
   if kind == "collab" then return Cat.value_label("suit", t.fields.suit) end
+  if kind == "challenge" then return require("functions/forge/forge_challenges").template_name(t) end
   if kind == "booster" then return game_name("Other", (t.key:gsub("_%d+$", ""))) or t.key end
   local set = ({enhancement = "Enhanced", deck = "Back", blind = "Blind", stake = "Stake", tag = "Tag"})[kind] or k.set
   local c = G and G.P_CENTERS and G.P_CENTERS[t.key]
@@ -213,6 +217,47 @@ function D.sample_art(kind, key)
     if s then return {atlas = s.atlas or "chips", x = s.pos.x, y = s.pos.y} end
   end
   return nil
+end
+
+D.BLANK_KINDS = {joker = true, tarot = true, planet = true, spectral = true, voucher = true, booster = true, deck = true, enhancement = true, seal = true, tag = true, blind = true, stake = true}
+D.BLANK_DIR = "resources/textures/1x/forge_blank/"
+
+function D.blank_art(kind)
+  if D.BLANK_KINDS[kind] then return D.BLANK_DIR .. kind .. ".png" end
+  return nil
+end
+
+D.UNSET_FIELDS = {planet = {hand = true}, blind = {size = true, reward = true}, booster = {pack = true}, collab = {suit = true}, suit = {colour = true}, hand = {pattern = true}, ctype = {colour = true}, rarity = {colour = true}, sticker = {look = true}, fusion = {out = true}}
+
+function D.unset(d, f)
+  local u = type(d) == "table" and d.unset == true and D.UNSET_FIELDS[d.kind]
+  if not u then return false end
+  if f == nil then return true end
+  return u[f] == true
+end
+
+function D.choose(d, f)
+  if D.unset(d, f) then d.unset = nil end
+end
+
+D.BLANK_FIELDS = {
+  enhancement = {chips = 0, mult = 0, xmult = 1, money = 0, held_xmult = 1, held_money = 0, breaks = 0},
+  edition = {shader = "none", chips = 0, mult = 0, xmult = 1},
+  planet = {chips = 0, mult = 0},
+}
+
+function D.blank(kind)
+  local k = Cat.kind(kind)
+  local d = D.new(k.id, {name = "", mode = "advanced", rules = {}, vars = {}, effects = {}})
+  d.name = ""
+  if k.rules then
+    d.rules, d.vars = {}, {}
+  else
+    d.effects = {}
+    for f, v in pairs(D.BLANK_FIELDS[k.id] or {}) do if d.fields[f] ~= nil then d.fields[f] = v end end
+  end
+  if D.UNSET_FIELDS[k.id] then d.unset = true end
+  return d
 end
 
 function D.from_template(kind, t)
@@ -248,10 +293,11 @@ local function plain_lines(d, l)
   local out = {}
   local function add(str) for _, line in ipairs(T.wrap(str)) do out[#out + 1] = line end end
   local f = d.fields or {}
-  if d.kind == "planet" then
+  local kind = D.unset(d) and "" or d.kind
+  if kind == "planet" then
     add(string.format(mod_loc("Levels up {C:attention}%s{}"), Cat.value_label("hand", f.hand)) .. (f.levels and f.levels > 1 and (" x" .. f.levels) or ""))
     if d.mode == "advanced" and ((f.mult or 0) > 0 or (f.chips or 0) > 0) then add(string.format(mod_loc("{C:mult}+%s{} Mult and {C:chips}+%s{} Chips per level"), Cat.fmt({}, f.mult), Cat.fmt({}, f.chips))) end
-  elseif d.kind == "enhancement" then
+  elseif kind == "enhancement" then
     if (f.chips or 0) > 0 then add(string.format(mod_loc("{C:chips}+%s{} Chips"), Cat.fmt({}, f.chips))) end
     if (f.mult or 0) > 0 then add(string.format(mod_loc("{C:mult}+%s{} Mult"), Cat.fmt({}, f.mult))) end
     if (f.xmult or 1) > 1 then add(string.format(mod_loc("{X:mult,C:white}X%s{} Mult"), Cat.fmt({}, f.xmult))) end
@@ -267,13 +313,13 @@ local function plain_lines(d, l)
     if f.any_suit then add(mod_loc("Can be used as any suit")) end
     if f.no_rank then add(mod_loc("No rank or suit")) end
     if f.always then add(mod_loc("Always scores")) end
-  elseif d.kind == "edition" then
+  elseif kind == "edition" then
     if (f.chips or 0) > 0 then add(string.format(mod_loc("{C:chips}+%s{} Chips"), Cat.fmt({}, f.chips))) end
     if (f.mult or 0) > 0 then add(string.format(mod_loc("{C:mult}+%s{} Mult"), Cat.fmt({}, f.mult))) end
     if (f.xmult or 1) > 1 then add(string.format(mod_loc("{X:mult,C:white}X%s{} Mult"), Cat.fmt({}, f.xmult))) end
     if f.slot then add(mod_loc("{C:dark_edition}+1{} Joker slot")) end
     if (tonumber(f.sell) or 0) > 0 then add(string.format(mod_loc("{C:money}+$%d{} sell value"), tonumber(f.sell))) end
-  elseif d.kind == "booster" then
+  elseif kind == "booster" then
     local size = f.size or "Normal"
     local shown = d.mode == "advanced" and f.shown or ({Normal = 3, Jumbo = 5, Mega = 5})[size]
     local choose = d.mode == "advanced" and f.choose or ({Normal = 1, Jumbo = 1, Mega = 2})[size]
@@ -285,19 +331,61 @@ local function plain_lines(d, l)
       end
       for i = 1, #names, 3 do add(table.concat(names, ", ", i, math.min(#names, i + 2))) end
     else
-      add(string.format(mod_loc("Choose {C:attention}%d{} of up to {C:attention}%d{} %s cards"), choose or 1, shown or 3, Cat.value_label("plain", f.pack)))
+      if R.own_id("ctype", f.pack) then
+        add(string.format(mod_loc("Choose {C:attention}%d{} of up to {C:attention}%d{} {C:attention}%s{}"), choose or 1, shown or 3, Cat.value_label("ctype", f.pack)))
+      else
+        add(string.format(mod_loc("Choose {C:attention}%d{} of up to {C:attention}%d{} %s cards"), choose or 1, shown or 3, Cat.value_label("plain", f.pack)))
+      end
       if d.mode == "advanced" and f.own_only then add(mod_loc("Only {C:attention}your own{} creations")) end
     end
     local pe = require("functions/forge/forge_editions").pack_edition(d)
     if pe then add(string.format(mod_loc("Every card is {C:dark_edition}%s{}"), require("functions/forge/forge_rules").ed_name(pe))) end
-  elseif d.kind == "collab" then
+  elseif kind == "collab" then
     add(string.format(mod_loc("Face cards of {C:attention}%s{}"), Cat.value_label("suit", f.suit)))
-  elseif d.kind == "blind" then
-    add(string.format(mod_loc("Size {C:red}X%s{}, reward {C:money}$%d{}"), Cat.fmt({}, f.size), f.reward or 5))  elseif d.kind == "voucher" then
+  elseif kind == "fusion" then
+    local Fu = require("functions/forge/forge_fusion")
+    local ff = Fu.fields({fields = f})
+    if ff.c then add(string.format(mod_loc("{C:attention}%s{} + {C:attention}%s{}"), R.card_label(f.a), R.card_label(f.b)) .. " + {C:attention}" .. R.card_label(ff.c) .. "{}")
+    else add(string.format(mod_loc("{C:attention}%s{} + {C:attention}%s{}"), R.card_label(f.a), R.card_label(f.b))) end
+    add(string.format(mod_loc("Fuse into {C:attention}%s{} for {C:money}%s{}"), R.card_label(f.out), Cat.fmt({fmt = "$"}, tonumber(f.cost) or 5)))
+    add(mod_loc("The best edition stays"))
+    if ff.auto then add(mod_loc("Fuses by itself when they meet")) end
+    if ff.between then add(mod_loc("Only between rounds")) end
+    if ff.sacrifice then add(mod_loc("Also destroys a random Joker")) end
+    if ff.keep then add(mod_loc("Keeps stickers and sell value")) end
+  elseif kind == "sticker" then
+    local SX = require("functions/forge/forge_stickerrules")
+    local jokers = SX.fields({fields = f}).on == "Jokers"
+    add(mod_loc(jokers and "A sticker for your Jokers" or "A sticker for your cards"))
+    local w = tonumber(f.chance) or 10
+    local on = jokers and "On {C:attention}%s{} of shop Jokers" or "On {C:attention}%s{} of shop and pack cards"
+    if w > 0 then add(string.format(mod_loc(on), Cat.fmt({fmt = "%"}, w))) else add(mod_loc("Never in the shop, only put by effects")) end
+    SX.doc_lines(f, add)
+  elseif kind == "rarity" then
+    add(mod_loc("A new rarity for your Jokers"))
+    local w = tonumber(f.chance) or 2
+    if w > 0 then add(string.format(mod_loc("Shop odds {C:attention}%s{}"), Cat.fmt({fmt = "%"}, w))) else add(mod_loc("Never in the shop, only made by effects")) end
+    require("functions/forge/forge_rarityrules").doc_lines(f, add)
+  elseif kind == "ctype" then
+    add(mod_loc("Its own family of cards"))
+    local shop = tonumber(f.shop) or 2
+    if shop > 0 then add(string.format(mod_loc("Shows in the shop with weight {C:attention}%s{}"), Cat.fmt({}, shop))) else add(mod_loc("Only in its own packs")) end
+    require("functions/forge/forge_typerules").doc_lines(f, add)
+  elseif kind == "hand" then
+    local Hands = require("functions/forge/forge_hands")
+    local hf = Hands.fields(d)
+    for _, l in ipairs(Hands.doc_lines(hf)) do add(l) end
+    add(string.format(mod_loc("{C:chips}%s{} Chips, {C:mult}%s{} Mult, ranks above {C:attention}%s{}"), Cat.fmt({}, hf.chips), Cat.fmt({}, hf.mult), Cat.value_label("hand", hf.beats)))
+  elseif kind == "suit" then
+    require("functions/forge/forge_suitrules").doc_lines(f, add)
+  elseif kind == "blind" then
+    add(string.format(mod_loc("Size {C:red}X%s{}, reward {C:money}$%d{}"), Cat.fmt({}, f.size), f.reward or 5))  elseif kind == "voucher" then
     if f.requires and f.requires ~= "none" then add(string.format(mod_loc("Needs {C:attention}%s{} first"), Cat.value_label("voucher", f.requires))) end
     if (tonumber(f.max_buys) or 1) > 1 then add(string.format(mod_loc("Can be bought {C:attention}%d{} times"), tonumber(f.max_buys))) end
   end
-  if d.kind ~= "voucher" and f.requires and f.requires ~= "none" then add(string.format(mod_loc("Needs {C:attention}%s{} first"), Cat.value_label("voucher", f.requires))) end
+  local gate = d.kind ~= "voucher" and require("functions/forge/forge_gates").doc(f.requires)
+  if gate then add(gate)
+  elseif d.kind ~= "voucher" and f.requires and f.requires ~= "none" then add(string.format(mod_loc("Needs {C:attention}%s{} first"), Cat.value_label("voucher", f.requires))) end
   if (d.kind == "tarot" or d.kind == "spectral") and D.needs_cards(d) and (f.select or 0) > 0 then
     add(string.format(mod_loc("Pick up to {C:attention}%d{} cards"), f.select))
   end
@@ -319,7 +407,6 @@ function D.lines(d, l)
   end
   local al = require("functions/forge/forge_always").line(d)
   if al then out[#out + 1] = al end
-  if #out == 0 then out = {mod_loc("Does nothing yet")} end
   return out
 end
 
@@ -329,7 +416,6 @@ function D.problems(d)
   if tostring(d.name or ""):gsub("%s", "") == "" then out[#out + 1] = mod_loc("Give it a name") end
   if d.kind == "joker" then
     local rules = d.rules or {}
-    if #rules == 0 then out[#out + 1] = mod_loc("Add a rule") end
     local nv = #(d.vars or {})
     for _, v in ipairs(d.vars or {}) do
       if R.clean_name(v.name) == "" then out[#out + 1] = mod_loc("Give every variable a name") break end
@@ -345,9 +431,7 @@ function D.problems(d)
       if missing then out[#out + 1] = string.format(mod_loc("Rule %d uses a variable that is gone"), i) end
     end
   else
-    local k = Cat.kind(d.kind)
-    local needs = (k.simple_max or 0) > 0 and d.kind ~= "planet" and d.kind ~= "blind" and d.kind ~= "booster"
-    if needs and #(d.effects or {}) == 0 then out[#out + 1] = mod_loc("Add an effect") end
+    if d.kind == "booster" and D.unset(d, "pack") then out[#out + 1] = mod_loc("Pick what it contains") end
     if Cat.chosen_pack(d) and #Cat.pack_cards(d) == 0 then out[#out + 1] = mod_loc("Add at least one card to the pack") end
     if (d.kind == "tarot" or d.kind == "spectral") and D.needs_cards(d) and (d.fields.select or 0) == 0 then out[#out + 1] = mod_loc("Pick at least 1 card for this effect") end
     for _, e in ipairs(d.effects or {}) do
@@ -439,6 +523,7 @@ local function register()
       ["{C:dark_edition}+1{} Joker slot"] = "{C:dark_edition}+1{} emplacement de Joker", ["Choose {C:attention}%d{} of up to {C:attention}%d{} %s cards"] = "Choisissez {C:attention}%d{} carte parmi {C:attention}%d{} (%s)", ["Only {C:attention}your own{} creations"] = "Seulement {C:attention}vos{} créations", ["Every card is {C:dark_edition}%s{}"] = "Chaque carte est {C:dark_edition}%s{}",
       ["Face cards of {C:attention}%s{}"] = "Figures de {C:attention}%s{}", ["Size {C:red}X%s{}, reward {C:money}$%d{}"] = "Taille {C:red}X%s{}, récompense {C:money}%d ${}", ["Pick up to {C:attention}%d{} cards"] = "Choisissez jusqu'à {C:attention}%d{} cartes",
       ["Give every variable a name"] = "Donnez un nom à chaque variable", ["Rule %d uses a variable that is gone"] = "La règle %d utilise une variable supprimée",
+      ["Pick what it contains"] = "Choisissez ce qu'il contient", ["Not chosen yet"] = "Pas encore choisi",
       ["Give it a name"] = "Donnez-lui un nom", ["Add a rule"] = "Ajoutez une règle", ["Rule %d does nothing yet: add an effect"] = "La règle %d ne fait rien : ajoutez un effet", ["Add an effect"] = "Ajoutez un effet",
       ["Pick at least 1 card for this effect"] = "Choisissez au moins 1 carte pour cet effet", ["Copy needs exactly 2 cards to pick"] = "Copier demande exactement 2 cartes", ["Card text is longer than 6 lines"] = "Le texte dépasse 6 lignes",
       ["A bit weak"] = "Un peu faible", ["Very strong"] = "Très fort", ["Nicely balanced"] = "Bien équilibré", ["Most cost $%d"] = "La plupart coûtent %d $", ["Most cost $%d to $%d"] = "La plupart coûtent de %d à %d $",
@@ -450,6 +535,7 @@ local function register()
       ["{C:dark_edition}+1{} Joker slot"] = "{C:dark_edition}+1{} espacio de comodín", ["Choose {C:attention}%d{} of up to {C:attention}%d{} %s cards"] = "Elige {C:attention}%d{} de hasta {C:attention}%d{} cartas (%s)", ["Only {C:attention}your own{} creations"] = "Solo {C:attention}tus{} creaciones", ["Every card is {C:dark_edition}%s{}"] = "Cada carta es {C:dark_edition}%s{}",
       ["Face cards of {C:attention}%s{}"] = "Figuras de {C:attention}%s{}", ["Size {C:red}X%s{}, reward {C:money}$%d{}"] = "Tamaño {C:red}X%s{}, premio {C:money}$%d{}", ["Pick up to {C:attention}%d{} cards"] = "Elige hasta {C:attention}%d{} cartas",
       ["Give every variable a name"] = "Ponle un nombre a cada variable", ["Rule %d uses a variable that is gone"] = "La regla %d usa una variable borrada",
+      ["Pick what it contains"] = "Elige qué contiene", ["Not chosen yet"] = "Sin elegir",
       ["Give it a name"] = "Ponle un nombre", ["Add a rule"] = "Añade una regla", ["Rule %d does nothing yet: add an effect"] = "La regla %d aún no hace nada: añade un efecto", ["Add an effect"] = "Añade un efecto",
       ["Pick at least 1 card for this effect"] = "Elige al menos 1 carta para este efecto", ["Copy needs exactly 2 cards to pick"] = "Copiar necesita exactamente 2 cartas", ["Card text is longer than 6 lines"] = "El texto pasa de 6 líneas",
       ["A bit weak"] = "Algo flojo", ["Very strong"] = "Muy fuerte", ["Nicely balanced"] = "Bien equilibrado", ["Most cost $%d"] = "La mayoría cuestan $%d", ["Most cost $%d to $%d"] = "La mayoría cuestan de $%d a $%d",

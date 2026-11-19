@@ -1,0 +1,836 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 301
+local X = {}
+
+X.V = 16
+X.ON = {"Jokers", "Playing cards", "Consumables", "Any card"}
+X.VANILLA = {"eternal", "perishable", "rental"}
+X.RUN = {stick_joker = true, stick_deck = true, stick_hand = true, stick_shop = true, unstick_joker = true, unstick_deck = true, unstick_hand = true}
+X.WHEN_TEXT = {
+  card_scored = "When a card scores (on a card: this card)", card_held = "When a card is held (on a card: this card)",
+  discard = "When a card is discarded (on a card: this card)", used = "When this card is used",
+}
+
+local function St() return require("functions/forge/forge_stickers") end
+local function Rules() return package.loaded["functions/forge/forge_rules"] end
+local function Hr() return package.loaded["functions/forge/forge_hostrules"] end
+local function ml(s) return mod_loc and mod_loc(s) or s end
+
+local function member(t, v)
+  for _, x in ipairs(t or {}) do if x == v then return true end end
+  return false
+end
+
+function X.fields(c)
+  local f = type(c) == "table" and type(c.fields) == "table" and c.fields or {}
+  local life = tonumber(f.life)
+  if not life or life ~= life then life = 0 end
+  return {on = member(X.ON, f.on) and f.on or "Jokers", life = math.max(0, math.min(1000, math.floor(life)))}
+end
+
+function X.card_kind(card)
+  local ab = type(card) == "table" and card.ability
+  if not ab then return nil end
+  if ab.set == "Joker" then return "Jokers" end
+  if ab.set == "Default" or ab.set == "Enhanced" then return "Playing cards" end
+  if ab.consumeable or ab.set == "Tarot" or ab.set == "Planet" or ab.set == "Spectral" then return "Consumables" end
+  return nil
+end
+
+function X.fits(c, card)
+  local kind = X.card_kind(card)
+  if not kind then return false end
+  local on = X.fields(c).on
+  return on == "Any card" or on == kind
+end
+
+function X.own_value(id) return St().PREFIX .. tostring(id) end
+
+function X.is_value(v)
+  if v == "any" or member(X.VANILLA, v) then return true end
+  local R = Rules()
+  return R and R.own_id("sticker", v) ~= nil or false
+end
+
+function X.values()
+  local out = {"any"}
+  for _, v in ipairs(X.VANILLA) do out[#out + 1] = v end
+  local R = Rules()
+  for _, v in ipairs(R and R.own_values("sticker") or {}) do out[#out + 1] = v end
+  return out
+end
+
+X.VANILLA_LABEL = {eternal = "Eternal", perishable = "Perishable", rental = "Rental"}
+
+function X.label(v)
+  if v == "any" then return ml("Any sticker") end
+  if X.VANILLA_LABEL[v] then
+    local L = G and G.localization and G.localization.descriptions and G.localization.descriptions.Other
+    local e = L and L[v]
+    return e and e.name or ml(X.VANILLA_LABEL[v])
+  end
+  local R = Rules()
+  return R and R.own_label("sticker", v) or tostring(v)
+end
+
+function X.has(card, v)
+  local ab = type(card) == "table" and card.ability
+  if not ab then return false end
+  if v == "any" then return St().any(card) or ab.eternal == true or ab.perishable == true or ab.rental == true end
+  if member(X.VANILLA, v) then return ab[v] == true end
+  local R = Rules()
+  local id = R and R.own_id("sticker", v)
+  return id ~= nil and St().has(card, id)
+end
+
+local function all_cards()
+  local out = {}
+  for _, area in ipairs({G.jokers, G.consumeables}) do
+    for _, c in ipairs(area and area.cards or {}) do out[#out + 1] = c end
+  end
+  for _, c in ipairs(G.playing_cards or {}) do out[#out + 1] = c end
+  return out
+end
+
+function X.count(v, only_jokers)
+  local n = 0
+  for _, c in ipairs(only_jokers and (G.jokers and G.jokers.cards or {}) or all_cards()) do
+    if X.has(c, v) then n = n + 1 end
+  end
+  return n
+end
+
+function X.fixed_rules(c)
+  local fx = St().effects(c)
+  local out = {}
+  local give = {}
+  if fx.chips and fx.chips ~= 0 then give[#give + 1] = {id = "chips", n = fx.chips} end
+  if fx.mult and fx.mult ~= 0 then give[#give + 1] = {id = "mult", n = fx.mult} end
+  if fx.xmult and fx.xmult ~= 1 then give[#give + 1] = {id = "xmult", n = fx.xmult} end
+  if #give > 0 then out[#out + 1] = {when = "card_scored", only = {}, give = give} end
+  if fx.round_money and fx.round_money ~= 0 then out[#out + 1] = {when = "round_end", only = {}, give = {{id = "money", n = fx.round_money}}} end
+  return out
+end
+
+function X.rules_of(c)
+  return type(c) == "table" and type(c.rules) == "table" and #c.rules > 0 and c.rules or nil
+end
+
+function X.card_items(card)
+  local out = {}
+  for _, s in ipairs(St().all_of(card)) do
+    local it = X.item_of(s)
+    if it then out[#out + 1] = it end
+  end
+  return out
+end
+
+function X.card_item(card)
+  local s = St().of_card(card)
+  if not s then return nil end
+  return X.item_of(s)
+end
+
+function X.item_of(s)
+  local list = {}
+  for _, r in ipairs(X.fixed_rules(s.c)) do list[#list + 1] = r end
+  for _, r in ipairs(X.rules_of(s.c) or {}) do list[#list + 1] = r end
+  if #list == 0 then return nil end
+  return {c = {id = s.id, kind = "sticker", rules = list, vars = s.c.vars, enabled = true}, key = "k_" .. s.id}
+end
+
+function X.merge(card, r, s)
+  if type(s) ~= "table" then return r end
+  if type(r) ~= "table" then return s end
+  if s.repetitions then
+    r.repetitions = (r.repetitions or 0) + s.repetitions
+    r.message, r.card = r.message or s.message, r.card or s.card
+    return r
+  end
+  if rawget(_G, "SMODS") then
+    local t, n = r, 0
+    while type(t.extra) == "table" and n < 20 do t, n = t.extra, n + 1 end
+    t.extra = s
+    return r
+  end
+  for _, k in ipairs({"chip_mod", "mult_mod", "chips", "mult", "h_mult", "h_chips", "dollars", "p_dollars"}) do
+    if type(s[k]) == "number" then r[k] = (tonumber(r[k]) or 0) + s[k] end
+  end
+  for _, k in ipairs({"Xmult_mod", "Xchip_mod", "x_mult", "x_chips"}) do
+    if type(s[k]) == "number" then r[k] = (tonumber(r[k]) or 1) * s[k] end
+  end
+  if s.message ~= nil then
+    if r.message ~= nil and card_eval_status_text then
+      pcall(card_eval_status_text, s.card or card, "extra", nil, nil, nil, {message = s.message, colour = s.colour})
+    else
+      r.message, r.colour = s.message, s.colour
+    end
+  end
+  for k, v in pairs(s) do if r[k] == nil then r[k] = v end end
+  return r
+end
+
+function X.run_rules(card, context, s)
+  local R = Rules()
+  local H = Hr()
+  local rules = R and X.rules_of(s.c)
+  if not (rules and H) then return nil end
+  local key = "k_" .. s.id
+  return R.calculate(card, context, R.clean_rules(rules, "sticker"), R.clean_vars(s.c.vars), {state = H.card_state(card, key), host = "joker", seed = "forge_" .. key})
+end
+
+function X.joker(card, context, r)
+  if not (card.ability and card.ability.set == "Joker") then return r end
+  for _, s in ipairs(St().all_of(card)) do
+    if X.rules_of(s.c) then
+      local ok, out = pcall(X.run_rules, card, context, s)
+      if not ok then print("[FORGE] sticker rules failed: " .. tostring(out)) else r = X.merge(card, r, out) end
+    end
+  end
+  return r
+end
+
+function X.used(card)
+  for _, s in ipairs(St().all_of(card)) do
+    if X.rules_of(s.c) then X.run_rules(card, {forge_when = "used", consumeable = card}, s) end
+  end
+end
+
+local function status(card, msg, colour)
+  if card and card_eval_status_text then pcall(card_eval_status_text, card, "extra", nil, nil, nil, {message = msg, colour = colour or G.C.FILTER}) end
+end
+
+function X.peel(card, id)
+  St().remove(card, id or card.ability.forge_stk)
+  if card.set_cost then pcall(card.set_cost, card) end
+  status(card, ml("Peeled!"))
+end
+
+function X.tick(card)
+  if not (card and card.ability) then return false end
+  local peeled = false
+  for _, id in ipairs(St().ids(card)) do
+    local life = tonumber(St().get(card, id, "life"))
+    if life then
+      life = life - 1
+      if life <= 0 then
+        X.peel(card, id)
+        peeled = true
+      else
+        St().set(card, id, "life", life)
+      end
+    end
+  end
+  return peeled
+end
+
+function X.round_end_other(card)
+  local list = St().all_of(card)
+  if #list == 0 or not G.GAME then return end
+  local round = G.GAME.round or 0
+  if card.ability.forge_stk_round == round then return end
+  card.ability.forge_stk_round = round
+  local fx = St().effects_on(card)
+  local kind = X.card_kind(card)
+  if kind == "Consumables" then
+    local R = Rules()
+    local pay = fx.round_money and R and R.money_cut and R.money_cut(fx.round_money) or fx.round_money
+    if pay and pay ~= 0 then
+      ease_dollars(pay)
+      status(card, (pay > 0 and "$" or "-$") .. math.abs(pay), pay > 0 and G.C.MONEY or G.C.RED)
+    end
+    if fx.sell_gain and fx.sell_gain ~= 0 then
+      card.ability.extra_value = (card.ability.extra_value or 0) + fx.sell_gain
+      card:set_cost()
+      status(card, localize("k_val_up"), G.C.MONEY)
+    end
+    for _, s in ipairs(list) do
+      if X.rules_of(s.c) then pcall(X.run_rules, card, {end_of_round = true}, s) end
+    end
+  end
+  for _, s in ipairs(list) do
+    local rl = St().effects(s.c).rounds_left
+    local left = rl and (tonumber(St().get(card, s.id, "left")) or rl) - 1
+    if left then St().set(card, s.id, "left", left) end
+    if left and left <= 0 then
+      status(card, localize("k_extinct_ex"))
+      G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.3, func = function()
+        if not card.removed then
+          if kind == "Playing cards" then
+            card:start_dissolve()
+            local H = Hr()
+            if H and H.notify_removed then pcall(H.notify_removed, {card}) end
+          else card:start_dissolve() end
+        end
+        return true
+      end}))
+      return
+    end
+  end
+  X.tick(card)
+end
+
+function X.round_end_all()
+  local list = {}
+  for _, c in ipairs(G.consumeables and G.consumeables.cards or {}) do list[#list + 1] = c end
+  for _, c in ipairs(G.playing_cards or {}) do list[#list + 1] = c end
+  for _, c in ipairs(list) do
+    if St().any(c) and not c.removed then
+      local ok, err = pcall(X.round_end_other, c)
+      if not ok then print("[FORGE] sticker round end failed: " .. tostring(err)) end
+    end
+  end
+end
+
+local function pick(pool, n, seed)
+  local out = {}
+  local left = {}
+  for i, c in ipairs(pool) do left[i] = c end
+  for _ = 1, math.min(n, #left) do
+    local c, i = pseudorandom_element(left, pseudoseed(seed))
+    out[#out + 1] = c
+    table.remove(left, i)
+  end
+  return out
+end
+
+function X.put(card, v)
+  local ab = type(card) == "table" and card.ability
+  if not ab or card.removed then return false end
+  if member(X.VANILLA, v) then
+    if ab[v] or X.card_kind(card) ~= "Jokers" then return false end
+    if v == "eternal" then
+      if ab.perishable or not card.set_eternal then return false end
+r 31 2135 %20%20%20%20%20%20 -
+l 2
+    elseif v == "perishable" then
+      if ab.eternal or not card.set_perishable then return false end
+r 31 2142 %20%20%20%20%20%20 -
+l 1
+    elseif card.set_rental then
+r 31 2145 %20%20%20%20%20%20 -
+l 435
+    end
+    return ab[v] == true
+  end
+  local R = Rules()
+  local sid = R and R.own_id("sticker", v)
+  if not sid or St().has(card, sid) then return false end
+  return St().apply(card, sid)
+end
+
+function X.held(card)
+  local ab = type(card) == "table" and card.ability
+  local out = {}
+  if not ab then return out end
+  for _, k in ipairs(X.VANILLA) do
+    if ab[k] then out[#out + 1] = k end
+  end
+  for _, id in ipairs(St().ids(card)) do out[#out + 1] = {own = id} end
+  return out
+end
+
+function X.take(card, v, seed)
+  local ab = type(card) == "table" and card.ability
+  if not ab then return false end
+  if v == "any" then
+    local held = X.held(card)
+    if #held == 0 then return false end
+    local one = pick(held, 1, seed or "forge_unstick")[1]
+    if type(one) == "table" then
+      if not St().remove(card, one.own) then return false end
+      if card.set_cost then pcall(card.set_cost, card) end
+      return true
+    end
+    v = one
+  end
+  local done = false
+  for _, k in ipairs(X.VANILLA) do
+    if v == k and ab[k] then
+      local dead = k == "perishable" and (tonumber(ab.perish_tally) or 1) <= 0
+      if k == "rental" and card.set_rental then card:set_rental(false) else ab[k] = nil end
+      if k == "perishable" then ab.perish_tally = nil end
+      if dead and card.set_debuff then card:set_debuff(false) end
+      done = true
+    end
+  end
+  local R = Rules()
+  local sid = R and R.own_id("sticker", v)
+  if sid and St().remove(card, sid) then
+    if card.set_cost then pcall(card.set_cost, card) end
+    done = true
+  end
+  return done
+end
+
+local function juice(list)
+  for _, c in ipairs(list) do
+    if c.juice_up then G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.1, func = function() c:juice_up(0.3, 0.4); return true end})) end
+  end
+end
+
+function X.put_many(v, area_cards, n, seed)
+  local pool = {}
+  for _, c in ipairs(area_cards or {}) do
+    if not c.removed and not X.has(c, v) and (not member(X.VANILLA, v) or X.card_kind(c) == "Jokers") then pool[#pool + 1] = c end
+  end
+  local done = {}
+  for _, c in ipairs(pick(pool, math.max(1, n), seed)) do
+    if X.put(c, v) then done[#done + 1] = c end
+  end
+  juice(done)
+  return done
+end
+
+function X.put_random(v, seed)
+  return X.put_many(v, G.jokers and G.jokers.cards, 1, seed)[1]
+end
+
+function X.take_many(v, area_cards, n, seed)
+  local pool = {}
+  for _, c in ipairs(area_cards or {}) do
+    if not c.removed and X.has(c, v) then pool[#pool + 1] = c end
+  end
+  local done = {}
+  for _, c in ipairs(pick(pool, math.max(1, n), seed)) do
+    if X.take(c, v, seed) then done[#done + 1] = c end
+  end
+  juice(done)
+  return done
+end
+
+function X.stick_random(id, area_cards, n, seed)
+  local pool = {}
+  for _, c in ipairs(area_cards or {}) do
+    if c.ability and not St().has(c, id) and #St().ids(c) < St().PER_CARD and not c.removed then pool[#pool + 1] = c end
+  end
+  local done = {}
+  for _, c in ipairs(pick(pool, math.max(1, n), seed)) do
+    if St().apply(c, id) then done[#done + 1] = c end
+  end
+  for _, c in ipairs(done) do
+    if c.juice_up then G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.1, func = function() c:juice_up(0.3, 0.4); return true end})) end
+  end
+  return done
+end
+
+function X.shop_bonus(id)
+  local t = G and G.GAME and G.GAME.forge_stk_shop
+  return type(t) == "table" and tonumber(t[id]) or 0
+end
+
+function X.apply(e)
+  local id = e and e.id
+  if not X.RUN[id] then return false end
+  local R = Rules()
+  local n = math.max(1, math.floor(tonumber(e.n) or 1))
+  if id == "unstick_joker" or id == "unstick_deck" or id == "unstick_hand" then
+    local area = id == "unstick_joker" and (G.jokers and G.jokers.cards) or id == "unstick_deck" and G.playing_cards or (G.hand and G.hand.cards)
+    if X.is_value(e.v) then X.take_many(e.v, area, n, "forge_" .. id) end
+    return true
+  end
+  if id == "stick_joker" and member(X.VANILLA, e.v) then
+    X.put_many(e.v, G.jokers and G.jokers.cards, n, "forge_stk_j")
+    return true
+  end
+  local sid = R and R.own_id("sticker", e.v)
+  if not (sid and St().by_id[sid]) then return true end
+  if id == "stick_joker" then X.stick_random(sid, G.jokers and G.jokers.cards, n, "forge_stk_j")
+  elseif id == "stick_deck" then X.stick_random(sid, G.playing_cards, n, "forge_stk_d")
+  elseif id == "stick_hand" then X.stick_random(sid, G.hand and G.hand.cards, n, "forge_stk_h")
+  elseif id == "stick_shop" and G.GAME then
+    G.GAME.forge_stk_shop = type(G.GAME.forge_stk_shop) == "table" and G.GAME.forge_stk_shop or {}
+    G.GAME.forge_stk_shop[sid] = math.max(0, math.min(100, X.shop_bonus(sid) + (tonumber(e.n) or 0)))
+  end
+  return true
+end
+
+function X.doc_lines(fields, add)
+  local f = X.fields({fields = fields})
+  if f.on ~= "Jokers" then add(string.format(ml("Goes on {C:attention}%s{}"), ml(f.on))) end
+  if f.life > 0 then add(string.format(ml("Peels off after {C:attention}%d{} rounds"), f.life)) end
+end
+
+X.PER = {en = "card with %s", fr = "carte avec %s", es = "carta con %s"}
+X.HAVE = {en = "you have %s {C:attention}%d{} Jokers with %s", fr = "vous avez %s {C:attention}%d{} jokers avec %s", es = "tienes %s {C:attention}%d{} comodines con %s"}
+X.CARD = {en = "the card has %s", fr = "la carte a %s", es = "la carta tiene %s"}
+X.ONE = {en = "card with {C:attention}%s{}", fr = "carte avec {C:attention}%s{}", es = "carta con {C:attention}%s{}"}
+X.GIVE_TEXT = {
+  en = {stick_card = "put {C:attention}%s{} on the card", stick_self = "put {C:attention}%s{} on this Joker",
+    unstick_card = "remove {C:attention}%s{} from the card", unstick_self = "remove {C:attention}%s{} from this Joker"},
+  fr = {stick_card = "colle {C:attention}%s{} sur la carte", stick_self = "colle {C:attention}%s{} sur ce Joker",
+    unstick_card = "retire {C:attention}%s{} de la carte", unstick_self = "retire {C:attention}%s{} de ce Joker"},
+  es = {stick_card = "pone {C:attention}%s{} en la carta", stick_self = "pone {C:attention}%s{} en este comodín",
+    unstick_card = "quita {C:attention}%s{} de la carta", unstick_self = "quita {C:attention}%s{} de este comodín"},
+}
+X.ANY_TEXT = {en = "any sticker", fr = "n'importe quel autocollant", es = "cualquier pegatina"}
+X.SELF_OK = {stick_self = true, unstick_card = true, unstick_self = true}
+
+local function first_own()
+  local R = Rules()
+  local vals = R and R.own_values("sticker") or {}
+  return vals[1] or (St().PREFIX .. "x")
+end
+
+function X.text()
+  local T = package.loaded["functions/forge/forge_text"]
+  if not T then return end
+  T.KIND_WHEN_TEXT = T.KIND_WHEN_TEXT or {}
+  T.KIND_WHEN_TEXT.sticker = X.WHEN_TEXT
+end
+
+function X.rules(R)
+  X.text()
+  R.HOST_OF.sticker = "sticker"
+  local whens = {}
+  for _, w in ipairs(R.JOKER_WHEN) do whens[#whens + 1] = w end
+  whens[#whens + 1] = "used"
+  R.KIND_WHEN.sticker = whens
+  R.HOST_WHEN.sticker = whens
+  R.STICKERS = X
+  local base_give = R.allowed_give
+  R.allowed_give = function(when, give, host, ...)
+    if host == "sticker" then host = "joker" end
+    return base_give(when, give, host, ...)
+  end
+  local base_only = R.allowed_only
+  R.allowed_only = function(when, only, host, ...)
+    if host == "sticker" then host = "joker" end
+    return base_only(when, only, host, ...)
+  end
+
+  local function val_ok(id, v)
+    if id == "unstick_card" or id == "unstick_self" then return X.is_value(v) end
+    if id == "stick_self" and member(X.VANILLA, v) then return true end
+    return R.own_id("sticker", v) ~= nil
+  end
+  X.val_ok = val_ok
+  for _, id in ipairs({"stick_card", "stick_self", "unstick_card", "unstick_self"}) do
+    if not R.member(R.GIVE, id) then R.GIVE[#R.GIVE + 1] = id end
+    local def = id:sub(1, 2) == "un" and function() return "any" end or id == "stick_self" and function() return R.own_values("sticker")[1] or "eternal" end or first_own
+    R.DEFAULT_GIVE[id] = function() return {id = id, v = def()} end
+    R.CLEAN_GIVE[id] = function(e)
+      if not val_ok(id, e.v) then e.v = def() end
+      e.n = nil
+    end
+    R.TEXT_GIVE[id] = function(g, s, lang)
+      local name = g.v == "any" and (X.ANY_TEXT[lang] or X.ANY_TEXT.en) or X.label(g.v)
+      return string.format((X.GIVE_TEXT[lang] or X.GIVE_TEXT.en)[id], name)
+    end
+    R.SIMPLE_GIVE[id] = true
+  end
+  R.GIVE_WHEN.stick_card = {card_scored = true, card_held = true, discard = true}
+  R.GIVE_WHEN.unstick_card = {card_scored = true, card_held = true, discard = true}
+  R.HOST_GIVE.stick_self = {joker = true}
+  R.HOST_GIVE.unstick_self = {joker = true}
+  R.LABEL_GIVE.stick_card, R.LABEL_GIVE.stick_self = "Put a sticker on the card", "Put a sticker on this Joker"
+  R.LABEL_GIVE.unstick_card, R.LABEL_GIVE.unstick_self = "Remove a sticker from the card", "Remove a sticker from this Joker"
+  R.VALUES_GIVE = R.VALUES_GIVE or {}
+  local function opts_of(list)
+    return function()
+      local out = {}
+      for _, v in ipairs(list()) do out[#out + 1] = {label = X.label(v), value = v} end
+      return out
+    end
+  end
+  R.VALUES_GIVE.stick_card = opts_of(function() return R.own_values("sticker") end)
+  R.VALUES_GIVE.stick_self = opts_of(function()
+    local out = {}
+    for _, v in ipairs(X.VANILLA) do out[#out + 1] = v end
+    for _, v in ipairs(R.own_values("sticker")) do out[#out + 1] = v end
+    return out
+  end)
+  R.VALUES_GIVE.unstick_card, R.VALUES_GIVE.unstick_self = opts_of(X.values), opts_of(X.values)
+  R.NUM_LABEL = R.NUM_LABEL or {}
+  for _, id in ipairs({"stick_card", "stick_self", "unstick_card", "unstick_self"}) do
+    R.NUM_LABEL[id] = function(g) return ml(R.LABEL_GIVE[id]) .. ": " .. X.label(g.v) end
+  end
+  R.DOS.stick_card = function(g, card, src, context, other)
+    local target = other or (context and context.other_card)
+    local sid = R.own_id("sticker", g.v)
+    if not (target and sid and target.ability) or St().has(target, sid) then return end
+    if St().apply(target, sid) then
+      G.E_MANAGER:add_event(Event({func = function() target:juice_up(0.3, 0.4); return true end}))
+      R.status(src, ml("Sticker!"), G.C.FILTER)
+    end
+  end
+  R.DOS.stick_self = function(g, card, src, context)
+    if context and context.blueprint then return end
+    if not (card and card.ability and val_ok("stick_self", g.v)) then return end
+    if X.put(card, g.v) then R.status(src, ml("Sticker!"), G.C.FILTER) end
+  end
+  R.DOS.unstick_card = function(g, card, src, context, other)
+    local target = other or (context and context.other_card)
+    if not (target and target.ability and X.is_value(g.v)) then return end
+    if X.take(target, g.v) then
+      G.E_MANAGER:add_event(Event({func = function() target:juice_up(0.3, 0.4); return true end}))
+      R.status(src, ml("Peeled!"), G.C.FILTER)
+    end
+  end
+  R.DOS.unstick_self = function(g, card, src, context)
+    if context and context.blueprint then return end
+    if not (card and card.ability and X.is_value(g.v)) then return end
+    if X.take(card, g.v) then R.status(src, ml("Peeled!"), G.C.FILTER) end
+  end
+
+  for _, id in ipairs({"card_sticker", "jokers_sticker"}) do
+    if not R.member(R.ONLY, id) then R.ONLY[#R.ONLY + 1] = id end
+    R.FILTER_ONLY[id] = true
+  end
+  R.CARD_ONLY = R.CARD_ONLY or {}
+  R.CARD_ONLY.card_sticker = true
+  R.NUM.jokers_sticker = {def = 1, lo = 0, hi = 100, step = 1, big = 5}
+  R.DEFAULT_ONLY.card_sticker = function() return {id = "card_sticker", v = "any"} end
+  R.DEFAULT_ONLY.jokers_sticker = function() return {id = "jokers_sticker", v = "any", op = "at_least", n = 1} end
+  R.CLEAN_ONLY.card_sticker = function(c)
+    if not X.is_value(c.v) then c.v = "any" end
+    c.op, c.n = nil, nil
+  end
+  R.CLEAN_ONLY.jokers_sticker = function(c)
+    if not X.is_value(c.v) then c.v = "any" end
+    c.op = c.op or "at_least"
+  end
+  R.CHECKS.card_sticker = function(o, context, card, other)
+    local target = other or (context and (context.other_card or context.consumeable))
+    if R.cur_host == "card" and context and context.forge_self then target = context.forge_self end
+    return X.has(target, o.v)
+  end
+  R.CHECKS.jokers_sticker = function(o) return R.compare(o.op, X.count(o.v, true), o.n) end
+  R.TEXT_ONLY.card_sticker = function(o, s, lang) return string.format(X.CARD[lang] or X.CARD.en, "{C:attention}" .. X.label(o.v) .. "{}") end
+  R.TEXT_ONLY.jokers_sticker = function(o, s, lang)
+    local op = (s and (s[o.op or "at_least"] or s.at_least)) or ""
+    return string.format(X.HAVE[lang] or X.HAVE.en, op, tonumber(o.n) or 0, "{C:attention}" .. X.label(o.v) .. "{}")
+  end
+  R.LABEL_ONLY.card_sticker, R.LABEL_ONLY.jokers_sticker = "The card has a sticker", "Jokers with a sticker"
+  local base_filter = R.filter_values
+  R.filter_values = function(id)
+    if id == "card_sticker" or id == "jokers_sticker" then return X.values() end
+    return base_filter(id)
+  end
+  local base_flabel = R.FILTER_LABEL
+  R.FILTER_LABEL = function(id, v)
+    if (id == "card_sticker" or id == "jokers_sticker" or id == "stickered") and X.is_value(v) then return X.label(v) end
+    return base_flabel and base_flabel(id, v) or nil
+  end
+
+  if not R.member(R.COUNTS, "stickered") then R.COUNTS[#R.COUNTS + 1] = "stickered" end
+  R.COUNT_MATCH.stickered = true
+  R.COUNT.stickered = function(g) return X.count(g.m) end
+  if R.LABEL_COUNT then R.LABEL_COUNT.stickered = "Card with a sticker" end
+  for lang, t in pairs(R.PER_TEXT or {}) do
+    if type(t) == "table" and type(t.counts) == "table" then t.counts.stickered = X.PER[lang] or X.PER.en end
+  end
+  local base_matches = R.count_matches
+  R.count_matches = function(per)
+    if per == "stickered" then return X.values() end
+    return base_matches(per)
+  end
+  local base_one = R.one_label
+  R.one_label = function(v, lang, ...)
+    if X.is_value(v) and (v == "any" or X.VANILLA_LABEL[v] or R.own_id("sticker", v)) then return string.format(X.ONE[lang] or X.ONE.en, X.label(v)) end
+    return base_one(v, lang, ...)
+  end
+  local base_m = R.count_m_label
+  if base_m then
+    R.count_m_label = function(per, m, lang)
+      if per == "stickered" then return string.format(X.ONE[lang] or X.ONE.en, X.label(m)) end
+      return base_m(per, m, lang)
+    end
+  end
+  for _, id in ipairs({"chips_per", "mult_per", "xmult_per", "money_per", "gain_mult_per", "gain_xmult_per"}) do
+    local fn = R.CLEAN_GIVE[id]
+    if type(fn) == "function" then
+      R.CLEAN_GIVE[id] = function(e, ...)
+        local m, per = type(e) == "table" and e.m, type(e) == "table" and e.per
+        local r = fn(e, ...)
+        if per == "stickered" and X.is_value(m) then e.per, e.m = per, m end
+        return r
+      end
+    end
+  end
+  local base_need = R.need_v
+  R.need_v = function(rules, vars)
+    local need = base_need(rules, vars)
+    for _, r in ipairs(type(rules) == "table" and rules or {}) do
+      for _, k in ipairs({"give", "alt", "only"}) do
+        for _, g in ipairs(type(r) == "table" and type(r[k]) == "table" and r[k] or {}) do
+          if type(g) == "table" and (g.per == "stickered" or g.id == "card_sticker" or g.id == "jokers_sticker" or g.id == "stick_card" or g.id == "stick_self" or X.RUN[g.id]) then need = math.max(need, X.V) end
+          if type(g) == "table" and (g.id == "unstick_card" or g.id == "unstick_self") then need = math.max(need, X.V) end
+        end
+      end
+    end
+    return need
+  end
+end
+
+function X.cat(Cat, n, run)
+  local list = {
+    run("stick_joker", "Sticker on random Jokers", n(1, 100, 1), "Puts {C:attention}%s{} on {C:attention}%s{} random Jokers", {v = "jsticker", args = {"v", "n"}, line1 = "Puts {C:attention}%s{} on a random Joker", simple = true, need = X.V}),
+    run("stick_deck", "Sticker on random deck cards", n(1, 500, 5), "Puts {C:attention}%s{} on {C:attention}%s{} random cards in your deck", {v = "sticker", args = {"v", "n"}, need = X.V}),
+    run("stick_hand", "Sticker on random cards in hand", n(1, 100, 1), "Puts {C:attention}%s{} on {C:attention}%s{} random cards in hand", {v = "sticker", args = {"v", "n"}, need = X.V}),
+    run("unstick_joker", "Remove a sticker from Jokers", n(1, 100, 1), "Removes {C:attention}%s{} from {C:attention}%s{} random Jokers",
+      {v = "anysticker", args = {"v", "n"}, line1 = "Removes {C:attention}%s{} from a random Joker", need = X.V}),
+    run("unstick_deck", "Remove a sticker from deck cards", n(1, 500, 5), "Removes {C:attention}%s{} from {C:attention}%s{} random cards in your deck",
+      {v = "anysticker", args = {"v", "n"}, need = X.V}),
+    run("unstick_hand", "Remove a sticker from cards in hand", n(1, 100, 1), "Removes {C:attention}%s{} from {C:attention}%s{} random cards in hand",
+      {v = "anysticker", args = {"v", "n"}, need = X.V}),
+    run("stick_shop", "Sticker on shop cards", n(1, 100, 20, 5, "%"), "{C:attention}%s{} on {C:attention}%s{} more shop cards", {v = "sticker", args = {"v", "n"}, need = X.V}),
+  }
+  for _, e in ipairs(list) do Cat.RUN[#Cat.RUN + 1] = e end
+  local function add(l, e)
+    if not l then return end
+    for _, x in ipairs(l) do if x.id == e.id then return end end
+    local c = {}
+    for k, v in pairs(e) do c[k] = v end
+    l[#l + 1] = c
+  end
+  local function plain(e)
+    local c = {}
+    for k, v in pairs(e) do c[k] = v end
+    c.run = nil
+    return c
+  end
+  for _, e in ipairs(list) do
+    for _, k in ipairs({"voucher", "deck", "stake", "challenge"}) do add(Cat.EFFECTS[k], e) end
+    if e.id ~= "stick_shop" then
+      for _, k in ipairs({"use", "spectral", "tag"}) do add(Cat.EFFECTS[k], plain(e)) end
+    end
+  end
+  add(Cat.EFFECTS.boss, list[3])
+  add(Cat.EFFECTS.challenge, {id = "ch_joker_sticker", label = "Sticker on the last starting Joker", v = "sticker", line = "The last starting Joker has {C:attention}%s{}", new = true, need = X.V})
+  local k = Cat.BY_ID.sticker
+  if k then
+    local have = {}
+    for _, f in ipairs(k.fields or {}) do have[f.id] = true end
+    if not have.on then
+      table.insert(k.fields, {id = "on", label = "Goes on", type = "choice", options = X.ON, def = "Jokers"})
+      table.insert(k.fields, {id = "life", label = "Lasts rounds", type = "num", num = n(0, 100, 0)})
+    end
+  end
+  for _, e in ipairs(Cat.EFFECTS.sticker or {}) do
+    if e.id == "times" then e.label = "Joker scores more" end
+  end
+end
+
+function X.install()
+  if X.hooked then return end
+  local okh, Hooks = pcall(require, "overhaul.hooks")
+  if not (okh and Hooks) then return end
+  X.hooked = true
+  X.text()
+  local H = Hr() or require("functions/forge/forge_hostrules")
+  if H and H.items_on and not H.forge_stk_wrapped then
+    H.forge_stk_wrapped = true
+    local base = H.items_on
+    H.items_on = function(card)
+      local out = base(card)
+      if card and card.ability and not card.debuff and St().any(card) and (card.ability.set == "Default" or card.ability.set == "Enhanced") then
+        local ok, its = pcall(X.card_items, card)
+        if ok then for _, it in ipairs(its) do out[#out + 1] = it end end
+      end
+      return out
+    end
+  end
+  Hooks.wrap("Card", "use_consumeable", function(orig) return function(self, ...)
+    local r = orig(self, ...)
+    if St().any(self) then
+      local ok, err = pcall(X.used, self)
+      if not ok then print("[FORGE] sticker use failed: " .. tostring(err)) end
+    end
+    return r
+  end end, {id = "forge_stickerrules.use"})
+  Hooks.wrap("Game", "start_run", function(orig) return function(self, args, ...)
+    local r = orig(self, args, ...)
+    local ch = type(args) == "table" and args.challenge
+    if type(ch) == "table" and type(ch.jokers) == "table" then
+      for k, v in ipairs(ch.jokers) do
+        if type(v) == "table" and v.forge_stk then
+r 3 617 %20%20%20%20%20%20%20%20%20%20 -
+l 83
+            local j = G.jokers and G.jokers.cards[k]
+            if j then St().apply(j, v.forge_stk) end
+            return true
+          end}))
+        end
+      end
+    end
+    return r
+  end end, {id = "forge_stickerrules.start"})
+  if type(end_round) == "function" then
+    local orig = end_round
+    end_round = function(...)
+      pcall(X.round_end_all)
+      return orig(...)
+    end
+  end
+end
+
+local function register_strings()
+  if not mod_loc_register then return end
+  mod_loc_register{
+    fr = {
+      ["Goes on"] = "Se colle sur", ["Lasts rounds"] = "Dure des manches", ["Jokers"] = "Jokers", ["Consumables"] = "Consommables", ["Any card"] = "N'importe quelle carte",
+      ["Goes on {C:attention}%s{}"] = "Se colle sur {C:attention}%s{}",
+      ["Peels off after {C:attention}%d{} rounds"] = "Se décolle après {C:attention}%d{} manches",
+      ["Peeled!"] = "Décollé !",
+      ["Sticker!"] = "Autocollant !",
+      ["Remove a sticker from the card"] = "Retirer un autocollant de la carte", ["Remove a sticker from this Joker"] = "Retirer un autocollant de ce Joker",
+      ["Remove a sticker from Jokers"] = "Retirer un autocollant de Jokers",
+      ["Remove a sticker from deck cards"] = "Retirer un autocollant de cartes du deck", ["Remove a sticker from cards in hand"] = "Retirer un autocollant de cartes en main",
+      ["Removes {C:attention}%s{} from {C:attention}%s{} random cards in your deck"] = "Retire {C:attention}%s{} de {C:attention}%s{} cartes du deck au hasard",
+      ["Removes {C:attention}%s{} from {C:attention}%s{} random cards in hand"] = "Retire {C:attention}%s{} de {C:attention}%s{} cartes en main au hasard",
+      ["Removes {C:attention}%s{} from {C:attention}%s{} random Jokers"] = "Retire {C:attention}%s{} de {C:attention}%s{} Jokers au hasard",
+      ["Removes {C:attention}%s{} from a random Joker"] = "Retire {C:attention}%s{} d'un Joker au hasard",
+      ["Any sticker"] = "N'importe quel autocollant", ["Eternal"] = "Éternel", ["Perishable"] = "Périssable", ["Rental"] = "Location",
+      ["Put a sticker on the card"] = "Coller un autocollant sur la carte", ["Put a sticker on this Joker"] = "Coller un autocollant sur ce Joker",
+      ["The card has a sticker"] = "La carte a un autocollant", ["Jokers with a sticker"] = "Jokers avec un autocollant", ["Card with a sticker"] = "Carte avec un autocollant",
+      ["Sticker on random Jokers"] = "Autocollant sur des Jokers au hasard", ["Sticker on random deck cards"] = "Autocollant sur des cartes du deck au hasard",
+      ["Sticker on random cards in hand"] = "Autocollant sur des cartes en main au hasard", ["Sticker on shop cards"] = "Autocollant sur les cartes de la boutique",
+      ["Puts {C:attention}%s{} on {C:attention}%s{} random Jokers"] = "Colle {C:attention}%s{} sur {C:attention}%s{} Jokers au hasard",
+      ["Puts {C:attention}%s{} on a random Joker"] = "Colle {C:attention}%s{} sur un Joker au hasard",
+      ["Puts {C:attention}%s{} on {C:attention}%s{} random cards in your deck"] = "Colle {C:attention}%s{} sur {C:attention}%s{} cartes du deck au hasard",
+      ["Puts {C:attention}%s{} on {C:attention}%s{} random cards in hand"] = "Colle {C:attention}%s{} sur {C:attention}%s{} cartes en main au hasard",
+      ["{C:attention}%s{} on {C:attention}%s{} more shop cards"] = "{C:attention}%s{} sur {C:attention}%s{} de cartes de boutique en plus",
+      ["When a card scores (on a card: this card)"] = "Quand une carte marque (sur une carte : cette carte)",
+      ["When a card is held (on a card: this card)"] = "Quand une carte est en main (sur une carte : cette carte)",
+      ["When a card is discarded (on a card: this card)"] = "Quand une carte est défaussée (sur une carte : cette carte)", ["When this card is used"] = "Quand cette carte est utilisée",
+      ["A sticker for your cards"] = "Un autocollant pour vos cartes", ["On {C:attention}%s{} of shop and pack cards"] = "Sur {C:attention}%s{} des cartes de boutique et de paquets",
+    },
+    es = {
+      ["Goes on"] = "Se pega en", ["Lasts rounds"] = "Dura rondas", ["Jokers"] = "Comodines", ["Consumables"] = "Consumibles", ["Any card"] = "Cualquier carta",
+      ["Goes on {C:attention}%s{}"] = "Se pega en {C:attention}%s{}",
+      ["Peels off after {C:attention}%d{} rounds"] = "Se despega tras {C:attention}%d{} rondas",
+      ["Peeled!"] = "¡Despegada!",
+      ["Sticker!"] = "¡Pegatina!",
+      ["Remove a sticker from the card"] = "Quitar una pegatina de la carta", ["Remove a sticker from this Joker"] = "Quitar una pegatina de este comodín",
+      ["Remove a sticker from Jokers"] = "Quitar una pegatina de comodines",
+      ["Remove a sticker from deck cards"] = "Quitar una pegatina de cartas del mazo", ["Remove a sticker from cards in hand"] = "Quitar una pegatina de cartas de la mano",
+      ["Removes {C:attention}%s{} from {C:attention}%s{} random cards in your deck"] = "Quita {C:attention}%s{} de {C:attention}%s{} cartas del mazo al azar",
+      ["Removes {C:attention}%s{} from {C:attention}%s{} random cards in hand"] = "Quita {C:attention}%s{} de {C:attention}%s{} cartas de la mano al azar",
+      ["Removes {C:attention}%s{} from {C:attention}%s{} random Jokers"] = "Quita {C:attention}%s{} de {C:attention}%s{} comodines al azar",
+      ["Removes {C:attention}%s{} from a random Joker"] = "Quita {C:attention}%s{} de un comodín al azar",
+      ["Any sticker"] = "Cualquier pegatina", ["Eternal"] = "Eterno", ["Perishable"] = "Perecedero", ["Rental"] = "Alquiler",
+      ["Put a sticker on the card"] = "Poner una pegatina en la carta", ["Put a sticker on this Joker"] = "Poner una pegatina en este comodín",
+      ["The card has a sticker"] = "La carta tiene una pegatina", ["Jokers with a sticker"] = "Comodines con una pegatina", ["Card with a sticker"] = "Carta con una pegatina",
+      ["Sticker on random Jokers"] = "Pegatina en comodines al azar", ["Sticker on random deck cards"] = "Pegatina en cartas del mazo al azar",
+      ["Sticker on random cards in hand"] = "Pegatina en cartas de la mano al azar", ["Sticker on shop cards"] = "Pegatina en las cartas de la tienda",
+      ["Puts {C:attention}%s{} on {C:attention}%s{} random Jokers"] = "Pone {C:attention}%s{} en {C:attention}%s{} comodines al azar",
+      ["Puts {C:attention}%s{} on a random Joker"] = "Pone {C:attention}%s{} en un comodín al azar",
+      ["Puts {C:attention}%s{} on {C:attention}%s{} random cards in your deck"] = "Pone {C:attention}%s{} en {C:attention}%s{} cartas del mazo al azar",
+      ["Puts {C:attention}%s{} on {C:attention}%s{} random cards in hand"] = "Pone {C:attention}%s{} en {C:attention}%s{} cartas de la mano al azar",
+      ["{C:attention}%s{} on {C:attention}%s{} more shop cards"] = "{C:attention}%s{} en un {C:attention}%s{} más de cartas de la tienda",
+      ["When a card scores (on a card: this card)"] = "Cuando una carta puntúa (en una carta: esta carta)",
+      ["When a card is held (on a card: this card)"] = "Cuando una carta está en la mano (en una carta: esta carta)",
+      ["When a card is discarded (on a card: this card)"] = "Cuando una carta se descarta (en una carta: esta carta)", ["When this card is used"] = "Cuando se usa esta carta",
+      ["A sticker for your cards"] = "Una pegatina para tus cartas", ["On {C:attention}%s{} of shop and pack cards"] = "En el {C:attention}%s{} de las cartas de tienda y sobres",
+    },
+  }
+end
+
+register_strings()
+
+return X
+end

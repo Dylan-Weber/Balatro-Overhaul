@@ -1,0 +1,509 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 362
+return function(R)
+  local S = {}
+  R.SELECT = S
+  S.V = 16
+  S.BASE = 5
+  S.GIVES = {"p_select", "select_plus", "select_round"}
+  S.RUN = {select_plus = true, select_round = true, select_set = true}
+  S.IDS = {p_select = true, select_plus = true, select_round = true, select_set = true, select_cap = true}
+
+  R.NUM.p_select = {def = 2, lo = -10, hi = 100, step = 1, big = 5}
+  R.NUM.select_plus = {def = 1, lo = -100, hi = 100, step = 1, big = 5}
+  R.NUM.select_round = {def = 1, lo = -100, hi = 100, step = 1, big = 5}
+
+  local P = require("functions/forge/forge_power3")
+  P.APPLY = P.APPLY or {}
+  if not R.member(P.PASSIVE, "p_select") then P.PASSIVE[#P.PASSIVE + 1] = "p_select" end
+  P.KEY.p_select = "select"
+  if P.PASS then P.PASS.p_select = true end
+  for _, id in ipairs(S.GIVES) do
+    if not R.member(R.GIVE, id) then R.GIVE[#R.GIVE + 1] = id end
+    R.HOST_GIVE[id] = {joker = true}
+    R.SIMPLE_GIVE[id] = true
+    R.DEFAULT_GIVE[id] = function() return {id = id, n = R.NUM[id].def} end
+  end
+
+  local function whole(n)
+    n = tonumber(n) or 0
+    if n ~= n then return 0 end
+    return n >= 0 and math.floor(n + 0.5) or -math.floor(-n + 0.5)
+  end
+  S.whole = whole
+
+  local function smods() return rawget(_G, "SMODS") end
+  local function game() return G and G.GAME end
+  local function params()
+    local g = game()
+    local sp = g and g.starting_params
+    if type(sp) ~= "table" then return nil end
+    sp.play_limit = tonumber(sp.play_limit) or S.BASE
+    sp.discard_limit = tonumber(sp.discard_limit) or S.BASE
+    return sp
+  end
+  S.params = params
+
+  function S.effective(raw, cap)
+    raw = tonumber(raw) or S.BASE
+    cap = tonumber(cap)
+    if cap then raw = math.min(raw, cap) end
+    return math.max(1, math.floor(raw))
+  end
+
+  function S.limits()
+    local sp = params()
+    local cap = game() and tonumber(G.GAME.forge_sel_cap)
+    if not sp then return S.BASE, S.BASE end
+    return S.effective(sp.play_limit, cap), S.effective(sp.discard_limit, cap)
+  end
+
+  function S.highlight_limit(play_raw, discard_raw, cap)
+    return math.max(S.effective(play_raw, cap), S.effective(discard_raw, cap))
+  end
+
+  function S.refresh()
+    local sp = params()
+    if not sp then return end
+    local cap = tonumber(G.GAME.forge_sel_cap)
+    local SM = smods()
+    if G.hand and G.hand.config then
+      G.hand.config.highlighted_limit = S.highlight_limit(sp.play_limit, sp.discard_limit, cap)
+    end
+    if SM and type(SM.hand_limit_strings) == "table" then
+      if SM.update_hand_limit_text then pcall(SM.update_hand_limit_text, true, true) end
+      if cap and localize then
+        local p, d = S.limits()
+        if p ~= sp.play_limit then SM.hand_limit_strings.play = localize("b_limit") .. p end
+        if d ~= sp.discard_limit then SM.hand_limit_strings.discard = localize("b_limit") .. d end
+      end
+    end
+  end
+
+  function S.change(d)
+    d = whole(d)
+    local sp = params()
+    if not sp or d == 0 then return end
+    local SM = smods()
+    if SM and SM.change_play_limit and SM.change_discard_limit then
+      pcall(SM.change_play_limit, d)
+      pcall(SM.change_discard_limit, d)
+    else
+      sp.play_limit = sp.play_limit + d
+      sp.discard_limit = sp.discard_limit + d
+    end
+    S.refresh()
+  end
+
+  function S.set(n)
+    local sp = params()
+    if not sp then return end
+    n = math.max(1, whole(n))
+    S.change(n - sp.play_limit)
+  end
+
+  function S.in_round()
+    local b = game() and G.GAME.blind
+    return (b ~= nil and b.in_blind == true) or G.GAME.facing_blind == true
+  end
+
+  function S.round(n)
+    n = whole(n)
+    local g = game()
+    if not g or n == 0 then return end
+    if S.in_round() then
+      g.forge_sel_round = (tonumber(g.forge_sel_round) or 0) + n
+      S.change(n)
+    else
+      g.forge_sel_next = (tonumber(g.forge_sel_next) or 0) + n
+    end
+  end
+
+  function S.round_start()
+    local g = game()
+    if not g then return end
+    local n = whole(g.forge_sel_next)
+    g.forge_sel_next = nil
+    if n ~= 0 then
+      g.forge_sel_round = (tonumber(g.forge_sel_round) or 0) + n
+      S.change(n)
+    end
+  end
+
+  function S.round_end()
+    local g = game()
+    if not g then return end
+    local n = whole(g.forge_sel_round)
+    g.forge_sel_round = nil
+    if n ~= 0 then S.change(-n) end
+    if g.forge_sel_cap then S.uncap() end
+  end
+
+  function S.cap(n)
+    local g = game()
+    if not g then return end
+    n = math.max(1, whole(n))
+    g.forge_sel_cap = g.forge_sel_cap and math.min(g.forge_sel_cap, n) or n
+    if G.hand and G.hand.highlighted then
+      local p = S.limits()
+      while #G.hand.highlighted > p do G.hand:remove_from_highlighted(G.hand.highlighted[#G.hand.highlighted]) end
+    end
+    S.refresh()
+  end
+
+  function S.uncap()
+    local g = game()
+    if not g then return end
+    g.forge_sel_cap = nil
+    S.refresh()
+  end
+
+  P.APPLY.select = function(d) S.change(d) end
+
+  R.DOS.select_plus = function(g, card, src)
+    local n = whole(g.n)
+    if n == 0 then return end
+    S.change(n)
+    if src and card_eval_status_text then card_eval_status_text(src, "extra", nil, nil, nil, {message = (n > 0 and "+" or "") .. n, colour = G.C.FILTER}) end
+  end
+  R.DOS.select_round = function(g, card, src)
+    local n = whole(g.n)
+    if n == 0 then return end
+    S.round(n)
+    if src and card_eval_status_text then card_eval_status_text(src, "extra", nil, nil, nil, {message = (n > 0 and "+" or "") .. n, colour = G.C.FILTER}) end
+  end
+
+  function S.apply(e)
+    local id = e and e.id
+    if id == "select_plus" then S.change(e.n)
+    elseif id == "select_round" then S.round(e.n)
+    elseif id == "select_set" then S.set(e.n)
+    else return false end
+    return true
+  end
+
+  if not R.member(R.ONLY, "select_limit") then R.ONLY[#R.ONLY + 1] = "select_limit" end
+  R.NUM.select_limit = {def = 7, lo = 1, hi = 100, step = 1, big = 5}
+  R.DEFAULT_ONLY.select_limit = function() return {id = "select_limit", op = "at_least", n = 7} end
+  R.CLEAN_ONLY.select_limit = function(c) c.v = nil; c.op = c.op or "at_least" end
+  R.CHECKS.select_limit = function(o) return R.compare(o.op, (S.limits()), tonumber(o.n) or 7) end
+  R.LABEL_ONLY.select_limit = "Cards you can select"
+  S.IDS.select_limit = true
+  local OL = {
+    en = "you can select %s {C:attention}%d{} cards", fr = "vous pouvez sélectionner %s {C:attention}%d{} cartes", es = "puedes seleccionar %s {C:attention}%d{} cartas",
+  }
+  R.TEXT_ONLY.select_limit = function(o, s, lang) return string.format(OL[lang] or OL.en, s[o.op or "at_least"] or s.at_least, whole(o.n)) end
+
+  if R.COUNT and R.COUNTS and R.PER_TEXT then
+    if not R.member(R.COUNTS, "select_limit") then R.COUNTS[#R.COUNTS + 1] = "select_limit" end
+    R.COUNT.select_limit = function() return (S.limits()) end
+    local CT = {en = "card you can select", fr = "carte que vous pouvez sélectionner", es = "carta que puedes seleccionar"}
+    for lang, t in pairs(R.PER_TEXT) do
+      if type(t) == "table" and type(t.counts) == "table" then t.counts.select_limit = CT[lang] or CT.en end
+    end
+    if R.LABEL_COUNT then R.LABEL_COUNT.select_limit = "Card you can select" end
+  end
+
+  local base_need = R.need_v
+  function R.need_v(rules, vars)
+    local need = base_need(rules, vars)
+    for _, r in ipairs(type(rules) == "table" and rules or {}) do
+      for _, k in ipairs({"give", "alt", "only"}) do
+        local l = type(r) == "table" and r[k]
+        for _, g in ipairs(type(l) == "table" and l or {}) do
+          if type(g) == "table" and (S.IDS[g.id] or g.per == "select_limit") then need = math.max(need, S.V) end
+        end
+      end
+    end
+    return need
+  end
+
+  local SL = {
+    en = {p_select = "{C:attention}%s{} cards to select", select_plus = "{C:attention}%s{} cards to select for the rest of the run", select_round = "{C:attention}%s{} cards to select for one round"},
+    fr = {p_select = "{C:attention}%s{} cartes à sélectionner", select_plus = "{C:attention}%s{} cartes à sélectionner pour le reste de la partie", select_round = "{C:attention}%s{} cartes à sélectionner pendant une manche"},
+    es = {p_select = "{C:attention}%s{} cartas para seleccionar", select_plus = "{C:attention}%s{} cartas para seleccionar el resto de la partida", select_round = "{C:attention}%s{} cartas para seleccionar durante una ronda"},
+  }
+  local function signed(n)
+    n = whole(n)
+    return (n >= 0 and "+" or "") .. n
+  end
+  S.signed = signed
+  function S.text(g, lang)
+    local s = (SL[lang] or SL.en)[g.id]
+    if not s then return "" end
+    return string.format(s, signed(g.n))
+  end
+  for _, id in ipairs(S.GIVES) do
+    R.TEXT_GIVE[id] = function(g, s, lang) return S.text(g, lang) end
+  end
+  R.LABEL_GIVE.p_select, R.LABEL_GIVE.select_plus, R.LABEL_GIVE.select_round = "Cards to select", "Cards to select for good", "Cards to select for one round"
+
+  S.LOC = {
+    fr = {
+      ["Cards to select"] = "Cartes à sélectionner", ["Cards to select for good"] = "Cartes à sélectionner pour de bon", ["Cards to select for one round"] = "Cartes à sélectionner pour une manche",
+      ["Cards you can select"] = "Cartes sélectionnables", ["Card you can select"] = "Carte sélectionnable", ["Fewer cards to select"] = "Moins de cartes à sélectionner",
+      ["{C:attention}%s{} cards to select for the rest of the run"] = SL.fr.select_plus, ["{C:attention}%s{} cards to select for one round"] = SL.fr.select_round,
+      ["You can select {C:attention}%d{} cards"] = "Vous pouvez sélectionner {C:attention}%d{} cartes",
+      ["You can only select {C:attention}%d{} cards"] = "Vous ne pouvez sélectionner que {C:attention}%d{} cartes",
+    },
+    es = {
+      ["Cards to select"] = "Cartas para seleccionar", ["Cards to select for good"] = "Cartas para seleccionar para siempre", ["Cards to select for one round"] = "Cartas para seleccionar por una ronda",
+      ["Cards you can select"] = "Cartas seleccionables", ["Card you can select"] = "Carta seleccionable", ["Fewer cards to select"] = "Menos cartas para seleccionar",
+      ["{C:attention}%s{} cards to select for the rest of the run"] = SL.es.select_plus, ["{C:attention}%s{} cards to select for one round"] = SL.es.select_round,
+      ["You can select {C:attention}%d{} cards"] = "Puedes seleccionar {C:attention}%d{} cartas",
+      ["You can only select {C:attention}%d{} cards"] = "Solo puedes seleccionar {C:attention}%d{} cartas",
+    },
+  }
+  if mod_loc_register then mod_loc_register(S.LOC) end
+
+  function S.cat(Cat, n, run)
+    local plus = run("select_plus", "Cards to select for good", n(-100, 100, 1), "{C:attention}%s{} cards to select for the rest of the run", {args = {"n"}, sign = true, simple = true, need = S.V})
+    local round = run("select_round", "Cards to select for one round", n(-100, 100, 1), "{C:attention}%s{} cards to select for one round", {args = {"n"}, sign = true, need = S.V})
+    local set = run("select_set", "Cards you can select", n(1, 100, 7), "You can select {C:attention}%d{} cards", {simple = true, need = S.V})
+    local cap = {id = "select_cap", label = "Fewer cards to select", num = n(1, 20, 3), simple = true, new = true, need = S.V, line = "You can only select {C:attention}%d{} cards"}
+    local function add(list, e)
+      if not list then return end
+      for _, x in ipairs(list) do if x.id == e.id then return end end
+      local c = {}
+      for k, v in pairs(e) do c[k] = v end
+      list[#list + 1] = c
+    end
+    Cat.RUN[#Cat.RUN + 1] = plus
+    Cat.RUN[#Cat.RUN + 1] = round
+    local function plain(e)
+      local c = {}
+      for k, v in pairs(e) do c[k] = v end
+      c.run = nil
+      return c
+    end
+    for _, k in ipairs({"voucher", "deck", "stake", "challenge"}) do
+      add(Cat.EFFECTS[k], plus)
+      add(Cat.EFFECTS[k], round)
+    end
+    for _, k in ipairs({"use", "spectral", "tag"}) do
+      add(Cat.EFFECTS[k], plain(plus))
+      add(Cat.EFFECTS[k], plain(round))
+    end
+    add(Cat.EFFECTS.boss, round)
+    add(Cat.EFFECTS.deck, set)
+    add(Cat.EFFECTS.challenge, set)
+    add(Cat.EFFECTS.boss, cap)
+    if Cat.RUN_ONLY and not R.member(Cat.RUN_ONLY, "select_limit") then Cat.RUN_ONLY[#Cat.RUN_ONLY + 1] = "select_limit" end
+    if Cat.OP_ONLY then Cat.OP_ONLY.select_limit = true end
+  end
+
+  local function same_rank(hand)
+    local by, order = {}, {}
+    for _, c in ipairs(hand) do
+      local id = c:get_id()
+      if not by[id] then by[id] = {}; order[#order + 1] = id end
+      by[id][#by[id] + 1] = c
+    end
+    local groups = {}
+    for _, id in ipairs(order) do groups[#groups + 1] = {id = id, cards = by[id]} end
+    table.sort(groups, function(a, b)
+      if #a.cards ~= #b.cards then return #a.cards > #b.cards end
+      return a.id > b.id
+    end)
+    return groups
+  end
+
+  local function sized(groups, lo, hi)
+    local out = {}
+    for _, g in ipairs(groups) do
+      if #g.cards >= lo and (not hi or #g.cards <= hi) then out[#out + 1] = g.cards end
+    end
+    return out
+  end
+
+  local function join(...)
+    local out = {}
+    for _, l in ipairs({...}) do for _, c in ipairs(l) do out[#out + 1] = c end end
+    return out
+  end
+
+  local function house(groups)
+    local three, two
+    for _, g in ipairs(groups) do
+      if not three and #g.cards >= 3 then three = g
+      elseif not two and #g.cards >= 2 then two = g end
+    end
+    if not (three and two) then return nil end
+    local a, b = {}, {}
+    for i = 1, 3 do a[i] = three.cards[i] end
+    for i = 1, 2 do b[i] = two.cards[i] end
+    return join(a, b)
+  end
+
+  S.SUITS = {"Spades", "Hearts", "Clubs", "Diamonds"}
+  local function has(name)
+    return find_joker and next(find_joker(name)) ~= nil
+  end
+
+  local function all_suits()
+    local out = {}
+    for _, suit in ipairs(S.SUITS) do out[#out + 1] = suit end
+    local Suits = package.loaded["functions/forge/forge_suits"]
+    for _, s in ipairs(Suits and Suits.list or {}) do out[#out + 1] = s.key end
+    return out
+  end
+
+  local function by_suit(hand)
+    local out = {}
+    for _, suit in ipairs(all_suits()) do
+      local t = {}
+      for _, c in ipairs(hand) do if c:is_suit(suit, nil, true) then t[#t + 1] = c end end
+      out[#out + 1] = t
+    end
+    return out
+  end
+
+  function S.straight(hand, need, skip)
+    local ids = {}
+    for _, c in ipairs(hand) do
+      local id = c:get_id()
+r 13 556 %20%20%20%20%20%20 -
+l 84
+        ids[id] = ids[id] or {}
+        ids[id][#ids[id] + 1] = c
+      end
+    end
+    local best, t, len, skipped = nil, {}, 0, false
+    for j = 1, 14 do
+      local at = ids[j == 1 and 14 or j]
+      if at then
+        len = len + 1
+        skipped = false
+        for _, c in ipairs(at) do t[#t + 1] = c end
+        if len >= need then best = t end
+      elseif skip and not skipped and j ~= 14 and len > 0 then
+        skipped = true
+      else
+        if best then break end
+        t, len, skipped = {}, 0, false
+      end
+    end
+    return best
+  end
+
+  function S.evaluate(hand, opts)
+    opts = opts or {}
+    local need = opts.four_fingers and 4 or 5
+    local groups = same_rank(hand)
+    local res = {}
+    for _, k in ipairs({"Flush Five", "Flush House", "Five of a Kind", "Straight Flush", "Four of a Kind", "Full House", "Flush", "Straight", "Three of a Kind", "Two Pair", "Pair", "High Card"}) do res[k] = {} end
+    local suits = by_suit(hand)
+    local flush
+    for _, t in ipairs(suits) do
+      if #t >= need and (not flush or #t > #flush) then flush = t end
+    end
+    local straight = S.straight(hand, need, opts.shortcut)
+    local five = sized(groups, 5)
+    local fours = sized(groups, 4, 4)
+    local threes = sized(groups, 3, 3)
+    local pairs_ = sized(groups, 2, 2)
+    for _, t in ipairs(suits) do
+      if #t >= need then
+        local sg = same_rank(t)
+        local f5 = sized(sg, 5)
+        if f5[1] and not res["Flush Five"][1] then res["Flush Five"] = {f5[1]} end
+        local fh = house(sg)
+        if fh and not res["Flush House"][1] then res["Flush House"] = {fh} end
+        local sf = S.straight(t, need, opts.shortcut)
+        if sf and not res["Straight Flush"][1] then res["Straight Flush"] = {sf} end
+      end
+    end
+    if five[1] then res["Five of a Kind"] = {five[1]} end
+    if fours[1] then res["Four of a Kind"] = {fours[1]} end
+    local fh = house(groups)
+    if fh then res["Full House"] = {fh} end
+    if flush then res["Flush"] = {flush} end
+    if straight then res["Straight"] = {straight} end
+    if threes[1] then res["Three of a Kind"] = {threes[1]} end
+    local twos = sized(groups, 2)
+    if #twos >= 2 then
+      local a, b = {}, {}
+      for i = 1, 2 do a[i] = twos[1][i]; b[i] = twos[2][i] end
+      res["Two Pair"] = {join(a, b)}
+    end
+    if pairs_[1] then res["Pair"] = {pairs_[1]} end
+    local hi
+    for _, c in ipairs(hand) do if not hi or c:get_nominal() > hi:get_nominal() then hi = c end end
+    if hi then res["High Card"] = {{hi}} end
+    local f = res["Five of a Kind"][1]
+    if f then res["Four of a Kind"] = {{f[1], f[2], f[3], f[4]}} end
+    f = res["Four of a Kind"][1]
+    if f then res["Three of a Kind"] = {{f[1], f[2], f[3]}} end
+    f = res["Three of a Kind"][1]
+    if f then res["Pair"] = {{f[1], f[2]}} end
+    return res
+  end
+
+  function S.wide(hand)
+    return type(hand) == "table" and #hand > 5 and not smods()
+  end
+
+  local function can_button(e, ok, colour, button)
+    if ok then
+      e.config.colour = colour
+      e.config.button = button
+    else
+r 32 57 %20%20%20%20%20%20 -
+r 32 58 %20%20%20%20%20%20 -
+l 52
+    end
+  end
+
+  function S.install()
+    if S.installed then return end
+    local ok, Hooks = pcall(require, "overhaul.hooks")
+    if not (ok and Hooks) then return end
+    S.installed = true
+    Hooks.wrap(_G, "evaluate_poker_hand", function(orig) return function(hand, ...)
+      local res = orig(hand, ...)
+      if not S.wide(hand) or type(res) ~= "table" then return res end
+      local okk, mine = pcall(S.evaluate, hand, {four_fingers = has("Four Fingers"), shortcut = has("Shortcut")})
+      if okk and mine then
+        for k, v in pairs(mine) do res[k] = v end
+      end
+      return res
+    end end, {id = "forge_select.evaluate_poker_hand"})
+    Hooks.wrap("G.FUNCS", "can_play", function(orig) return function(e, ...)
+      if smods() then
+        local r = orig(e, ...)
+        local p = S.limits()
+        if e.config.button and #G.hand.highlighted > p then can_button(e, false) end
+        return r
+      end
+      local p = S.limits()
+      local n = #G.hand.highlighted
+      can_button(e, n > 0 and n <= p and not G.GAME.blind.block_play, G.C.BLUE, "play_cards_from_highlighted")
+    end end, {id = "forge_select.can_play"})
+    Hooks.wrap("G.FUNCS", "can_discard", function(orig) return function(e, ...)
+      local r = orig(e, ...)
+      local _, d = S.limits()
+      if e.config.button and #G.hand.highlighted > d then can_button(e, false) end
+      return r
+    end end, {id = "forge_select.can_discard"})
+    Hooks.wrap("Game", "start_run", function(orig) return function(self, ...)
+      local r = orig(self, ...)
+      pcall(S.refresh)
+      return r
+    end end, {id = "forge_select.start_run"})
+    Hooks.wrap("Blind", "set_blind", function(orig) return function(self, blind, reset, silent, ...)
+      local r = orig(self, blind, reset, silent, ...)
+      if not reset and blind then pcall(S.round_start) end
+      return r
+    end end, {id = "forge_select.set_blind"})
+    Hooks.wrap(_G, "end_round", function(orig) return function(...)
+      pcall(S.round_end)
+      return orig(...)
+    end end, {id = "forge_select.end_round"})
+  end
+
+  return S
+end
+end

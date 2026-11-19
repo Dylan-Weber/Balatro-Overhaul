@@ -10,7 +10,9 @@ M.IMPORT_DIR = "forge/import"
 M.INDEX = "forge/mods/index.json"
 M.EXT = ".forgemod"
 M.FORMAT = "forgemod"
-M.V = 15
+M.V = 16
+M.ART_SIZES = {["71x95"] = true, ["11x10"] = true}
+function M.art_size_ok(w, h) return w ~= nil and h ~= nil and M.ART_SIZES[w .. "x" .. h] == true end
 M.MAX_BYTES = 2 * 1024 * 1024
 M.MAX_ITEMS = 60
 M.MAX_FILE = 64 * 1024
@@ -160,6 +162,7 @@ local function files_of(c)
   local out = {}
   if c.art and c.art.file then out[#out + 1] = c.art.file end
   for _, r in ipairs({"J", "Q", "K"}) do if c.faces and c.faces[r] then out[#out + 1] = c.faces[r] end end
+  require("functions/forge/forge_grow").files(c, out)
   return out
 end
 
@@ -200,7 +203,7 @@ function M.pack(info, ids)
         if b and not out.files[b] and f and f.getInfo(p) then
           local data = f.read(p)
           local w, h = M.png_size(data)
-          if type(data) == "string" and #data <= M.MAX_FILE and w == 71 and h == 95 then out.files[b] = M.b64_encode(data) end
+          if type(data) == "string" and #data <= M.MAX_FILE and M.art_size_ok(w, h) then out.files[b] = M.b64_encode(data) end
         end
         if b and out.files[b] then packed[p] = true end
       end
@@ -208,6 +211,7 @@ function M.pack(info, ids)
       for _, r in ipairs({"J", "Q", "K"}) do
         if x.faces and x.faces[r] and not packed[x.faces[r]] then x.faces[r] = nil end
       end
+      require("functions/forge/forge_grow").strip(x, packed)
       if j then out.jokers[#out.jokers + 1] = x else out.creations[#out.creations + 1] = x end
     end
   end
@@ -223,13 +227,18 @@ end
 function M.needs_v(jokers, creations)
   local v = 1
   local Always = require("functions/forge/forge_always")
-  for _, x in ipairs(jokers or {}) do v = math.max(v, Rules.need_v(x.rules, x.vars), Always.joker_need(x)) end
+  for _, x in ipairs(jokers or {}) do
+    v = math.max(v, Rules.need_v(x.rules, x.vars), Always.joker_need(x))
+    if type(x) == "table" and Rules.own_id("rarity", x.own_rarity) then v = math.max(v, 16) end
+    if type(x) == "table" and require("functions/forge/forge_gates").parse(x.requires) then v = math.max(v, 16) end
+  end
   local Cat = package.loaded["functions/forge/forge_catalog"]
   if Cat and Cat.need_v then
     for _, c in ipairs(creations or {}) do v = math.max(v, Cat.need_v(c)) end
   end
   return v
 end
+require("functions/forge/forge_grow").mods(M)
 
 function M.for_old_server(raw)
   if type(raw) ~= "string" then return nil end
@@ -263,7 +272,7 @@ function M.parse(raw)
       if type(k) == "string" and k:match("^[%w_]+$") and #k <= 40 and type(v) == "string" and nfiles < M.MAX_FILES then
         local data = M.b64_decode(v)
         local w, h = M.png_size(data)
-        if data and #data <= M.MAX_FILE and w == 71 and h == 95 then
+        if data and #data <= M.MAX_FILE and M.art_size_ok(w, h) then
           mod.files[k] = data
           nfiles = nfiles + 1
         end
@@ -291,6 +300,7 @@ function M.parse(raw)
       for _, r in ipairs({"J", "Q", "K"}) do faces[r] = art(c.faces[r]) end
       c.faces = faces
     end
+    require("functions/forge/forge_grow").remap(c, art)
     local clean
     if joker then clean = Store.clean(c) else clean = Store.clean_item(c) end
     if not clean or seen[clean.id] then return end

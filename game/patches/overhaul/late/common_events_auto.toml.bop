@@ -231,7 +231,7 @@ l 5
                 end
                 if G.P_SEALS then
 r 31 683 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 214
+l 227
                         if md[k] and not v.discovered then v.discovered = true end
                         if ma[k] and v.discovered then v.alerted = true end
                     end
@@ -287,6 +287,19 @@ function save_icon_frame_pos(ox, oy)
             "return {x=" .. ox .. ",y=" .. oy .. "}"
         )
     end)
+end
+
+function icon_frame_pos_path()
+    local profile_num = (G.SETTINGS and G.SETTINGS.profile) or 1
+    return "icon_frame_pos_" .. profile_num .. ".jkr"
+end
+
+function reset_icon_frame_pos()
+    pcall(function()
+        local path = icon_frame_pos_path()
+        if love.filesystem.getInfo and love.filesystem.getInfo(path) then love.filesystem.remove(path) end
+    end)
+    if G.STAGE == G.STAGES.MAIN_MENU and setup_profile_icon_frame then setup_profile_icon_frame() end
 end
 
 function load_icon_frame_pos()

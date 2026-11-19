@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 741
+l 763
 local P = {}
 
 local function L(s) return mod_loc and mod_loc(s) or s end
@@ -474,8 +474,15 @@ end
 local function row_h() return UIK.touch() and 0.64 or 0.6 end
 
 local function chip(label, colour, w, h)
+    local scale = UIK.touch() and 0.4 or 0.3
+    local f = G.LANG and G.LANG.font
+    if f and f.FONT then
+        local tw = f.FONT:getWidth(label) * (f.squish or 1) * scale * (f.FONTSCALE or 0.1) / G.TILESIZE
+        local room = w - 0.24
+        if tw > room and tw > 0 then scale = scale * room / tw end
+    end
     return {n = G.UIT.C, config = {align = "cm", minw = w, maxw = w, minh = h, r = 0.08, colour = colour, padding = 0.02}, nodes = {
-        {n = G.UIT.T, config = {text = label, scale = UIK.touch() and 0.4 or 0.3, colour = G.C.WHITE, shadow = true}},
+        {n = G.UIT.T, config = {text = label, scale = scale, colour = G.C.WHITE, shadow = true}},
     }}
 end
 
@@ -534,6 +541,8 @@ local function player_row(p, i, w, teams)
                 minw = status_w, maxw = status_w, minh = h - 0.12, scale = UIK.touch() and 0.38 or 0.32, col = true})}, status_w))
         elseif p.connected == false then
             label, col = L("Away"), G.C.ORANGE
+        elseif not p.ready and rawget(_G, "bom_waitplay") and bom_waitplay.party_status(p) then
+            label, col = bom_waitplay.party_status(p), G.C.ORANGE
         elseif S.room and p.pid == S.room.hostId then
             label, col = L("Host"), G.C.GOLD
         elseif p.ready then
@@ -698,6 +707,19 @@ local function lobby_body()
     if mg and mg.lobby_wait and mg.lobby_wait(true) then
         local wb = UIK.button{label = L("Play while you wait"), button = "mg_wait_play", colour = G.C.PURPLE, id = "mg_wait_row", col = true, w = UIK.touch() and math.min(inner, 4.8) or nil}
         left[#left + 1] = {n = G.UIT.R, config = {align = "cm", minw = inner, padding = 0.1}, nodes = {wb}}
+    end
+    local WP = rawget(_G, "bom_waitplay")
+    local solo = WP and WP.lobby_buttons and WP.lobby_buttons("party") or {}
+    if #solo > 0 then
+        local t = UIK.touch()
+        local sc, bh = t and 0.42 or 0.36, t and 0.8 or 0.62
+        local sw = math.min((inner - 0.2) / #solo, t and 3.6 or 3.2)
+        local row = {}
+        for i, it in ipairs(solo) do
+            if i > 1 then row[#row + 1] = {n = G.UIT.C, config = {minw = 0.2}} end
+            row[#row + 1] = UIK.button{label = it[1], button = it[2], colour = it[3], id = it[4], col = true, w = sw, h = bh, scale = sc}
+        end
+        left[#left + 1] = {n = G.UIT.R, config = {align = "cm", minw = inner, padding = 0.06}, nodes = row}
     end
     if port then
         for _, it in ipairs(right) do left[#left + 1] = it end

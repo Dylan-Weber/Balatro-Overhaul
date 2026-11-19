@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 153
+l 155
 local B = {}
 
 local MPS = require("multiplayer.mps_state")
@@ -60,7 +60,9 @@ end
 
 local function say_hello()
     S.hello = true
-    bom_core.send({type = "social_hello", pkey = bom_core.player_key(), name = profile_name(), hidden = G.SETTINGS and G.SETTINGS.social_hidden == true})
+    local R = rawget(_G, "bom_room")
+    local version = R and R.game_version and R.game_version() or nil
+    bom_core.send({type = "social_hello", pkey = bom_core.player_key(), name = profile_name(), version = version, hidden = G.SETTINGS and G.SETTINGS.social_hidden == true})
 end
 
 local function ensure_connected()

@@ -1,0 +1,228 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 66
+local X = {}
+
+X.V = 16
+X.DECK_IDS = {"dollars", "hands", "discards", "hand_size", "joker_slots", "consumable_slots", "interest_cap", "edition_joker", "draw_cards", "start_card", "start_consumable"}
+X.START = {start_card = true, start_consumable = true}
+X.ALL = {ch_enhance = "enhancement", ch_edition = "edition", ch_seal = "seal"}
+X.EDIT = {ch_copies = true, ch_add_rank = true, ch_add_suit = true, ch_enh_n = true, ch_seal_n = true, ch_ed_n = true, ch_joker_rental = true, ch_joker_perishable = true}
+
+local function Rules() return package.loaded["functions/forge/forge_rules"] end
+local function whole(n, lo, hi)
+  n = math.floor(tonumber(n) or lo)
+  return math.max(lo, math.min(hi, n))
+end
+
+function X.cat(Cat, n)
+  local list = Cat.EFFECTS.challenge
+  local have = {}
+  for _, e in ipairs(list) do have[e.id] = true end
+  local function add(e)
+    if have[e.id] then return end
+    have[e.id] = true
+    e.new, e.need = true, X.V
+    list[#list + 1] = e
+  end
+  for _, id in ipairs(X.DECK_IDS) do
+    for _, e in ipairs(Cat.EFFECTS.deck or {}) do
+      if e.id == id then
+        local c = {}
+        for k, v in pairs(e) do c[k] = v end
+        add(c)
+      end
+    end
+  end
+  add({id = "ch_copies", label = "Copies of each card", simple = true, num = n(1, 10, 2), line = "Every starting card is there {C:attention}%d{} times"})
+  add({id = "ch_add_rank", label = "Extra cards of a rank", simple = true, v = "rankvalue", num = n(1, 100, 4), line = "{C:attention}+%d{} {C:attention}%s{} cards in the deck"})
+  add({id = "ch_add_suit", label = "Extra cards of a suit", v = "suit", num = n(1, 100, 13), line = "{C:attention}+%d{} {C:attention}%s{} cards in the deck"})
+  add({id = "ch_enh_n", label = "Enhance starting cards", v = "enhancement", num = n(1, 500, 5), line = "{C:attention}%d{} starting cards are {C:attention}%s{}"})
+  add({id = "ch_seal_n", label = "Seal on starting cards", v = "seal", num = n(1, 500, 5), line = "{C:attention}%d{} starting cards have a {C:attention}%s{}"})
+  add({id = "ch_ed_n", label = "Edition on starting cards", v = "edition", num = n(1, 500, 5), line = "{C:attention}%d{} starting cards are {C:dark_edition}%s{}"})
+  add({id = "ch_joker_rental", label = "Rental on the last starting Joker", line = "The last starting Joker is {C:attention}Rental{}"})
+  add({id = "ch_deck", label = "Deck", v = "chback", line = "Played with the {C:attention}%s{}"})
+  add({id = "ch_joker_perishable", label = "Perishable on the last starting Joker", line = "The last starting Joker is {C:attention}Perishable{}"})
+end
+
+function X.front(suit, rank)
+  for _, f in pairs(G.P_CARDS or {}) do
+    if f.suit == suit and f.value == rank then return f end
+  end
+  return nil
+end
+
+local function suit_of(v)
+  local R = Rules()
+  return R and R.suit_key and R.suit_key(v) or v
+end
+
+local RANKS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King", "Ace"}
+local SUITS = {"Spades", "Hearts", "Clubs", "Diamonds"}
+
+local function new_card(front, center)
+  if not front then return nil end
+  local card = create_playing_card({front = front, center = center or G.P_CENTERS.c_base}, G.deck, true, true)
+  return card
+end
+
+local function copy_into_deck(src)
+r 3 1207 %20%20 -
+l 109
+  local c = copy_card(src, nil, nil, G.playing_card)
+  c:add_to_deck()
+  table.insert(G.playing_cards, c)
+  G.deck:emplace(c)
+  return c
+end
+
+local function pick(n, ok, seed)
+  local pool = {}
+  for _, c in ipairs(G.playing_cards or {}) do if ok(c) then pool[#pool + 1] = c end end
+  local out = {}
+  for _ = 1, math.min(n, #pool) do
+    local c, i = pseudorandom_element(pool, pseudoseed(seed))
+    out[#out + 1] = c
+    table.remove(pool, i)
+  end
+  return out
+end
+
+function X.edit(e)
+  local id, v = e.id, e.v
+  local R = Rules()
+  if id == "ch_copies" then
+    local times = whole(e.n, 1, 10)
+    local base = {}
+    for _, c in ipairs(G.playing_cards or {}) do base[#base + 1] = c end
+    for _ = 2, times do for _, c in ipairs(base) do copy_into_deck(c) end end
+  elseif id == "ch_add_rank" then
+    for i = 1, whole(e.n, 1, 100) do
+      local suit = pseudorandom_element(SUITS, pseudoseed("forge_chr" .. i))
+      new_card(X.front(suit, v))
+    end
+  elseif id == "ch_add_suit" then
+    local s = suit_of(v)
+    for i = 1, whole(e.n, 1, 100) do new_card(X.front(s, RANKS[(i - 1) % 13 + 1])) end
+  elseif id == "ch_enh_n" then
+    local cen = R and R.usable("enhancement", v) and G.P_CENTERS[v]
+    if cen then for _, c in ipairs(pick(whole(e.n, 1, 500), function(c) return c.config.center == G.P_CENTERS.c_base end, "forge_che")) do c:set_ability(cen, nil, true) end end
+  elseif X.ALL[id] then
+    X.every(X.ALL[id], v)
+  elseif id == "ch_seal_n" then
+    if v and R and R.usable("seal", v) then for _, c in ipairs(pick(whole(e.n, 1, 500), function(c) return not c.seal end, "forge_chs")) do c:set_seal(v, true, true) end end
+  elseif id == "ch_ed_n" then
+    local ed = R and R.edition_arg and R.edition_arg(v)
+    if ed then for _, c in ipairs(pick(whole(e.n, 1, 500), function(c) return not c.edition end, "forge_chd")) do c:set_edition(ed, true, true) end end
+  end
+end
+
+function X.every(what, v)
+  local R = Rules()
+  if not (R and R.own_id(what, v) and R.usable(what, v)) then return end
+  local ed = what == "edition" and R.edition_arg(v)
+  for _, c in ipairs(G.playing_cards or {}) do
+    if what == "enhancement" and G.P_CENTERS[v] then c:set_ability(G.P_CENTERS[v], nil, true)
+    elseif what == "seal" then c:set_seal(v, true, true)
+    elseif ed then c:set_edition(ed, true, true) end
+  end
+end
+
+function X.own_all(e)
+  local R = Rules()
+  return X.ALL[e.id] ~= nil and R ~= nil and R.own_id(X.ALL[e.id], e.v) ~= nil
+end
+
+function X.start_effect(e)
+  local n = tonumber(e.n) or 1
+  local R = Rules()
+  if e.id == "start_card" then
+    for _ = 1, math.max(1, math.min(10, math.floor(n))) do if not (R and R.make_card(e.v, nil)) then break end end
+  elseif e.id == "start_consumable" then
+    for _ = 1, math.max(1, math.floor(n)) do
+      local joker = e.v == "Joker"
+      local card = create_card(joker and "Joker" or (e.v or "Tarot"), joker and G.jokers or G.consumeables, nil, nil, nil, nil, nil, "forge_ch")
+      card:add_to_deck()
+      if joker then G.jokers:emplace(card) else G.consumeables:emplace(card) end
+    end
+  end
+end
+
+function X.last_joker(c)
+  local count = 0
+  for _, e in ipairs(c.effects or {}) do if e.id == "ch_joker" or e.id == "ch_eternal" then count = count + 1 end end
+  return count > 0 and G.jokers and G.jokers.cards[count] or nil
+end
+
+function X.apply(c)
+  local order = {}
+  for _, e in ipairs(c.effects or {}) do
+    if e.id == "ch_copies" then table.insert(order, 1, e) elseif X.EDIT[e.id] or X.START[e.id] then order[#order + 1] = e end
+  end
+  for _, e in ipairs(c.effects or {}) do if X.own_all(e) then table.insert(order, 1, e) end end
+  for _, e in ipairs(order) do
+    local ok, err = pcall(function()
+      if X.START[e.id] then X.start_effect(e)
+      elseif e.id == "ch_joker_rental" or e.id == "ch_joker_perishable" then
+        local j = X.last_joker(c)
+        if j and e.id == "ch_joker_rental" and j.set_rental then j:set_rental(true) end
+        if j and e.id == "ch_joker_perishable" and j.set_perishable then j:set_perishable(true) end
+      else X.edit(e) end
+    end)
+    if not ok then print("[FORGE] challenge effect " .. tostring(e.id) .. " failed: " .. tostring(err)) end
+  end
+  G.GAME.starting_deck_size = #(G.playing_cards or {})
+end
+
+function X.on_start(c)
+  local any = false
+  for _, e in ipairs(c.effects or {}) do if X.EDIT[e.id] or X.START[e.id] or X.own_all(e) then any = true end end
+  if not any then return end
+r 3 617 %20%20 -
+r 3 617 %20%20%20%20 -
+l 42
+      X.apply(c)
+      return true
+    end}))
+    return true
+  end}))
+end
+
+local function register_strings()
+  if not mod_loc_register then return end
+  mod_loc_register{
+    fr = {
+      ["Copies of each card"] = "Copies de chaque carte", ["Extra cards of a rank"] = "Cartes en plus d'un rang", ["Extra cards of a suit"] = "Cartes en plus d'une couleur",
+      ["Enhance starting cards"] = "Améliorer des cartes de départ", ["Seal on starting cards"] = "Sceau sur des cartes de départ", ["Edition on starting cards"] = "Édition sur des cartes de départ",
+      ["Rental on the last starting Joker"] = "Location sur le dernier Joker de départ", ["Perishable on the last starting Joker"] = "Périssable sur le dernier Joker de départ",
+      ["Every starting card is there {C:attention}%d{} times"] = "Chaque carte de départ est là {C:attention}%d{} fois",
+      ["{C:attention}+%d{} {C:attention}%s{} cards in the deck"] = "{C:attention}+%d{} cartes {C:attention}%s{} dans le deck",
+      ["{C:attention}%d{} starting cards are {C:attention}%s{}"] = "{C:attention}%d{} cartes de départ sont {C:attention}%s{}",
+      ["{C:attention}%d{} starting cards have a {C:attention}%s{}"] = "{C:attention}%d{} cartes de départ ont un {C:attention}%s{}",
+      ["{C:attention}%d{} starting cards are {C:dark_edition}%s{}"] = "{C:attention}%d{} cartes de départ sont {C:dark_edition}%s{}",
+      ["The last starting Joker is {C:attention}Rental{}"] = "Le dernier Joker de départ est en {C:attention}Location{}",
+      ["The last starting Joker is {C:attention}Perishable{}"] = "Le dernier Joker de départ est {C:attention}Périssable{}",
+      ["Played with the {C:attention}%s{}"] = "Se joue avec {C:attention}%s{}",
+    },
+    es = {
+      ["Copies of each card"] = "Copias de cada carta", ["Extra cards of a rank"] = "Cartas extra de un rango", ["Extra cards of a suit"] = "Cartas extra de un palo",
+      ["Enhance starting cards"] = "Mejorar cartas iniciales", ["Seal on starting cards"] = "Sello en cartas iniciales", ["Edition on starting cards"] = "Edición en cartas iniciales",
+      ["Rental on the last starting Joker"] = "Alquiler en el último comodín inicial", ["Perishable on the last starting Joker"] = "Perecedero en el último comodín inicial",
+      ["Every starting card is there {C:attention}%d{} times"] = "Cada carta inicial está {C:attention}%d{} veces",
+      ["{C:attention}+%d{} {C:attention}%s{} cards in the deck"] = "{C:attention}+%d{} cartas {C:attention}%s{} en el mazo",
+      ["{C:attention}%d{} starting cards are {C:attention}%s{}"] = "{C:attention}%d{} cartas iniciales son {C:attention}%s{}",
+      ["{C:attention}%d{} starting cards have a {C:attention}%s{}"] = "{C:attention}%d{} cartas iniciales tienen un {C:attention}%s{}",
+      ["{C:attention}%d{} starting cards are {C:dark_edition}%s{}"] = "{C:attention}%d{} cartas iniciales son {C:dark_edition}%s{}",
+      ["The last starting Joker is {C:attention}Rental{}"] = "El último comodín inicial es de {C:attention}Alquiler{}",
+      ["The last starting Joker is {C:attention}Perishable{}"] = "El último comodín inicial es {C:attention}Perecedero{}",
+      ["Played with the {C:attention}%s{}"] = "Se juega con {C:attention}%s{}",
+    },
+  }
+end
+
+register_strings()
+
+return X
+end

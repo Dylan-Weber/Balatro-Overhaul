@@ -103,7 +103,10 @@ function S.clean(c)
   end
   if out.name == "" then out.name = "Joker" end
   if type(c.requires) == "string" and c.requires:match("^v_[%w_]+$") and #c.requires <= 40 then out.requires = c.requires end
+  if require("functions/forge/forge_gates").ok(c.requires) then out.requires = c.requires end
   if require("functions/forge/forge_always").syntax_ok(c.always_ed) then out.always_ed = c.always_ed end
+  out.look = require("functions/forge/forge_forcedlook").clean(c.look)
+  if require("functions/forge/forge_rarities").own_ok(c.own_rarity) then out.own_rarity = c.own_rarity end
   return out
 end
 
@@ -340,6 +343,8 @@ function S.clean_item(c)
     art = clean_art(c.art),
     from = type(c.from) == "string" and c.from:match("^[%w_]+$") and c.from:sub(1, 40) or nil,
     faces = S.clean_faces(c.faces),
+    unset = c.unset == true or nil,
+    look = require("functions/forge/forge_forcedlook").kind_ok(c.kind) and require("functions/forge/forge_forcedlook").clean(c.look) or nil,
   }
   if out.name == "" then out.name = Cat.kind(c.kind).label end
   if out.rules and #out.rules == 0 then out.rules = nil end
@@ -430,5 +435,8 @@ function S.count(kind)
   if kind == nil then return #S.all() + #S.items() end
   return #S.of_kind(kind)
 end
+
+require("functions/forge/forge_grow").store(S)
+require("functions/forge/forge_balance").store(S)
 
 return S

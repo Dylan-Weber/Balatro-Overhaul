@@ -15,6 +15,7 @@ local _debug_host = nil
 local _debug_path = nil
 local _last_status = nil
 local _waiting = false
+local _opens = 0
 
 local WORKER_CODE = [[
 local bit = require("bit")
@@ -804,6 +805,7 @@ function AndroidWS.poll()
             mp_log.info("AndroidWS", "Probe result: socket=%s %s", tostring(_socket_available), tostring(detail))
         elseif kind == "CONNECTED" then
             _connected = true
+            _opens = _opens + 1
             _last_error = nil
             mp_log.info("AndroidWS", "Connected: %s", tostring(detail))
         elseif kind == "DISCONNECTED" then
@@ -880,6 +882,10 @@ end
 
 function AndroidWS.isConnected()
     return _connected
+end
+
+function AndroidWS.openCount()
+    return _opens
 end
 
 function AndroidWS.lastStatus()

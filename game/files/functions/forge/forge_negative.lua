@@ -85,8 +85,7 @@ return function(R)
 
   local D = R.DOS
   D.lose_money = function(g, card, src)
-    local have = big_num(G.GAME.dollars) - big_num(G.GAME.bankrupt_at or 0)
-    local n = math.min(tonumber(g.n) or 0, math.max(0, have))
+    local n = tonumber(g.n) or 0
     if n <= 0 then return end
     ease_dollars(-n)
     R.status(src, "-" .. localize("$") .. T.fmt_n(n), G.C.RED)
@@ -161,6 +160,106 @@ return function(R)
     }
   end
 
+  R.TWIN_V = 16
+  R.TWIN_IDS = {"lose_money_per", "minus_chips_per", "minus_mult_per", "var_lose_money", "var_minus_chips", "var_minus_mult"}
+  local TWIN_PER = {lose_money_per = "lose_money", minus_chips_per = "minus_chips", minus_mult_per = "minus_mult"}
+  local TWIN_VAR = {var_lose_money = true, var_minus_chips = true, var_minus_mult = true}
+  for _, id in ipairs(R.TWIN_IDS) do
+    if not R.member(R.GIVE, id) then R.GIVE[#R.GIVE + 1] = id end
+    R.HOST_GIVE[id] = ALL3
+    R.NEG_GIVE[id] = id ~= "lose_money_per" and id ~= "var_lose_money" or nil
+  end
+  R.NUM.lose_money_per = {def = 1, lo = 1, hi = R.BIG, step = 1, big = 5}
+  R.NUM.minus_chips_per = {def = 2, lo = 1, hi = R.BIG, step = 1, big = 10}
+  R.NUM.minus_mult_per = {def = 1, lo = 1, hi = R.BIG, step = 1, big = 5}
+  R.NUM.var_lose_money = {def = 1, lo = 1, hi = R.BIG, step = 1, big = 5}
+  R.NUM.var_minus_chips = {def = 5, lo = 1, hi = R.BIG, step = 1, big = 10}
+  R.NUM.var_minus_mult = {def = 1, lo = 1, hi = R.BIG, step = 1, big = 5}
+  R.GIVE_WHEN.minus_chips_per = {card_scored = true, hand_played = true}
+  R.GIVE_WHEN.var_minus_chips = {card_scored = true, hand_played = true}
+  R.GIVE_WHEN.minus_mult_per = SCORE
+  R.GIVE_WHEN.var_minus_mult = SCORE
+  for id in pairs(TWIN_VAR) do R.VAR_GIVE[id] = true end
+  R.PER_GIVE = R.PER_GIVE or {}
+  R.DEFAULT_GIVE = R.DEFAULT_GIVE or {}
+  R.CLEAN_GIVE = R.CLEAN_GIVE or {}
+  for id in pairs(TWIN_PER) do
+    R.PER_GIVE[id] = TWIN_PER[id]
+    R.DEFAULT_GIVE[id] = function() return {id = id, n = R.NUM[id].def, per = "jokers"} end
+    R.CLEAN_GIVE[id] = R.CLEAN_GIVE.money_per
+  end
+  R.SIMPLE_GIVE.minus_chips_per = true
+  R.SIMPLE_GIVE.minus_mult_per = true
+
+  local function count(g, card, context)
+    if TWIN_VAR[g.id] then return R.var_val(card, g.var) end
+    return R.count_of and R.count_of(g, card, context) or 0
+  end
+  local function scaled(g, card, context) return (tonumber(g.n) or 0) * count(g, card, context) end
+  for _, id in ipairs({"minus_chips_per", "var_minus_chips"}) do
+    R.SCORE_GIVE[id] = "chips"
+    R.AMOUNT[id] = function(g, card, context)
+      return -math.min(math.max(0, scaled(g, card, context)), math.max(0, big_num(rawget(_G, "hand_chips"))))
+    end
+  end
+  for _, id in ipairs({"minus_mult_per", "var_minus_mult"}) do
+    R.SCORE_GIVE[id] = "mult"
+    R.AMOUNT[id] = function(g, card, context)
+      return -math.min(math.max(0, scaled(g, card, context)), math.max(0, big_num(rawget(_G, "mult"))))
+    end
+  end
+  local function lose_scaled(g, card, src, context)
+    local n = scaled(g, card, context or {})
+    if n <= 0 then return end
+    D.lose_money({n = n}, card, src)
+  end
+  D.lose_money_per = lose_scaled
+  D.var_lose_money = lose_scaled
+
+  local L2 = {
+    en = {
+      lose_money_per = "lose {C:money}$%s{} for each %s", minus_chips_per = "{C:chips}-%s{} Chips for each %s", minus_mult_per = "{C:mult}-%s{} Mult for each %s",
+      var_lose_money = "lose {C:money}$%s{} for each {C:attention}%s{}",
+      var_minus_chips = "{C:chips}-%s{} Chips for each {C:attention}%s{}", var_minus_mult = "{C:mult}-%s{} Mult for each {C:attention}%s{}",
+    },
+    fr = {
+      lose_money_per = "perdez {C:money}%s ${} par %s", minus_chips_per = "{C:chips}-%s{} jetons par %s", minus_mult_per = "{C:mult}-%s{} Multi par %s",
+      var_lose_money = "perdez {C:money}%s ${} par {C:attention}%s{}", var_minus_chips = "{C:chips}-%s{} jetons par {C:attention}%s{}", var_minus_mult = "{C:mult}-%s{} Multi par {C:attention}%s{}",
+    },
+    es = {
+      lose_money_per = "pierdes {C:money}$%s{} por cada %s", minus_chips_per = "{C:chips}-%s{} fichas por cada %s", minus_mult_per = "{C:mult}-%s{} multi por cada %s",
+      var_lose_money = "pierdes {C:money}$%s{} por cada {C:attention}%s{}",
+      var_minus_chips = "{C:chips}-%s{} fichas por cada {C:attention}%s{}", var_minus_mult = "{C:mult}-%s{} multi por cada {C:attention}%s{}",
+    },
+  }
+  for id in pairs(TWIN_PER) do
+    R.TEXT_GIVE[id] = function(g, s, lang) return string.format((L2[lang] or L2.en)[id], T.fmt_n(g.n), R.count_label(g, lang)) end
+    if R.per_tarot_text then R.per_tarot_text(id) end
+  end
+  for id in pairs(TWIN_VAR) do
+    R.TEXT_GIVE[id] = function(g, s, lang, vars) return string.format((L2[lang] or L2.en)[id], T.fmt_n(g.n), T.var_name(vars, g.var)) end
+  end
+  LG.lose_money_per, LG.minus_chips_per, LG.minus_mult_per = "Lose money for each", "-Chips for each", "-Mult for each"
+  LG.var_lose_money, LG.var_minus_chips, LG.var_minus_mult = "Lose money for each point", "-Chips for each point", "-Mult for each point"
+  R.VAR_STEP = R.VAR_STEP or {}
+  R.VAR_STEP.var_lose_money, R.VAR_STEP.var_minus_chips, R.VAR_STEP.var_minus_mult = "Lose money for each %s", "-Chips for each %s", "-Mult for each %s"
+  if mod_loc_register then
+    mod_loc_register{
+      fr = {
+        ["Lose money for each"] = "Perd de l'argent par", ["-Chips for each"] = "-Jetons par", ["-Mult for each"] = "-Multi par",
+        ["Lose money for each point"] = "Perd de l'argent par point",
+        ["-Chips for each point"] = "-Jetons par point", ["-Mult for each point"] = "-Multi par point",
+        ["Lose money for each %s"] = "Perd de l'argent par %s", ["-Chips for each %s"] = "-Jetons par %s", ["-Mult for each %s"] = "-Multi par %s",
+      },
+      es = {
+        ["Lose money for each"] = "Pierde dinero por cada", ["-Chips for each"] = "-Fichas por cada", ["-Mult for each"] = "-Multi por cada",
+        ["Lose money for each point"] = "Pierde dinero por cada punto",
+        ["-Chips for each point"] = "-Fichas por cada punto", ["-Mult for each point"] = "-Multi por cada punto",
+        ["Lose money for each %s"] = "Pierde dinero por cada %s", ["-Chips for each %s"] = "-Fichas por cada %s", ["-Mult for each %s"] = "-Multi por cada %s",
+      },
+    }
+  end
+
   local base_need = R.need_v
   function R.need_v(rules, vars)
     local need = base_need(rules, vars)
@@ -170,6 +269,7 @@ return function(R)
       for _, l in ipairs(type(r) == "table" and {r.give, r.alt} or {}) do
         for _, g in ipairs(type(l) == "table" and l or {}) do
           if type(g) == "table" and neg[g.id] then need = math.max(need, R.NEG_V) end
+          if type(g) == "table" and (TWIN_PER[g.id] or TWIN_VAR[g.id]) then need = math.max(need, R.TWIN_V) end
         end
       end
     end

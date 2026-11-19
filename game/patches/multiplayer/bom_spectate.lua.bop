@@ -865,7 +865,7 @@ function SP.register_funcs()
     G.FUNCS.spec_close = function()
         SP.close()
 r 32 1375 %20%20%20%20%20%20%20%20 -
-l 277
+l 278
     end
     G.FUNCS.spec_frame = function() if V.open then pcall(frame) end end
     G.FUNCS.spec_holder = function(e)
@@ -1081,7 +1081,8 @@ local function on_live(d)
         pcall(function() if G.OVERLAY_MENU then G.FUNCS.exit_overlay_menu() end end)
         pcall(function()
             local M = rawget(_G, "mpm_menu")
-            if M and M.exit then M.exit() end
+            local W = rawget(_G, "bom_waitplay")
+            if M and M.exit and not (W and W.keeps_queue and W.keeps_queue()) then M.exit() end
         end)
         local ok = P.start({ mode = "live", id = d.id, header = d.header or {}, streams = d.streams or {}, seqs = d.seqs,
             pid = tonumber(d.pid) or 0, see_jokers = d.see_jokers ~= false })

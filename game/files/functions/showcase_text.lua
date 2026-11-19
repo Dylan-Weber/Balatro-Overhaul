@@ -152,6 +152,8 @@ T.STRINGS = {
         ["Skip Overhaul tutorial"] = "Passer le tutoriel Overhaul",
         ["The Overhaul tutorial is done"] = "Le tutoriel Overhaul est fini",
         ["No tour and no Hologram tips"] = "Ni visite, ni conseils d'Hologramme",
+        ["Main menu"] = "Menu principal", ["Profile icon position"] = "Position de l'icône de profil",
+        ["Put the main menu profile icon back in its corner"] = "Remet l'icône de profil du menu principal dans son coin",
     },
     es = {
         ["Tutorials"] = "Tutoriales",
@@ -166,6 +168,8 @@ T.STRINGS = {
         ["Skip Overhaul tutorial"] = "Saltar tutorial de Overhaul",
         ["The Overhaul tutorial is done"] = "El tutorial de Overhaul está hecho",
         ["No tour and no Hologram tips"] = "Sin recorrido ni consejos de Holograma",
+        ["Main menu"] = "Menú principal", ["Profile icon position"] = "Posición del icono de perfil",
+        ["Put the main menu profile icon back in its corner"] = "Devuelve el icono de perfil del menú principal a su esquina",
     },
 }
 

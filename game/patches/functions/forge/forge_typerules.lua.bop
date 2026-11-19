@@ -1,0 +1,296 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 246
+local X = {}
+
+X.WHENS = {"type_used", "type_bought", "type_sold"}
+X.WHEN_TEXT = {type_used = "When one of these cards is used", type_bought = "When one of these cards is bought", type_sold = "When one of these cards is sold"}
+X.COUNTS = {"type_held", "type_used"}
+
+local function Types() return require("functions/forge/forge_types") end
+local function Rules() return package.loaded["functions/forge/forge_rules"] end
+
+function X.fields(c)
+  local f = type(c) == "table" and type(c.fields) == "table" and c.fields or {}
+  local function num(k, lo, hi)
+    local v = tonumber(f[k])
+    if not v or v ~= v then return 0 end
+    return math.max(lo, math.min(hi, v))
+  end
+  local at = tonumber(f.sell_at)
+  if at == nil or at ~= at then at = (tonumber(f.fixed_sell) or 0) > 0 and tonumber(f.fixed_sell) or -1 end
+  at = at < 0 and -1 or math.floor(math.min(1e9, at))
+  return {sell = num("sell", 0, 1e9), fixed_sell = at, neg = num("neg", 0, 100), max_held = math.floor(num("max_held", 0, 1000))}
+end
+
+function X.type_of_set(set)
+  local t = type(set) == "string" and Types().by_set[set]
+  return t or nil
+end
+
+function X.type_of_card(card)
+  local set = type(card) == "table" and card.ability and card.ability.set
+  return X.type_of_set(set)
+end
+
+function X.set_of_value(v)
+  local R = Rules()
+  local id = R and R.own_id("ctype", v)
+  local t = id and Types().by_id[id]
+  return t and t.set or nil
+end
+
+function X.held(set)
+  local n = 0
+  for _, c in ipairs(G.consumeables and G.consumeables.cards or {}) do
+    if c.ability and c.ability.set == set then n = n + 1 end
+  end
+  return n
+end
+
+function X.used(set)
+  local n = 0
+  for _, v in pairs(G.GAME and G.GAME.consumeable_usage or {}) do
+    if type(v) == "table" and v.set == set then n = n + (tonumber(v.count) or 1) end
+  end
+  return n
+end
+
+function X.full(card)
+  local t = X.type_of_card(card)
+  if not t then return false end
+  local f = X.fields(t.c)
+  return f.max_held > 0 and X.held(t.set) >= f.max_held
+end
+
+function X.sell_price(f, current, extra)
+  if f.fixed_sell >= 0 then return f.fixed_sell + (tonumber(extra) or 0) + f.sell end
+  return (tonumber(current) or 0) + f.sell
+end
+
+function X.doc_lines(fields, add)
+  local f = X.fields({fields = fields})
+  if f.fixed_sell >= 0 then add(string.format(mod_loc("Its cards always sell for {C:money}$%d{}"), f.fixed_sell)) end
+  if f.sell > 0 then add(string.format(mod_loc("Its cards sell for {C:money}$%d{} more"), f.sell)) end
+  if f.neg > 0 then add(string.format(mod_loc("{C:dark_edition}Negative{} {C:attention}%d%%{} of the time"), f.neg)) end
+  if f.max_held > 0 then add(string.format(mod_loc("You can hold at most {C:attention}%d{}"), f.max_held)) end
+end
+
+X.USED = {
+  en = "it is a {C:attention}%s{} card", fr = "c'est une carte {C:attention}%s{}", es = "es una carta de {C:attention}%s{}",
+}
+X.ONE = {en = "{C:attention}%s{} card", fr = "carte {C:attention}%s{}", es = "carta de {C:attention}%s{}"}
+X.PER = {
+  en = {type_held = "%s you have", type_used = "%s used this run"},
+  fr = {type_held = "%s que vous avez", type_used = "%s utilisée dans la partie"},
+  es = {type_held = "%s que tienes", type_used = "%s usada en la partida"},
+}
+X.LABEL_COUNT = {type_held = "Card of a type you have", type_used = "Card of a type used this run"}
+
+function X.rules(R)
+  R.HOST_OF.ctype = "run"
+  R.KIND_WHEN.ctype = X.WHENS
+  for _, w in ipairs(X.WHENS) do if not R.member(R.WHEN, w) then R.WHEN[#R.WHEN + 1] = w end end
+  local own = function(v) return R.own_id("ctype", v) ~= nil end
+  local name = function(v) return R.own_label("ctype", v) or tostring(v) end
+  R.ONLY_WHEN.used_kind = R.ONLY_WHEN.used_kind or {}
+  R.ONLY_WHEN.used_kind.card_bought = true
+  R.ONLY_WHEN.used_kind.card_sold = true
+  local clean = R.CLEAN_ONLY.used_kind
+  R.CLEAN_ONLY.used_kind = function(c, ...)
+    local v = type(c) == "table" and c.v
+    local r = clean and clean(c, ...)
+    if own(v) then c.v = v end
+    return r
+  end
+  local base_used = R.CHECKS.used_kind
+  R.CHECKS.used_kind = function(o, context, ...)
+    local c = context.consumeable or ((context.buying_card or context.selling_card) and context.card)
+    if own(o.v) then
+      local set = X.set_of_value(o.v)
+      return set ~= nil and c ~= nil and c.ability ~= nil and c.ability.set == set
+    end
+    if not context.consumeable and c then return c.ability ~= nil and c.ability.set == o.v end
+    return base_used(o, context, ...)
+  end
+  local base_text = R.TEXT_ONLY.used_kind
+  R.TEXT_ONLY.used_kind = function(o, s, lang)
+    if own(o.v) then return string.format(X.USED[lang] or X.USED.en, name(o.v)) end
+    return base_text(o, s, lang)
+  end
+  for _, id in ipairs(X.COUNTS) do
+    if not R.member(R.COUNTS, id) then R.COUNTS[#R.COUNTS + 1] = id end
+    R.COUNT_MATCH[id] = true
+    if R.LABEL_COUNT then R.LABEL_COUNT[id] = X.LABEL_COUNT[id] end
+  end
+  R.COUNT.type_held = function(g) local set = X.set_of_value(g.m) return set and X.held(set) or 0 end
+  R.COUNT.type_used = function(g) local set = X.set_of_value(g.m) return set and X.used(set) or 0 end
+  for lang, t in pairs(R.PER_TEXT or {}) do
+    if type(t) == "table" and type(t.counts) == "table" then
+      for id, txt in pairs(X.PER[lang] or X.PER.en) do t.counts[id] = txt end
+    end
+  end
+  local base_matches = R.count_matches
+  R.count_matches = function(per)
+    if per == "type_held" or per == "type_used" then return R.own_values("ctype") end
+    return base_matches(per)
+  end
+  local base_one = R.one_label
+  R.one_label = function(v, lang)
+    if own(v) then return string.format(X.ONE[lang] or X.ONE.en, name(v)) end
+    return base_one(v, lang)
+  end
+  local base_count = R.count_label
+  R.count_label = function(g, lang)
+    if g.per == "type_held" or g.per == "type_used" then
+      return string.format((X.PER[lang] or X.PER.en)[g.per], R.one_label(g.m or "", lang))
+    end
+    return base_count(g, lang)
+  end
+  local base_m = R.count_m_label
+  if base_m then
+    R.count_m_label = function(per, m, lang)
+      if own(m) then return R.one_label(m, lang) end
+      return base_m(per, m, lang)
+    end
+  end
+  for _, id in ipairs({"chips_per", "mult_per", "xmult_per", "money_per", "gain_mult_per", "gain_xmult_per"}) do
+    local fn = R.CLEAN_GIVE[id]
+    if type(fn) == "function" then
+      R.CLEAN_GIVE[id] = function(e, ...)
+        local m = type(e) == "table" and e.m
+        local per = type(e) == "table" and e.per
+        local r = fn(e, ...)
+        if own(m) and (per == "type_held" or per == "type_used") then e.per, e.m = per, m end
+        return r
+      end
+    end
+  end
+  local base_create = R.create_one
+  R.create_one = function(kind, card, ...)
+    if own(kind) then
+      local set = X.set_of_value(kind)
+      if not set then return false end
+      return base_create(set, card, ...)
+    end
+    return base_create(kind, card, ...)
+  end
+  local base_need = R.need_v
+  R.need_v = function(rules, vars)
+    local need = base_need(rules, vars)
+    for _, r in ipairs(type(rules) == "table" and rules or {}) do
+      for _, k in ipairs({"give", "alt", "only"}) do
+        for _, g in ipairs(type(r) == "table" and type(r[k]) == "table" and r[k] or {}) do
+          if type(g) == "table" and (g.per == "type_held" or g.per == "type_used" or ((g.id == "used_kind" or g.id == "create") and own(g.v))) then need = math.max(need, 16) end
+        end
+      end
+    end
+    return need
+  end
+  X.text()
+end
+
+function X.text()
+  local T = package.loaded["functions/forge/forge_text"]
+  if not T then return end
+  T.KIND_WHEN_TEXT = T.KIND_WHEN_TEXT or {}
+  T.KIND_WHEN_TEXT.ctype = X.WHEN_TEXT
+end
+
+function X.fire(card, when)
+  local t = X.type_of_card(card)
+  if not t then return end
+  local c = t.c
+  if type(c.rules) ~= "table" or #c.rules == 0 then return end
+  local HR = require("functions/forge/forge_hostrules")
+  local ctx = {forge_when = when, consumeable = card, card = card, other_card = nil}
+  HR.fire_item(c, "type_" .. c.id, ctx)
+end
+
+function X.install()
+  if X.hooked then return end
+  local okh, Hooks = pcall(require, "overhaul.hooks")
+  if not (okh and Hooks) then return end
+  X.hooked = true
+  X.text()
+  Hooks.wrap("Card", "set_cost", function(orig) return function(self, ...)
+    local r = orig(self, ...)
+    local t = X.type_of_card(self)
+    if t then
+      local f = X.fields(t.c)
+      if f.fixed_sell >= 0 or f.sell > 0 then
+        self.sell_cost = X.sell_price(f, self.sell_cost, self.ability and tonumber(self.ability.extra_value))
+        self.sell_cost_label = self.facing == "back" and "?" or self.sell_cost
+      end
+    end
+    return r
+  end end, {id = "forge_typerules.set_cost"})
+  Hooks.wrap(_G, "create_card", function(orig) return function(_type, area, ...)
+    local card = orig(_type, area, ...)
+    if card and area and (area == G.shop_jokers or area == G.pack_cards) and not card.edition then
+      local t = X.type_of_card(card)
+      local f = t and X.fields(t.c)
+      if f and f.neg > 0 and pseudorandom(pseudoseed("forge_type_neg" .. (G.GAME.round_resets and G.GAME.round_resets.ante or 1))) < f.neg / 100 then
+        card:set_edition({negative = true}, true, true)
+      end
+    end
+    return card
+  end end, {id = "forge_typerules.create_card"})
+  Hooks.wrap("G.FUNCS", "check_for_buy_space", function(orig) return function(card, ...)
+    if card and X.full(card) then
+      alert_no_space(card, G.consumeables)
+      return false
+    end
+    return orig(card, ...)
+  end end, {id = "forge_typerules.buy_space"})
+  Hooks.wrap("G.FUNCS", "buy_from_shop", function(orig) return function(e, ...)
+    local card = e and e.config and e.config.ref_table
+    local r = orig(e, ...)
+    if card and X.type_of_card(card) then
+r 3 617 %20%20%20%20%20%20 -
+l 42
+        if card.area == G.consumeables then pcall(X.fire, card, "type_bought") end
+        return true
+      end}))
+    end
+    return r
+  end end, {id = "forge_typerules.buy"})
+  Hooks.wrap("Card", "use_consumeable", function(orig) return function(self, ...)
+    local r = orig(self, ...)
+    if X.type_of_card(self) then pcall(X.fire, self, "type_used") end
+    return r
+  end end, {id = "forge_typerules.use"})
+  Hooks.wrap("Card", "sell_card", function(orig) return function(self, ...)
+    if X.type_of_card(self) then pcall(X.fire, self, "type_sold") end
+    return orig(self, ...)
+  end end, {id = "forge_typerules.sell"})
+end
+
+local function register_strings()
+  if not mod_loc_register then return end
+  mod_loc_register{
+    fr = {
+      ["Always sells for"] = "Se revend toujours", ["Off"] = "Non", ["Its cards always sell for {C:money}$%d{}"] = "Ses cartes se revendent toujours {C:money}%d ${}",
+      ["+$ sell value"] = "+$ de revente", ["Negative chance"] = "Chance d'être Négative", ["Most held at once"] = "Maximum en main",
+      ["Its cards sell for {C:money}$%d{} more"] = "Ses cartes se revendent {C:money}%d ${} de plus", ["{C:dark_edition}Negative{} {C:attention}%d%%{} of the time"] = "{C:dark_edition}Négative{} {C:attention}%d %%{} du temps",
+      ["You can hold at most {C:attention}%d{}"] = "Vous pouvez en garder {C:attention}%d{} au plus",
+      ["When one of these cards is used"] = "Quand une de ces cartes est utilisée", ["When one of these cards is bought"] = "Quand une de ces cartes est achetée", ["When one of these cards is sold"] = "Quand une de ces cartes est vendue",
+      ["Card of a type you have"] = "Carte d'un type que vous avez", ["Card of a type used this run"] = "Carte d'un type utilisée dans la partie", ["WHICH TYPE?"] = "QUEL TYPE ?",
+    },
+    es = {
+      ["Always sells for"] = "Siempre se vende por", ["Off"] = "No", ["Its cards always sell for {C:money}$%d{}"] = "Sus cartas siempre se venden por {C:money}$%d{}",
+      ["+$ sell value"] = "+$ al vender", ["Negative chance"] = "Probabilidad de Negativa", ["Most held at once"] = "Máximo a la vez",
+      ["Its cards sell for {C:money}$%d{} more"] = "Sus cartas se venden por {C:money}$%d{} más", ["{C:dark_edition}Negative{} {C:attention}%d%%{} of the time"] = "{C:dark_edition}Negativa{} el {C:attention}%d%%{} de las veces",
+      ["You can hold at most {C:attention}%d{}"] = "Puedes tener {C:attention}%d{} como máximo",
+      ["When one of these cards is used"] = "Cuando se usa una de estas cartas", ["When one of these cards is bought"] = "Cuando se compra una de estas cartas", ["When one of these cards is sold"] = "Cuando se vende una de estas cartas",
+      ["Card of a type you have"] = "Carta de un tipo que tienes", ["Card of a type used this run"] = "Carta de un tipo usada en la partida", ["WHICH TYPE?"] = "¿QUÉ TIPO?",
+    },
+  }
+end
+
+register_strings()
+
+return X
+end

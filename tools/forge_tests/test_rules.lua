@@ -93,6 +93,7 @@ local function ctx_for(when, extra)
     hand_debuffed = {cardarea = G.jokers, debuffed_hand = true, full_hand = hand, scoring_hand = hand, scoring_name = "Pair", poker_hands = ph},
     passive = {forge_none = true},
   }
+  for _, w in ipairs({"money_earned", "money_spent", "card_drawn", "joker_sold", "joker_added", "tag_added", "boss_beaten", "ante_up", "shop_opened", "hand_leveled", "consumable_added", "before_discard"}) do base[w] = {forge_when = w} end
   local c = base[when]
   for k, v in pairs(extra or {}) do c[k] = v end
   return c

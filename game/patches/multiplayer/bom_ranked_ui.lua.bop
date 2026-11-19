@@ -512,7 +512,7 @@ function R.show_results()
             return
         end
 r 32 1375 %20%20%20%20%20%20%20%20 -
-l 542
+l 559
     end
     G.FUNCS.mp_ranked_results_view = function()
         close_session()
@@ -574,7 +574,6 @@ local function clock(sec)
     sec = math.max(0, math.floor(sec or 0))
     return string.format("%d:%02d", math.floor(sec / 60), sec % 60)
 end
-U.clock = clock
 
 local function searching()
     return Q.status == "joining" or Q.status == "searching"
@@ -612,7 +611,6 @@ end
 local function update_view()
     Q.view.status = status_text()
     Q.view.counts = counts_text()
-    U.reframe()
 end
 U.update_view = update_view
 
@@ -650,7 +648,8 @@ function U.queue_start()
         return R.ui_refresh()
     end
     Q.status, Q.error, Q.since = "joining", nil, now()
-    if G.GAME then
+    local WP = rawget(_G, "bom_waitplay")
+    if G.GAME and not (WP and WP.solo_run and WP.solo_run()) then
         G.GAME.mp_searching = true
         G.GAME.bom_quick_match = true
     end
@@ -676,7 +675,8 @@ function U.queue_cancel(silent)
         return
     end
     Q.status = nil
-    if G.GAME then
+    local WP = rawget(_G, "bom_waitplay")
+    if G.GAME and not (WP and WP.solo_run and WP.solo_run()) then
         G.GAME.mp_searching = false
         G.GAME.bom_quick_match = nil
     end
@@ -776,6 +776,10 @@ local function tab_main()
     local bh = t and 1.0 or 0.86
     local ch = UIK.H - UIK.TOP - bh - 0.95
     local busy = searching()
+    local WP = rawget(_G, "bom_waitplay")
+    local solo = busy and WP and WP.lobby_buttons and WP.lobby_buttons("ranked") or {}
+    local two_rows = #solo > 0 and UIK.portrait()
+    if two_rows then ch = ch - bh - 0.12 end
     local packs = tonumber(S.profile.packs) or 0
     update_view()
     local cards
@@ -791,13 +795,26 @@ local function tab_main()
     else
         cards = UIK.columns({{rank_card(cw, ch)}, {season_card(cw, ch)}, {recent_card(cw, ch)}}, {h = ch})
     end
-    local buttons = UIK.button_bar({
+    local bw = cw
+    if #solo > 0 and not two_rows then bw = math.min(cw, (UIK.W - 1.2 - 0.3 * (#solo + 1)) / (#solo + 2)) end
+    local main_row = {
         UIK.button{label = busy and L("CANCEL") or L("PLAY RANKED"), button = busy and "mp_ranked_queue_cancel" or "mp_ranked_queue",
-            colour = busy and G.C.RED or G.C.GREEN, w = cw, h = bh, id = "mp_ranked_queue"},
-        {n = G.UIT.C, config = {minw = 0.3}},
-        UIK.button{label = L("OPEN PACK") .. " (" .. tostring(packs) .. ")", button = "mp_ranked_open_pack", colour = G.C.PURPLE,
-            disabled = packs <= 0, w = cw, h = bh, id = "mp_ranked_pack"},
-    }, {padding = 0.06})
+            colour = busy and G.C.RED or G.C.GREEN, w = bw, h = bh, id = "mp_ranked_queue"},
+    }
+    local solo_row = two_rows and {} or main_row
+    for _, it in ipairs(solo) do
+        if #solo_row > 0 then solo_row[#solo_row + 1] = {n = G.UIT.C, config = {minw = 0.3}} end
+        solo_row[#solo_row + 1] = UIK.button{label = it[1], button = it[2], colour = it[3], id = it[4], w = bw, h = bh}
+    end
+    main_row[#main_row + 1] = {n = G.UIT.C, config = {minw = 0.3}}
+    main_row[#main_row + 1] = UIK.button{label = L("OPEN PACK") .. " (" .. tostring(packs) .. ")", button = "mp_ranked_open_pack", colour = G.C.PURPLE,
+        disabled = packs <= 0, w = bw, h = bh, id = "mp_ranked_pack"}
+    local buttons = UIK.button_bar(main_row, {padding = 0.06})
+    if two_rows then
+        buttons = {n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = {{n = G.UIT.C, config = {align = "cm", padding = 0}, nodes = {
+            buttons, UIK.button_bar(solo_row, {padding = 0.06}),
+        }}}}
+    end
     return body_wrap({n = G.UIT.C, config = {align = "tm"}, nodes = {
         {n = G.UIT.R, config = {align = "cm"}, nodes = {cards}},
         buttons,
@@ -1067,7 +1084,7 @@ l 9
                 R.draw_tile(self)
                 if self.children.mp_fx then self.children.mp_fx:draw() end
 r 2 461 %20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 142
+l 127
             end
         end
     end
@@ -1161,8 +1178,6 @@ local function tab_profile()
 end
 
 local function window_def(tab)
-    local queued = searching()
-    U.framed = queued
     return UIK.window{zoom = false,
         id = "mp_ranked",
         title = L("RANKED"),
@@ -1174,20 +1189,7 @@ local function window_def(tab)
             {key = "rules", label = L("Rules"), build = tab_rules},
         },
         back_func = "mp_ranked_back",
-        no_back = queued,
-        footer = queued and function()
-            local w = (UIK.W - 0.6) / 2
-            return {
-                UIK.button{label = L("Leave queue & back"), button = "mp_ranked_leave_back", colour = G.C.RED, w = w},
-                UIK.back_node({back_func = "mp_ranked_back", back_label = L("Back, stay in queue"), w = w}),
-            }
-        end or nil,
     }
-end
-
-function U.reframe()
-    if U.framed == searching() or not ranked_open() then return end
-    G.FUNCS.overlay_menu{definition = window_def(UIK._win and UIK._win._cur)}
 end
 
 function R.ui_refresh()
@@ -1314,7 +1316,7 @@ function U.register()
     events()
     G.FUNCS.mp_open_ranked = function()
 r 32 1381 %20%20%20%20%20%20%20%20 -
-l 12
+l 14
         G.FUNCS.overlay_menu{definition = window_def()}
         R.request_profile()
         local m = menu()
@@ -1323,16 +1325,14 @@ l 12
         start_tick()
     end
     G.FUNCS.mp_ranked_back = function()
-        if not searching() then U.queue_cancel(true) end
         local m = menu()
-        if m and m.active then return G.FUNCS.exit_overlay_menu() end
+        if m and m.active then
+            if G.STAGE == G.STAGES.MAIN_MENU and m.open_play then return m.open_play() end
+            return G.FUNCS.exit_overlay_menu()
+        end
         if G.FUNCS.open_multiplayer_menu then return G.FUNCS.open_multiplayer_menu() end
 r 32 1375 %20%20%20%20%20%20%20%20 -
-l 21
-    end
-    G.FUNCS.mp_ranked_leave_back = function()
-        U.queue_cancel(true)
-        G.FUNCS.mp_ranked_back()
+l 17
     end
     G.FUNCS.mp_ranked_queue = function() U.queue_start() end
     G.FUNCS.mp_ranked_queue_cancel = function() U.queue_cancel() end

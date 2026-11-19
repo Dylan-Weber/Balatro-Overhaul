@@ -2,11 +2,12 @@ BOP 1
 eol lf
 final 1
 base 0
-l 126
+l 128
 local math = require("functions.pure_math")
 local P = require("functions/forge/forge_pixel")
 local Store = require("functions/forge/forge_store")
 local FJ = require("functions/forge/forge_joker")
+local FL = require("functions/forge/forge_forcedlook")
 
 local PX = {}
 ForgePixelUI = PX
@@ -37,6 +38,7 @@ PX.KINDS = {
   {key = "seal", label = "Seal", atlas = "centers", empty_blank = true},
   {key = "edition", label = "Edition", atlas = "Joker", empty_blank = true},
   {key = "skin", label = "Card skin", atlas = "cards_1"},
+  {key = "suit", label = "Suit symbol", w = 11, h = 10, atlas = "cards_1", game = 0.6},
   {key = "blind", label = "Blind chip", w = 34, h = 34, atlas = "blind_chips", game = 1.4},
   {key = "tag", label = "Tag", w = 34, h = 34, atlas = "tags", game = 0.8},
   {key = "stake", label = "Stake", w = 29, h = 29, atlas = "chips", game = 0.8},
@@ -138,7 +140,7 @@ l 6
     local quad = love.graphics.newQuad(pos.x * atlas.px, pos.y * atlas.py, atlas.px, atlas.py, img:getDimensions())
     love.graphics.draw(img, quad, 0, 0, 0, w / atlas.px, h / atlas.py)
 r 13 112 %20%20%20%20 -
-l 357
+l 369
     love.graphics.pop()
     img:setFilter(fmin, fmag)
     return canvas:newImageData()
@@ -204,6 +206,11 @@ function PX.sprites(kind_key)
     for key, c in pairs(G.P_CARDS or {}) do if c.pos then list[#list + 1] = {key = key, c = c} end end
     table.sort(list, function(a, b) return a.c.pos.y < b.c.pos.y or (a.c.pos.y == b.c.pos.y and a.c.pos.x < b.c.pos.x) end)
     for _, e in ipairs(list) do out[#out + 1] = {key = e.key, atlas = "cards_1", pos = e.c.pos} end
+  elseif k.key == "suit" then
+    for i, suit in ipairs({"S", "H", "C", "D"}) do
+      local c = G.P_CARDS and G.P_CARDS[suit .. "_2"]
+      if c and c.pos then out[#out + 1] = {key = suit .. "_2", atlas = "cards_1", pos = c.pos, crop = {x = 30, y = 13}} end
+    end
   elseif k.key == "blind" then
     for _, e in ipairs(sorted_by_order(G.P_BLINDS)) do out[#out + 1] = {key = e.key, atlas = e.c.atlas or "blind_chips", pos = {x = 0, y = e.c.pos.y}} end
   elseif k.key == "tag" then
@@ -225,6 +232,13 @@ end
 
 local function sprite_of(kind_key, s)
   local w, h = kind_size(PX.kind(kind_key))
+  if s.crop then
+    local ok, deck = pcall(love.image.newImageData, "resources/textures/1x/8BitDeck.png")
+    if not (ok and deck) then return nil end
+    local out = love.image.newImageData(w, h)
+    out:paste(deck, 0, 0, s.pos.x * 71 + s.crop.x, s.pos.y * 95 + s.crop.y, w, h)
+    return P.from_image_data(out)
+  end
   return PX.sprite_data(s.atlas, s.pos, w, h)
 end
 
@@ -849,7 +863,7 @@ end
 
 function Canvas:move(dt)
 r 2 655 %20%20 -
-l 381
+l 441
   if PX.pad.on then
     local H = G.CONTROLLER and G.CONTROLLER.HID
     if H and (H.mouse or H.touch) and not H.controller then
@@ -960,6 +974,7 @@ function PX.preview_node()
     if not atlas then return {n = G.UIT.R, config = {align = "cm", minw = box, minh = box}, nodes = {}} end
     local spr = Sprite(0, 0, s, s, atlas, {x = 0, y = 0})
     spr.states.drag.can = false
+    if PX.look_ok() then FL.tag(spr, PX.look_get()) end
     PX.preview_card = nil
     return {n = G.UIT.R, config = {align = "cm", minw = box, minh = box, padding = 0}, nodes = {{n = G.UIT.O, config = {object = spr}}}}
   end
@@ -978,6 +993,8 @@ function PX.preview_node()
   if tg and tg.look ~= nil then
     if tg.edition == "negative" then card:set_edition({negative = true}, true, true) end
     require("functions/forge/forge_shine").preview(card, tg.look)
+  elseif PX.look_ok() then
+    FL.preview(card, PX.look_get())
   else
     local ed = adv() and PX.EDITIONS[PX.state.edition] or "base"
     if ed ~= "base" then card:set_edition({[ed] = true}, true, true) end
@@ -1162,6 +1179,63 @@ local function brush_row(w, h)
   return stepper(string.format(mod_loc("Brush %d"), PX.state.brush), "forge_px_brush", w, h, PX.state.brush <= 1, PX.state.brush >= PX.BRUSH_MAX, "forge_px_brush")
 end
 
+function PX.look_ok()
+  local k = PX.kind()
+  if not FL.PX_KINDS[k.key] then return false end
+  local t = PX.state.target
+  if t and t.kind == "draft" then
+    local B = rawget(_G, "ForgeBuilder")
+    local d = B and B.state and B.state.draft
+    return d ~= nil and FL.kind_ok(d.kind)
+  end
+  return true
+end
+
+function PX.look_get()
+  local t = PX.state.target
+  if t and t.kind == "draft" then
+    local B = rawget(_G, "ForgeBuilder")
+    local d = B and B.state and B.state.draft
+    return d and FL.clean(d.look) or nil
+  end
+  if t and t.kind == "creation" then
+    local c = Store.get(t.id)
+    return c and FL.clean(c.look) or nil
+  end
+  return FL.clean(PX.state.look)
+end
+
+function PX.look_set(v)
+  v = FL.clean(v)
+  local t = PX.state.target
+  if t and t.kind == "draft" then
+    local B = rawget(_G, "ForgeBuilder")
+    local d = B and B.state and B.state.draft
+    if d then
+      d.look = v
+      B.dirty = true
+    end
+    return
+  end
+  if t and t.kind == "creation" then
+    local c = Store.get(t.id)
+    if c then
+      c.look = v
+      Store.put(c)
+      FJ.register_all()
+    end
+    return
+  end
+  PX.state.look = v
+end
+
+local function look_rows(w, h)
+  return {
+    line_of({UIK.text(mod_loc("Special effect"), {scale = base_sc(), colour = UIK.C.title})}, w),
+    stepper(FL.name(PX.look_get()), "forge_px_look", w, h, false, false, "forge_px_look"),
+  }
+end
+
 local function edition_name(e)
   if e == "base" then return mod_loc("Base") end
   local ok, s = pcall(localize, {type = "name_text", set = "Edition", key = "e_" .. e})
@@ -1232,7 +1306,7 @@ local function eye(i, visible, size)
   if visible then
     local check = Sprite(0, 0, size * 0.8, size * 0.8, G.ASSET_ATLAS["icons"], {x = 1, y = 0})
 r 30 1916 %20%20%20%20 -
-l 904
+l 917
     nodes[1] = {n = G.UIT.O, config = {object = check}}
   end
   return {n = G.UIT.C, config = {align = "cm", minw = size, minh = size, r = 0.1, colour = visible and G.C.RED or G.C.BLACK, outline = 1.2, outline_colour = G.C.WHITE, line_emboss = 0.5,
@@ -1293,7 +1367,9 @@ local function panel(w)
     if PX.state.panel == "layers" then body = layer_rows(w, h)
     elseif PX.state.panel == "view" then
       body = view_rows(w, h)
-      if is_card(PX.kind()) then
+      if PX.look_ok() then
+        for _, r in ipairs(look_rows(w, h)) do body[#body + 1] = r end
+      elseif is_card(PX.kind()) then
         body[#body + 1] = stepper(edition_name(PX.EDITIONS[PX.state.edition]), "forge_px_edition", w, h, false, false, "forge_px_edition")
       end
     else body = options_rows(w, h) end
@@ -1307,6 +1383,7 @@ local function panel(w)
     else
       rows[#rows + 1] = brush_row(w, h)
       for _, r in ipairs(view_rows(w, h)) do rows[#rows + 1] = r end
+      if PX.look_ok() then for _, r in ipairs(look_rows(w, h)) do rows[#rows + 1] = r end end
     end
   end
   return {n = G.UIT.C, config = {align = "tm", minw = w, padding = 0}, nodes = rows}
@@ -1585,6 +1662,16 @@ end
 G.FUNCS.forge_px_edition = function(e)
   local d = e and e.config and e.config.ref_table and e.config.ref_table.d or 1
   PX.state.edition = (PX.state.edition - 1 + d) % #PX.EDITIONS + 1
+  UIK.refresh()
+end
+
+G.FUNCS.forge_px_look = function(e)
+  local d = e and e.config and e.config.ref_table and e.config.ref_table.d or 1
+  local list = FL.options()
+  local cur = PX.look_get() or "none"
+  local at = 1
+  for i, v in ipairs(list) do if v == cur then at = i end end
+  PX.look_set(list[(at - 1 + d) % #list + 1])
   UIK.refresh()
 end
 
@@ -2046,7 +2133,7 @@ G.FUNCS.forge_px_make = function()
   local path = Store.art_path(id)
   local info = PX.export_files(PX.paths(path))
   if not info then return end
-  local c = Store.put({id = id, name = mod_loc("New joker"), rarity = 1, cost = 4, enabled = false, art = {file = info.x1, file2x = info.x2, soul = info.soul, soul2x = info.soul2x, kind = info.kind}, rules = {}})
+  local c = Store.put({id = id, name = mod_loc("New joker"), rarity = 1, cost = 4, enabled = false, art = {file = info.x1, file2x = info.x2, soul = info.soul, soul2x = info.soul2x, kind = info.kind}, rules = {}, look = FL.clean(PX.state.look)})
   FJ.register_all()
   local B = rawget(_G, "ForgeBuilder")
   if B and B.edit and c then

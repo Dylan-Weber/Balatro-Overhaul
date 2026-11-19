@@ -1,0 +1,464 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 345
+local Store = require("functions/forge/forge_store")
+
+local Fu = {}
+
+Fu.EDITION_RANK = {foil = 1, holo = 2, polychrome = 3, negative = 4}
+
+Fu.SPECIAL_J = {"j_any", "j_any_common", "j_any_uncommon", "j_any_rare", "j_any_legendary"}
+Fu.SPECIAL_C = {"c_any", "c_any_tarot", "c_any_planet", "c_any_spectral"}
+Fu.RARITY = {j_any_common = 1, j_any_uncommon = 2, j_any_rare = 3, j_any_legendary = 4}
+Fu.SET = {c_any_tarot = "Tarot", c_any_planet = "Planet", c_any_spectral = "Spectral"}
+Fu.ON = {"Jokers", "Consumables"}
+Fu.LABEL = {
+  j_none = "Nothing", j_any = "Any Joker", j_any_common = "Any Common Joker", j_any_uncommon = "Any Uncommon Joker", j_any_rare = "Any Rare Joker", j_any_legendary = "Any Legendary Joker",
+  c_any = "Any consumable", c_any_tarot = "Any Tarot", c_any_planet = "Any Planet", c_any_spectral = "Any Spectral",
+}
+
+function Fu.joker_ok(v)
+  return type(v) == "string" and #v <= 40 and v:match("^[jc]_[%w_]+$") ~= nil
+end
+
+function Fu.own_rarity(v)
+  local id = type(v) == "string" and v:match("^j_any_r_(%w+)$")
+  return id and ("rarity_forge_" .. id) or nil
+end
+
+function Fu.special(v)
+  return v == "j_none" or Fu.LABEL[v] ~= nil or Fu.own_rarity(v) ~= nil
+end
+
+function Fu.fields(c)
+  local f = type(c) == "table" and type(c.fields) == "table" and c.fields or {}
+  local cost = tonumber(f.cost)
+  local third = Fu.joker_ok(f.c) and f.c ~= "j_none" and f.c or nil
+  local out = Fu.joker_ok(f.out) and not Fu.special(f.out) and f.out or nil
+  return {a = Fu.joker_ok(f.a) and f.a or nil, b = Fu.joker_ok(f.b) and f.b or nil, c = third, out = out, cost = cost and math.max(0, cost) or 5,
+    on = f.on == "Consumables" and "Consumables" or "Jokers", auto = f.auto == true, between = f.between == true, sacrifice = f.sacrifice == true, keep = f.keep == true}
+end
+
+local function usable(key, on)
+  local center = G and G.P_CENTERS and G.P_CENTERS[key]
+  if not center or center.forge_lost or center.forge_on == false then return false end
+  if on == "Consumables" then return center.consumeable ~= nil or center.set == "Tarot" or center.set == "Planet" or center.set == "Spectral" end
+  return center.set == "Joker"
+end
+
+function Fu.recipes()
+  local out = {}
+  local ok, items = pcall(Store.live_items)
+  for _, c in ipairs(ok and items or {}) do
+    if type(c) == "table" and c.kind == "fusion" and c.enabled ~= false then
+      local f = Fu.fields(c)
+      if f.a and f.b and f.out then
+        local parts = {f.a, f.b}
+        if f.c then parts[3] = f.c end
+        out[#out + 1] = {id = c.id, c = c, a = f.a, b = f.b, third = f.c, parts = parts, out = f.out, cost = f.cost,
+          on = f.on, auto = f.auto, between = f.between, sacrifice = f.sacrifice, keep = f.keep}
+      end
+    end
+  end
+  table.sort(out, function(x, y) return tostring(x.id) < tostring(y.id) end)
+  return out
+end
+
+local function key_of(card) return card and card.config and card.config.center and card.config.center.key end
+
+function Fu.fits(card, want)
+  local center = card and card.config and card.config.center
+  if not center then return false end
+  local key = center.key
+  if want == key then return true end
+  if want == "j_any" then return center.set == "Joker" end
+  if Fu.RARITY[want] then return center.set == "Joker" and center.rarity == Fu.RARITY[want] end
+  local own = Fu.own_rarity(want)
+  if own then return center.set == "Joker" and center.rarity == own end
+  if want == "c_any" then return center.consumeable ~= nil or center.set == "Tarot" or center.set == "Planet" or center.set == "Spectral" end
+  if Fu.SET[want] then return center.set == Fu.SET[want] end
+  return false
+end
+
+local function area_for(r)
+  if r.on == "Consumables" then return G.consumeables end
+  return G.jokers
+end
+
+local function free(c)
+  return c and not c.getting_sliced and not c.removed
+end
+
+function Fu.assign(r, card, pool)
+  for i, want in ipairs(r.parts) do
+    if Fu.fits(card, want) then
+      local used = {[card] = true}
+      local picked = {}
+      picked[i] = card
+      local function fill(j)
+        if j > #r.parts then return true end
+        if picked[j] then return fill(j + 1) end
+        for _, other in ipairs(pool) do
+          if not used[other] and free(other) and Fu.fits(other, r.parts[j]) then
+            used[other], picked[j] = true, other
+            if fill(j + 1) then return true end
+            used[other], picked[j] = nil, nil
+          end
+        end
+        return false
+      end
+      if fill(1) then return picked end
+    end
+  end
+  return nil
+end
+
+function Fu.match(card, cards)
+  if not key_of(card) then return nil end
+  for _, r in ipairs(Fu.recipes()) do
+    if usable(r.out, r.on) then
+      local area = area_for(r)
+      local pool = cards or (area and area.cards) or {}
+      local picked = Fu.assign(r, card, pool)
+      if picked then
+        local others = {}
+        for _, c in ipairs(picked) do if c ~= card then others[#others + 1] = c end end
+        return r, others[1], picked
+      end
+    end
+  end
+  return nil
+end
+
+function Fu.best_edition_of(list)
+  local best, bestn = nil, 0
+  for _, c in ipairs(list) do
+    local e = c and c.edition
+    if type(e) == "table" then
+      for k, n in pairs(Fu.EDITION_RANK) do if e[k] and n > bestn then best, bestn = k, n end end
+      if not best and e.type then best, bestn = e.type, 0.5 end
+    end
+  end
+  return best
+end
+
+function Fu.best_edition(x, y) return Fu.best_edition_of({x, y}) end
+
+function Fu.victim(picked)
+  local skip = {}
+  for _, c in ipairs(picked) do skip[c] = true end
+  local pool = {}
+  for _, j in ipairs(G.jokers and G.jokers.cards or {}) do
+    if not skip[j] and free(j) and not j.ability.eternal then pool[#pool + 1] = j end
+  end
+  if #pool == 0 then return nil end
+  return pseudorandom_element(pool, pseudoseed("forge_fuse_sac"))
+end
+
+function Fu.can(card)
+  if not (card and card.area) or (G.CONTROLLER and G.CONTROLLER.locked) then return false end
+  if card.area ~= G.jokers and card.area ~= G.consumeables then return false end
+  local r, other, picked = Fu.match(card)
+  if not r or card.area ~= area_for(r) then return false end
+  for _, c in ipairs(picked) do if c.ability.eternal then return false end end
+  if r.between and G.GAME and (G.GAME.facing_blind or (G.GAME.blind and G.GAME.blind.in_blind)) then return false end
+  if r.sacrifice and not Fu.victim(picked) then return false end
+  local floor = G.GAME and G.GAME.bankrupt_at or 0
+  if r.cost > 0 and (G.GAME.dollars - r.cost) < floor then return false end
+  return true, r, other, picked
+end
+
+function Fu.keep(made, picked)
+  local extra, stk, perish, rental = 0, {}, nil, false
+  local St = package.loaded["functions/forge/forge_stickers"]
+  for _, c in ipairs(picked) do
+    local ab = c.ability or {}
+    extra = extra + (tonumber(ab.extra_value) or 0)
+    for _, id in ipairs(St and St.ids(c) or {ab.forge_stk}) do stk[#stk + 1] = id end
+    if ab.perishable then perish = math.max(perish or 0, tonumber(ab.perish_tally) or 0) end
+    rental = rental or ab.rental == true
+  end
+  if extra ~= 0 then made.ability.extra_value = (made.ability.extra_value or 0) + extra end
+  if perish and made.set_perishable then made:set_perishable(true) made.ability.perish_tally = perish end
+  if rental and made.set_rental then made:set_rental(true) end
+  if St then
+    for _, id in ipairs(stk) do pcall(St.apply, made, id) end
+  end
+  pcall(Fu.keep_vars, made, picked)
+  if made.set_cost then made:set_cost() end
+end
+
+function Fu.var_key(name) return (tostring(name or ""):lower():gsub("%s+", "")) end
+
+function Fu.num_vars(card)
+  local cen = card and card.config and card.config.center
+  if not (cen and cen.forge and cen.forge_id) then return nil end
+  local c = Store.get(cen.forge_id)
+  local defs = c and c.vars
+  if type(defs) ~= "table" or #defs == 0 then return nil end
+  local x = card.ability and type(card.ability.extra) == "table" and card.ability.extra
+  local vals = x and type(x.vars) == "table" and x.vars or {}
+  local out = {}
+  for i, d in ipairs(defs) do
+    if type(d) == "table" and (not d.type or d.type == "number") then
+      local start = tonumber(d.start) or 0
+      out[#out + 1] = {i = i, key = Fu.var_key(d.name), start = start, v = tonumber(vals[i]) or start}
+    end
+  end
+  return out, defs
+end
+
+function Fu.keep_vars(made, picked)
+  local mine, defs = Fu.num_vars(made)
+  if not (mine and #mine > 0) then return end
+  local grown = {}
+  for _, c in ipairs(picked) do
+    for _, e in ipairs(Fu.num_vars(c) or {}) do grown[e.key] = (grown[e.key] or 0) + (e.v - e.start) end
+  end
+  if next(grown) == nil then return end
+  local R = require("functions/forge/forge_rules")
+  local saved = R.cur_state
+  R.cur_state = nil
+  local vals = R.vars_state(made, defs)
+  R.cur_state = saved
+  for _, e in ipairs(mine) do
+    local g = grown[e.key]
+    if g and g ~= 0 then
+      local v = (tonumber(vals[e.i]) or e.start) + g
+      vals[e.i] = math.floor(v * 100 + 0.5) / 100
+    end
+  end
+end
+
+function Fu.fuse(card)
+  local ok, r, _, picked = Fu.can(card)
+  if not ok then return nil end
+  local ed = Fu.best_edition_of(picked)
+  local victim = r.sacrifice and Fu.victim(picked) or nil
+  if r.cost > 0 then ease_dollars(-r.cost) end
+  local gone = {}
+  for _, c in ipairs(picked) do gone[#gone + 1] = c end
+  if victim then gone[#gone + 1] = victim end
+  for _, c in ipairs(gone) do
+    c.getting_sliced = true
+    if c.area then c.area:remove_card(c) end
+    c:start_dissolve({G.C.PURPLE})
+  end
+  local area = area_for(r)
+  local center = G.P_CENTERS[r.out]
+  local made = create_card(r.on == "Consumables" and (center and center.set or "Tarot") or "Joker", area, nil, nil, nil, nil, r.out, "forge_fuse")
+  if ed then made:set_edition({[ed] = true}, true, true) else made:set_edition(nil, true, true) end
+  if r.keep then Fu.keep(made, picked) end
+  made:add_to_deck()
+  area:emplace(made)
+  made:start_materialize()
+  play_sound("tarot1")
+  made:juice_up(0.5, 0.5)
+  return made
+end
+
+function Fu.auto()
+  if Fu.fusing or not (G.jokers and G.GAME) then return end
+  for _, r in ipairs(Fu.recipes()) do
+    if r.auto then
+      local area = area_for(r)
+      for _, c in ipairs(area and area.cards or {}) do
+        if free(c) then
+          local ok, rr = Fu.can(c)
+          if ok and rr.id == r.id then
+            Fu.fusing = true
+            local done = pcall(Fu.fuse, c)
+            Fu.fusing = false
+            if done then return true end
+          end
+        end
+      end
+    end
+  end
+end
+
+function Fu.hint(card)
+  if not (card and card.area and (card.area == G.shop_jokers or card.area == G.pack_cards)) then return nil end
+  for _, r in ipairs(Fu.recipes()) do
+    if usable(r.out, r.on) then
+      local area = area_for(r)
+      local pool = {card}
+      for _, c in ipairs(area and area.cards or {}) do pool[#pool + 1] = c end
+      if Fu.assign(r, card, pool) then return r end
+    end
+  end
+  return nil
+end
+
+function Fu.hint_text(r)
+  local names = {}
+  for _, p in ipairs(r.parts) do names[#names + 1] = "{C:attention}" .. Fu.label(p) .. "{}" end
+  return {string.format(mod_loc("Fuses into {C:attention}%s{}"), Fu.label(r.out)), table.concat(names, " + ")}
+end
+
+function Fu.label(v)
+  if Fu.LABEL[v] then return mod_loc and mod_loc(Fu.LABEL[v]) or Fu.LABEL[v] end
+  local own = Fu.own_rarity(v)
+  if own then
+    local Ra = package.loaded["functions/forge/forge_rarities"]
+    local name = Ra and Ra.label and Ra.label(own) or own
+    return string.format(mod_loc and mod_loc("Any %s Joker") or "Any %s Joker", name)
+  end
+  local R = package.loaded["functions/forge/forge_rules"]
+  return R and R.card_label(v) or tostring(v)
+end
+
+function Fu.ingredient_options(on)
+  local out = {}
+  local R = package.loaded["functions/forge/forge_rules"]
+  if on == "Consumables" then
+    for _, v in ipairs(Fu.SPECIAL_C) do out[#out + 1] = {label = Fu.label(v), value = v, colour = G.C.PURPLE} end
+    for _, set in ipairs({"Tarot", "Planet", "Spectral"}) do
+      for _, v in ipairs(R and R.card_values(set) or {}) do out[#out + 1] = {label = R.card_label(v), value = v} end
+    end
+    return out
+  end
+  for _, v in ipairs(Fu.SPECIAL_J) do out[#out + 1] = {label = Fu.label(v), value = v, colour = G.C.PURPLE} end
+  for _, v in ipairs(R and R.own_values("rarity") or {}) do
+    local id = R.own_id("rarity", v)
+    if id then out[#out + 1] = {label = Fu.label("j_any_r_" .. id), value = "j_any_r_" .. id, colour = G.C.PURPLE} end
+  end
+  for _, v in ipairs(R and R.card_values("Joker") or {}) do out[#out + 1] = {label = R.card_label(v), value = v, colour = R.own_id("card", v) and G.C.GREEN or nil} end
+  return out
+end
+
+function Fu.button(card)
+  local r = Fu.match(card)
+  if not r or r.auto then return nil end
+  local label = mod_loc and mod_loc("Fuse") or "Fuse"
+  return {n = G.UIT.C, config = {align = "cr"}, nodes = {
+    {n = G.UIT.C, config = {ref_table = card, align = "cr", padding = 0.1, r = 0.08, minw = 1.25, hover = true, shadow = true, colour = G.C.UI.BACKGROUND_INACTIVE, one_press = true, button = "forge_fuse", func = "forge_can_fuse"}, nodes = {
+      {n = G.UIT.B, config = {w = 0.1, h = 0.6}},
+      {n = G.UIT.C, config = {align = "tm"}, nodes = {
+        {n = G.UIT.R, config = {align = "cm", maxw = 1.25}, nodes = {{n = G.UIT.T, config = {text = label, colour = G.C.UI.TEXT_LIGHT, scale = 0.4, shadow = true}}}},
+        {n = G.UIT.R, config = {align = "cm"}, nodes = {{n = G.UIT.T, config = {text = localize("$") .. tostring(r.cost), colour = G.C.WHITE, scale = 0.55, shadow = true}}}},
+      }},
+    }},
+  }}
+end
+
+function Fu.install_hooks()
+  if Fu.hooked then return end
+  Fu.hooked = true
+  G.FUNCS.forge_can_fuse = function(e)
+r 32 2157 %20%20%20%20 -
+l 4
+    if Fu.can(card) then
+      e.config.colour = G.C.PURPLE
+      e.config.button = "forge_fuse"
+    else
+r 32 57 %20%20%20%20%20%20 -
+r 32 58 %20%20%20%20%20%20 -
+l 3
+    end
+  end
+  G.FUNCS.forge_fuse = function(e)
+r 32 2157 %20%20%20%20 -
+r 3 617 %20%20%20%20 -
+l 98
+      local ok, err = pcall(Fu.fuse, card)
+      if not ok then require("functions/forge/forge_joker").log_once("fuse", "fuse failed: " .. tostring(err)) end
+      return true
+    end}))
+  end
+  if G.UIDEF and G.UIDEF.use_and_sell_buttons then
+    local orig = G.UIDEF.use_and_sell_buttons
+    G.UIDEF.use_and_sell_buttons = function(card, ...)
+      local t = orig(card, ...)
+      if card and card.area and (card.area == G.jokers or card.area == G.consumeables) and type(t) == "table" then
+        local ok, node = pcall(Fu.button, card)
+        local col = ok and node and t.nodes and t.nodes[1]
+        if col and type(col.nodes) == "table" then col.nodes[#col.nodes + 1] = {n = G.UIT.R, config = {align = "cl"}, nodes = {node}} end
+      end
+      return t
+    end
+  end
+  local okh, Hooks = pcall(require, "overhaul.hooks")
+  if not (okh and Hooks and Hooks.wrap) then return end
+  Hooks.wrap("CardArea", "emplace", function(orig) return function(self, card, ...)
+    local r = orig(self, card, ...)
+    if (self == G.jokers or self == G.consumeables) and not Fu.fusing then
+      G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.3, func = function()
+        local ok, err = pcall(Fu.auto)
+        if not ok then print("[FORGE] auto fuse failed: " .. tostring(err)) end
+        return true
+      end}))
+    end
+    return r
+  end end, {id = "forge_fusion.emplace"})
+  Hooks.wrap("Card", "generate_UIBox_ability_table", function(orig) return function(self, ...)
+    local out = orig(self, ...)
+    local ok, r = pcall(Fu.hint, self)
+    if ok and r and type(out) == "table" then
+      local L = G.localization
+      if L and L.misc and L.descriptions then
+        L.misc.labels = L.misc.labels or {}
+        L.misc.labels.forge_fusion_hint = mod_loc("Fusion!")
+        G.BADGE_COL = G.BADGE_COL or {}
+        G.BADGE_COL.forge_fusion_hint = G.C.PURPLE
+        L.descriptions.Other = L.descriptions.Other or {}
+        local entry = {name = mod_loc("Fusion!"), text = Fu.hint_text(r)}
+        local FJ = package.loaded["functions/forge/forge_joker"]
+        L.descriptions.Other.forge_fusion_hint = FJ and FJ.parsed and FJ.parsed(entry) or entry
+        if type(out.badges) == "table" then out.badges[#out.badges + 1] = "forge_fusion_hint" end
+        if type(generate_card_ui) == "function" then pcall(generate_card_ui, {key = "forge_fusion_hint", set = "Other"}, out) end
+      end
+    end
+    return out
+  end end, {id = "forge_fusion.hint"})
+end
+
+local function register_strings()
+  if not mod_loc_register then return end
+  mod_loc_register{
+    fr = {
+      ["Fusion"] = "Fusion", ["Fusions"] = "Fusions", ["Fuse"] = "Fusionner", ["First Joker"] = "Premier Joker", ["Second Joker"] = "Second Joker", ["Fuses into"] = "Devient",
+      ["{C:attention}%s{} + {C:attention}%s{}"] = "{C:attention}%s{} + {C:attention}%s{}", ["Fuse into {C:attention}%s{} for {C:money}%s{}"] = "Fusion en {C:attention}%s{} pour {C:money}%s{}",
+      ["The best edition stays"] = "La meilleure édition reste", ["Third Joker"] = "Troisième Joker", ["Fuses"] = "Fusionne", ["Consumables"] = "Consommables",
+      ["Fuses by itself"] = "Fusionne tout seul", ["Only between rounds"] = "Seulement entre les manches", ["Sacrifice a Joker"] = "Sacrifier un Joker", ["Keeps upgrades"] = "Garde les améliorations",
+      ["Any Joker"] = "N'importe quel Joker", ["Any Common Joker"] = "N'importe quel Joker Commun",
+      ["Any Uncommon Joker"] = "N'importe quel Joker Peu commun", ["Any Rare Joker"] = "N'importe quel Joker Rare",
+      ["Any Legendary Joker"] = "N'importe quel Joker Légendaire", ["Any %s Joker"] = "N'importe quel Joker %s", ["Any consumable"] = "N'importe quel consommable",
+      ["Any Tarot"] = "N'importe quel Tarot", ["Any Planet"] = "N'importe quelle Planète", ["Any Spectral"] = "N'importe quelle carte Spectrale",
+      ["Fusion!"] = "Fusion !", ["Fuses into {C:attention}%s{}"] = "Devient {C:attention}%s{}",
+      ["Fuses by itself when they meet"] = "Fusionne tout seul quand ils se retrouvent",
+      ["Also destroys a random Joker"] = "Détruit aussi un Joker au hasard", ["Keeps stickers and sell value"] = "Garde les autocollants et la valeur de revente",
+    },
+    es = {
+      ["Fusion"] = "Fusión", ["Fusions"] = "Fusiones", ["Fuse"] = "Fusionar", ["First Joker"] = "Primer comodín", ["Second Joker"] = "Segundo comodín", ["Fuses into"] = "Se convierte en",
+      ["{C:attention}%s{} + {C:attention}%s{}"] = "{C:attention}%s{} + {C:attention}%s{}", ["Fuse into {C:attention}%s{} for {C:money}%s{}"] = "Se fusionan en {C:attention}%s{} por {C:money}%s{}",
+      ["The best edition stays"] = "Se queda la mejor edición", ["Third Joker"] = "Tercer comodín", ["Fuses"] = "Fusiona", ["Consumables"] = "Consumibles",
+      ["Fuses by itself"] = "Se fusiona solo", ["Only between rounds"] = "Solo entre rondas", ["Sacrifice a Joker"] = "Sacrificar un comodín", ["Keeps upgrades"] = "Conserva las mejoras",
+      ["Any Joker"] = "Cualquier comodín", ["Any Common Joker"] = "Cualquier comodín común", ["Any Uncommon Joker"] = "Cualquier comodín poco común", ["Any Rare Joker"] = "Cualquier comodín raro",
+      ["Any Legendary Joker"] = "Cualquier comodín legendario", ["Any %s Joker"] = "Cualquier comodín %s", ["Any consumable"] = "Cualquier consumible",
+      ["Any Tarot"] = "Cualquier tarot", ["Any Planet"] = "Cualquier planeta", ["Any Spectral"] = "Cualquier carta espectral",
+      ["Fusion!"] = "¡Fusión!", ["Fuses into {C:attention}%s{}"] = "Se convierte en {C:attention}%s{}",
+      ["Fuses by itself when they meet"] = "Se fusiona solo cuando se juntan",
+      ["Also destroys a random Joker"] = "También destruye un comodín al azar", ["Keeps stickers and sell value"] = "Conserva las pegatinas y el valor de venta",
+    },
+  }
+end
+
+register_strings()
+
+do
+  local R = package.loaded["functions/forge/forge_rules"]
+  if R and R.card_label and not R.forge_fu_label then
+    R.forge_fu_label = true
+    local base = R.card_label
+    R.card_label = function(v, ...)
+      if Fu.special(v) then return Fu.label(v) end
+      return base(v, ...)
+    end
+  end
+end
+
+return Fu
+end

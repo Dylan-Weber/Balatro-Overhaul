@@ -270,7 +270,7 @@ function BP.open(from)
   if from ~= nil then BP.from = from end
   BP.sel.page_set = nil
 r 32 1381 %20%20 -
-l 36
+l 38
   G.FUNCS.overlay_menu{definition = UIK.window{id = "bo_bp", title = L("BOSS PRACTICE"),
     tabs = {{key = "practice", label = L("Fight"), build = build_tab}, BP.LO and BP.loadout_tab and {key = "loadout", label = L("Loadout"), build = BP.loadout_tab} or nil},
     footer = {UIK.button{label = L("PLAY"), button = "bo_bp_play", colour = UIK.C.ok, id = "bo_bp_play"}},
@@ -297,6 +297,8 @@ function BP.start(boss, deck, ante, lo, kind)
   local back = G.P_CENTERS[deck]
   if G.GAME.viewed_back then G.GAME.viewed_back:change_to(back) else G.GAME.viewed_back = Back(back) end
   local seed = type(generate_starting_seed) == "function" and generate_starting_seed() or nil
+  local M = rawget(_G, "mpm_menu")
+  if M then M.casino = nil end
   hidden_inventory(function() G.FUNCS.start_run(nil, {stake = 1, seed = seed, back = back}) end)
 end
 

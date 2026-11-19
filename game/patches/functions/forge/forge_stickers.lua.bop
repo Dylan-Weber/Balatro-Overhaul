@@ -1,0 +1,555 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 453
+local Store = require("functions/forge/forge_store")
+
+local St = {}
+
+St.MAX = 8
+St.PREFIX = "sticker_forge_"
+St.LOOKS = {"Purple", "Red", "Green", "Blue", "Black", "White", "Orange", "Gold", "Padlock", "Hourglass", "Coin"}
+St.POS = {White = {x = 1, y = 0}, Red = {x = 2, y = 0}, Green = {x = 3, y = 0}, Blue = {x = 4, y = 0}, Black = {x = 0, y = 1}, Purple = {x = 1, y = 1},
+  Orange = {x = 2, y = 1}, Gold = {x = 3, y = 1}, Padlock = {x = 0, y = 0}, Hourglass = {x = 0, y = 2}, Coin = {x = 1, y = 2}}
+St.HEX = {PURPLE = "8a5cd1", GOLD = "d99a1e", GREEN = "2f9a55", TEAL = "1d9399", ORANGE = "e0702a", PINK = "d8508f", BLUE = "3466d0", RED = "d8473f", BLACK = "3a3346"}
+St.list = {}
+St.by_id = {}
+St.sprites = {}
+
+function St.fields(c)
+  local f = type(c) == "table" and type(c.fields) == "table" and c.fields or {}
+  local w = tonumber(f.chance)
+  return {look = St.POS[f.look] and f.look or "Purple", colour = St.HEX[f.colour] and f.colour or "PURPLE", chance = w and math.max(0, math.min(100, w)) or 10}
+end
+
+function St.badge_key(id) return "forge_stk_" .. tostring(id) end
+
+function St.rgb(c)
+  local hex = St.HEX[St.fields(c).colour]
+  local r, g, b = tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
+  return {r / 255, g / 255, b / 255, 1}
+end
+
+function St.assign(items)
+  local list = {}
+  for _, c in ipairs(type(items) == "table" and items or {}) do
+    if type(c) == "table" and c.kind == "sticker" and c.enabled ~= false and type(c.id) == "string" then list[#list + 1] = c end
+  end
+  table.sort(list, function(a, b) return tostring(a.id) < tostring(b.id) end)
+  local out = {}
+  for i = 1, math.min(St.MAX, #list) do out[#out + 1] = {id = list[i].id, c = list[i], key = St.badge_key(list[i].id)} end
+  return out
+end
+
+function St.set_list(list)
+  St.list, St.by_id = list, {}
+  for _, s in ipairs(list) do St.by_id[s.id] = s end
+end
+
+function St.refresh_list()
+  local ok, items = pcall(Store.live_items)
+  St.set_list(St.assign(ok and items or {}))
+  return St.list
+end
+
+function St.name(s)
+  local c = s and s.c
+  if c and c.name and c.name ~= "" then return c.name end
+  return mod_loc and mod_loc("Sticker") or "Sticker"
+end
+
+function St.effects(c)
+  local out = {}
+  for _, e in ipairs(type(c) == "table" and type(c.effects) == "table" and c.effects or {}) do
+    if type(e) == "table" and type(e.id) == "string" then
+      local n = tonumber(e.n)
+      if e.id == "times" or e.id == "xmult" then out[e.id] = (out[e.id] or 1) * (n or 2)
+      elseif e.id == "no_sell" then out.no_sell = true
+      elseif e.id == "rounds_left" then out.rounds_left = math.min(out.rounds_left or math.huge, math.max(1, math.floor(n or 5)))
+      else out[e.id] = (out[e.id] or 0) + (n or 0) end
+    end
+  end
+  return out
+end
+
+St.PER_CARD = math.huge
+St.FIT = 3
+St.SMODS_PREFIX = "sticker_forge_"
+St.LEFT = {Padlock = true, Hourglass = true, Coin = true}
+
+function St.norm(ab)
+  local m = ab.forge_stk_more
+  if m == nil then return end
+  if type(m) ~= "table" then ab.forge_stk_more = nil return end
+  local seen = {}
+  if ab.forge_stk then seen[ab.forge_stk] = true end
+  for i = #m, 1, -1 do
+    local e = m[i]
+    if type(e) ~= "table" or type(e.id) ~= "string" then table.remove(m, i) end
+  end
+  local i = 1
+  while i <= #m do
+    if seen[m[i].id] then table.remove(m, i) else seen[m[i].id] = true i = i + 1 end
+  end
+  if ab.forge_stk == nil and #m > 0 then
+    local f = table.remove(m, 1)
+    ab.forge_stk, ab.forge_stk_left, ab.forge_stk_life = f.id, f.left, f.life
+  end
+  if #m == 0 then ab.forge_stk_more = nil end
+end
+
+function St.ids(card)
+  local ab = type(card) == "table" and card.ability
+  if type(ab) ~= "table" then return {} end
+  St.norm(ab)
+  local out = {}
+  if ab.forge_stk ~= nil then out[1] = ab.forge_stk end
+  for _, e in ipairs(ab.forge_stk_more or {}) do out[#out + 1] = e.id end
+  if St.smods_on then
+    for _, id in ipairs(out) do if St.by_id[id] then ab[St.SMODS_PREFIX .. id] = true end end
+  end
+  return out
+end
+
+function St.any(card)
+  local ab = type(card) == "table" and card.ability
+  return type(ab) == "table" and (ab.forge_stk ~= nil or type(ab.forge_stk_more) == "table" and #ab.forge_stk_more > 0) or false
+end
+
+function St.has(card, id)
+  if id == nil then return false end
+  for _, x in ipairs(St.ids(card)) do if x == id then return true end end
+  return false
+end
+
+function St.all_of(card)
+  local out = {}
+  for _, id in ipairs(St.ids(card)) do
+    local s = St.by_id[id]
+    if s then out[#out + 1] = s end
+  end
+  return out
+end
+
+local function slot(ab, id)
+  if ab.forge_stk == id then return nil, true end
+  for _, e in ipairs(type(ab.forge_stk_more) == "table" and ab.forge_stk_more or {}) do
+    if type(e) == "table" and e.id == id then return e end
+  end
+end
+
+function St.get(card, id, k)
+  local ab = card.ability
+  local e, main = slot(ab, id)
+  if main then return ab["forge_stk_" .. k] end
+  return e and e[k]
+end
+
+function St.set(card, id, k, v)
+  local ab = card.ability
+  local e, main = slot(ab, id)
+  if main then ab["forge_stk_" .. k] = v elseif e then e[k] = v end
+end
+
+function St.remove(card, id)
+  local ab = type(card) == "table" and card.ability
+  if type(ab) ~= "table" or id == nil then return false end
+  St.norm(ab)
+  local done = false
+  if ab.forge_stk == id then
+    ab.forge_stk, ab.forge_stk_left, ab.forge_stk_life = nil, nil, nil
+    done = true
+  else
+    local m = ab.forge_stk_more or {}
+    for i = #m, 1, -1 do
+      if m[i].id == id then table.remove(m, i) done = true end
+    end
+  end
+  St.norm(ab)
+  ab[St.SMODS_PREFIX .. tostring(id)] = nil
+  return done
+end
+
+function St.clear(card)
+  local done = false
+  for _, id in ipairs(St.ids(card)) do
+    if St.remove(card, id) then done = true end
+  end
+  return done
+end
+
+function St.effects_on(card)
+  local out = {}
+  for _, s in ipairs(St.all_of(card)) do
+    for k, v in pairs(St.effects(s.c)) do
+      if k == "times" or k == "xmult" then out[k] = (out[k] or 1) * v
+      elseif k == "no_sell" then out.no_sell = true
+      elseif k ~= "rounds_left" then out[k] = (out[k] or 0) + v end
+    end
+  end
+  return out
+end
+
+function St.of_card(card)
+  return St.all_of(card)[1]
+end
+
+local function loc(s)
+  local L = G and G.localization
+  if not (L and L.misc and L.descriptions) then return end
+  L.misc.labels = L.misc.labels or {}
+  L.misc.labels[s.key] = St.name(s)
+  L.descriptions.Other = L.descriptions.Other or {}
+  local D = require("functions/forge/forge_doc")
+  local lang = D.lang and D.lang() or "en"
+  local lines = D.lines(s.c, lang)
+  if not (type(s.c.text) == "table" and s.c.text[lang]) then
+    local head = #D.lines({id = s.c.id, kind = "sticker", name = s.c.name, fields = {chance = St.fields(s.c).chance}}, lang)
+    for _ = 1, math.min(head, #lines) do table.remove(lines, 1) end
+  end
+  local entry = {name = St.name(s), text = #lines > 0 and lines or {""}}
+  local FJ = package.loaded["functions/forge/forge_joker"]
+  L.descriptions.Other[s.key] = FJ and FJ.parsed and FJ.parsed(entry) or entry
+end
+
+function St.smods_key(id) return St.SMODS_PREFIX .. tostring(id) end
+
+function St.smods_apply(obj, card, val)
+  if not (card and card.ability) then return end
+  if val then St.apply(card, obj.forge_sticker) else St.remove(card, obj.forge_sticker) end
+end
+
+function St.smods_should(obj, card, center, area, bypass)
+  if bypass == nil then return false end
+  local s = St.by_id[obj.forge_sticker]
+  return s ~= nil and card ~= nil and St.X().fits(s.c, card) and not St.has(card, s.id) and #St.ids(card) < St.PER_CARD
+end
+
+St.SETS = {Jokers = {Joker = true}, ["Playing cards"] = {Default = true, Enhanced = true},
+  Consumables = {Tarot = true, Planet = true, Spectral = true}, ["Any card"] = {Joker = true, Default = true, Enhanced = true, Tarot = true, Planet = true, Spectral = true}}
+
+function St.register_smods(list)
+  local SM = rawget(_G, "SMODS")
+  local SB = SM.Sticker and SM.Sticker.obj_buffer
+  for key, o in pairs(SM.Stickers) do if type(o) == "table" and o.forge_sticker then SM.Stickers[key] = nil end end
+  if SB then
+    for i = #SB, 1, -1 do if type(SB[i]) == "string" and SB[i]:sub(1, #St.SMODS_PREFIX) == St.SMODS_PREFIX then table.remove(SB, i) end end
+  end
+  G.shared_stickers = G.shared_stickers or {}
+  local L = G.localization
+  for _, s in ipairs(list) do
+    local key = St.smods_key(s.id)
+    local f = St.fields(s.c)
+    local obj = {key = key, original_key = key, set = "Sticker", forge_sticker = s.id, atlas = "stickers", pos = St.POS[f.look],
+      badge_colour = St.rgb(s.c), rate = 0, sets = St.SETS[St.X().fields(s.c).on] or St.SETS.Jokers, needs_enable_flag = false,
+      hide_badge = true, discovered = true, unlocked = true, loc_txt = {}, order = SB and (#SB + 1) or 0,
+      apply = St.smods_apply, should_apply = St.smods_should, draw = function() end}
+    if SM.Sticker then setmetatable(obj, {__index = SM.Sticker}) end
+    SM.Stickers[key] = obj
+    if SB then SB[#SB + 1] = key end
+    if G.BADGE_COL then G.BADGE_COL[key] = St.rgb(s.c) end
+    G.shared_stickers[key] = St.sprite(f.look) or G.shared_stickers[key]
+    if L and L.misc and L.descriptions and L.descriptions.Other then
+      L.misc.labels[key] = L.misc.labels[s.key]
+      L.descriptions.Other[key] = L.descriptions.Other[s.key]
+    end
+  end
+  St.smods_on = true
+end
+
+function St.register()
+  local list = St.refresh_list()
+  if not G then return end
+  if not G.BADGE_COL and type(get_badge_colour) == "function" then pcall(get_badge_colour, "eternal") end
+  if not G.BADGE_COL then return end
+  for _, s in ipairs(list) do
+    G.BADGE_COL[s.key] = St.rgb(s.c)
+    pcall(loc, s)
+  end
+  local SM = rawget(_G, "SMODS")
+  if type(SM) == "table" and type(SM.Stickers) == "table" then
+    local ok, err = pcall(St.register_smods, list)
+    if not ok then print("[FORGE] sticker register failed: " .. tostring(err)) end
+  end
+end
+
+function St.apply(card, id)
+  if not (card and card.ability) then return false end
+  local s = St.by_id[id]
+  if not s then return false end
+  local ab = card.ability
+  local ids = St.ids(card)
+  if not St.has(card, id) then
+    if ab.forge_stk == nil then
+      ab.forge_stk = id
+    else
+      if #ids >= St.PER_CARD then return false end
+      ab.forge_stk_more = type(ab.forge_stk_more) == "table" and ab.forge_stk_more or {}
+      ab.forge_stk_more[#ab.forge_stk_more + 1] = {id = id}
+    end
+  end
+  local fx = St.effects(s.c)
+  St.set(card, id, "left", fx.rounds_left)
+  local life = St.X().fields(s.c).life
+  St.set(card, id, "life", life > 0 and life or nil)
+  if St.smods_on then ab[St.SMODS_PREFIX .. id] = true end
+  if card.set_cost then pcall(card.set_cost, card) end
+  return true
+end
+
+function St.X() return require("functions/forge/forge_stickerrules") end
+
+function St.roll_shop(card)
+  if not (card and card.ability) or St.any(card) or #St.list == 0 then return end
+  local X = St.X()
+  local ante = G.GAME and G.GAME.round_resets and G.GAME.round_resets.ante or 1
+  for _, s in ipairs(St.list) do
+    local w = X.fits(s.c, card) and math.min(100, St.fields(s.c).chance + X.shop_bonus(s.id)) or 0
+    if w > 0 and pseudorandom(pseudoseed("forge_stk_" .. s.id .. ante)) < w / 100 then
+      St.apply(card, s.id)
+      return s.id
+    end
+  end
+end
+
+function St.random_joker(id, seed)
+  local pool = {}
+  for _, j in ipairs(G.jokers and G.jokers.cards or {}) do
+    if j.ability and not St.has(j, id) and #St.ids(j) < St.PER_CARD then pool[#pool + 1] = j end
+  end
+  if #pool == 0 then return nil end
+  local j = pseudorandom_element(pool, pseudoseed(seed or "forge_stk_put"))
+  St.apply(j, id)
+  return j
+end
+
+local MULT_KEYS = {"mult_mod", "chip_mod", "dollars", "mult", "chips", "h_mult", "h_chips", "p_dollars", "h_dollars"}
+local X_KEYS = {"Xmult_mod", "x_mult", "Xmult", "xmult", "x_chips", "xchips", "Xchip_mod", "x_mult_mod"}
+
+local function relabel(r)
+  if type(r) ~= "table" or r.message == nil or not localize then return end
+  if r.Xmult_mod then r.message = localize{type = "variable", key = "a_xmult", vars = {r.Xmult_mod}}
+  elseif r.mult_mod then r.message = localize{type = "variable", key = "a_mult", vars = {r.mult_mod}}
+  elseif r.chip_mod then r.message = localize{type = "variable", key = "a_chips", vars = {r.chip_mod}} end
+end
+
+function St.score(card, r)
+  if not St.of_card(card) then return r end
+  local fx = St.effects_on(card)
+  if fx.times and type(r) == "table" then
+    for _, k in ipairs(MULT_KEYS) do if type(r[k]) == "number" then r[k] = r[k] * fx.times end end
+    for _, k in ipairs(X_KEYS) do if type(r[k]) == "number" and r[k] ~= 1 then r[k] = r[k] * fx.times end end
+    relabel(r)
+  end
+  if fx.mult or fx.chips or fx.xmult then
+    r = type(r) == "table" and r or {}
+    if fx.chips then r.chip_mod = (r.chip_mod or 0) + fx.chips end
+    if fx.mult then r.mult_mod = (r.mult_mod or 0) + fx.mult end
+    if fx.xmult and fx.xmult ~= 1 then r.Xmult_mod = (r.Xmult_mod or 1) * fx.xmult end
+    if r.message == nil then
+      local m = {message = true, Xmult_mod = r.Xmult_mod, mult_mod = r.mult_mod, chip_mod = r.chip_mod}
+      relabel(m)
+      if m.message ~= true then r.message = m.message end
+    end
+    r.card = r.card or card
+  end
+  return r
+end
+
+function St.round_end(card)
+  local list = St.all_of(card)
+  if #list == 0 or not G.GAME then return end
+  local round = G.GAME.round or 0
+  if card.ability.forge_stk_round == round then return end
+  card.ability.forge_stk_round = round
+  local fx = St.effects_on(card)
+  local R = package.loaded["functions/forge/forge_rules"]
+  local pay = fx.round_money and R and R.money_cut and R.money_cut(fx.round_money) or fx.round_money
+  if pay and pay ~= 0 then
+    ease_dollars(pay)
+    card_eval_status_text(card, "dollars", pay)
+  end
+  if fx.sell_gain and fx.sell_gain ~= 0 then
+    card.ability.extra_value = (card.ability.extra_value or 0) + fx.sell_gain
+    card:set_cost()
+    card_eval_status_text(card, "extra", nil, nil, nil, {message = localize("k_val_up"), colour = G.C.MONEY})
+  end
+  for _, s in ipairs(list) do
+    local rl = St.effects(s.c).rounds_left
+    if rl then
+      local left = (tonumber(St.get(card, s.id, "left")) or rl) - 1
+      St.set(card, s.id, "left", left)
+      if left <= 0 then
+        card_eval_status_text(card, "extra", nil, nil, nil, {message = localize("k_extinct_ex"), colour = G.C.FILTER})
+        G.E_MANAGER:add_event(Event({trigger = "after", delay = 0.3, func = function()
+          if not card.removed then card:start_dissolve() end
+          return true
+        end}))
+        return
+      end
+    end
+  end
+  St.X().tick(card)
+end
+
+function St.sprite(look)
+  if St.sprites[look] then return St.sprites[look] end
+  local atlas = G.ASSET_ATLAS and G.ASSET_ATLAS.stickers
+  if not atlas then return nil end
+  St.sprites[look] = Sprite(0, 0, G.CARD_W, G.CARD_H, atlas, St.POS[look] or St.POS.Purple)
+  return St.sprites[look]
+end
+
+function St.looks(card)
+  if card.forge_stk_look then return {card.forge_stk_look} end
+  local out = {}
+  for _, s in ipairs(St.all_of(card)) do out[#out + 1] = St.fields(s.c).look end
+  return out
+end
+
+function St.squeeze(n)
+  n = tonumber(n) or 0
+  if n <= St.FIT then return 1 end
+  return (St.FIT - 1) / (n - 1)
+end
+
+function St.draw(card, layer)
+  if not (layer == "card" or layer == "both") or card.sprite_facing ~= "front" or not card.children.center then return end
+  local at = {left = 0, right = 0}
+  local step = 0.61 * ((card.T and card.T.h or G.CARD_H) / G.CARD_H)
+  local looks = St.looks(card)
+  local count = {left = 0, right = 0}
+  for _, look in ipairs(looks) do
+    if St.sprite(look) then
+      local side = St.LEFT[look] and "left" or "right"
+      count[side] = count[side] + 1
+    end
+  end
+  for _, look in ipairs(looks) do
+    local spr = St.sprite(look)
+    if spr then
+      local side = St.LEFT[look] and "left" or "right"
+      local dy = at[side] * step * St.squeeze(count[side])
+      at[side] = at[side] + 1
+      spr.role.draw_major = card
+      spr:draw_shader("dissolve", nil, nil, nil, card.children.center, nil, nil, 0, dy)
+      spr:draw_shader("voucher", nil, card.ARGS.send_to_shader, nil, card.children.center, nil, nil, 0, dy)
+    end
+  end
+end
+
+function St.install_hooks()
+  if St.hooked then return end
+  St.hooked = true
+  pcall(St.X().install)
+  if type(create_card) == "function" then
+    local orig = create_card
+    create_card = function(_type, area, ...)
+      local card = orig(_type, area, ...)
+      if card and G.GAME and area and (area == G.shop_jokers or area == G.pack_cards) then pcall(St.roll_shop, card) end
+      return card
+    end
+  end
+  if Card and Card.calculate_joker then
+    local orig = Card.calculate_joker
+    Card.calculate_joker = function(self, context, ...)
+      local r, r2 = orig(self, context, ...)
+      if not St.any(self) or self.debuff or type(context) ~= "table" or context.blueprint then return r, r2 end
+r 3 2294 %20%20%20%20%20%20 -
+l 94
+        local ok, out = pcall(St.score, self, r)
+        if ok then r = out end
+      elseif context.end_of_round and not context.individual and not context.repetition and self.area == G.jokers then
+        pcall(St.round_end, self)
+      end
+      r = St.X().joker(self, context, r)
+      return r, r2
+    end
+  end
+  if Card and Card.can_sell_card then
+    local orig = Card.can_sell_card
+    Card.can_sell_card = function(self, ...)
+      if St.of_card(self) and St.effects_on(self).no_sell then return false end
+      return orig(self, ...)
+    end
+  end
+  local okh, Hooks = pcall(require, "overhaul.hooks")
+  if okh and Hooks and Hooks.wrap then
+    Hooks.wrap("Card", "draw", function(orig) return function(self, layer, ...)
+      local r = {orig(self, layer, ...)}
+      if St.any(self) or self.forge_stk_look then pcall(St.draw, self, layer) end
+      return unpack(r)
+    end end, {id = "forge_stickers.draw"})
+  elseif Card and Card.draw then
+    local orig = Card.draw
+    Card.draw = function(self, layer, ...)
+      local r = {orig(self, layer, ...)}
+      if St.any(self) or self.forge_stk_look then pcall(St.draw, self, layer) end
+      return unpack(r)
+    end
+  end
+  if Card and Card.generate_UIBox_ability_table then
+    local orig = Card.generate_UIBox_ability_table
+    Card.generate_UIBox_ability_table = function(self, ...)
+      local list = St.all_of(self)
+      if #list == 0 then return orig(self, ...) end
+      St.cur = list
+      local r = {pcall(orig, self, ...)}
+      St.cur = nil
+      if not r[1] then error(r[2], 0) end
+      return unpack(r, 2, table.maxn(r))
+    end
+  end
+  if type(generate_card_ui) == "function" then
+    local orig = generate_card_ui
+    generate_card_ui = function(_c, full_UI_table, specific_vars, card_type, badges, ...)
+      local list = St.cur
+      if not (list and full_UI_table == nil and type(badges) == "table") then return orig(_c, full_UI_table, specific_vars, card_type, badges, ...) end
+      St.cur = nil
+      for _, s in ipairs(list) do badges[#badges + 1] = s.key end
+      local out = orig(_c, full_UI_table, specific_vars, card_type, badges, ...)
+      if type(out) == "table" then
+        for _, s in ipairs(list) do pcall(orig, {key = s.key, set = "Other"}, out) end
+      end
+      return out
+    end
+  end
+end
+
+local function register_strings()
+  if not mod_loc_register then return end
+  mod_loc_register{
+    fr = {
+      ["Sticker"] = "Autocollant", ["Stickers"] = "Autocollants", ["Shop chance"] = "Chance en boutique",
+      ["Padlock"] = "Cadenas", ["Hourglass"] = "Sablier", ["Coin"] = "Pièce",
+      ["This Joker scores {C:attention}%s{}"] = "Ce Joker rapporte {C:attention}%s{}", ["Joker scores more"] = "Le Joker rapporte plus",
+      ["{C:mult}%s{} Mult"] = "{C:mult}%s{} Multi", ["{C:chips}%s{} Chips"] = "{C:chips}%s{} Jetons", ["{X:mult,C:white}%s{} Mult"] = "{X:mult,C:white}%s{} Multi",
+      ["{C:money}%s{} at end of round"] = "{C:money}%s{} en fin de manche", ["{C:red}%s{} at end of round"] = "{C:red}%s{} en fin de manche", ["Money each round"] = "Argent à chaque manche",
+      ["Gains {C:money}%s{} sell value each round"] = "Gagne {C:money}%s{} de valeur de vente par manche", ["Sell value each round"] = "Valeur de vente par manche",
+      ["Can't be sold"] = "Ne peut pas être vendu", ["Destroyed after {C:attention}%d{} rounds"] = "Détruit après {C:attention}%d{} manches", ["Destroyed after rounds"] = "Détruit après des manches",
+      ["Put a sticker on a Joker"] = "Coller un autocollant sur un Joker", ["Puts {C:attention}%s{} on a random Joker"] = "Colle {C:attention}%s{} sur un Joker au hasard",
+      ["A sticker for your Jokers"] = "Un autocollant pour vos Jokers", ["On {C:attention}%s{} of shop Jokers"] = "Sur {C:attention}%s{} des Jokers en boutique",
+      ["Never in the shop, only put by effects"] = "Jamais en boutique, seulement collé par des effets",
+      ["Sticker on the last starting Joker"] = "Autocollant sur le dernier Joker de départ", ["The last starting Joker has {C:attention}%s{}"] = "Le dernier Joker de départ a {C:attention}%s{}",
+    },
+    es = {
+      ["Sticker"] = "Pegatina", ["Stickers"] = "Pegatinas", ["Shop chance"] = "Probabilidad en tienda",
+      ["Padlock"] = "Candado", ["Hourglass"] = "Reloj de arena", ["Coin"] = "Moneda",
+      ["This Joker scores {C:attention}%s{}"] = "Este comodín puntúa {C:attention}%s{}", ["Joker scores more"] = "El comodín puntúa más",
+      ["{C:mult}%s{} Mult"] = "{C:mult}%s{} multi", ["{C:chips}%s{} Chips"] = "{C:chips}%s{} fichas", ["{X:mult,C:white}%s{} Mult"] = "{X:mult,C:white}%s{} multi",
+      ["{C:money}%s{} at end of round"] = "{C:money}%s{} al final de la ronda", ["{C:red}%s{} at end of round"] = "{C:red}%s{} al final de la ronda", ["Money each round"] = "Dinero cada ronda",
+      ["Gains {C:money}%s{} sell value each round"] = "Gana {C:money}%s{} de valor de venta cada ronda", ["Sell value each round"] = "Valor de venta cada ronda",
+      ["Can't be sold"] = "No se puede vender", ["Destroyed after {C:attention}%d{} rounds"] = "Se destruye tras {C:attention}%d{} rondas", ["Destroyed after rounds"] = "Se destruye tras rondas",
+      ["Put a sticker on a Joker"] = "Poner una pegatina en un comodín", ["Puts {C:attention}%s{} on a random Joker"] = "Pone {C:attention}%s{} en un comodín al azar",
+      ["A sticker for your Jokers"] = "Una pegatina para tus comodines", ["On {C:attention}%s{} of shop Jokers"] = "En el {C:attention}%s{} de los comodines de la tienda",
+      ["Never in the shop, only put by effects"] = "Nunca en la tienda, solo puesta por efectos",
+      ["Sticker on the last starting Joker"] = "Pegatina en el último comodín inicial", ["The last starting Joker has {C:attention}%s{}"] = "El último comodín inicial tiene {C:attention}%s{}",
+    },
+  }
+end
+
+register_strings()
+
+return St
+end

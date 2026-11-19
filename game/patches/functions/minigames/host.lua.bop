@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 235
+l 241
 local MG = Minigames
 local K = MG.kit
 local L = MG.L
@@ -117,11 +117,17 @@ local function away_box()
     return b and alive(b.box) and b.box.VT or nil
 end
 
+local function wait_box()
+    local W = rawget(_G, "bom_waitplay")
+    return W and alive(W.box) and W.box.VT or nil
+end
+
 local function fits(x, y, w, h)
     local sx, sy, sw, sh = screen()
     if not (x >= sx + H.PAD and y >= sy + H.PAD and x + w <= sx + sw - H.PAD and y + h <= sy + sh - H.PAD) then return false end
-    local A = away_box()
-    if A and x < A.x + A.w + H.GAP and A.x - H.GAP < x + w and y < A.y + A.h + H.GAP and A.y - H.GAP < y + h then return false end
+    for _, A in ipairs({away_box() or false, wait_box() or false}) do
+        if A and x < A.x + A.w + H.GAP and A.x - H.GAP < x + w and y < A.y + A.h + H.GAP and A.y - H.GAP < y + h then return false end
+    end
     return not on_labels(x, y, w, h, sx, sy)
 end
 

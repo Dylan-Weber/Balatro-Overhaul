@@ -224,5 +224,16 @@ do
   check("utf8: mod name cut on a whole letter", back == nil or (valid(back.name or "") and valid(back.author or "")))
 end
 
+do
+  files["forge/art/ggg777.png"] = png("G")
+  Store.put_item({id = "ggg777", kind = "ctype", name = "Glyphs", fields = {colour = "TEAL", fixed_sell = 3}, art = {file = "forge/art/ggg777.png"}})
+  local graw, gout = M.pack({name = "Glyph Pack", author = "Tester"}, {"ggg777"})
+  check("type pack art: packed", type(graw) == "string" and gout.files.ggg777 ~= nil)
+  local gm = M.parse(graw)
+  local gc = gm and gm.creations[1]
+  check("type pack art: parsed with its art", gc and gc.kind == "ctype" and gc.art and gc.art.file == "forge/art/fm_" .. gout.id .. "_ggg777.png")
+  check("type pack art: fixed sell kept", gc and gc.fields and gc.fields.sell_at == 3)
+end
+
 print(string.format("%d checks, %d failed", total, fails))
 os.exit(fails == 0 and 0 or 1)

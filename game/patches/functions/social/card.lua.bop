@@ -200,7 +200,7 @@ function SC.body()
     if more then
         rows[#rows + 1] = UIK.spacer(t and 0.06 or 0.12)
         rows[#rows + 1] = {n = G.UIT.R, config = {align = "cm", padding = 0}, nodes = {
-            btn{label = L("Challenge"), button = "social_challenge_open", ref_table = {code = code}, colour = G.C.GREEN, w = bw, h = bh, id = "social_card_challenge", col = true},
+            btn{label = L("Challenge (verb)"), button = "social_challenge_open", ref_table = {code = code}, colour = G.C.GREEN, w = bw, h = bh, id = "social_card_challenge", col = true},
             {n = G.UIT.C, config = {minw = 0.2}, nodes = {}},
             btn{label = L("Share a seed"), button = "social_seed_open", ref_table = {code = code}, colour = G.C.BLUE, w = bw, h = bh, id = "social_card_seed", col = true},
         }}
@@ -222,7 +222,7 @@ function SC.open(code)
     SC.confirm_block = nil
     if G.CONTROLLER then G.CONTROLLER.text_input_hook = nil end
 r 32 1381 %20%20%20%20 -
-l 84
+l 85
     G.FUNCS.overlay_menu{definition = UIK.window{
         id = "social_card", compact = true, w = card_w() + 0.2,
         title = L("FRIEND"),
@@ -292,15 +292,16 @@ function SC.init()
             ["No 1v1 match together yet."] = "Pas encore de match 1c1 ensemble.", ["Connect to see your record."] = "Connectez-vous pour voir votre bilan.",
             ["Last played: {what}"] = "Dernier match : {what}", ["Message"] = "Message", ["Pin to top"] = "Épingler en haut", ["Unpin"] = "Désépingler",
             ["{w}W {l}L"] = "{w}V {l}D", ["{w}W {l}L {d}D"] = "{w}V {l}D {d}N",
-            ["Ask to join"] = "Demander à rejoindre", ["Ask"] = "Demander", ["Challenge"] = "Défier", ["Share a seed"] = "Partager une seed",
+            ["Ask to join"] = "Demander à rejoindre", ["Ask"] = "Demander", ["Challenge (verb)"] = "Défier", ["Share a seed"] = "Partager une seed",
             ["Block"] = "Bloquer", ["Sure? Block"] = "Sûr ? Bloquer", ["Party invite"] = "Inviter en groupe",
         },
+        ["en-us"] = {["Challenge (verb)"] = "Challenge"},
         es = {
             ["FRIEND"] = "AMIGO", ["Friend"] = "Amigo", ["Head to head"] = "Cara a cara", ["Wins"] = "Victorias", ["Losses"] = "Derrotas", ["Draws"] = "Empates",
             ["No 1v1 match together yet."] = "Aún no habéis jugado un 1v1.", ["Connect to see your record."] = "Conéctate para ver tu historial.",
             ["Last played: {what}"] = "Última partida: {what}", ["Message"] = "Mensaje", ["Pin to top"] = "Fijar arriba", ["Unpin"] = "Desfijar",
             ["{w}W {l}L"] = "{w}V {l}D", ["{w}W {l}L {d}D"] = "{w}V {l}D {d}E",
-            ["Ask to join"] = "Pedir unirte", ["Ask"] = "Pedir", ["Challenge"] = "Retar", ["Share a seed"] = "Compartir código",
+            ["Ask to join"] = "Pedir unirte", ["Ask"] = "Pedir", ["Challenge (verb)"] = "Retar", ["Share a seed"] = "Compartir código",
             ["Block"] = "Bloquear", ["Sure? Block"] = "¿Seguro? Bloquear", ["Party invite"] = "Invitar en grupo",
         },
     }

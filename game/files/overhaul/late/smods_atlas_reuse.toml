@@ -1,0 +1,151 @@
+[manifest]
+version = "1.0.0"
+priority = 1
+
+[[patches]]
+[patches.regex]
+id = "atlas_reuse.helpers"
+requires = ["auto.smods_game_object.004"]
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>[\t ]*SMODS\.atlas_prefetch_stop = atlas_prefetch_stop\n)'''
+position = "at"
+payload = '''
+${pre}
+    local atlas_snapshot = nil
+
+    local function atlas_build_key(atlas, file_path, texture_scaling)
+        return table.concat({tostring((atlas.path_mod or atlas.mod or SMODS).path), tostring(file_path), tostring(texture_scaling),
+            tostring(SMODS.config and SMODS.config.graphics_mipmap_level), tostring(atlas.disable_mipmap), tostring(atlas.force_pixel)}, "\0")
+    end
+
+    local function atlas_kept(atlas, key)
+        local t = G[atlas_table_map[atlas.atlas_table] or "ASSET_ATLAS"]
+        return key ~= nil and atlas.bom_key == key and atlas.image ~= nil and atlas.bom_image == atlas.image
+            and t ~= nil and t[atlas.key_noloc or atlas.key] == atlas
+    end
+
+    local function atlas_kept_now(atlas)
+        local file_path, texture_scaling = atlas_source(atlas)
+        if not file_path then return false end
+        return atlas_kept(atlas, atlas_build_key(atlas, file_path, texture_scaling))
+    end
+
+    local function atlas_render_key()
+        local s = G.SETTINGS or {}
+        local g = s.GRAPHICS or {}
+        local parts = {tostring(g.texture_scaling), tostring(s.language), tostring(s.real_language), tostring(s.colourblind_option),
+            tostring(s.suit_palette), tostring(SMODS.config and SMODS.config.graphics_mipmap_level)}
+        for _, key in ipairs(SMODS.Atlas.obj_buffer) do
+            local atlas = SMODS.Atlas.obj_table[key]
+            local file_path, texture_scaling = nil, nil
+            if atlas then file_path, texture_scaling = atlas_source(atlas) end
+            parts[#parts + 1] = key .. "=" .. (file_path and atlas_build_key(atlas, file_path, texture_scaling) or "-")
+        end
+        return table.concat(parts, "\1")
+    end
+
+    local function atlas_entries()
+        local list = {}
+        for _, pair in ipairs({{G.asset_atli, "ASSET_ATLAS"}, {G.animation_atli, "ANIMATION_ATLAS"}}) do
+            local t = G[pair[2]]
+            for _, a in ipairs(pair[1] or {}) do
+                if type(a.name) == "string" and a.name:sub(1, 3) ~= "mp_" then
+                    local e = t and t[a.name]
+                    list[#list + 1] = {pair[2], a.name, e, e and e.image}
+                end
+            end
+        end
+        return list
+    end
+
+    local function atlas_snap()
+        atlas_snapshot = {key = atlas_render_key(), entries = atlas_entries()}
+    end
+
+    local function atlas_restore_needed()
+        local snap = atlas_snapshot
+        if not snap then
+            if SMODS.booted then return true end
+            local entries = atlas_entries()
+            if #entries == 0 then return true end
+            for _, e in ipairs(entries) do
+                if not (e[3] and e[4] and e[3].px and e[3].py) then return true end
+            end
+            return false
+        end
+        if snap.key ~= atlas_render_key() then return true end
+        for _, e in ipairs(snap.entries) do
+            local t = G[e[1]] and G[e[1]][e[2]]
+            if t ~= e[3] or (t and t.image ~= e[4]) then return true end
+        end
+        return false
+    end
+
+    local function atlas_fill_fields()
+        for _, name in ipairs({"ASSET_ATLAS", "ANIMATION_ATLAS"}) do
+            for _, atlas in pairs(G[name] or {}) do
+                if type(atlas) == "table" and atlas.image and atlas.px and atlas.py then
+                    atlas.atlas_table = atlas.atlas_table or name
+                    atlas.columns = atlas.image:getWidth() / atlas.px
+                    atlas.rows = atlas.image:getHeight() / atlas.py
+                end
+            end
+        end
+    end
+'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "atlas_reuse.inject_class"
+requires = ["atlas_reuse.helpers", "auto.smods_game_object.012"]
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<head>[\t ]*inject_class = function\(self\)\n)[\t ]*local list = \{\}\n(?<loop>[\t ]*for _, key in ipairs\(self\.obj_buffer\) do\n[\t ]*local o = self\.obj_table\[key\]\n)[\t ]*if o then list\[#list \+ 1\] = o end\n(?<mid>[\t ]*end\n[\t ]*pcall\(atlas_prefetch_start, list\)\n[\t ]*SMODS\.GameObject\.inject_class\(self\)\n[\t ]*atlas_prefetch_stop\(\)\n)'''
+position = "at"
+payload = '''
+${head}            local list, restore = {}, atlas_restore_needed()
+${loop}                if o and (restore or not atlas_kept_now(o)) then list[#list + 1] = o end
+${mid}            atlas_snap()
+'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "atlas_reuse.restore"
+requires = ["atlas_reuse.helpers", "auto.smods_game_object.012"]
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<head>[\t ]*pre_inject_class = function\(self\)\n)(?<post>[\t ]*G:set_render_settings\(\) -- restore originals first in case a texture pack was disabled\n)'''
+position = "at"
+payload = '''
+${head}            if not atlas_restore_needed() then
+                atlas_fill_fields()
+                return
+            end
+${post}'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "atlas_reuse.inject"
+requires = ["atlas_reuse.helpers", "auto.smods_game_object.005"]
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>[\t ]*local file_path, texture_scaling = atlas_source\(self\)\n[\t ]*if not file_path then return end\n)'''
+position = "at"
+payload = '''
+${pre}            local bom_key = atlas_build_key(self, file_path, texture_scaling)
+            if atlas_kept(self, bom_key) then return end
+            self.bom_key, self.bom_image = bom_key, nil
+'''
+times = 1
+
+[[patches]]
+[patches.regex]
+id = "atlas_reuse.built"
+requires = ["atlas_reuse.inject"]
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = '''^(?<pre>[\t ]*self\.rows = self\.image:getHeight\(\) / self\.py\n[\t ]*G\[atlas_table_map\[self\.atlas_table\]\]\[self\.key_noloc or self\.key\] = self\n)'''
+position = "at"
+payload = '''
+${pre}            self.bom_image = self.image
+'''
+times = 1

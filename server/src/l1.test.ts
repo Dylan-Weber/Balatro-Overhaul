@@ -85,6 +85,27 @@ describe('L1 messages are validated', () => {
   });
 });
 
+describe('ranked queue after a dropped connection', () => {
+  it('the new socket of the same player replaces the old queue entry, so nobody is matched with the dead one', async () => {
+    const k = key('R');
+    const name = nm('Back');
+    const old = await connect();
+    old.send({ type: 'find_match', ranked: true, name, pkey: k });
+    await old.wait(is('searching'));
+    const back = await connect();
+    back.send({ type: 'find_match', ranked: true, name, pkey: k });
+    await back.wait(is('searching'));
+    const b = await connect();
+    b.send({ type: 'find_match', ranked: true, name: nm('Other'), pkey: key('O') });
+    const rb = await b.wait(is('room_ready'));
+    const rback = await back.wait(is('room_ready'));
+    expect(rback.code).toBe(rb.code);
+    await sleep(100);
+    expect(old.msgs.some(m => m.type === 'room_ready')).toBe(false);
+    old.close(); back.close(); b.close();
+  });
+});
+
 describe('ranked seeds', () => {
   it('the server seed is in the ranked ruleset before the start, so host and guest play the same seed', async () => {
     const a = await connect();
@@ -380,5 +401,37 @@ describe('ranked results for both players', () => {
     const hist = await b.wait(is('ranked_history'));
     expect((hist.matches as Msg[])[0]).toMatchObject({ id: start.match_id, delta: 0, result: 'lose' });
     a.close(); b.close();
+  });
+});
+describe('a spectator can stay in the ranked queue', () => {
+  it('watching a live match does not block find_match, the match is found and the live feed keeps coming', async () => {
+    const host = await connect();
+    const guest = await connect();
+    host.send({ type: 'create_room', name: nm('SpecHost'), pkey: key('S'), visibility: 'public' });
+    const created = await host.wait(is('room_created'));
+    guest.send({ type: 'join_room', code: created.code, name: nm('SpecGuest'), pkey: key('T') });
+    await host.wait(is('room_ready'));
+    host.send({ type: 'match_start', seed: 'TEST', settings: { mode: 'nemesis', starting_lives: 3 }, player_name: 'SpecHostX' });
+    const id = (await guest.wait(is('match_start'))).match_id as string;
+    const v = await connect();
+    v.send({ type: 'spectate_watch', id });
+    expect((await v.wait(is('spectate_start'))).id).toBe(id);
+    v.send({ type: 'find_match', ranked: true, name: nm('Watcher'), pkey: key('V') });
+    await v.wait(is('searching'));
+    expect(v.msgs.some((m) => m.type === 'room_error')).toBe(false);
+    const r = await connect();
+    r.send({ type: 'find_match', ranked: true, name: nm('Rival'), pkey: key('W') });
+    const rv = await v.wait(is('room_ready'));
+    expect(rv.ranked).toBe(true);
+    await r.wait(is('room_ready'));
+    host.send({ type: 'act', seq: 1, a: [{ k: 'select', b: 'S' }] });
+    const act = await v.wait(is('spectate_act'));
+    expect(act.id).toBe(id);
+    v.send({ type: 'wait_status', status: 'solo' });
+    expect((await r.wait(is('wait_status'))).status).toBe('solo');
+    v.send({ type: 'spectate_leave' });
+    await v.wait(is('spectate_end'));
+    expect(rooms[rv.code as string]).toBeDefined();
+    host.close(); guest.close(); v.close(); r.close();
   });
 });
