@@ -201,7 +201,7 @@ Balatro belongs to LocalThunk and Playstack and is not included.
 
 ## Credits
 
-Made by JupiterianSoul. Special thanks to Samlegeek63 and Monoceros for helping me test and find bugs ! Thanks to OkiMaSha (GrantDPowell on GitHub) for the idea of playing solo while you wait for a match, the bug report behind it and the ranked queue timer.
+Made by JupiterianSoul. Special thanks to Samlegeek63 and Monoceros for helping me test and find bugs ! Thanks to OkiMaSha for the idea of playing solo while you wait for a match, the bug report behind it and the ranked queue timer.
 
 Uses LÖVE 11.5, Steamodded, nativefs, json.lua and the Balatro Mod Index. Thanks to Lovely Injector. The Deck Creator is ported from Balatro-DeckCreator by adambennett, and some of its random logic follows Cryptid. Every project the Overhaul is built on, with its author and licence, is listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
