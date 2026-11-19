@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 249
+l 264
 
 local bom_match = {}
 
@@ -176,14 +176,29 @@ local match = {
     end_pvp = false,
 }
 
+local function mp_run() return G and G.GAME and G.GAME.multiplayer end
+
+function bom_match.keep_sp_save()
+    if bom_match._sp_save_kept or type(save_run) ~= "function" or type(remove_save) ~= "function" then return end
+    bom_match._sp_save_kept = true
+    local save_run_ref, remove_save_ref = save_run, remove_save
+    save_run = function(...)
+        if not mp_run() then return save_run_ref(...) end
+        local args, pending = G.ARGS.save_run, G.FILE_HANDLER and G.FILE_HANDLER.run
+        local r = save_run_ref(...)
+        G.ARGS.save_run = args
+        if G.FILE_HANDLER then G.FILE_HANDLER.run = pending end
+        return r
+    end
+    remove_save = function(...)
+        if mp_run() then return end
+        return remove_save_ref(...)
+    end
+end
 
 function bom_match.reset()
+    pcall(bom_match.keep_sp_save)
     pcall(function() bom_spectate.wait_over() end)
-    pcall(function()
-        if remove_save then
-            remove_save()
-        end
-    end)
     match.phase        = bom_match.PHASE.NONE
     match.ante_timer   = nil
     match.opp_deck     = nil
