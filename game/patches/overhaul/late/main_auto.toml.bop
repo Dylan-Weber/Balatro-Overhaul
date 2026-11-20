@@ -942,7 +942,7 @@ UI_SIZE_EDGE_W = 0.8
 function ui_size_fit(w, h)
 	local base
 r 12 330 %09 -
-l 150
+l 151
 		base = G.window_prev.orig_scale*w/G.window_prev.w
 	else
 		base = G.window_prev.orig_scale*h/G.window_prev.h
@@ -1003,6 +1003,7 @@ function menu_zoom_target(w, h)
 	else
 		z = math.min(z, math.max(phone and 1.4 or 1.6, math.min(zr, PORTRAIT and PORTRAIT.READ_ZMAX or 1.6)) * extra, extra * uw * fill / t.w, extra * uh * math.min(fill, 0.92) / t.h)
 	end
+	if phone and w >= h then z = math.min(z, extra) end
 	if G.OVERLAY_TUTORIAL then z = math.min(z, 1) end
 	return math.max(0.5, math.floor(z * 20) / 20)
 end

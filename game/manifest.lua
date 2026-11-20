@@ -3035,7 +3035,7 @@ return {
       file = "files/overhaul/version.lua",
       kind = "own",
       path = "overhaul/version.lua",
-      sha256 = "19526ca300107b3c79303647f992168bf17587c8f6b4695cf8a242fdab797f14",
+      sha256 = "bd79a1a5e4c45f47ffc2b9f44206d978b9e07a0b7446ad392153d707220fbffa",
       size = 148,
     },
     {
@@ -3161,8 +3161,8 @@ return {
       kind = "patch",
       patch = "patches/overhaul/late/main_auto.toml.bop",
       path = "overhaul/late/main_auto.toml",
-      sha256 = "5174eb47ebe4058977c1780da647084462f84767e7e2cf0624497fdf402f0123",
-      size = 43700,
+      sha256 = "cc2d0c744e96fcdac2bf2c5d72e187340e3676c13e45b754b92dfd401ae59e25",
+      size = 43753,
     },
     {
       kind = "patch",
@@ -6484,7 +6484,7 @@ return {
   game_version = "1.0.1o-FULL",
   name = "Balatro Overhaul",
   overhaul_name = "2.1.3",
-  overhaul_version = "79",
+  overhaul_version = "80",
   vanilla = {
     {
       lines = "lines/1.txt",
