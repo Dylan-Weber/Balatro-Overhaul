@@ -942,8 +942,8 @@ return {
       file = "files/functions/qol.lua",
       kind = "own",
       path = "functions/qol.lua",
-      sha256 = "61df1da084e968f22fae2f41e4d5544a21c7d2a91399e22a1c4168bcd975abbe",
-      size = 848,
+      sha256 = "746bb6055f17e17eb7bf10f1a370752a7520156a2b295810f8ebdebe33a622be",
+      size = 862,
     },
     {
       file = "files/functions/quests.lua",
@@ -1962,6 +1962,13 @@ return {
     },
     {
       kind = "patch",
+      patch = "patches/functions/qol/pack_guard.lua.bop",
+      path = "functions/qol/pack_guard.lua",
+      sha256 = "d9053935d7bac8476a41aea786e1652b6c8350a7f89a9b9d4adcebf34a17c318",
+      size = 2735,
+    },
+    {
+      kind = "patch",
       patch = "patches/functions/qol/pause_menu.lua.bop",
       path = "functions/qol/pause_menu.lua",
       sha256 = "0734debe97b839f831dbe087d681dc1fa41334a509bf78a92d9acd7a6e578f29",
@@ -2475,8 +2482,8 @@ return {
       kind = "patch",
       patch = "patches/multiplayer/bom_draft.lua.bop",
       path = "multiplayer/bom_draft.lua",
-      sha256 = "d6fd3b1b2f8b45eb4a4c85ba8aaa8780e527c7b4a090481a4afdd4ed8933d278",
-      size = 15944,
+      sha256 = "de0e89a0e0f19ea2d123e5f48a2c957af8f40463d3c369e0e21197c0e97a8461",
+      size = 16907,
     },
     {
       kind = "patch",
@@ -2545,8 +2552,8 @@ return {
       file = "files/multiplayer/bom_lobby_settings.lua",
       kind = "own",
       path = "multiplayer/bom_lobby_settings.lua",
-      sha256 = "0558ea5996a36efca0604d529bc0d52f3a2f8b69ae97134bcd90bd1e67649bbd",
-      size = 59799,
+      sha256 = "ed3152c918d69750a339b7f07b33af1cdffa8f5efd4a404952747bd2dc45fc80",
+      size = 59782,
     },
     {
       kind = "patch",
@@ -2566,15 +2573,15 @@ return {
       kind = "patch",
       patch = "patches/multiplayer/bom_party.lua.bop",
       path = "multiplayer/bom_party.lua",
-      sha256 = "46d3d2517085210e7ff1da141e66f2f47f46730d5ec671c7466a6dcaa56aa44a",
-      size = 66085,
+      sha256 = "aac456c2292a471aeb3014af2f5ac61c1a25c9920a2a00f9c4bc1dea9396a019",
+      size = 66749,
     },
     {
       file = "files/multiplayer/bom_party_extras.lua",
       kind = "own",
       path = "multiplayer/bom_party_extras.lua",
-      sha256 = "0047780ac367fe6413e59488515cdc03eae8bd2af2920425be182e248def6959",
-      size = 4214,
+      sha256 = "bfd039117bdc0bac23b8570bd2a72c2d00dfa8fb245a22fea8ae7ff2ae513e32",
+      size = 4197,
     },
     {
       kind = "patch",
@@ -2587,8 +2594,8 @@ return {
       kind = "patch",
       patch = "patches/multiplayer/bom_pick.lua.bop",
       path = "multiplayer/bom_pick.lua",
-      sha256 = "1076005b8589be5d10cee1a441b0609cbd6e09173f4d3a472ee8cf7d3536f0ae",
-      size = 18794,
+      sha256 = "6d6ee4fb682a03da791f1032f428a4b1be621ba06a811c58fff9e486b09e685a",
+      size = 19560,
     },
     {
       kind = "patch",
@@ -3028,7 +3035,7 @@ return {
       file = "files/overhaul/version.lua",
       kind = "own",
       path = "overhaul/version.lua",
-      sha256 = "38689145ad0852c40465d9b4e75bb46f2255fb5255e842998b00929ef8bdabb6",
+      sha256 = "19526ca300107b3c79303647f992168bf17587c8f6b4695cf8a242fdab797f14",
       size = 148,
     },
     {
@@ -6477,7 +6484,7 @@ return {
   game_version = "1.0.1o-FULL",
   name = "Balatro Overhaul",
   overhaul_name = "2.1.3",
-  overhaul_version = "78",
+  overhaul_version = "79",
   vanilla = {
     {
       lines = "lines/1.txt",

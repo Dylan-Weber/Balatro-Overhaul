@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 275
+l 276
 local P = {}
 
 local function L(s)
@@ -78,7 +78,8 @@ function P.jokers_wanted(s)
 end
 
 function P.needed()
-    if in_party() or st().ranked == true then return false end
+    if st().ranked == true then return false end
+    if in_party() then return P.deck_wanted(settings()) end
     local s = settings()
     return P.deck_wanted(s) or P.jokers_wanted(s) > 0
 end
@@ -180,7 +181,7 @@ end
 
 local function player_line(pid, bw)
     local me = pid == my_pid()
-    local name = me and L("You") or st().opp_name
+    local name = me and L("You") or (in_party() and bom_party and bom_party.name_of and bom_party.name_of(pid)) or st().opp_name
     if not me and (type(name) ~= "string" or name == "" or name == "Opponent") then name = L("Your opponent") end
     local k = tostring(pid)
     local ts = UIK.touch() and 0.38 or 0.32
@@ -279,7 +280,7 @@ local function show(force)
     end
     S.open = true
 r 32 1381 %20%20%20%20 -
-l 170
+l 188
     G.FUNCS.overlay_menu{definition = UIK.window{
         id = "mp_pick", title = L("MATCH PICKS"), compact = true, no_back = true,
         tabs = {{key = "pick", label = L("Your picks"), build = build}},
@@ -339,7 +340,7 @@ local function on_done(d)
     if S.in_jokers and G.FUNCS.exit_overlay_menu then pcall(G.FUNCS.exit_overlay_menu) end
     S.in_jokers = false
     close()
-    if st().is_host and S.starting and P.orig_start then
+    if st().is_host and S.starting and (P.orig_start or S.resume) then
         S.starting = false
         S.start_at = now() + 0.6
     end
@@ -348,7 +349,7 @@ end
 
 local function on_error(d)
     if type(d) ~= "table" then return true end
-    if d.reason == "off" and S.starting and P.orig_start then
+    if d.reason == "off" and S.starting and (P.orig_start or S.resume) then
         S.starting = false
         S.result = {skipped = true}
         S.start_at = now()
@@ -365,18 +366,36 @@ local function on_error(d)
 end
 
 local function reset()
-    S.state, S.result, S.starting, S.start_at, S.in_jokers = nil, nil, false, nil, false
+    S.state, S.result, S.starting, S.start_at, S.in_jokers, S.resume = nil, nil, false, nil, false, nil
     S.mine = {deck = nil, jokers = {}, ready = false}
     if S.open then close() end
     if bom_match and bom_match.set_launch_picks then bom_match.set_launch_picks(nil, nil, nil) end
 end
 P.reset = reset
 
+function P.party_gate(cont)
+    if not (in_party() and P.needed()) or S.result then return false end
+    S.starting = true
+    S.resume = cont
+    S.state = nil
+    S.gate_at = now() + 4
+    local _, values = deck_choices()
+    send({type = "pick_start", pool = values, bot_jokers = P.bot_jokers()})
+    return true
+end
+
 function P.update()
     local t = now()
+    if S.gate_at and (S.state or not S.starting) then S.gate_at = nil end
+    if S.gate_at and t >= S.gate_at and S.resume then
+        S.gate_at, S.starting, S.result = nil, false, {skipped = true}
+        S.start_at = t
+    end
     if S.start_at and t >= S.start_at then
         S.start_at = nil
-        if in_lobby() and P.orig_start then pcall(P.orig_start) end
+        local go = S.resume or P.orig_start
+        S.resume = nil
+        if in_lobby() and go then pcall(go) end
     end
     local d = S.state
     if not d or S.result then return end

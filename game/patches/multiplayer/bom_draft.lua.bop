@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 231
+l 235
 local D = {}
 
 local function L(s)
@@ -77,13 +77,17 @@ local function in_party()
 end
 
 function D.needed()
-    if in_party() then return false end
     local s = st()
     local set = (bom_match and bom_match.get_settings and bom_match.get_settings()) or {}
+    if in_party() then return set.deck_draft == true end
     return s.ranked == true or set.deck_draft == true
 end
 
-local function opp_name()
+local function opp_name(pid)
+    if pid ~= nil and in_party() and bom_party and bom_party.name_of then
+        local pn = bom_party.name_of(pid)
+        if type(pn) == "string" and pn ~= "" then return pn end
+    end
     local n = st().opp_name
     if type(n) == "string" and n ~= "" and n ~= "Opponent" then return n end
     return L("Your opponent")
@@ -128,7 +132,7 @@ local function status_text()
     if d.phase == "done" then return type(d.deck) == "string" and string.format(L("Match deck: %s"), deck_label(d.deck)) or L("Draft done") end
     if d.phase == "ban" then
         if d.turn == my_pid() then return L("Ban a deck") end
-        return string.format(L("%s is banning"), opp_name())
+        return string.format(L("%s is banning"), opp_name(d.turn))
     end
     local mine = d.picks and d.picks[tostring(my_pid())]
     if mine then return string.format(L("Waiting for %s"), opp_name()) end
@@ -235,7 +239,7 @@ local function show()
     end
     S.open = true
 r 32 1381 %20%20%20%20 -
-l 147
+l 164
     local args = setmetatable({
         id = "mp_draft", title = L("DECK DRAFT"), compact = true,
         tabs = {{key = "draft", label = L("Deck draft"), build = build}},
@@ -293,7 +297,7 @@ local function on_done(d)
     S.view.timer = ""
     apply_result(d)
     show()
-    if st().is_host and S.starting and D.orig_start then
+    if st().is_host and S.starting and (D.orig_start or S.resume) then
         S.starting = false
         S.start_at = (love and love.timer and love.timer.getTime() or 0) + 1.2
     end
@@ -302,7 +306,7 @@ end
 
 local function on_error(d)
     if type(d) ~= "table" then return end
-    if d.reason == "off" and S.starting and D.orig_start then
+    if d.reason == "off" and S.starting and (D.orig_start or S.resume) then
         S.starting = false
         S.result = {skipped = true}
         S.start_at = love and love.timer and love.timer.getTime() or 0
@@ -311,7 +315,7 @@ local function on_error(d)
 end
 
 local function reset()
-    S.state, S.result, S.starting, S.start_at = nil, nil, false, nil
+    S.state, S.result, S.starting, S.start_at, S.resume = nil, nil, false, nil, nil
     if S.open then close() end
 end
 D.reset = reset
@@ -322,11 +326,28 @@ local function cancelled()
     return true
 end
 
+function D.party_gate(cont)
+    if not (in_party() and D.needed()) or S.result then return false end
+    S.starting = true
+    S.resume = cont
+    S.state = nil
+    S.gate_at = (love and love.timer and love.timer.getTime() or os.time()) + 4
+    if bom_core and bom_core.send then bom_core.send({type = "draft_start", deck_filter = bom_core.deck_filter_field and bom_core.deck_filter_field() or nil}) end
+    return true
+end
+
 function D.update()
     local now = love and love.timer and love.timer.getTime() or os.time()
+    if S.gate_at and (S.state or not S.starting) then S.gate_at = nil end
+    if S.gate_at and now >= S.gate_at and S.resume then
+        S.gate_at, S.starting, S.result = nil, false, {skipped = true}
+        S.start_at = now
+    end
     if S.start_at and now >= S.start_at then
         S.start_at = nil
-        if in_lobby() and D.orig_start then pcall(D.orig_start) end
+        local go = S.resume or D.orig_start
+        S.resume = nil
+        if in_lobby() and go then pcall(go) end
     end
     local d = S.state
     if not d or d.phase == "done" then return end

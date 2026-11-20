@@ -66,7 +66,7 @@ local function register_lobby()
         {key = "race_target", tab = "match", kind = "stepper", label = "Target ante", info = "First to clear it wins", min = 1, max = 12, show = race_on},
     })
     insert_after(LS.DEFS, "different_decks", {
-        {key = "deck_draft", tab = "players", kind = "toggle", label = "Deck draft", info = "Ban and pick decks in turn", no_party = true, refresh = true},
+        {key = "deck_draft", tab = "players", kind = "toggle", label = "Deck draft", info = "Ban and pick decks in turn", refresh = true},
     })
 end
 

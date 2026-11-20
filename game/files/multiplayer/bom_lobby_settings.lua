@@ -272,7 +272,7 @@ M.DEFS = {
     {key = "deck_filter", tab = "players", kind = "cycle", own = true, label = "Decks to pick from", info = "Decks shown in New Run and lobbies", refresh = true,
         options = function() return {{value = "vanilla", label = "Only vanilla"}, {value = "new", label = "Only new"}, {value = "both", label = "Both"}} end},
     {key = "deck", tab = "players", kind = "cycle", label = "Deck", options = deck_options, refresh = true, info_fn = deck_info},
-    {key = "different_decks", tab = "players", kind = "toggle", label = "Each player picks a deck", info = "Everyone picks theirs at match start", refresh = true, no_party = true},
+    {key = "different_decks", tab = "players", kind = "toggle", label = "Each player picks a deck", info = "Everyone picks theirs at match start", refresh = true},
     {key = "joker_picks", tab = "players", kind = "stepper", label = "Starting joker picks", min = 0, max = 5, refresh = true, no_party = true,
         format = function(v) return (tonumber(v) or 0) <= 0 and L("Off") or tostring(v) end, info_fn = joker_picks_info},
     {header = "Timers", tab = "players"},

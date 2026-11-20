@@ -223,11 +223,17 @@ export function draftLeftForPicks(room: DraftRoom): number {
   return picks && !room.ranked && room.settings.different_decks === true ? 3 : 1;
 }
 
-export function startDraft(room: DraftRoom, deps: DraftDeps, seed?: string | null, filters: unknown[] = []): Draft {
+export function draftBansEach(players: number, left: number, decks: number): number {
+  return Math.max(0, Math.min(DRAFT_BANS_EACH, Math.floor((decks - left) / Math.max(1, players))));
+}
+
+export function startDraft(room: DraftRoom, deps: DraftDeps, seed?: string | null, filters: unknown[] = [], pids: number[] = [0, 1]): Draft {
   if (room.draft) clear(room.draft);
-  const pids = [0, 1];
   const filter = sharedDeckFilter(filters);
-  const d = newDraft(seed || room.rankedSeed || crypto.randomUUID(), pids, DRAFT_BANS_EACH, pids.length * DRAFT_BANS_EACH + draftLeftForPicks(room), filter);
+  const left = draftLeftForPicks(room);
+  const all = draftDecksFor(filter);
+  const each = draftBansEach(pids.length, left, all.decks.length + all.spare.length);
+  const d = newDraft(seed || room.rankedSeed || crypto.randomUUID(), pids, each, pids.length * each + left, filter);
   room.draft = d;
   deps.log('INFO', 'DRAFT', `${room.code} started decks=${filter} pool=${d.pool.join(',')}`);
   arm(room, deps);

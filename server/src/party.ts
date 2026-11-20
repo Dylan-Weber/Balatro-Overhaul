@@ -6,6 +6,8 @@ import { versionNameOf } from './updates';
 import { blockedMods, type ModRef } from './integrity';
 import { plainMods, forgeMods } from './forge_relay';
 import { rollDeck } from './deck_roll';
+import { startDraft, draftAction, resendDraft, cancelDraft, wantsDraft, cleanDeckFilter, remaining as draftRemaining, type Draft, type DraftDeps, type DraftRoom } from './draft';
+import { startPick, pickAction, resendPick, cancelPick, wantsPick, cleanPool, RANDOM_PICK, type Pick, type PickDeps, type PickRoom } from './pick';
 import {
   PARTY_MAX, PartyCfg, partyCfg, cleanPartySettings, resolveParty, raidTarget, teamTotals, balanceTeams, teamCount, PARTY_KINDS, RPlayer,
   KIND_MIN, raceCleared, raceWinner, raceOrder, RaceEntry,
@@ -66,6 +68,9 @@ export interface Seat {
   done: boolean;
   freeDrop: boolean;
   solo: boolean;
+  pvpDone?: number;
+  slotN?: number | null;
+  doneKey?: string | null;
   live: Msg | null;
   board: Msg | null;
   spectating: number | null;
@@ -103,6 +108,10 @@ export interface Party {
   outCount: number;
   lastResult: Msg | null;
   lastPvp: number;
+  draft?: Draft | null;
+  pick?: Pick | null;
+  pvpN?: number;
+  lastN?: number;
   matchId?: string;
   raceGoal?: number;
   raceStart?: number;
@@ -230,6 +239,8 @@ export function partyNames(p: Party): string[] { return seatList(p).map(([, s]) 
 
 function clearTimers(p: Party): void {
   if (p.pvpTimer) { clearTimeout(p.pvpTimer); p.pvpTimer = null; }
+  cancelDraft(p as unknown as DraftRoom, true);
+  cancelPick(p as unknown as PickRoom);
   if (p.holdTimer) { clearTimeout(p.holdTimer); p.holdTimer = null; }
 }
 
@@ -812,12 +823,55 @@ export function startError(p: Party): string | null {
   return null;
 }
 
+function partyDeps(p: Party): DraftDeps & PickDeps {
+  return {
+    sendTo: (pid, m) => { const s = p.seats[pid]; if (s) send(s, m); },
+    isBot: (pid) => isBotWs(p.seats[pid]?.ws ?? null),
+    connected: (pid) => live(p.seats[pid]?.ws ?? null),
+    log: (level, tag, text) => D.log(level, tag, `${text} party=${p.code}`),
+  };
+}
+
+function partyDraftStart(p: Party, pid: number, ws: WS, msg: Msg): void {
+  const f = cleanDeckFilter(msg.deck_filter);
+  if (f) (ws.data as { deckFilter?: string }).deckFilter = f;
+  if (p.phase !== 'lobby') return;
+  if (p.draft && p.draft.phase !== 'done') { resendDraft(p as unknown as DraftRoom, pid, partyDeps(p)); return; }
+  if (pid !== p.hostId) return;
+  if (!wantsDraft(p as unknown as DraftRoom)) { send(p.seats[pid]!, { type: 'draft_error', reason: 'off' }); return; }
+  const pids = seatList(p).filter(([, s]) => live(s.ws)).map(([i]) => i);
+  const filters = pids.map(i => (p.seats[i]?.ws?.data as { deckFilter?: string } | undefined)?.deckFilter);
+  startDraft(p as unknown as DraftRoom, partyDeps(p), null, filters, pids);
+}
+
+function partyPickStart(p: Party, pid: number, msg: Msg): void {
+  if (p.phase !== 'lobby') return;
+  if (p.pick && !p.pick.done) { resendPick(p as unknown as PickRoom, pid, partyDeps(p)); return; }
+  if (pid !== p.hostId) return;
+  const jokers = p.settings.joker_picks;
+  p.settings.joker_picks = 0;
+  try {
+    if (!wantsPick(p as unknown as PickRoom)) { send(p.seats[pid]!, { type: 'pick_error', reason: 'off' }); return; }
+    let pool = cleanPool(msg.pool);
+    const d = p.draft;
+    if (d && d.phase === 'done') pool = [...draftRemaining(d), ...(pool.includes(RANDOM_PICK) ? [RANDOM_PICK] : [])];
+    const pids = seatList(p).filter(([, s]) => live(s.ws)).map(([i]) => i);
+    startPick(p as unknown as PickRoom, partyDeps(p), pids, pool, { defaultDeck: d && d.phase === 'done' ? d.deck : null });
+  } finally {
+    if (jokers === undefined) delete p.settings.joker_picks; else p.settings.joker_picks = jokers;
+  }
+}
+
 function handleStart(ws: WS, msg: Msg): void {
   const p = partyForSocket(ws);
   if (!p || p.phase !== 'lobby' || pidOf(p, ws) !== p.hostId) return;
   const e = startError(p);
   if (e) { err(ws, e); return; }
   for (const [pid, s] of seatList(p)) if (!live(s.ws)) p.seats[pid] = null;
+  const draft = p.draft;
+  if (draft && draft.phase === 'done' && draft.deck && p.settings.different_decks !== true) p.settings.deck = draft.deck;
+  cancelDraft(p as unknown as DraftRoom, true);
+  cancelPick(p as unknown as PickRoom);
   startMatch(p, typeof msg.seed === 'string' && msg.seed.length > 0 && msg.seed.length <= 16 ? msg.seed : null);
 }
 
@@ -833,11 +887,13 @@ export function startMatch(p: Party, seed: string | null): void {
   p.outCount = 0;
   p.lastResult = null;
   p.lastPvp = 0;
+  p.pvpN = 0;
+  p.lastN = 0;
   p.finalAnte = D.finalAnteFor(p.settings);
   p.teamLives = {};
   p.raidLives = cfg.raidLives;
   for (const [, s] of seatList(p)) {
-    Object.assign(s, { lives: cfg.lives, alive: true, score: null, finished: false, readyBlind: false, ante: 1, blind: 'S', placement: null, endReason: null, result: null, snapshot: null, ready: false, ended: false, done: false, freeDrop: true, solo: false, live: null, board: null, spectating: null, best: 0, lostBlinds: [], wait: null });
+    Object.assign(s, { lives: cfg.lives, alive: true, score: null, finished: false, readyBlind: false, ante: 1, blind: 'S', placement: null, endReason: null, result: null, snapshot: null, ready: false, ended: false, done: false, freeDrop: true, solo: false, live: null, board: null, spectating: null, best: 0, lostBlinds: [], wait: null, pvpDone: 0, slotN: null, doneKey: null });
     if (cfg.kind === 'teams') p.teamLives[s.team] = cfg.lives;
     if (cfg.kind !== 'teams') s.team = 0;
   }
@@ -863,15 +919,28 @@ export function startMatch(p: Party, seed: string | null): void {
 }
 
 function blindPos(ante: number, blind: string): number { return ante * 3 + (blind === 'S' ? 0 : blind === 'B' ? 1 : 2); }
-function atPvp(p: Party, s: Seat): boolean { return p.pvpAnte !== null && s.ante === p.pvpAnte && s.blind === p.pvpBlind; }
+function seatN(s: Seat): number { return (s.pvpDone ?? 0) + 1; }
+function atPvp(p: Party, s: Seat): boolean { return p.pvpAnte !== null && s.slotN != null && s.slotN === (p.pvpN ?? 0); }
 function inPvp(p: Party, s: Seat): boolean { return atPvp(p, s); }
-function stalePvp(p: Party, here: number): boolean { return here <= p.lastPvp || (p.pvpAnte !== null && here < blindPos(p.pvpAnte, p.pvpBlind)); }
-function pastPvp(p: Party, s: Seat): boolean { return p.pvpAnte !== null && blindPos(s.ante, s.blind) > blindPos(p.pvpAnte, p.pvpBlind); }
-function nextPvp(p: Party): number {
-  for (let pos = Math.max(p.lastPvp + 1, blindPos(1, 'S')); pos <= p.lastPvp + 300; pos++) {
-    if (isPvpBlind(p, Math.floor(pos / 3), ['S', 'B', 'L'][pos % 3])) return pos;
-  }
-  return -1;
+function stalePvp(p: Party, s: Seat): boolean { return s.slotN == null || s.slotN <= (p.lastN ?? 0) || (p.pvpAnte !== null && s.slotN < (p.pvpN ?? 0)); }
+function pastPvp(p: Party, s: Seat): boolean { return p.pvpAnte !== null && seatN(s) > (p.pvpN ?? 0); }
+function seatAt(p: Party, s: Seat, ante: number, blind: string): void {
+  const key = `${ante}:${blind}`;
+  if (s.slotN != null && key !== `${s.ante}:${s.blind}`) pvpDoneBy(s);
+  if (s.doneKey && s.doneKey !== key) s.doneKey = null;
+  s.ante = ante;
+  s.blind = blind;
+  s.slotN = isPvpBlind(p, ante, blind) ? (s.doneKey === key ? (s.pvpDone ?? 0) : seatN(s)) : null;
+}
+function pvpDoneBy(s: Seat): void {
+  if (s.slotN != null) s.pvpDone = Math.max(s.pvpDone ?? 0, s.slotN);
+  s.slotN = null;
+  s.doneKey = `${s.ante}:${s.blind}`;
+}
+function countSlots(p: Party, upTo: number): number {
+  let n = 0;
+  for (let pos = blindPos(1, 'S'); pos <= upTo && pos <= blindPos(1, 'S') + 600; pos++) if (isPvpBlind(p, Math.floor(pos / 3), ['S', 'B', 'L'][pos % 3])) n++;
+  return n;
 }
 function pvpStart(p: Party): number {
   if (typeof p.settings.pvp_start_round === 'number') return p.settings.pvp_start_round;
@@ -896,11 +965,12 @@ function isPvpBlind(p: Party, ante: number, blind: string): boolean {
   return everyBlind(p) ? (blind === 'S' || blind === 'B' || blind === 'L') : blind === 'L';
 }
 
-function openPvp(p: Party, ante: number, blind = 'L'): void {
+function openPvp(p: Party, ante: number, blind = 'L', n?: number): void {
   p.pvpAnte = ante;
   p.pvpBlind = blind;
+  p.pvpN = n ?? (p.lastN ?? 0) + 1;
   p.pvpStarted = false;
-  for (const [, o] of aliveSeats(p)) { o.score = null; o.finished = false; o.done = false; o.leftOut = false; if (o.ante !== ante || o.blind !== blind) o.readyBlind = false; }
+  for (const [, o] of aliveSeats(p)) { o.score = null; o.finished = false; o.done = false; o.leftOut = false; if (!atPvp(p, o)) o.readyBlind = false; }
   armTimer(p);
 }
 
@@ -913,19 +983,17 @@ function soloPass(p: Party, pid: number): void {
 function handleBlindEntered(p: Party, pid: number, msg: Msg): void {
   const s = p.seats[pid]!;
   if (!s.alive) return;
-  s.ante = typeof msg.ante === 'number' ? msg.ante : s.ante;
-  s.blind = typeof msg.blind === 'string' ? msg.blind : s.blind;
+  seatAt(p, s, typeof msg.ante === 'number' ? msg.ante : s.ante, typeof msg.blind === 'string' ? msg.blind : s.blind);
   s.solo = false;
   touch(p);
   if (isPvpBlind(p, s.ante, s.blind)) {
-    const here = blindPos(s.ante, s.blind);
-    if (stalePvp(p, here)) {
+    if (stalePvp(p, s)) {
       send(s, matchState(p, pid, 'blind_entered'));
       soloPass(p, pid);
       broadcastState(p);
       return;
     }
-    if (p.pvpAnte === null) openPvp(p, s.ante, s.blind);
+    if (p.pvpAnte === null) openPvp(p, s.ante, s.blind, s.slotN ?? undefined);
     else if (atPvp(p, s) && p.pvpStarted && !s.done) { s.leftOut = false; send(s, { type: 'start_blind', party: true }); }
   }
   send(s, matchState(p, pid, 'blind_entered'));
@@ -946,6 +1014,8 @@ function checkStart(p: Party, force = false): void {
   const inside = due.filter(([, s]) => inPvp(p, s));
   if (force ? inside.length === 0 : (inside.length === 0 || !due.every(([, s]) => s.readyBlind && inPvp(p, s)))) return;
   p.pvpStarted = true;
+  const low = [...inside].sort(([, a], [, b]) => blindPos(a.ante, a.blind) - blindPos(b.ante, b.blind))[0];
+  if (low) { p.pvpAnte = low[1].ante; p.pvpBlind = low[1].blind; }
   for (const [, s] of inside) { s.readyBlind = false; send(s, { type: 'start_blind', party: true }); }
   for (const [, s] of present) if (!inPvp(p, s)) s.leftOut = true;
   armTimer(p);
@@ -976,17 +1046,15 @@ function handleReadyBlind(p: Party, pid: number, ready: boolean, msg?: Msg): voi
   const s = p.seats[pid]!;
   if (!s.alive) return;
   if (ready && msg && typeof msg.ante === 'number' && typeof msg.blind === 'string' && isPvpBlind(p, msg.ante, msg.blind)) {
-    const here = blindPos(msg.ante, msg.blind);
     const passed = s.solo && s.ante === msg.ante && s.blind === msg.blind;
-    s.ante = msg.ante;
-    s.blind = msg.blind;
-    if (stalePvp(p, here)) {
+    seatAt(p, s, msg.ante, msg.blind);
+    if (stalePvp(p, s)) {
       s.readyBlind = false;
       if (!passed) soloPass(p, pid);
       broadcastState(p);
       return;
     }
-    if (p.pvpAnte === null) openPvp(p, s.ante, s.blind);
+    if (p.pvpAnte === null) openPvp(p, s.ante, s.blind, s.slotN ?? undefined);
     else if (atPvp(p, s) && p.pvpStarted && !s.done) {
       s.leftOut = false;
       s.readyBlind = false;
@@ -1016,6 +1084,7 @@ function parseScore(v: unknown): number {
 function soloDone(p: Party, pid: number): void {
   const s = p.seats[pid]!;
   s.solo = false;
+  pvpDoneBy(s);
   send(s, {
     type: 'pvp_resolved', party: true, solo: true, result: 'draw', myScore: 0, oppScore: 0, myLives: poolLives(p, s), oppLives: oppAggregate(p, pid).lives,
     matchEnded: false, winner: null, winReason: null, finalPvp: false, finalAnte: p.finalAnte, suddenDeath: p.suddenDeath,
@@ -1136,6 +1205,12 @@ export function resolveBlind(p: Party): void {
   };
   const aggBefore: Record<number, { score: number }> = {};
   for (const [pid] of aliveSeats(p)) aggBefore[pid] = { score: cfg.kind === 'raid' ? r.raidTarget : cfg.kind === 'teams' ? bestEnemyTeam(r.teamScores, p.seats[pid]!.team) : oppAggregate(p, pid).score };
+  for (const [pid, s] of seatList(p)) {
+    if (!atPvp(p, s) && outcomes[pid] === undefined) continue;
+    s.pvpDone = Math.max(s.pvpDone ?? 0, p.pvpN ?? 0);
+    if (s.slotN != null && s.slotN <= (p.pvpN ?? 0)) { s.slotN = null; s.doneKey = `${s.ante}:${s.blind}`; }
+  }
+  p.lastN = Math.max(p.lastN ?? 0, p.pvpN ?? 0);
   p.pvpAnte = null;
   p.pvpStarted = false;
   p.lastPvp = Math.max(p.lastPvp, blindPos(ante, p.pvpBlind));
@@ -1165,7 +1240,7 @@ export function resolveBlind(p: Party): void {
   }
   for (const [, s] of seatList(p)) {
     s.score = null; s.finished = false; s.done = false; s.leftOut = false;
-    if (s.ante <= ante) s.readyBlind = false;
+    if (s.slotN == null || s.slotN <= (p.lastN ?? 0)) s.readyBlind = false;
   }
   finishOrContinue(p, over, 'pvp_resolved');
   if (!over) reopenPvp(p);
@@ -1179,10 +1254,10 @@ function bestEnemyTeam(scores: Record<number, number>, team: number): number {
 
 function reopenPvp(p: Party): void {
   if (p.pvpAnte !== null || p.phase !== 'playing') return;
-  const next = nextPvp(p);
-  const first = aliveSeats(p).find(([, s]) => isPvpBlind(p, s.ante, s.blind) && blindPos(s.ante, s.blind) === next);
+  const next = (p.lastN ?? 0) + 1;
+  const first = aliveSeats(p).find(([, s]) => s.slotN === next);
   if (!first) return;
-  openPvp(p, first[1].ante, first[1].blind);
+  openPvp(p, first[1].ante, first[1].blind, next);
   broadcastState(p);
   checkStart(p);
 }
@@ -1322,7 +1397,7 @@ function rejoinPayload(p: Party, pid: number): Msg {
   };
 }
 
-export const PARTY_SKIP = ['pvpTimer', 'holdTimer'] as const;
+export const PARTY_SKIP = ['pvpTimer', 'holdTimer', 'draft', 'pick'] as const;
 export const SEAT_SKIP = ['ws'] as const;
 
 export function partySnapshot(p: Party, botSnap: (ws: unknown) => Msg | null, now = Date.now()): Msg {
@@ -1371,6 +1446,18 @@ export function partyRestore(body: Msg, makeBot: (snap: Msg, p: Party, pid: numb
       p.moved![pid] = true;
     }
   });
+  if (p.lastN === undefined) {
+    p.lastN = countSlots(p, p.lastPvp);
+    p.pvpN = p.pvpAnte !== null ? countSlots(p, blindPos(p.pvpAnte, p.pvpBlind)) : 0;
+    for (const [, seat] of seatList(p)) {
+      const here = blindPos(seat.ante, seat.blind);
+      const at = isPvpBlind(p, seat.ante, seat.blind);
+      seat.pvpDone = countSlots(p, Math.min(here - (at ? 1 : 0), p.lastPvp));
+      seat.slotN = at ? countSlots(p, here) : null;
+      seat.doneKey = null;
+      if (at && here <= p.lastPvp) { seat.pvpDone = seat.slotN!; seat.slotN = null; seat.doneKey = `${seat.ante}:${seat.blind}`; }
+    }
+  }
   if (pvpLeft !== null && p.pvpAnte !== null) armTimer(p, pvpLeft);
   scheduleHold(p);
   touch(p);
@@ -1468,6 +1555,10 @@ export function handlePartyMessage(ws: WS, msg: Msg): boolean {
   touch(p);
   switch (t) {
     case 'match_settings': handleSettings(ws, msg); return true;
+    case 'draft_start': partyDraftStart(p, pid, ws, msg); return true;
+    case 'draft_action': if (p.draft) draftAction(p as unknown as DraftRoom, pid, msg, partyDeps(p)); return true;
+    case 'pick_start': partyPickStart(p, pid, msg); return true;
+    case 'pick_set': if (p.pick) pickAction(p as unknown as PickRoom, pid, msg, partyDeps(p)); return true;
     case 'player_name': {
       if (msg.name !== undefined && !D.claimName(ws, msg)) return true;
       if (ws.data?.name) p.seats[pid]!.name = ws.data.name;

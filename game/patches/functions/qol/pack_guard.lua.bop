@@ -1,0 +1,83 @@
+BOP 1
+eol lf
+final 1
+base 0
+l 68
+local Q = QOL
+local M = Q.feature("pack_guard", {})
+
+M.seen = false
+
+function M.room(card)
+    local g = G and G.GAME
+    local extra = card and card.ability and tonumber(card.ability.extra)
+    if not extra then extra = g and tonumber(g.pack_size) end
+    if not extra then return nil end
+    local mod = g and g.modifiers and tonumber(g.modifiers.booster_size_mod) or 0
+    return math.max(1, math.floor(extra + mod))
+end
+
+function M.fit(card)
+    local g = G and G.GAME
+    local room = M.room(card)
+    if not (g and room and tonumber(g.pack_choices)) then return end
+    if g.pack_choices > room then g.pack_choices = room end
+    if g.pack_choices < 1 then g.pack_choices = 1 end
+end
+
+function M.pack_state()
+    local S = G and G.STATES
+    if not S then return false end
+    for _, k in ipairs({"TAROT_PACK", "PLANET_PACK", "SPECTRAL_PACK", "STANDARD_PACK", "BUFFOON_PACK", "SMODS_BOOSTER_OPENED"}) do
+        if S[k] and G.STATE == S[k] then return true end
+    end
+    return false
+end
+
+local function pack_left()
+    return G.pack_cards and not G.pack_cards.REMOVED and G.pack_cards.cards and #G.pack_cards.cards or 0
+end
+
+function M.init()
+    if M._wrapped or not (Card and Card.open and G and G.FUNCS and G.FUNCS.use_card and G.FUNCS.can_skip_booster) then return end
+    M._wrapped = true
+    local open = Card.open
+    Card.open = function(self, ...)
+        local booster = self and self.ability and self.ability.set == "Booster"
+        if booster then M.seen = false end
+        local r = {open(self, ...)}
+        if booster and G.E_MANAGER and Event then
+            M.fit(self)
+            G.E_MANAGER:add_event(Event({blockable = false, blocking = false, func = function()
+                M.fit(self)
+                return true
+            end}))
+        end
+        return unpack(r, 1, table.maxn(r))
+    end
+    local use = G.FUNCS.use_card
+    G.FUNCS.use_card = function(e, ...)
+        local c = e and e.config and e.config.ref_table
+        if c and G.pack_cards and c.area == G.pack_cards and G.GAME and tonumber(G.GAME.pack_choices) and G.GAME.pack_choices > 1 and pack_left() <= 1 then
+            G.GAME.pack_choices = 1
+        end
+        return use(e, ...)
+    end
+    local can_skip = G.FUNCS.can_skip_booster
+    G.FUNCS.can_skip_booster = function(e, ...)
+        local r = can_skip(e, ...)
+        local n = pack_left()
+        if n > 0 then
+            M.seen = true
+        elseif M.seen and e and e.config and not e.config.button and M.pack_state() and G.pack_cards
+            and not (G.CONTROLLER and G.CONTROLLER.locks and G.CONTROLLER.locks.use) then
+r 32 311 %20%20%20%20%20%20%20%20%20%20%20%20 -
+l 7
+            e.config.button = "skip_booster"
+        end
+        return r
+    end
+end
+
+return M
+end

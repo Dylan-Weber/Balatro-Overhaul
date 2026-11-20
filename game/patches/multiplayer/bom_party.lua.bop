@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 763
+l 777
 local P = {}
 
 local function L(s) return mod_loc and mod_loc(s) or s end
@@ -339,8 +339,22 @@ FUNCS.party_ready = function()
     send({type = "party_ready", ready = not (me and me.ready)})
 end
 
-FUNCS.party_start = function()
+function P.name_of(pid)
+    for _, p in ipairs(S.room and S.room.players or {}) do
+        if tonumber(p.pid) == tonumber(pid) then return p.name end
+    end
+    return nil
+end
+
+FUNCS.party_start = function(stage)
     if not P.can_start() then return end
+    stage = type(stage) == "number" and stage or 0
+    if stage <= 0 then
+        if bom_draft and bom_draft.reset then pcall(bom_draft.reset) end
+        if bom_pick and bom_pick.reset then pcall(bom_pick.reset) end
+        if bom_draft and bom_draft.party_gate and bom_draft.party_gate(function() FUNCS.party_start(1) end) then return end
+    end
+    if stage <= 1 and bom_pick and bom_pick.party_gate and bom_pick.party_gate(function() FUNCS.party_start(2) end) then return end
     local seed = bom_match.new_match_seed and bom_match.new_match_seed() or nil
     send({type = "party_start", seed = seed})
 end

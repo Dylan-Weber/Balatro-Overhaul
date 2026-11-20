@@ -1,3 +1,4 @@
+import { remaining as draftRemaining } from './draft';
 import { describe, it, expect, afterAll } from 'bun:test';
 import { startServer, setTimings, validateMessage } from './index';
 import { partyCfg, resolveParty, raidTarget, bossChips, teamScore, teamTotals, balanceTeams, teamCount, cleanPartySettings, RPlayer } from './party_rules';
@@ -351,7 +352,7 @@ describe('party PvP schedule after a player comes back', () => {
     for (const c of cs) c.close();
   });
 
-  it('a player who ran past the PvP blinds does not hold them or move the next one to their ante', async () => {
+  it('a player who ran past a PvP blind does not hold it; their next boss is the next PvP blind, at the lowest ante', async () => {
     const { cs, code } = await party(3, { party_kind: 'br' });
     await start(cs);
     for (const c of cs.slice(0, 2)) c.send({ type: 'ready_blind', ante: 2, blind: 'L' });
@@ -365,9 +366,10 @@ describe('party PvP schedule after a player comes back', () => {
     cs[1].send({ type: 'play_hand', score: 20, hands_left: 0 });
     expect(await cs[0].wait('pvp_resolved', (m) => m.ante === 2, 500)).toMatchObject({ lowest: 2 });
     expect(parties[code].seats[2]!.lives).toBe(3);
-    expect(parties[code].pvpAnte).toBeNull();
+    expect(parties[code].pvpN).toBe(2);
     for (const c of cs.slice(0, 2)) c.send({ type: 'ready_blind', ante: 3, blind: 'L' });
-    for (const c of cs.slice(0, 2)) await c.wait('start_blind', () => true, 500);
+    cs[2].send({ type: 'ready_blind', ante: 5, blind: 'L' });
+    for (const c of cs) await c.wait('start_blind', (m) => m.solo !== true, 500);
     expect(parties[code].pvpAnte).toBe(3);
     for (const c of cs) c.close();
   });
@@ -1033,6 +1035,62 @@ describe('party edge cases: rooms', () => {
     cs[1].send({ type: 'blind_entered', ante: 3, blind: 'L' });
     cs[1].send({ type: 'ready_blind' });
     for (const c of cs) await c.wait('start_blind', (m) => m.solo !== true);
+    for (const c of cs) c.close();
+  });
+
+  it('raid: a player whose ante went back still fights the next raid boss with the team, no solo pass', async () => {
+    const { cs, code } = await party(2, { party_kind: 'raid' });
+    await start(cs);
+    for (const c of cs) c.send({ type: 'blind_entered', ante: 2, blind: 'L' });
+    await sleep(40);
+    for (const c of cs) c.send({ type: 'ready_blind' });
+    for (const c of cs) await c.wait('start_blind');
+    for (const c of cs) c.send({ type: 'play_hand', score: 999999, hands_left: 0 });
+    for (const c of cs) await c.wait('pvp_resolved', (m) => m.solo !== true);
+    cs[0].send({ type: 'blind_entered', ante: 3, blind: 'S' });
+    cs[0].send({ type: 'blind_entered', ante: 3, blind: 'L' });
+    cs[1].send({ type: 'blind_entered', ante: 2, blind: 'S' });
+    cs[1].send({ type: 'blind_entered', ante: 2, blind: 'L' });
+    await sleep(40);
+    for (const c of cs) c.send({ type: 'ready_blind' });
+    await sleep(40);
+    for (const c of cs) await c.wait('start_blind', (m) => m.solo !== true);
+    expect(cs[1].msgs.some((m) => m.type === 'start_blind' && m.solo === true)).toBe(false);
+    expect(parties[code].pvpN).toBe(2);
+    expect(parties[code].pvpAnte).toBe(2);
+    cs[0].send({ type: 'play_hand', score: 10, hands_left: 0 });
+    cs[1].send({ type: 'play_hand', score: 20, hands_left: 0 });
+    expect(await cs[0].wait('pvp_resolved', (m) => m.ante === 2 && m.solo !== true && m.raidTotal === 30, 1000)).toMatchObject({ kind: 'raid' });
+    for (const c of cs) c.close();
+  });
+
+  it('party lobby: deck draft bans rotate over every player, then each player picks their own deck from what is left', async () => {
+    const { cs, code } = await party(3, { party_kind: 'raid', deck_draft: true, different_decks: true });
+    cs[0].send({ type: 'draft_start', deck_filter: 'vanilla' });
+    const first = await cs[1].wait('draft_state', () => true, 1000);
+    expect(Object.keys(first.picks as Msg)).toEqual(['0', '1', '2']);
+    expect(first.bans_each).toBe(2);
+    const order: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      const d = parties[code].draft!;
+      const turn = d.turn as number;
+      order.push(turn);
+      const left = d.pool.filter((x) => !d.bans.some((b) => b.deck === x));
+      cs[turn].send({ type: 'draft_action', action: 'ban', deck: left[0] });
+      await sleep(30);
+    }
+    expect(new Set(order).size).toBe(3);
+    expect(parties[code].draft!.phase).toBe('done');
+    const left = draftRemaining(parties[code].draft!);
+    cs[0].send({ type: 'pick_start', pool: ['Red Deck', 'Blue Deck', 'random_pick'] });
+    const st = await cs[2].wait('pick_state', () => true, 1000);
+    expect(st.pool).toEqual([...left, 'random_pick']);
+    expect(st.jokers).toBe(0);
+    cs.forEach((c, i) => c.send({ type: 'pick_set', deck: left[i % left.length], ready: true }));
+    const done = await cs[1].wait('pick_done', () => true, 1000);
+    expect(done.decks).toEqual({ '0': left[0], '1': left[1 % left.length], '2': left[2 % left.length] });
+    await start(cs);
+    expect(parties[code].draft ?? null).toBeNull();
     for (const c of cs) c.close();
   });
 
