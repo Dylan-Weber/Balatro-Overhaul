@@ -872,7 +872,7 @@ l 4
       deck_stakes = {},
 r 7 907 %20%20%20%20%20%20 -
 r 7 908 %20%20%20%20%20%20 -
-l 84
+l 103
           completed = {},
           unlocked = {}
       }
@@ -941,7 +941,26 @@ create_drag_target_from_card = function(_card)
   end
 
   if area == G.pack_cards then
-    if _card.ability.consumeable and _card.ability.set ~= 'Planet' then
+    local pick = pack_pick_action and pack_pick_action(_card)
+    if pick then
+      local select_zone = Z.P_select
+      if pick.also_use then
+        drop_zone(Z.C_use, G.C.RED, {localize('b_use')}, _card,
+          function(other) return other:can_use_consumeable() end,
+          function(other) if other:can_use_consumeable() then G.FUNCS.use_card({config = {ref_table = other, SMODS_use_card = true}}) end end)
+        local s, u = Z.P_select.T, Z.C_use.T
+        if s.x < u.x and s.x + s.w > u.x - 0.15 and s.y < u.y + u.h and s.y + s.h > u.y then
+          Z.P_select_short = Z.P_select_short or Moveable{T = {x = 0, y = 0, w = 1, h = 1}}
+          local m = Z.P_select_short
+          m.T.x, m.T.y, m.T.w, m.T.h = s.x, s.y, math.max(1, u.x - 0.15 - s.x), s.h
+          if m.hard_set_VT then m:hard_set_VT() end
+          select_zone = m
+        end
+      end
+      drop_zone(select_zone, G.C.GREEN, {pick.text}, _card,
+        function(other) return pack_pick_ready(other, pick) ~= nil end,
+        function(other) pack_pick_run(other, pick) end)
+    elseif _card.ability.consumeable and _card.ability.set ~= 'Planet' then
       drop_zone(Z.C_use, G.C.RED, {localize('b_use')}, _card,
         function(other) return other:can_use_consumeable() end,
         function(other) if other:can_use_consumeable() then use_dropped(other) end end)

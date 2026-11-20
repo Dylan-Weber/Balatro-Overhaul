@@ -541,7 +541,7 @@ e 3 1681 - - =14,-1,+%73%77%69,=2,-1,+%5F%75%70,=2
 l 1
     haptic_buzz(2)
 r 3 1593 %20%20%20%20 -
-l 25
+l 34
     if not area then return end
     if area == G.hand and area:can_highlight(self) then
         if G.STATE == G.STATES.HAND_PLAYED then return end
@@ -549,6 +549,15 @@ l 25
     end
     if area == G.pack_cards and not self.ability.consumeable and can_select_pack_card(self) then
         swipe_use(self)
+        return
+    end
+    local pick = area == G.pack_cards and pack_pick_action and pack_pick_action(self)
+    if pick then
+        if pick.also_use and self:can_use_consumeable() then
+            G.FUNCS.use_card({config = {ref_table = self, SMODS_use_card = true}})
+        else
+            pack_pick_run(self, pick)
+        end
         return
     end
     if area == G.shop_jokers or area == G.shop_booster or area == G.shop_vouchers then

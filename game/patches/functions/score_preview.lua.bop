@@ -129,7 +129,7 @@ local function build_shared()
         if type(t) == 'table' then
             SHARED[t] = true
 r 13 154 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 165
+l 176
                 if type(v) == 'table' then SHARED[v] = true end
             end
         end
@@ -282,12 +282,23 @@ end
 
 local AREA_NOOPS = {'align_cards', 'set_ranks', 'shuffle', 'sort', 'hard_set_cards', 'juice_up', 'draw', 'update', 'parse_highlighted', 'recalculate'}
 
+local function area_config(cfg)
+    if type(cfg) ~= 'table' then return cfg end
+    local t = {}
+    for k, x in pairs(cfg) do
+        if type(x) == 'table' and getmetatable(x) == nil and not SHARED[x] then t[k] = shallow(x) else t[k] = x end
+    end
+    local mt = getmetatable(cfg)
+    if mt then setmetatable(t, mt) end
+    return t
+end
+
 local function proxy_area(a)
     if not a then return nil end
     local p = {}
     for k, v in pairs(a) do p[k] = v end
     setmetatable(p, getmetatable(a))
-    p.config = dcopy(a.config, {})
+    p.config = area_config(a.config)
     p.T = shallow(a.T)
     p.states = dcopy(a.states, {})
     p.children = VOID

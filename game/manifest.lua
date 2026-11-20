@@ -893,8 +893,8 @@ return {
       kind = "patch",
       patch = "patches/functions/portrait.lua.bop",
       path = "functions/portrait.lua",
-      sha256 = "a9a6a1b693de9eb50be242f24f0363217ebd412416405b3cbaf91ad4da9a8691",
-      size = 102340,
+      sha256 = "854368a3a6d38ede645b2a999e494fc5a1d06ba54e76c18df71b5ee7d67117bc",
+      size = 102616,
     },
     {
       file = "files/functions/profile_rewards.lua",
@@ -1005,8 +1005,8 @@ return {
       kind = "patch",
       patch = "patches/functions/score_preview.lua.bop",
       path = "functions/score_preview.lua",
-      sha256 = "e7dce569f6b3fa283863bc39b4d2c3adf94f0879859721b6ed29265911325834",
-      size = 38046,
+      sha256 = "8b89d11b4797f1a36d31fb5e55e5106df4cbe2f0a6b69853c5d3c69de92e97f0",
+      size = 38389,
     },
     {
       kind = "patch",
@@ -3028,7 +3028,7 @@ return {
       file = "files/overhaul/version.lua",
       kind = "own",
       path = "overhaul/version.lua",
-      sha256 = "24b95caabc3df53d669a34f778b24280a3a724ec500a267796c2fe2aaeaf7daa",
+      sha256 = "38689145ad0852c40465d9b4e75bb46f2255fb5255e842998b00929ef8bdabb6",
       size = 148,
     },
     {
@@ -3070,15 +3070,15 @@ return {
       kind = "patch",
       patch = "patches/overhaul/late/button_callbacks_auto.toml.bop",
       path = "overhaul/late/button_callbacks_auto.toml",
-      sha256 = "53b617c4d9b4df174804661aedcb1d27f4c5f048f8950ca7dd06203e53da5784",
-      size = 80383,
+      sha256 = "9bf6f7e3d5004f8897581b2c9f6b4889f0bc9110ce08e468e4ada3d894d62c7e",
+      size = 82684,
     },
     {
       kind = "patch",
       patch = "patches/overhaul/late/card_auto.toml.bop",
       path = "overhaul/late/card_auto.toml",
-      sha256 = "aeb923af7e2f8280b1a701a785abc4dd86bee2756dfdcbfd40cfbcadde194a56",
-      size = 26800,
+      sha256 = "ca8c39ed26350d95833f85f231f51c74a2fa916eae6f1ca65aa3c7ba94faf56d",
+      size = 27133,
     },
     {
       file = "files/overhaul/late/card_character_auto.toml",
@@ -3161,8 +3161,8 @@ return {
       kind = "patch",
       patch = "patches/overhaul/late/misc_functions_auto.toml.bop",
       path = "overhaul/late/misc_functions_auto.toml",
-      sha256 = "c1429d17baa02a15201e6dd00654db4aa1280eb6ac7aa3456770c10a678960f8",
-      size = 34125,
+      sha256 = "40c8101cae349a2d24763c3f18f195fb5eaea1dd92f41f011ff837be02fb5c04",
+      size = 35185,
     },
     {
       kind = "patch",
@@ -6477,7 +6477,7 @@ return {
   game_version = "1.0.1o-FULL",
   name = "Balatro Overhaul",
   overhaul_name = "2.1.3",
-  overhaul_version = "77",
+  overhaul_version = "78",
   vanilla = {
     {
       lines = "lines/1.txt",

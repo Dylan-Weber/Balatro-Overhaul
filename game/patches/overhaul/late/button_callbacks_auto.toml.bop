@@ -1670,7 +1670,7 @@ payload = '''
 ${pre}  end
 
 r 32 2112 %20%20 -
-l 269
+l 323
     return G.FUNCS.select_button_check(e)
   end
 
@@ -1682,6 +1682,60 @@ l 269
       G.FUNCS.select_button_check(e)
     end
     return e.config.button ~= nil
+  end
+
+  local function pick_button_node(node, depth)
+    if type(node) ~= 'table' or depth > 12 then return nil end
+    local c = node.config
+    if c and c.button and c.func then return node end
+    for _, child in ipairs(node.nodes or {}) do
+      local found = pick_button_node(child, depth + 1)
+      if found then return found end
+    end
+  end
+
+  local function pick_button_text(node, depth)
+    if type(node) ~= 'table' or depth > 12 then return nil end
+    if node.n == G.UIT.T and node.config and type(node.config.text) == 'string' then return node.config.text end
+    for _, child in ipairs(node.nodes or {}) do
+      local found = pick_button_text(child, depth + 1)
+      if found then return found end
+    end
+  end
+
+  function pack_pick_action(card)
+    if not (card and card.ability and card.ability.consumeable and G.pack_cards and card.area == G.pack_cards) then return nil end
+    local pack = rawget(_G, 'booster_obj')
+    if pack and card.selectable_from_pack then
+      local ok, select_area, also_use = pcall(card.selectable_from_pack, card, pack)
+      if ok and select_area then
+        local text = SMODS and SMODS.get_select_text and SMODS.get_select_text(card, pack)
+        return {func = 'can_select_from_booster', text = text or localize('b_select'), also_use = also_use and true or nil}
+      end
+    end
+    if not (G.UIDEF and G.UIDEF.use_and_sell_buttons) then return nil end
+    local ok, def = pcall(G.UIDEF.use_and_sell_buttons, card)
+    local node = ok and pick_button_node(def, 0)
+    local func = node and node.config.func
+    if not func or func == 'can_use_consumeable' or type(G.FUNCS[func]) ~= 'function' then return nil end
+    return {func = func, text = pick_button_text(node, 0) or localize('b_select')}
+  end
+
+  function pack_pick_ready(card, pick)
+    pick = pick or pack_pick_action(card)
+    if not pick or not G.FUNCS[pick.func] then return nil end
+    local e = {config = {ref_table = card}}
+    if not pcall(G.FUNCS[pick.func], e) then return nil end
+    local button = e.config.button
+    if not button or type(G.FUNCS[button]) ~= 'function' then return nil end
+    return e
+  end
+
+  function pack_pick_run(card, pick)
+    local e = pack_pick_ready(card, pick)
+    if not e then return false end
+    G.FUNCS[e.config.button](e)
+    return true
 ${post}'''
 times = 1
 

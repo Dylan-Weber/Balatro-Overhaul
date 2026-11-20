@@ -1172,13 +1172,19 @@ l 10
   if D.J_sell then zone(D.J_sell, E, c.y - 0.2, d.x - 0.15 - E, c.h + 0.4) end
   if D.C_use then
 r 32 2270 %20%20%20%20 -
-l 435
+l 441
       zone(D.C_use, E, c.y + c.h + 0.3, fw, P.ZONE_H)
     else
       zone(D.C_use, E, ay, fw, ah)
     end
   end
   if D.P_select then zone(D.P_select, E, ay, fw, ah) end
+  local pick = area == G.pack_cards and pack_pick_action and pack_pick_action(card)
+  if pick and pick.also_use and D.C_use and D.P_select then
+    local sw = (fw - 0.15) * 0.5
+    zone(D.P_select, E, ay, sw, ah)
+    zone(D.C_use, E + sw + 0.15, ay, fw - sw - 0.15, ah)
+  end
 end
 
 local raw_dtc = create_drag_target_from_card
