@@ -52,7 +52,7 @@ payload = '''
 ${pre}        if self.HID.touch ~= (HID_type == 'touch') then 
 r 17 147 %20%20%20%20%20%20%20%20%20%20%20%20 -
 r 5 662 %20%20%20%20%20%20%20%20%20%20%20%20 -
-l 154
+l 169
                 v:set_ranks()
             end
         end
@@ -91,13 +91,27 @@ local function touch_press(c)
     c.touch_control.clear_touch = true
 end
 
+local function button_at(c)
+    for _, node in ipairs(c.collision_list) do
+        if not node.REMOVED and node.states.visible and node.states.click.can and node.config and node.config.button then
+            return node
+        end
+    end
+end
+
 local function touch_release(c)
     local down = c.cursor_down
     if not down.target then return end
     local tc = c.touch_control
-    if down.distance < G.MIN_CLICK_DIST and down.duration < 0.2 then
-        if down.target.states.click.can and not tc.l_press.target then
-            tc.s_tap.target, tc.s_tap.time, tc.s_tap.handled = down.target, held_time(c), false
+    local still = (down.distance or 0) < G.MIN_CLICK_DIST
+    local target = down.target
+    if still and not c.dragging.prev_target and (target == G.ROOM or not target.states.click.can) then
+        target = button_at(c) or target
+    end
+    local button = target.config and target.config.button and not (Card and target:is(Card))
+    if still and ((down.duration or 0) < 0.2 or button) then
+        if target.states.click.can and not tc.l_press.target then
+            tc.s_tap.target, tc.s_tap.time, tc.s_tap.handled = target, held_time(c), false
         end
     elseif c.dragging.prev_target then
         mark_release_target(c)
@@ -132,6 +146,7 @@ local function touch_dispatch(c)
                 hover.target, hover.handled = tapped, false
             end
         else
+            if tapped.under_overlay and not G.OVERLAY_TUTORIAL then tapped.under_overlay = false end
             tapped:click()
         end
         tc.s_tap.handled, tc.clear_touch, tc.tip_open = true, nil, nil

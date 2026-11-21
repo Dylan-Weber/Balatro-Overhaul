@@ -3997,7 +3997,7 @@ l 5
             love.graphics.pop()
         end
 r 7 2838 %20%20%20%20%20%20%20%20 -
-l 54
+l 55
 ${post}'''
 times = 1
 
@@ -4051,7 +4051,8 @@ target = "game.lua"
 pattern = '''^(?<pre>[\t ]*if not G\.debug_UI_toggle then \n)(?<post>)'''
 position = "at"
 payload = '''
-${pre}    local under = self.OVERLAY_TUTORIAL and true or false
+${pre}    if self.OVERLAY_TUTORIAL and self.OVERLAY_TUTORIAL.REMOVED then self.OVERLAY_TUTORIAL = nil end
+    local under = self.OVERLAY_TUTORIAL and true or false
 r 22 333 %20%20%20%20 -
 l 83
         v.under_overlay = under

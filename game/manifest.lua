@@ -3035,7 +3035,7 @@ return {
       file = "files/overhaul/version.lua",
       kind = "own",
       path = "overhaul/version.lua",
-      sha256 = "bd79a1a5e4c45f47ffc2b9f44206d978b9e07a0b7446ad392153d707220fbffa",
+      sha256 = "4e1fd0293416352258177d6953720ba989f69496a479074d85ae45a7b01f04e2",
       size = 148,
     },
     {
@@ -3126,8 +3126,8 @@ return {
       kind = "patch",
       patch = "patches/overhaul/late/controller_auto.toml.bop",
       path = "overhaul/late/controller_auto.toml",
-      sha256 = "8094240fd1f466ee81714ffc82ab0689b0384fed153a74ac9352f5c5a0e0a9b1",
-      size = 34709,
+      sha256 = "825860956fc9bc6df5fe6b786b1de776015176a01a8af194581826dcd8acd254",
+      size = 35371,
     },
     {
       file = "files/overhaul/late/forge_shine.toml",
@@ -3140,8 +3140,8 @@ return {
       kind = "patch",
       patch = "patches/overhaul/late/game_auto.toml.bop",
       path = "overhaul/late/game_auto.toml",
-      sha256 = "1e6c35beca62dec62f789be382df93b0353401b139c0bc346d797f1ca55f5c2f",
-      size = 246282,
+      sha256 = "a9a6af4e9211325442ed92a0f3b372f930cb153726c261c1d9e01ac9361bbf1d",
+      size = 246382,
     },
     {
       kind = "patch",
@@ -6484,7 +6484,7 @@ return {
   game_version = "1.0.1o-FULL",
   name = "Balatro Overhaul",
   overhaul_name = "2.1.3",
-  overhaul_version = "80",
+  overhaul_version = "81",
   vanilla = {
     {
       lines = "lines/1.txt",
