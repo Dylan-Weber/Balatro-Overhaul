@@ -59,10 +59,9 @@ end end, {id = "overhaul.ingame_keyboard.select"})
 Hooks.wrap("love", "update", function(original) return function(delta_time, ...)
     local results = Hooks.pack(original(delta_time, ...))
     local controller = G and G.CONTROLLER
-    if K.sys and (not controller or controller.text_input_hook ~= K.sys or K.sys.REMOVED or K.on()) then
+    if K.sys and (not controller or controller.text_input_hook ~= K.sys or K.on()) then
         K.sys = nil
-        local focused_field = controller and controller.text_input_hook
-        if not focused_field or focused_field.REMOVED or K.on() then system_keys(false) end
+        if not (controller and controller.text_input_hook) or K.on() then system_keys(false) end
     end
     return Hooks.unpack(results)
 end end, {id = "overhaul.ingame_keyboard.update"})

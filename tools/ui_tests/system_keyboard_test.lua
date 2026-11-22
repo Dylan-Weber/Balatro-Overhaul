@@ -41,14 +41,8 @@ check('tap brings it back after Back', keyboard_shown)
 
 field = focus_new_field()
 G.CONTROLLER.text_input_hook = nil
-field.REMOVED = true
 love.update(0)
 check('closes with the menu', not keyboard_shown)
-
-field = focus_new_field()
-field.REMOVED = true
-love.update(0)
-check('removed field still focused closes it', not keyboard_shown)
 
 field = focus_new_field()
 local other_field = {}
@@ -72,3 +66,4 @@ focus({})
 check('setting on never opens it', not keyboard_shown)
 
 print(failures == 0 and 'all system keyboard checks pass' or (failures .. ' failed'))
+os.exit(failures == 0 and 0 or 1)
