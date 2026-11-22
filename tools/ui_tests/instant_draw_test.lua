@@ -28,6 +28,7 @@ end
 
 local FRAME_TIME = 1 / 60
 local HAND_SIZE = 8
+local DECK_SIZE = 60
 
 G = {
   SETTINGS = {paused = false, qol_instant_draw = true},
@@ -54,7 +55,7 @@ end
 load_game_function("assets/smods/src/utils.lua", "function SMODS.draw_cards(hand_space)")
 
 local played_sounds = 0
-function play_sound() played_sounds = played_sounds + 1 end
+function play_sound(sound_code) if sound_code == "card1" then played_sounds = played_sounds + 1 end end
 
 -- A card area with the parts of CardArea the draw functions use.
 local function new_card_area(card_limit)
@@ -75,10 +76,10 @@ local function new_card_area(card_limit)
   return card_area
 end
 
-local function new_round()
+local function new_round(hand_size)
   G.deck = new_card_area(52)
-  for card_number = 1, 20 do G.deck.cards[card_number] = {id = card_number, playing_card = true} end
-  G.hand = new_card_area(HAND_SIZE)
+  for card_number = 1, DECK_SIZE do G.deck.cards[card_number] = {id = card_number, playing_card = true} end
+  G.hand = new_card_area(hand_size or HAND_SIZE)
   G.GAME = {blind = {name = "Small Blind", stay_flipped = function() return false end}, modifiers = {},
     current_round = {hands_played = 0, discards_used = 0}, facing_blind = true}
   G.E_MANAGER = EventManager()
@@ -154,12 +155,54 @@ ok(normal_cards_at_select == HAND_SIZE, "with instant draw off the hand is full 
 G.SETTINGS.qol_instant_draw = true
 new_round()
 local instant_seconds, instant_cards_at_select = draw_hand_then_select(G.FUNCS.draw_from_deck_to_hand)
-ok(instant_seconds and instant_seconds <= (HAND_SIZE + 4) * FRAME_TIME, "with instant draw on the hand is drawn in a few frames, took " .. tostring(instant_seconds))
+ok(instant_seconds and instant_seconds <= 3 * FRAME_TIME, "with instant draw on the hand is drawn within 3 frames, took " .. tostring(instant_seconds))
 ok(instant_cards_at_select == HAND_SIZE, "the hand only becomes playable once all " .. HAND_SIZE .. " cards are in it, it had " .. tostring(instant_cards_at_select))
 ok(hand_ids() == normal_order, "instant draw draws the same cards in the same order: " .. hand_ids() .. " vs " .. normal_order)
-ok(#G.deck.cards == 20 - HAND_SIZE, "the drawn cards left the deck")
-ok(played_sounds == HAND_SIZE and G.hand.sort_count == HAND_SIZE, "every card still plays its sound and sorts the hand")
+ok(#G.deck.cards == DECK_SIZE - HAND_SIZE, "the drawn cards left the deck")
+ok(G.hand.sort_count == HAND_SIZE, "every card still sorts the hand")
+ok(played_sounds >= 1 and played_sounds <= instant_draw.DRAW_SOUNDS_PER_FRAME, "cards landing together play a few draw sounds, not " .. played_sounds)
 ok(instant_draw.draw_depth == 0, "instant draw is off again once the draw has been queued")
+
+-- a 52 card hand: the case instant draw is for
+local BIG_HAND_SIZE = 52
+G.SETTINGS.qol_instant_draw = false
+new_round(BIG_HAND_SIZE)
+local big_normal_seconds, big_normal_cards_at_select = draw_hand_then_select(G.FUNCS.draw_from_deck_to_hand)
+local big_normal_order = hand_ids()
+ok(big_normal_seconds and big_normal_seconds >= 5.5, "with instant draw off 52 cards take the game's 5.5s, took " .. tostring(big_normal_seconds))
+ok(big_normal_cards_at_select == BIG_HAND_SIZE, "with instant draw off the 52 card hand is full when it becomes playable")
+G.SETTINGS.qol_instant_draw = true
+new_round(BIG_HAND_SIZE)
+local big_cards_by_frame = {}
+local big_first_frame_time = G.TIMERS.TOTAL
+local big_seconds, big_cards_at_select = draw_hand_then_select(G.FUNCS.draw_from_deck_to_hand)
+for _, card in ipairs(G.hand.cards) do
+  local frame_number = math.floor((card.arrived_at - big_first_frame_time) / FRAME_TIME + 0.5)
+  big_cards_by_frame[frame_number] = (big_cards_by_frame[frame_number] or 0) + 1
+end
+local big_landing_frames = 0
+for _ in pairs(big_cards_by_frame) do big_landing_frames = big_landing_frames + 1 end
+ok(big_seconds and big_seconds <= 3 * FRAME_TIME, "with instant draw on 52 cards are drawn within 3 frames, took " .. tostring(big_seconds))
+ok(big_landing_frames == 1, "all 52 cards land in the same frame, they landed over " .. big_landing_frames .. " frames")
+ok(big_cards_at_select == BIG_HAND_SIZE, "the 52 card hand only becomes playable once every card is in it, it had " .. tostring(big_cards_at_select))
+ok(hand_ids() == big_normal_order, "the 52 card hand has the same cards in the same order")
+ok(played_sounds <= instant_draw.DRAW_SOUNDS_PER_FRAME, "52 cards landing together play at most " .. instant_draw.DRAW_SOUNDS_PER_FRAME .. " draw sounds, played " .. played_sounds)
+
+-- a draw event that is not done yet holds the queue again, as the game expects
+new_round()
+local unfinished_tries, ran_after_unfinished_with_tries = 0, nil
+G.E_MANAGER:add_event(Event({func = function()
+  instant_draw.wrap_draw(function()
+    G.E_MANAGER:add_event(Event({trigger = "before", delay = 0.1, func = function()
+      unfinished_tries = unfinished_tries + 1
+      return unfinished_tries >= 3
+    end}))
+  end)()
+  G.E_MANAGER:add_event(Event({func = function() ran_after_unfinished_with_tries = unfinished_tries return true end}))
+  return true
+end}))
+run_until(function() return ran_after_unfinished_with_tries ~= nil end)
+ok(ran_after_unfinished_with_tries == 3, "the next event waits until an unfinished draw event is done, it ran after " .. tostring(ran_after_unfinished_with_tries) .. " tries")
 
 -- events queued after the draw keep their own waits
 new_round()
@@ -180,7 +223,7 @@ local heard_drawn
 for _, heard in ipairs(SMODS.heard_contexts) do
   if heard.context.hand_drawn then heard_drawn = heard end
 end
-ok(smods_seconds and smods_seconds <= (HAND_SIZE + 5) * FRAME_TIME, "Steamodded draws are instant too, took " .. tostring(smods_seconds))
+ok(smods_seconds and smods_seconds <= 3 * FRAME_TIME, "Steamodded draws are instant too, took " .. tostring(smods_seconds))
 ok(smods_cards_at_select == HAND_SIZE, "with Steamodded the hand is full when it becomes playable")
 ok(heard_drawn and #heard_drawn.context.hand_drawn == HAND_SIZE and heard_drawn.cards_in_hand == HAND_SIZE,
   "jokers hear about all " .. HAND_SIZE .. " drawn cards after they are in the hand")

@@ -1733,8 +1733,8 @@ return {
       file = "files/functions/qol/instant_draw.lua",
       kind = "own",
       path = "functions/qol/instant_draw.lua",
-      sha256 = "fee6d5529a0576f3b63745825b6a826c300dd70386b7dee4cfdf16bfbc7d150c",
-      size = 3604,
+      sha256 = "47912bd280f14a75328db1d00f4bc01b8c0cc291ab55b72003afa6965a2972fb",
+      size = 5538,
     },
     {
       kind = "patch",

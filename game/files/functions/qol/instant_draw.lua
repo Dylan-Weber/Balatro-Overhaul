@@ -4,12 +4,19 @@ local M = Q.feature("instant_draw", {})
 -- Drawing a hand queues a short pause, then one event per card that holds the queue for
 -- 0.1s after the card lands, and with Steamodded one more event that holds it for 0.4s
 -- after telling jokers what was drawn. Instant draw keeps every one of those events, in the
--- same order, and only drops the waits. Nothing is moved by a timer: each card still goes
--- into the hand from its own event, and anything queued after the draw still runs after it.
+-- same order, and drops the waits. It also stops them holding the queue for a frame each,
+-- so a 52 card hand lands in one frame instead of 52. They still wait behind anything
+-- queued before them, and anything queued after the draw still runs after every card is in.
 M.SHORTENED_TRIGGERS = {after = true, before = true}
+
+-- A whole hand landing at once would play every card's draw sound together.
+M.DRAW_SOUNDS_PER_FRAME = 3
 
 M.draw_depth = 0
 M.wrapped_draw_functions = {}
+M.landing_depth = 0
+M.sound_frame_time = nil
+M.sounds_this_frame = 0
 
 Q.default("qol_instant_draw", false)
 
@@ -28,6 +35,35 @@ function M.shorten(event)
     if type(event) ~= "table" or not M.SHORTENED_TRIGGERS[event.trigger] then return end
     local event_delay = tonumber(event.delay)
     if event_delay and event_delay > 0 then event.delay = 0 end
+    if event.blocking == false or type(event.func) ~= "function" then return end
+    -- The event no longer holds the queue when it finishes in one go. If it reports that it
+    -- is not done, it holds the queue at once (EventManager:update reads the blocking flag of
+    -- G.ARGS.event_manager_update after the event runs) and from then on, as it did before.
+    local event_function = event.func
+    event.blocking = false
+    event.func = function(...)
+        M.landing_depth = M.landing_depth + 1
+        local event_results = {pcall(event_function, ...)}
+        M.landing_depth = M.landing_depth - 1
+        if not event_results[1] then error(event_results[2], 0) end
+        if not event_results[2] then
+            event.blocking = true
+            local queue_results = G and G.ARGS and G.ARGS.event_manager_update
+            if type(queue_results) == "table" then queue_results.blocking = true end
+        end
+        return unpack(event_results, 2, table.maxn(event_results))
+    end
+end
+
+function M.sound_allowed(sound_code)
+    if M.landing_depth == 0 or sound_code ~= 'card1' then return true end
+    local frame_time = G and G.TIMERS and G.TIMERS.REAL
+    if frame_time ~= M.sound_frame_time then
+        M.sound_frame_time = frame_time
+        M.sounds_this_frame = 0
+    end
+    M.sounds_this_frame = M.sounds_this_frame + 1
+    return M.sounds_this_frame <= M.DRAW_SOUNDS_PER_FRAME
 end
 
 -- Runs a draw function with instant draw on for the events it queues. The flag only lasts
@@ -73,6 +109,13 @@ function M.init()
     EventManager.add_event = function(self, event, ...)
         if M.draw_depth > 0 then pcall(M.shorten, event) end
         return add_event(self, event, ...)
+    end
+    if type(play_sound) == "function" then
+        local base_play_sound = play_sound
+        play_sound = function(sound_code, ...)
+            if not M.sound_allowed(sound_code) then return end
+            return base_play_sound(sound_code, ...)
+        end
     end
 end
 
