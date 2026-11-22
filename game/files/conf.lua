@@ -1,6 +1,7 @@
 assert(loadstring(love.filesystem.read("balatro/conf.lua"), "@conf.lua"))()
 
 pcall(require, "functions.win_dpi")
+pcall(function() require("functions.android_audio").apply(love._os) end)
 pcall(require, "functions.pure_math")
 
 local modloader_ok, modloader = pcall(require, "modloader.boot")

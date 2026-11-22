@@ -67,8 +67,8 @@ return {
       file = "files/conf.lua",
       kind = "own",
       path = "conf.lua",
-      sha256 = "4ec59c8c89ffcdea14e8e452980a026381c663ec4b8c38262d92d9493a69e941",
-      size = 444,
+      sha256 = "d501f39231437b9c3466577280f3b394ebf6de9e796e0e28b64aa26f4894b570",
+      size = 517,
     },
     {
       kind = "keep",
@@ -482,6 +482,13 @@ return {
       path = "functions/achievements_ui.lua",
       sha256 = "c0f28506b72456f10dd86530ce75997906ab6d8568d877b4c8c77a17624bac09",
       size = 33435,
+    },
+    {
+      file = "files/functions/android_audio.lua",
+      kind = "own",
+      path = "functions/android_audio.lua",
+      sha256 = "150e5d535a50a27d0ad26426cbd04fb52889df90945531704db726357e0cff82",
+      size = 1599,
     },
     {
       file = "files/functions/app_icon.lua",
