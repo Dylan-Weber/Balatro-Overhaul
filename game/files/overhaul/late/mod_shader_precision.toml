@@ -2,20 +2,15 @@
 version = "1.0.0"
 priority = 0
 
-# On OpenGL ES (phones), LOVE compiles pixel shaders at medium float precision unless a
-# shader asks for more. Mod shaders are written and tested on desktop, where every float is
-# 32-bit, and their math can overflow medium precision: Cryptid's Astral star field and
-# Glitched random numbers turned whole cards black on a Pixel. Ask for high precision in
-# every mod shader when the GPU supports it, which matches what desktop already uses.
+# Compile Steamodded mod shaders at high float precision on phones (OpenGL ES), where LOVE
+# defaults to medium precision and mod shader math written for desktop can overflow it.
+# See functions/mod_shader_precision.lua.
 [[patches]]
 [patches.pattern]
 id = "mod_shader_precision.highp_on_gles"
 target = '=[SMODS _ "src/game_object.lua"]'
 pattern = "G.SHADERS[self.key] = love.graphics.newShader(file)"
-position = "before"
-payload = '''
-if love.graphics.getRendererInfo() == "OpenGL ES" then
-    file = "#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#endif\n" .. file
-end'''
+position = "at"
+payload = "G.SHADERS[self.key] = require(\"functions/mod_shader_precision\").compile(file)"
 match_indent = true
 times = 1
