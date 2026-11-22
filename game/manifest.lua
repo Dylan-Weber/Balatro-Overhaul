@@ -1712,8 +1712,8 @@ return {
       file = "files/functions/qol/fast_packs.lua",
       kind = "own",
       path = "functions/qol/fast_packs.lua",
-      sha256 = "953402a9ab5b73e140672a322d1b3791bcd9234267ed07e7db5adb120a15f35a",
-      size = 3219,
+      sha256 = "8c637b4147735241e50ec07e16dc099168016e2bbbb9bd1c528d061db592078f",
+      size = 3722,
     },
     {
       file = "files/functions/qol/focus_pause.lua",

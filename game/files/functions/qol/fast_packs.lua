@@ -28,6 +28,14 @@ function M.shorten(event)
     if d and d > 0 then event.delay = d * M.SCALE end
 end
 
+-- Card.open puts the new cards in G.pack_cards as soon as it exists and is on screen.
+-- G.pack_cards still points at the last pack's area after that pack closes, and in
+-- portrait that removed area sits on screen. Fast packs shortens the wait, so the cards
+-- landed in the removed area before the new pack box was built, and the pack opened empty.
+function M.forget_closed_pack_area()
+    if G.pack_cards and G.pack_cards.REMOVED then G.pack_cards = nil end
+end
+
 Q.row("Shop", function()
     return Q.toggle('set_qol_fast_packs', "Fast packs", "Booster packs open at once in solo runs", 'qol_fast_packs')
 end)
@@ -62,6 +70,7 @@ function M.init()
     M._wrapped = true
     local open = Card.open
     Card.open = function(self, ...)
+        M.forget_closed_pack_area()
         local ok, fast = pcall(function() return self.ability and self.ability.set == "Booster" and M.allowed() end)
         if ok and fast then
             M.card = self
