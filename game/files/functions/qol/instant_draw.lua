@@ -7,7 +7,9 @@ local M = Q.feature("instant_draw", {})
 -- same order, and drops the waits. It also stops them holding the queue for a frame each,
 -- so a 52 card hand lands in one frame instead of 52. They still wait behind anything
 -- queued before them, and anything queued after the draw still runs after every card is in.
-M.SHORTENED_TRIGGERS = {after = true, before = true}
+-- Steamodded also queues an immediate event beside each card that takes up hand space,
+-- and those get the same treatment.
+M.INSTANT_TRIGGERS = {after = true, before = true, immediate = true}
 
 -- A whole hand landing at once would play every card's draw sound together.
 M.DRAW_SOUNDS_PER_FRAME = 3
@@ -32,7 +34,7 @@ function M.allowed()
 end
 
 function M.shorten(event)
-    if type(event) ~= "table" or not M.SHORTENED_TRIGGERS[event.trigger] then return end
+    if type(event) ~= "table" or not M.INSTANT_TRIGGERS[event.trigger] then return end
     local event_delay = tonumber(event.delay)
     if event_delay and event_delay > 0 then event.delay = 0 end
     if event.blocking == false or type(event.func) ~= "function" then return end

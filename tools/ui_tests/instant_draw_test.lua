@@ -188,6 +188,17 @@ ok(big_cards_at_select == BIG_HAND_SIZE, "the 52 card hand only becomes playable
 ok(hand_ids() == big_normal_order, "the 52 card hand has the same cards in the same order")
 ok(played_sounds <= instant_draw.DRAW_SOUNDS_PER_FRAME, "52 cards landing together play at most " .. instant_draw.DRAW_SOUNDS_PER_FRAME .. " draw sounds, played " .. played_sounds)
 
+-- Steamodded's draw as Cryptid runs it queues an immediate event beside each card
+new_round(BIG_HAND_SIZE)
+local interleaved_seconds, interleaved_cards_at_select = draw_hand_then_select(instant_draw.wrap_draw(function()
+  for _ = 1, BIG_HAND_SIZE do
+    G.E_MANAGER:add_event(Event({trigger = "immediate", func = function() return true end}))
+    draw_card(G.deck, G.hand, 50, "up", true)
+  end
+end))
+ok(interleaved_seconds and interleaved_seconds <= 3 * FRAME_TIME, "52 cards with an immediate event beside each are drawn within 3 frames, took " .. tostring(interleaved_seconds))
+ok(interleaved_cards_at_select == BIG_HAND_SIZE, "and the hand only becomes playable once all 52 are in it")
+
 -- a draw event that is not done yet holds the queue again, as the game expects
 new_round()
 local unfinished_tries, ran_after_unfinished_with_tries = 0, nil
