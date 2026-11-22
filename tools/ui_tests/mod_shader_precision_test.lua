@@ -5,6 +5,8 @@
 -- shaped like LOVE's (effect() declared at the default precision before the mod's code).
 -- Bug this guards: LOVE compiles pixel shaders at medium precision on OpenGL ES, Cryptid's
 -- Astral and Glitched shaders overflowed it, and those cards drew solid black on a Pixel.
+-- It also guards Astral's star field on high-density screens: it mixed screen_coords (pixels)
+-- with mouse_screen_pos and screen_scale (screen units) and blew out to white on the phone.
 -- A plain "precision highp float;" on top does not compile there (Steamodded then swaps in an
 -- empty shader and the effect disappears), so this also checks the raised shaders compile.
 package.path = "assets/?.lua;" .. package.path
@@ -54,6 +56,7 @@ love = {
 
 local Engine = require("modloader.lovely")
 Engine.load("mods", {enabled = {}, late = {"assets/overhaul/late/mod_shader_precision.toml"}})
+love.graphics.getDPIScale = function() return 2.4381 end
 local game_object_source = read_disk_file("assets/smods/src/game_object.lua")
 local patched_game_object = Engine.apply_patches('=[SMODS _ "src/game_object.lua"]', game_object_source)
 ok(patched_game_object:find('require("functions/mod_shader_precision").compile(file)', 1, true) ~= nil,
@@ -133,6 +136,33 @@ ok(mod_shader_precision.raise("precision highp float;\n" .. mod_shader_source) =
 ok(mod_shader_precision.raise("#pragma language glsl3\n" .. mod_shader_source) == "#pragma language glsl3\n" .. mod_shader_source, "a GLSL 3 shader is left alone")
 ok(mod_shader_precision.raise("vec4 position(mat4 a, vec4 b) { return a * b; }") == "vec4 position(mat4 a, vec4 b) { return a * b; }", "a shader without effect() is left alone")
 
+-- Cryptid's Astral: screen_coords goes into screen units before it meets mouse_screen_pos
+local astral_excerpt = table.concat({
+  "extern MY_HIGHP_OR_MEDIUMP vec2 mouse_screen_pos;",
+  "extern MY_HIGHP_OR_MEDIUMP float hovering;",
+  "extern MY_HIGHP_OR_MEDIUMP float screen_scale;",
+  "vec4 effect( vec4 colour, Image texture, vec2 texture_coords, vec2 screen_coords )",
+  "{",
+  "    vec2 mouse_offset = (screen_coords.xy - mouse_screen_pos.xy)/screen_scale;",
+  "    return colour * length(mouse_offset);",
+  "}",
+  ""}, "\n")
+local patched_astral = Engine.apply_patches('=[SMODS Cryptid "astral.fs"]', astral_excerpt)
+ok(patched_astral:find("extern MY_HIGHP_OR_MEDIUMP float overhaul_pixel_density;", 1, true) ~= nil, "Astral declares overhaul_pixel_density")
+ok(patched_astral:find("(screen_coords.xy / overhaul_pixel_density - mouse_screen_pos.xy)/screen_scale", 1, true) ~= nil, "Astral divides screen_coords by the pixel density")
+ok(Engine.apply_patches('=[SMODS Cryptid "glitched_b.fs"]', astral_excerpt) == astral_excerpt, "other Cryptid shaders are not given the pixel density")
+
+mod_shader_files["Mods/Cryptid/assets/shaders/astral.fs"] = patched_astral
+local astral_shader = {key = "cry_astral", path = "astral.fs", mod = {id = "Cryptid", path = "Mods/Cryptid/", gles_alerted = true},
+  send_vars = function() return {astral_twinkle = 3} end}
+inject(astral_shader)
+local astral_variables = astral_shader.send_vars()
+ok(astral_variables.overhaul_pixel_density == 2.4381, "Astral is sent the screen's pixels per unit")
+ok(astral_variables.astral_twinkle == 3, "the mod's own shader variables are still sent")
+local plain_shader = {key = "example_plain", path = "astral.fs", mod = mod_shader.mod}
+inject(plain_shader)
+ok(plain_shader.send_vars == nil, "a shader without the uniform gets nothing extra")
+
 -- compile as GLSL ES 1.00 the way a phone does, when the validator is available
 local validator_found = os.execute("command -v glslangValidator >/dev/null 2>&1")
 if validator_found == 0 or validator_found == true then
@@ -154,6 +184,7 @@ if validator_found == 0 or validator_found == true then
   ok(compiles(mod_shader_source), "the mod's shader compiles as GLSL ES as written")
   ok(not compiles(mod_shader_precision.high_precision .. mod_shader_source), "a plain high precision line on top does not compile (the old fix)")
   ok(compiles(raised_source), "the raised shader compiles as GLSL ES")
+  ok(compiles(mod_shader_precision.raise(patched_astral)), "the patched Astral excerpt compiles as GLSL ES at high precision")
 else
   print("skipping the GLSL ES compile checks (no glslangValidator)")
 end

@@ -778,6 +778,13 @@ return {
       src = 13,
     },
     {
+      file = "files/functions/mod_shader_pixel_density.lua",
+      kind = "own",
+      path = "functions/mod_shader_pixel_density.lua",
+      sha256 = "c8d1ab4be21c39a81919a00de2a6e06ee70dc9cadea254e770c81db306c40958",
+      size = 1624,
+    },
+    {
       file = "files/functions/mod_shader_precision.lua",
       kind = "own",
       path = "functions/mod_shader_precision.lua",
@@ -2944,8 +2951,8 @@ return {
       file = "files/overhaul/late/mod_shader_precision.toml",
       kind = "own",
       path = "overhaul/late/mod_shader_precision.toml",
-      sha256 = "0e9bec74e467bbfca88880f9ec83465e4b0a96ed8a2ea4d20da80ef9035e5181",
-      size = 582,
+      sha256 = "de1fd8fc269b2a374ade2b4d78bab66f30e21dd336f8944e98d53d2a13920cf6",
+      size = 1669,
     },
     {
       kind = "patch",
