@@ -2934,6 +2934,13 @@ return {
       size = 43611,
     },
     {
+      file = "files/overhaul/late/mod_shader_precision.toml",
+      kind = "own",
+      path = "overhaul/late/mod_shader_precision.toml",
+      sha256 = "5a43c83e0e2c59ed78b672eb8db2e79f1bf73821ba374c96dd9d6cbfbfa9cfc6",
+      size = 881,
+    },
+    {
       kind = "patch",
       patch = "patches/overhaul/late/misc_functions_auto.toml.bop",
       path = "overhaul/late/misc_functions_auto.toml",
