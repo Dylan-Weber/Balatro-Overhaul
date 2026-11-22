@@ -4,6 +4,30 @@ import sys
 
 PORT = 44380
 ALLOWED_PORTS = {443}
+CA_FILES = (
+    "/etc/ssl/cert.pem",
+    "/opt/homebrew/etc/openssl@3/cert.pem",
+    "/usr/local/etc/openssl@3/cert.pem",
+    "/usr/local/etc/openssl/cert.pem",
+)
+
+
+def make_context():
+    ctx = ssl.create_default_context()
+    for path in CA_FILES:
+        try:
+            ctx.load_verify_locations(cafile=path)
+        except (OSError, ssl.SSLError):
+            pass
+    try:
+        import certifi
+        ctx.load_verify_locations(cafile=certifi.where())
+    except Exception:
+        pass
+    return ctx
+
+
+CONTEXT = None
 
 
 async def pipe(reader, writer):
@@ -27,7 +51,10 @@ async def handle(client_reader, client_writer):
         port = int(port)
         if not host or port not in ALLOWED_PORTS:
             raise ValueError(f"target not allowed: {line}")
-        ctx = ssl.create_default_context()
+        global CONTEXT
+        if CONTEXT is None:
+            CONTEXT = make_context()
+        ctx = CONTEXT
         server_reader, server_writer = await asyncio.wait_for(
             asyncio.open_connection(host, port, ssl=ctx, server_hostname=host), 15
         )

@@ -4795,7 +4795,7 @@ G.UIDEF.profile_icon_frame = function()
             icon_sprite:define_draw_steps({
 r 30 662 %20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
 r 9 505 %20%20%20%20%20%20%20%20%20%20%20%20%20%20 -
-l 441
+l 425
               {shader = effect_def.shader},
             })
           end
@@ -5072,35 +5072,6 @@ optional = true
 
 [[patches]]
 [patches.regex]
-id = "auto.UI_definitions.modded.011"
-target = "functions/UI_definitions.lua"
-pattern = '''^(?<pre>)[\t ]*local consumable_nodes = \{\}\n[\t ]*if #SMODS\.ConsumableType\.visible_buffer <= 3 then\n[\t ]*for _, key in ipairs\(SMODS\.ConsumableType\.visible_buffer\) do\n[\t ]*local id = 'your_collection_'\.\.key:lower\(\)\.\.'s'\n[\t ]*consumable_nodes\[#consumable_nodes\+1\] = UIBox_button\(\{button = id, label = \{localize\('b_'\.\.key:lower\(\)\.\.'_cards'\)\}, count = G\.DISCOVER_TALLIES\[key:lower\(\)\.\.'s'\], minw = 4, id = id, colour = G\.C\.SECONDARY_SET\[key\]\}\)\n[\t ]*end\n[\t ]*else\n[\t ]*consumable_nodes\[#consumable_nodes\+1\] = UIBox_button\(\{ button = 'your_collection_consumables', label = \{localize\('b_stat_consumables'\), localize\{ type = 'variable', key = 'c_types', vars = \{#SMODS\.ConsumableType\.visible_buffer\} \} \}, count = G\.DISCOVER_TALLIES\['consumeables'\], minw = 4, minh = 4, id = 'your_collection_consumables', colour = G\.C\.FILTER \}\)\n[\t ]*end\n(?<post>)'''
-position = "at"
-payload = '''
-${pre}${post}'''
-optional = true
-
-[[patches]]
-[patches.regex]
-id = "auto.UI_definitions.modded.012"
-target = "functions/UI_definitions.lua"
-pattern = '''^(?<pre>)(?<post>[\t ]*end\n[\t ]*local t = create_UIBox_generic_options\(\{ back_func = G\.STAGE == G\.STAGES\.RUN and 'options' or 'exit_overlay_menu', contents = \{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.15\}, nodes=\{\n[\t ]*UIBox_button\(\{button = 'your_collection_jokers',label = \{localize\('b_jokers'\)\}, count = G\.DISCOVER_TALLIES\.jokers,  minw = 5, minh = 1\.7, scale = 0\.6, id = 'your_collection_jokers'\}\),\n[\t ]*UIBox_button\(\{button = 'your_collection_decks', label = \{localize\('b_decks'\)\}, count = G\.DISCOVER_TALLIES\.backs, minw = 5\}\),\n[\t ]*UIBox_button\(\{button = 'your_collection_vouchers', label = \{localize\('b_vouchers'\)\}, count = G\.DISCOVER_TALLIES\.vouchers, minw = 5, id = 'your_collection_vouchers'\}\),\n[\t ]*\{n=G\.UIT\.R, config=\{align = "cm", padding = 0\.1, r=0\.2, colour = G\.C\.BLACK\}, nodes=\{\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", maxh=2\.9\}, nodes=\{\n[\t ]*\{n=G\.UIT\.T, config=\{text = localize\('k_cap_consumables'\), scale = 0\.45, colour = G\.C\.L_BLACK, vert = true, maxh=2\.2\}\},\n[\t ]*\}\},\n[\t ]*\{n=G\.UIT\.C, config=\{align = "cm", padding = 0\.15\}, nodes = consumable_nodes\}\n)'''
-position = "at"
-payload = '''
-${pre}  end
-  local consumable_nodes = {}
-  if #SMODS.ConsumableType.visible_buffer <= 3 then
-      for _, key in ipairs(SMODS.ConsumableType.visible_buffer) do
-          local id = 'your_collection_'..key:lower()..'s'
-          consumable_nodes[#consumable_nodes+1] = UIBox_button({button = id, label = {localize('b_'..key:lower()..'_cards')}, count = G.DISCOVER_TALLIES[key:lower()..'s'], minw = 4, id = id, colour = G.C.SECONDARY_SET[key]})
-      end
-  else
-      consumable_nodes[#consumable_nodes+1] = UIBox_button({ button = 'your_collection_consumables', label = {localize('b_stat_consumables'), localize{ type = 'variable', key = 'c_types', vars = {#SMODS.ConsumableType.visible_buffer} } }, count = G.DISCOVER_TALLIES['consumeables'], minw = 4, minh = 4, id = 'your_collection_consumables', colour = G.C.FILTER })
-${post}'''
-optional = true
-
-[[patches]]
-[patches.regex]
 id = "auto.UI_definitions.modded.013"
 target = "functions/UI_definitions.lua"
 pattern = '''^(?<pre>)[\t ]*UIBox_button\(\{button = 'your_collection_blinds', label = \{localize\('b_blinds'\)\}, count = G\.DISCOVER_TALLIES\.blinds, minw = 5, minh = 2\.0, id = 'your_collection_blinds', focus_args = \{snap_to = true\}\}\),UIBox_button\(\{button = 'your_collection_other_gameobjects', label = \{localize\('k_other'\)\}, minw = 5, id = 'your_collection_other_gameobjects', focus_args = \{snap_to = true\}\}\),\n(?<post>)'''
@@ -5109,6 +5080,19 @@ payload = '''
 ${pre}      UIBox_button({button = 'your_collection_blinds', label = {localize('b_blinds')}, count = G.DISCOVER_TALLIES.blinds, minw = 5, id = 'your_collection_blinds'}),UIBox_button({button = 'your_collection_other_gameobjects', label = {localize('k_other')}, minw = 5, id = 'your_collection_other_gameobjects', focus_args = {snap_to = true}}),
       UIBox_button({button = 'your_collection_stakes', label = {mod_loc("Stakes")}, minw = 5, id = 'your_collection_stakes', focus_args = {snap_to = true}}),
 ${post}'''
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "auto.UI_definitions.modded.013b"
+target = "functions/UI_definitions.lua"
+pattern = '''^(?<pre>[\t ]*blinds,\n[\t ]*other)\n(?<post>)'''
+position = "at"
+payload = '''
+${pre},
+      UIBox_button({button = 'your_collection_stakes', label = {mod_loc("Stakes")}, minw = 5, id = 'your_collection_stakes', focus_args = {snap_to = true}}),
+${post}'''
+times = 1
 optional = true
 
 [[patches]]
