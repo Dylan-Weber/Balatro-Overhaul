@@ -181,7 +181,7 @@ function P.orient_popup(kind)
     footer[1] = UIK.button{label = L('orient_try_again'), button = 'orient_msg_retry', colour = UIK.C.ok, w = math.min(w * 0.5, 3.6), h = touch and 0.9 or 0.7, scale = touch and 0.5 or 0.45}
   end
 r 32 1381 %20%20 -
-l 406
+l 411
   G.FUNCS.overlay_menu{definition = UIK.window{
     id = 'orient_msg', compact = true, w = w,
     title = L('orient_' .. kind .. '_title'),
@@ -563,7 +563,12 @@ function P.badge_clear_y()
     bottom = math.max(bottom or 0, y + h)
   end
   if not bottom then return nil end
-  return (bottom + (CL.MODE_GAP or 4)) / (G.TILESCALE * G.TILESIZE) - G.ROOM.T.y
+  -- The labels sit at fixed pixels, but the run is laid out at the unzoomed scale. While a
+  -- menu is open (the pause menu opens when the app goes to the background) the room is
+  -- zoomed in and moved up, so measuring against it pushed the run down for good.
+  local unzoomed_tile_pixels = G.TILESCALE * G.TILESIZE / (G.MENU_ZOOM or 1)
+  local unzoomed_room_top = G.ROOM_UNZOOMED and G.ROOM_UNZOOMED.y or G.ROOM.T.y
+  return (bottom + (CL.MODE_GAP or 4)) / unzoomed_tile_pixels - unzoomed_room_top
 end
 
 function P.place_run()
