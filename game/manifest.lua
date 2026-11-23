@@ -1845,8 +1845,8 @@ return {
       kind = "patch",
       patch = "patches/functions/settings/catalog.lua.bop",
       path = "functions/settings/catalog.lua",
-      sha256 = "895629e70a87a8394138efed70236220e7a15061328e65b30e4562c4c044d6e6",
-      size = 35440,
+      sha256 = "dc8ec25b06b3392bd6c11002f0a4e288b234c36cbea79a7f65d79e4b7c4bd6b6",
+      size = 35477,
     },
     {
       kind = "patch",

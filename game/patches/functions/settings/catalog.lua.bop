@@ -236,7 +236,7 @@ function S.progression_changed()
   G.MAIN_MENU_UI = nil
   if G.collection_alert then G.collection_alert:remove() G.collection_alert = nil end
   set_main_menu_UI()
-  G.REFRESH_ALERTS = true
+  if rawget(_G, "set_alerts") then G.REFRESH_ALERTS = true end
 end
 
 local function shop(pool)
