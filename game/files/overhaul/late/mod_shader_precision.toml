@@ -1,0 +1,43 @@
+[manifest]
+version = "1.0.0"
+priority = 0
+
+# Compile Steamodded mod shaders at high float precision on phones (OpenGL ES), where LOVE
+# defaults to medium precision and mod shader math written for desktop can overflow it, and
+# send the screen's pixel density to shaders that ask for it.
+# See functions/mod_shader_precision.lua and functions/mod_shader_pixel_density.lua.
+[[patches]]
+[patches.pattern]
+id = "mod_shader_precision.highp_on_gles"
+target = '=[SMODS _ "src/game_object.lua"]'
+pattern = "G.SHADERS[self.key] = love.graphics.newShader(file)"
+position = "at"
+payload = '''
+G.SHADERS[self.key] = require("functions/mod_shader_precision").compile(file)
+require("functions/mod_shader_pixel_density").attach(self, file)'''
+match_indent = true
+times = 1
+
+# Cryptid's Astral star field mixes screen_coords (pixels) with mouse_screen_pos and
+# screen_scale (screen units). Put screen_coords in screen units first, as on desktop.
+[[patches]]
+[patches.pattern]
+id = "mod_shader_precision.cryptid_astral_pixel_density_uniform"
+target = '=[SMODS Cryptid "astral.fs"]'
+pattern = "extern MY_HIGHP_OR_MEDIUMP vec2 mouse_screen_pos;"
+position = "after"
+payload = "extern MY_HIGHP_OR_MEDIUMP float overhaul_pixel_density;"
+match_indent = true
+times = 1
+optional = true
+
+[[patches]]
+[patches.regex]
+id = "mod_shader_precision.cryptid_astral_pixel_density"
+requires = ["mod_shader_precision.cryptid_astral_pixel_density_uniform"]
+target = '=[SMODS Cryptid "astral.fs"]'
+pattern = '''\(screen_coords\.xy - mouse_screen_pos\.xy\)/screen_scale'''
+position = "at"
+payload = "(screen_coords.xy / overhaul_pixel_density - mouse_screen_pos.xy)/screen_scale"
+times = 1
+optional = true

@@ -778,6 +778,20 @@ return {
       src = 13,
     },
     {
+      file = "files/functions/mod_shader_pixel_density.lua",
+      kind = "own",
+      path = "functions/mod_shader_pixel_density.lua",
+      sha256 = "c8d1ab4be21c39a81919a00de2a6e06ee70dc9cadea254e770c81db306c40958",
+      size = 1624,
+    },
+    {
+      file = "files/functions/mod_shader_precision.lua",
+      kind = "own",
+      path = "functions/mod_shader_precision.lua",
+      sha256 = "bccb6f50ed7390b43fe4c6feb5924aaae90a7b0293e2403c795e79df0154eacd",
+      size = 3920,
+    },
+    {
       kind = "patch",
       patch = "patches/functions/mod_guide.lua.bop",
       path = "functions/mod_guide.lua",
@@ -2932,6 +2946,13 @@ return {
       path = "overhaul/late/main_auto.toml",
       sha256 = "d3d0fbc01422a1b0e8da5cc0a739896775b754389b04f1a619dc11b7f9209df8",
       size = 43611,
+    },
+    {
+      file = "files/overhaul/late/mod_shader_precision.toml",
+      kind = "own",
+      path = "overhaul/late/mod_shader_precision.toml",
+      sha256 = "de1fd8fc269b2a374ade2b4d78bab66f30e21dd336f8944e98d53d2a13920cf6",
+      size = 1669,
     },
     {
       kind = "patch",
