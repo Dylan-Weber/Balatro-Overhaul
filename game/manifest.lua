@@ -3105,8 +3105,8 @@ return {
       kind = "patch",
       patch = "patches/overhaul/late/sprite.toml.bop",
       path = "overhaul/late/sprite.toml",
-      sha256 = "2638934dafa9f3c8fbbce0a99c76e05da066ae7f59a16b2a8d19baccb6d22200",
-      size = 2975,
+      sha256 = "7c38b273bf8ddfe89319b4472aa69116e8bdcb2bdf67a1728a5fc0271b10648e",
+      size = 3646,
     },
     {
       file = "files/overhaul/late/sprite_auto.toml",
