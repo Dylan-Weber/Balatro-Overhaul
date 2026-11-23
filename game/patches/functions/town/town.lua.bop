@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 508
+l 512
 Town = Town or {}
 local T = Town
 
@@ -53,9 +53,9 @@ local function door(label, button, ref, colour)
 end
 
 T.PLACES = {
-  {key = "tavern", name = "TAVERN", line = "Quests and your past runs", center = "j_drunkard", colour = "BLUE",
+  {key = "tavern", name = "TAVERN", line = "Quests and your past runs", hidden_line = "Your past runs", center = "j_drunkard", colour = "BLUE",
     doors = function()
-      return list(door(L("QUESTS"), "open_quest_menu", nil, G.C.BLUE),
+      return list(not progression_hidden() and door(L("QUESTS"), "open_quest_menu", nil, G.C.BLUE),
         door(L("RUN HISTORY"), "open_run_history", {from = "open_tavern_hub"}, G.C.RED))
     end},
   {key = "market", name = "MARKET", line = "Cosmetics for your Balacoin", center = "v_overstock_norm", colour = "MONEY",
@@ -78,6 +78,10 @@ T.PLACES = {
   {key = "racetrack", name = "RACETRACK", line = "Speedrun times, yours and online", center = "j_runner", colour = "Planet", online = true,
     doors = function() return list(door(hub_label("SpeedrunBoard", L("SPEEDRUNS")), "open_speedrun_board", nil, G.C.SECONDARY_SET.Planet)) end},
 }
+
+local function line_for_place(place)
+  return L(place.hidden_line and progression_hidden() and place.hidden_line or place.line)
+end
 
 local function colour_of(p)
   return G.C[p.colour] or G.C.SECONDARY_SET[p.colour] or G.C.BLUE
@@ -256,7 +260,7 @@ function T.set_focus(key)
   local names = {}
   for _, dd in ipairs(entry.doors) do names[#names + 1] = dd.label end
   T.info.name = L(p.name)
-  T.info.line = L(p.line)
+  T.info.line = line_for_place(p)
   T.info.doors = table.concat(names, ",  ")
   local net = (p.online and not online()) and L("Online part needs a connection") or ""
   T.info.net = (net ~= "" and not portrait()) and ("   " .. net) or net
@@ -480,7 +484,7 @@ function T.place_def(key)
     }}
   end
   local right = {
-    {n = G.UIT.R, config = {align = "cm", padding = 0.06, maxw = bw + 0.4}, nodes = {UIK.text(L(p.line), {scale = touch() and 0.4 or 0.36, colour = UIK.C.text})}},
+    {n = G.UIT.R, config = {align = "cm", padding = 0.06, maxw = bw + 0.4}, nodes = {UIK.text(line_for_place(p), {scale = touch() and 0.4 or 0.36, colour = UIK.C.text})}},
     {n = G.UIT.R, config = {minh = 0.15, minw = 0.1}, nodes = {}},
   }
   for _, b in ipairs(buttons) do right[#right + 1] = b end
@@ -557,7 +561,7 @@ end
 function T.open()
   T.deal = not G.OVERLAY_MENU and moving()
 r 32 1381 %20%20 -
-l 77
+l 79
   T.opening = nil
   local ok, err = pcall(function() G.FUNCS.overlay_menu{definition = T.map_def()} end)
   if not ok then
@@ -609,6 +613,7 @@ mod_loc_register{
     ["TAVERN"] = "TAVERNE", ["MARKET"] = "MARCHÉ", ["TAILOR"] = "TAILLEUR", ["THE FORGE"] = "LA FORGE",
     ["LIBRARY"] = "BIBLIOTHÈQUE", ["TRAINING GROUNDS"] = "ENTRAÎNEMENT", ["ARCADE"] = "SALLE D'ARCADE", ["RACETRACK"] = "CIRCUIT",
     ["Quests and your past runs"] = "Les quêtes et vos parties passées",
+    ["Your past runs"] = "Vos parties passées",
     ["Cosmetics for your Balacoin"] = "Des cosmétiques contre vos Balacoins",
     ["Dress your deck and your profile"] = "Habillez votre jeu et votre profil",
     ["Make your own cards and decks"] = "Créez vos propres cartes et jeux",
@@ -623,6 +628,7 @@ mod_loc_register{
     ["TAVERN"] = "TABERNA", ["MARKET"] = "MERCADO", ["TAILOR"] = "SASTRE", ["THE FORGE"] = "LA FORJA",
     ["LIBRARY"] = "BIBLIOTECA", ["TRAINING GROUNDS"] = "ENTRENAMIENTO", ["ARCADE"] = "SALÓN RECREATIVO", ["RACETRACK"] = "CIRCUITO",
     ["Quests and your past runs"] = "Las misiones y tus partidas pasadas",
+    ["Your past runs"] = "Tus partidas pasadas",
     ["Cosmetics for your Balacoin"] = "Cosméticos a cambio de Balacoin",
     ["Dress your deck and your profile"] = "Viste tu baraja y tu perfil",
     ["Make your own cards and decks"] = "Crea tus propias cartas y barajas",

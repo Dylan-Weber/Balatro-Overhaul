@@ -415,7 +415,7 @@ function PUI.open(tab, from)
   if QuestManager then pcall(QuestManager.init) end
   if check_milestones then pcall(check_milestones) end
 r 32 1381 %20%20 -
-l 544
+l 553
   G.FUNCS.overlay_menu{definition = PUI.window(tab)}
 end
 
@@ -598,6 +598,7 @@ local function busy()
 end
 
 function PUI.pump()
+  if progression_popups_hidden() then PUI.queue = {} end
   if PUI.box or #PUI.queue == 0 or PUI.waiting then return end
   if not (G and G.ROOM_ATTACH and G.E_MANAGER and UIBox) then return end
   if busy() or (PUI.queue[1].quest and not rawget(_G, "QuestManager")) then
@@ -630,7 +631,7 @@ function PUI.pump()
 end
 
 function PUI.toast(t)
-  if not t then return end
+  if not t or progression_popups_hidden() then return end
   PUI.queue[#PUI.queue + 1] = t
   PUI.pump()
 end
@@ -937,7 +938,7 @@ function PUI.badge_tick(force)
   b.next_t = now + 0.5
   local menu = G.STAGE == G.STAGES.MAIN_MENU and G.MAIN_MENU_UI and not G.MAIN_MENU_UI.REMOVED
   local btn = menu and G.MAIN_MENU_UI:get_UIE_by_ID("progression_button") or nil
-  local n = btn and PUI.ready_total() or 0
+  local n = btn and not progression_hidden() and PUI.ready_total() or 0
   if n <= 0 then badge_drop() return end
   b.n = n
   b.text = n > 9 and "9+" or tostring(n)
@@ -950,6 +951,14 @@ function PUI.badge_tick(force)
   G.progression_badge = UIBox{definition = badge_def(h), config = {align = "cri", offset = {x = big and -0.12 or 0.16, y = 0}, major = btn}}
   G.progression_badge.states.collide.can = false
   b.major = btn
+end
+
+function PUI.set_hidden()
+  if progression_popups_hidden() then
+    PUI.queue = {}
+    if PUI.box then PUI.hide() end
+  end
+  if progression_hidden() then badge_drop() end
 end
 
 if Game and Game.update and not PUI.badge_wrapped then
