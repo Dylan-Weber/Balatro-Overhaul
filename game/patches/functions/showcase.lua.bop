@@ -251,7 +251,7 @@ local TOUR = {
     {key = 'ovt_lobbies', mark = menu_marks('multiplayer_button')},
     {key = 'ovt_casino', mark = menu_marks('tavern_button')},
     {key = 'ovt_casino_more', mark = menu_marks('tavern_button')},
-    {key = 'ovt_progression', mark = menu_marks('progression_button')},
+    {key = 'ovt_progression', mark = menu_marks('progression_button'), progression = true},
     {key = 'ovt_achievements', mark = menu_marks('achievements_button')},
     {key = 'ovt_collection', mark = menu_marks('collection_button')},
     {key = 'ovt_replays', mark = menu_marks('tavern_button')},
@@ -264,12 +264,12 @@ local TOUR = {
 G.FUNCS.showcase_run_steps = function()
     local step = 1
     for _, s in ipairs(TOUR) do
-        step = showcase_info({
+        if not (s.progression and progression_hidden()) then step = showcase_info({
             text_key = s.key,
             highlight = s.mark,
             attach = {major = G.ROOM_ATTACH, type = 'cm', offset = {x = 0, y = -1}},
             step = step,
-        })
+        }) end
     end
 
 r 1 112 %20%20%20%20 -

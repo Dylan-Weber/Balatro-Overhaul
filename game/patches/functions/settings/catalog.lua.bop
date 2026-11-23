@@ -2,7 +2,7 @@ BOP 1
 eol lf
 final 1
 base 0
-l 483
+l 501
 local S = SettingsUI
 local L = function(s) return mod_loc(s) end
 
@@ -52,6 +52,8 @@ function S.defaults()
   if St.keyboard_play == nil then St.keyboard_play = true end
   if St.ingame_keyboard == nil then St.ingame_keyboard = (G.F_MOBILE or rawget(_G, "_IS_DESKTOP") == false) and true or false end
   if St.safe_sell == nil then St.safe_sell = false end
+  if St.hide_progression == nil then St.hide_progression = false end
+  if St.hide_progression_popups == nil then St.hide_progression_popups = false end
   if St.spectate_follow == nil then St.spectate_follow = true end
   if GR.portrait_fill == nil then GR.portrait_fill = false end
   if GR.classic_layout == nil then GR.classic_layout = false end
@@ -224,7 +226,23 @@ local function gameplay(pool)
       UIK.action{id = 'set_reset_icon', label = L("Profile icon position"), info = L("Put the main menu profile icon back in its corner"),
         button_label = L("Reset"), button = 'reset_profile_icon_pos', colour = UIK.C.warn},
     }},
+    {title = "Progression", items = {
+      UIK.toggle{id = 'set_hide_progression_popups', label = L("Hide Progression Pop-ups"), info = L("No pop-ups for quests, levels or milestones"), ref_table = St, ref_value = 'hide_progression_popups',
+        callback = function() save() S.progression_changed() end},
+      UIK.toggle{id = 'set_hide_progression', label = L("Hide Progression Buttons"), info = L("No Progression button, badge or Quests door"), ref_table = St, ref_value = 'hide_progression',
+        callback = function() save() S.progression_changed() end},
+    }},
   }
+end
+
+function S.progression_changed()
+  if ProgressionUI and ProgressionUI.set_hidden then pcall(ProgressionUI.set_hidden) end
+  if not (G.STAGE == G.STAGES.MAIN_MENU and G.MAIN_MENU_UI and set_main_menu_UI) then return end
+  G.MAIN_MENU_UI:remove()
+  G.MAIN_MENU_UI = nil
+  if G.collection_alert then G.collection_alert:remove() G.collection_alert = nil end
+  set_main_menu_UI()
+  if rawget(_G, "set_alerts") then G.REFRESH_ALERTS = true end
 end
 
 local function shop(pool)
