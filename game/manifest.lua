@@ -697,8 +697,8 @@ return {
       file = "files/functions/fair_lock.lua",
       kind = "own",
       path = "functions/fair_lock.lua",
-      sha256 = "49d9672bbd3d0aa47f7dcccd006537dbe5127e77a00bf22d1117ba10309ceccc",
-      size = 9935,
+      sha256 = "dbd726bfc9ba8ffadf379819b33d8de1397c2f50784dec2066aea1a3846b38c2",
+      size = 10094,
     },
     {
       file = "files/functions/fast_fs.lua",
@@ -935,8 +935,8 @@ return {
       file = "files/functions/qol.lua",
       kind = "own",
       path = "functions/qol.lua",
-      sha256 = "61df1da084e968f22fae2f41e4d5544a21c7d2a91399e22a1c4168bcd975abbe",
-      size = 848,
+      sha256 = "284a2f6d1fdf86aa1159b60d0e52e7aa6845f4767a169b4f09ee77e6574c1eef",
+      size = 864,
     },
     {
       file = "files/functions/quests.lua",
@@ -1728,6 +1728,13 @@ return {
       path = "functions/qol/hotkeys.lua",
       sha256 = "36d629db4ff9e8796970c878b029a9899d7dfaf9fb57c27f3bf455a7c70a2310",
       size = 4925,
+    },
+    {
+      file = "files/functions/qol/instant_draw.lua",
+      kind = "own",
+      path = "functions/qol/instant_draw.lua",
+      sha256 = "3f0b0e3496b6e5dd0437f7adf669e9e465ed531cbb406b7b798948e93e3666ad",
+      size = 5677,
     },
     {
       kind = "patch",
